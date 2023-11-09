@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2.150"
-nix = { version = "0.27.1", features = ["ioctl"]}
+thiserror = "1.0.50"
 
