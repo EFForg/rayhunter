@@ -1,0 +1,6 @@
+[build]
+target = "armv7-unknown-linux-gnueabihf"
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"
