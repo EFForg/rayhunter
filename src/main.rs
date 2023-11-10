@@ -129,16 +129,13 @@ async fn main() -> io::Result<()> {
     tokio::spawn(async move {
         loop {
             let mut dev_ = dev_clone.lock().await;
-            match dev_.read_response().await.unwrap() {
-                Some(msg) => {
-                    let mut clients_ = clients_clone.lock().await;
-                    for client in clients_.iter_mut() {
-                        for buf in &msg {
-                            client.write(buf).await.unwrap();
-                        }
+            if let Some(msg) = dev_.read_response().await.unwrap() {
+                let mut clients_ = clients_clone.lock().await;
+                for client in clients_.iter_mut() {
+                    for buf in &msg {
+                        let _ = client.write(buf).await.unwrap();
                     }
-                },
-                None => {},
+                }
             }
         }
     });
