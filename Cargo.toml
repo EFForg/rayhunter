@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytes = "1.5.0"
 libc = "0.2.150"
-nix = { version = "0.27.1", features = ["ioctl"]}
+thiserror = "1.0.50"
 
