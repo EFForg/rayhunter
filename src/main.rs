@@ -170,7 +170,8 @@ fn main() -> std::io::Result<()> {
         }
     });
 
-    // Accept connections from clients, writing any data received to the diag device
+    // Accept connections from a client (only one is accepted at a time),
+    // writing any data received to the diag device
     loop {
         println!("Waiting for client");
         let (mut client_reader, _) = listener.accept()?;
