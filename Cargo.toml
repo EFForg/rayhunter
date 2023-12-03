@@ -7,6 +7,9 @@ edition = "2021"
 
 [dependencies]
 bytes = "1.5.0"
+crc = "3.0.1"
+deku = "0.16.0"
 libc = "0.2.150"
+pcap-file = "2.0.0"
 thiserror = "1.0.50"
 
