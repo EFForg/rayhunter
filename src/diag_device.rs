@@ -1,5 +1,5 @@
 use crate::hdlc::{hdlc_encapsulate, hdlc_decapsulate, HdlcError};
-use crate::diag::{Response, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, ResponseContainer};
+use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
 
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
@@ -72,32 +72,35 @@ impl DiagDevice {
         })
     }
 
-    fn parse_response_container(&self, container: ResponseContainer) -> DiagResult<Vec<Response>> {
+    fn parse_response_container(&self, container: MessagesContainer) -> DiagResult<Vec<Message>> {
         let mut result = Vec::new();
-        for msg in container.responses {
-            let data = hdlc_decapsulate(msg.data, &self.crc)?;
-            match Response::from_bytes((&data, 0)) {
-                Ok(((_, leftover_bytes), res)) => {
-                    if leftover_bytes > 0 {
-                        println!("warning: {} leftover bytes when Response", leftover_bytes);
-                    }
-                    result.push(res);
+        for msg in container.messages {
+            match hdlc_decapsulate(msg.data, &self.crc) {
+                Ok(data) => match Message::from_bytes((&data, 0)) {
+                    Ok(((_, leftover_bytes), res)) => {
+                        if leftover_bytes > 0 {
+                            println!("warning: {} leftover bytes when Response", leftover_bytes);
+                        }
+                        result.push(res);
+                    },
+                    Err(e) => {
+                        println!("error parsing response: {:?}", e);
+                    },
                 },
-                Err(e) => {
-                    println!("{:?}", data);
-                    println!("error parsing response: {:?}", e);
-                },
+                Err(err) => {
+                    println!("error decapsulating response: {:?}", err);
+                }
             }
         }
         Ok(result)
     }
 
-    pub fn read_response(&mut self) -> DiagResult<Vec<Response>> {
+    pub fn read_response(&mut self) -> DiagResult<Vec<Message>> {
         let mut buf = vec![0; BUFFER_LEN];
 
         loop {
             let _ = self.file.read(&mut buf)?;
-            let ((_, leftover_bytes), res_container) = ResponseContainer::from_bytes((&buf, 0))?;
+            let ((_, leftover_bytes), res_container) = MessagesContainer::from_bytes((&buf, 0))?;
             if leftover_bytes > 0 {
                 println!("warning: {} leftover bytes when parsing ResponseContainer", leftover_bytes);
             }
@@ -124,7 +127,7 @@ impl DiagDevice {
                 let msg = format!("write failed with error code {}", ret);
                 return Err(DiagDeviceError::DeviceReadFailed(msg));
             }
-            println!("{}. wrote {} bytes to device", buf.len(), ret);
+            println!("wrote {} bytes to device", ret);
         }
         Ok(())
     }
@@ -133,15 +136,18 @@ impl DiagDevice {
         let req = Request::LogConfig(LogConfigRequest::RetrieveIdRanges);
         self.write_request(&req)?;
 
-        for res in self.read_response()? {
-            match res.payload {
-                ResponsePayload::LogConfig(LogConfigResponse::RetrieveIdRanges { log_mask_sizes }) => {
-                    if res.status != 0 {
-                        return Err(DiagDeviceError::RequestFailed(res.status, req));
-                    }
-                    return Ok(log_mask_sizes);
+        for msg in self.read_response()? {
+            match msg {
+                Message::Log { .. } => println!("skipping log response..."),
+                Message::Response { payload, status, .. } => match payload {
+                    ResponsePayload::LogConfig(LogConfigResponse::RetrieveIdRanges { log_mask_sizes }) => {
+                        if status != 0 {
+                            return Err(DiagDeviceError::RequestFailed(status, req));
+                        }
+                        return Ok(log_mask_sizes);
+                    },
+                    _ => println!("skipping non-LogConfigResponse response..."),
                 },
-                _ => println!("skipping non-LogConfigResponse response..."),
             }
         }
 
@@ -153,12 +159,17 @@ impl DiagDevice {
         let req = build_log_mask_request(log_type, log_mask_bitsize);
         self.write_request(&req)?;
 
-        for res in self.read_response()? {
-            if let ResponsePayload::LogConfig(LogConfigResponse::SetMask) = res.payload {
-                if res.status != 0 {
-                    return Err(DiagDeviceError::RequestFailed(res.status, req));
-                }
-                return Ok(());
+        for msg in self.read_response()? {
+            match msg {
+                Message::Log { .. } => println!("skipping log response..."),
+                Message::Response { payload, status, .. } => {
+                    if let ResponsePayload::LogConfig(LogConfigResponse::SetMask) = payload {
+                        if status != 0 {
+                            return Err(DiagDeviceError::RequestFailed(status, req));
+                        }
+                        return Ok(());
+                    }
+                },
             }
         }
 
