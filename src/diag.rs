@@ -1,6 +1,6 @@
 //! Diag protocol serialization/deserialization
 
-use chrono::{DateTime, Local, FixedOffset};
+use chrono::{DateTime, FixedOffset};
 use deku::prelude::*;
 
 #[derive(Debug, Clone, DekuWrite)]
@@ -137,7 +137,7 @@ pub fn build_log_mask_request(log_type: u32, log_mask_bitsize: u32) -> Request {
     }
 
     Request::LogConfig(LogConfigRequest::SetMask {
-        log_type: log_type as u32,
+        log_type,
         log_mask_bitsize,
         log_mask,
     })

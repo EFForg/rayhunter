@@ -2,8 +2,7 @@ use crate::hdlc::{hdlc_encapsulate, hdlc_decapsulate, HdlcError};
 use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
 
 use std::fs::File;
-use std::io::{Cursor, Read, Write};
-use bytes::{Buf, BufMut};
+use std::io::Read;
 use std::os::fd::AsRawFd;
 use thiserror::Error;
 use crc::{Crc, Algorithm};
@@ -43,7 +42,6 @@ pub const CRC_CCITT_ALG: Algorithm<u16> = Algorithm {
 };
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
-const USER_SPACE_DATA_TYPE: i32 = 32;
 const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
@@ -151,7 +149,7 @@ impl DiagDevice {
             }
         }
 
-        return Err(DiagDeviceError::NoResponse(req));
+        Err(DiagDeviceError::NoResponse(req))
     }
 
     fn set_log_mask(&mut self, log_type: u32, log_mask_bitsize: u32) -> DiagResult<()> {
@@ -173,7 +171,7 @@ impl DiagDevice {
             }
         }
 
-        return Err(DiagDeviceError::NoResponse(req));
+        Err(DiagDeviceError::NoResponse(req))
     }
 
     pub fn config_logs(&mut self) -> DiagResult<()> {

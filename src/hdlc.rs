@@ -49,8 +49,7 @@ pub fn hdlc_decapsulate(mut data: Vec<u8>, crc: &Crc<u16>) -> Result<Vec<u8>, Hd
 
     let mut unescaped = Vec::new();
     let mut escaping = false;
-    for i in 0..data.len() {
-        let b = data[i];
+    for b in data {
         if escaping {
             match b {
                 0x5e => unescaped.push(0x7e),
