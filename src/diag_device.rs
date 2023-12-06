@@ -1,5 +1,6 @@
 use crate::hdlc::{hdlc_encapsulate, hdlc_decapsulate, HdlcError};
 use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
+use crate::log_codes;
 
 use std::fs::File;
 use std::io::Read;
@@ -40,6 +41,27 @@ pub const CRC_CCITT_ALG: Algorithm<u16> = Algorithm {
     check: 0x2189,
     residue: 0x0000,
 };
+
+pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
+    // Layer 2:
+    log_codes::LOG_GPRS_MAC_SIGNALLING_MESSAGE_C, // 0x5226
+
+    // Layer 3:
+    log_codes::LOG_GSM_RR_SIGNALING_MESSAGE_C, // 0x512f
+    log_codes::WCDMA_SIGNALLING_MESSAGE, // 0x412f
+    log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C, // 0xb0c0
+    log_codes::LOG_NR_RRC_OTA_MSG_LOG_C, // 0xb821
+    
+    // NAS:
+    log_codes::LOG_UMTS_NAS_OTA_MESSAGE_LOG_PACKET_C, // 0x713a
+    log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C, // 0xb0e2
+    log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C, // 0xb0e3
+    log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C, // 0xb0ec
+    log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C, // 0xb0ed
+    
+    // User IP traffic:
+    log_codes::LOG_DATA_PROTOCOL_LOGGING_C // 0x11eb
+];
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
 const MEMORY_DEVICE_MODE: i32 = 2;
@@ -125,7 +147,6 @@ impl DiagDevice {
                 let msg = format!("write failed with error code {}", ret);
                 return Err(DiagDeviceError::DeviceReadFailed(msg));
             }
-            println!("wrote {} bytes to device", ret);
         }
         Ok(())
     }
@@ -153,8 +174,7 @@ impl DiagDevice {
     }
 
     fn set_log_mask(&mut self, log_type: u32, log_mask_bitsize: u32) -> DiagResult<()> {
-        // send a logging mask of all 1's equal to its respective mask size
-        let req = build_log_mask_request(log_type, log_mask_bitsize);
+        let req = build_log_mask_request(log_type, log_mask_bitsize, &LOG_CODES_FOR_RAW_PACKET_LOGGING);
         self.write_request(&req)?;
 
         for msg in self.read_response()? {

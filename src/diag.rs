@@ -125,15 +125,23 @@ pub enum LogConfigResponse {
     SetMask,
 }
 
-// register logging for each supported log type. it seems that "log_mask_sizes" is an array of
-// numbers for each log type, where each number is how many bits are in that log mask
-pub fn build_log_mask_request(log_type: u32, log_mask_bitsize: u32) -> Request {
-    // if log_mask_bitsize = 8n + k, then we need n+1 bytes to store the mask, with the last
-    // byte having k bits set
-    let mask_len = (log_mask_bitsize as usize + 7) / 8;
-    let mut log_mask = vec![0xff; mask_len];
-    if log_mask_bitsize % 8 != 0 {
-        log_mask[mask_len - 1] = 0xff >> (8 - (log_mask_bitsize as usize % 8));
+pub fn build_log_mask_request(log_type: u32, log_mask_bitsize: u32, accepted_log_codes: &[u32]) -> Request {
+    let mut current_byte: u8 = 0;
+    let mut num_bits_written: u8 = 0;
+    let mut log_mask: Vec<u8> = vec![];
+    for i in 0..log_mask_bitsize {
+        let log_code: u32 = (log_type << 12) | i;
+        if accepted_log_codes.contains(&log_code) {
+            println!("enabling {:x}", log_code);
+            current_byte |= 1 << num_bits_written;
+        }
+        num_bits_written += 1;
+
+        if num_bits_written == 8 || i == log_mask_bitsize - 1 {
+            current_byte = 0;
+            num_bits_written = 0;
+            log_mask.push(current_byte);
+        }
     }
 
     Request::LogConfig(LogConfigRequest::SetMask {
@@ -167,25 +175,11 @@ mod test {
 
     #[test]
     fn test_build_log_mask_request() {
-        assert_eq!(build_log_mask_request(0, 1), Request::LogConfig(LogConfigRequest::SetMask {
+        let accepted = vec![0x412f];
+        assert_eq!(build_log_mask_request(0, 1, &accepted), Request::LogConfig(LogConfigRequest::SetMask {
             log_type: 0,
             log_mask_bitsize: 1,
             log_mask: vec![0x01],
-        }));
-        assert_eq!(build_log_mask_request(0, 2), Request::LogConfig(LogConfigRequest::SetMask {
-            log_type: 0,
-            log_mask_bitsize: 2,
-            log_mask: vec![0x03],
-        }));
-        assert_eq!(build_log_mask_request(0, 8), Request::LogConfig(LogConfigRequest::SetMask {
-            log_type: 0,
-            log_mask_bitsize: 8,
-            log_mask: vec![0xff],
-        }));
-        assert_eq!(build_log_mask_request(0, 9), Request::LogConfig(LogConfigRequest::SetMask {
-            log_type: 0,
-            log_mask_bitsize: 9,
-            log_mask: vec![0xff, 0x01],
         }));
     }
 
