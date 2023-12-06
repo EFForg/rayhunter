@@ -119,6 +119,7 @@ impl DiagDevice {
         let mut buf = vec![0; BUFFER_LEN];
 
         loop {
+            println!("waiting to read");
             let _ = self.file.read(&mut buf)?;
             let ((_, leftover_bytes), res_container) = MessagesContainer::from_bytes((&buf, 0))?;
             if leftover_bytes > 0 {
@@ -175,6 +176,7 @@ impl DiagDevice {
 
     fn set_log_mask(&mut self, log_type: u32, log_mask_bitsize: u32) -> DiagResult<()> {
         let req = build_log_mask_request(log_type, log_mask_bitsize, &LOG_CODES_FOR_RAW_PACKET_LOGGING);
+        println!("setting log mask {} {:?}", log_type, &req);
         self.write_request(&req)?;
 
         for msg in self.read_response()? {
