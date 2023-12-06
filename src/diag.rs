@@ -132,15 +132,14 @@ pub fn build_log_mask_request(log_type: u32, log_mask_bitsize: u32, accepted_log
     for i in 0..log_mask_bitsize {
         let log_code: u32 = (log_type << 12) | i;
         if accepted_log_codes.contains(&log_code) {
-            println!("enabling {:x}", log_code);
             current_byte |= 1 << num_bits_written;
         }
         num_bits_written += 1;
 
         if num_bits_written == 8 || i == log_mask_bitsize - 1 {
+            log_mask.push(current_byte);
             current_byte = 0;
             num_bits_written = 0;
-            log_mask.push(current_byte);
         }
     }
 
@@ -153,6 +152,7 @@ pub fn build_log_mask_request(log_type: u32, log_mask_bitsize: u32, accepted_log
 
 #[cfg(test)]
 mod test {
+    use crate::diag_device::LOG_CODES_FOR_RAW_PACKET_LOGGING;
     use super::*;
 
     #[test]
@@ -175,11 +175,20 @@ mod test {
 
     #[test]
     fn test_build_log_mask_request() {
-        let accepted = vec![0x412f];
-        assert_eq!(build_log_mask_request(0, 1, &accepted), Request::LogConfig(LogConfigRequest::SetMask {
-            log_type: 0,
-            log_mask_bitsize: 1,
-            log_mask: vec![0x01],
+        let log_type = 11;
+        let bitsize = 513;
+        let req = build_log_mask_request(log_type, bitsize, &LOG_CODES_FOR_RAW_PACKET_LOGGING);
+        assert_eq!(req, Request::LogConfig(LogConfigRequest::SetMask {
+            log_type: log_type,
+            log_mask_bitsize: bitsize,
+            log_mask: vec![
+                0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                0x1, 0x0, 0x0, 0x0, 0xc, 0x30, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                0x0, 0x0, 0x0, 0x0, 0x0,
+            ],
         }));
     }
 
