@@ -99,12 +99,13 @@ impl DiagDevice {
                 Ok(data) => match Message::from_bytes((&data, 0)) {
                     Ok(((_, leftover_bytes), res)) => {
                         if leftover_bytes > 0 {
-                            println!("warning: {} leftover bytes when Response", leftover_bytes);
+                            println!("warning: {} leftover bytes when parsing Message", leftover_bytes);
                         }
                         result.push(res);
                     },
                     Err(e) => {
                         println!("error parsing response: {:?}", e);
+                        println!("{:?}", data);
                     },
                 },
                 Err(err) => {

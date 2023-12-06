@@ -5,12 +5,13 @@ mod log_codes;
 
 use crate::diag_device::DiagDevice;
 
-fn main() -> std::io::Result<()> {
-    let mut dev = DiagDevice::new().unwrap();
-    dev.config_logs().unwrap();
+fn main() -> diag_device::DiagResult<()> {
+    env_logger::init();
+    let mut dev = DiagDevice::new()?;
+    dev.config_logs()?;
 
     loop {
-        for msg in dev.read_response().unwrap() {
+        for msg in dev.read_response()? {
             println!("msg: {:?}", msg);
         }
     }
