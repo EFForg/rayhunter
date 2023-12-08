@@ -115,23 +115,10 @@ pub enum LogBody {
         msg: Vec<u8>,
     },
     #[deku(id = "0xb0c0")]
-    LteRrcOtaMessage {
+    LteRrcOtaMessage{
         ext_header_version: u8,
-        rrc_rel: u8,
-        rrc_version: u8,
-        #[deku(skip, cond = "*ext_header_version < 25")] // handle post-NR releases
-        nc_rrc_rel: Option<u16>,
-        bearer_id: u8,
-        phy_cell_id: u16,
-
-        // extended header. some of these fields need manual parsing based on
-        // header version
-        #[deku(reader = "read_lte_rrc_ota_message_log_freq(deku::rest, *ext_header_version)")]
-        freq: u32,
-        sfn: u16,
-        channel_type: u8,
-        #[deku(reader = "read_lte_rrc_ota_message_log_msg(deku::rest)")]
-        msg: Vec<u8>,
+        #[deku(ctx = "*ext_header_version")]
+        packet: LteRrcOtaPacket,
     },
     #[deku(id_pat = "0xb0e2 | 0xb0e3 | 0xb0ec | 0xb0ed")]
     Nas4GMessage {
@@ -161,34 +148,106 @@ pub enum LogBody {
     }
 }
 
-fn read_lte_rrc_ota_message_log_freq(rest: &BitSlice<u8, Msb0>, ext_header_version: u8) -> Result<(&BitSlice<u8, Msb0>, u32), DekuError> {
-    if ext_header_version < 8 {
-        let (rest, freq) = u16::read(rest, ())?;
-        Ok((rest, freq as u32))
-    } else {
-        let (rest, freq) = u32::read(rest, ())?;
-        Ok((rest, freq))
-    }
+/*
+        item_struct = namedtuple('QcDiagLteRrcOtaPacket', 'rrc_rel_maj rrc_rel_min rbid pci earfcn sfn_subfn pdu_num len')
+        item_struct_v5 = namedtuple('QcDiagLteRrcOtaPacketV5', 'rrc_rel_maj rrc_rel_min rbid pci earfcn sfn_subfn pdu_num sib_mask len')
+        item_struct_v25 = namedtuple('QcDiagLteRrcOtaPacketV25', 'rrc_rel_maj rrc_rel_min nr_rrc_rel_maj nr_rrc_rel_min rbid pci earfcn sfn_subfn pdu_num sib_mask len')
+        if pkt_version >= 25:
+            # Version 25, 26, 27
+            item = item_struct_v25._make(struct.unpack('<BBBB BHLH BLH', pkt_body[1:21]))
+            msg_content = pkt_body[21:]
+        elif pkt_version >= 8:
+            # Version 8, 9, 12, 13, 15, 16, 19, 20, 22, 24
+            item = item_struct_v5._make(struct.unpack('<BB BHLH BLH', pkt_body[1:19]))
+            msg_content = pkt_body[19:]
+        elif pkt_version >= 5:
+            # Version 6, 7
+            item = item_struct_v5._make(struct.unpack('<BB BHHH BLH', pkt_body[1:17]))
+            msg_content = pkt_body[17:]
+        else:
+            # Version 2, 3, 4
+            item = item_struct._make(struct.unpack('<BB BHHH BH', pkt_body[1:13]))
+            msg_content = pkt_body[13:]
+*/
+
+#[derive(Debug, Clone, PartialEq, DekuRead)]
+#[deku(ctx = "ext_header_version: u8", id = "ext_header_version")]
+pub enum LteRrcOtaPacket {
+    #[deku(id_pat = "0..=4")]
+    V0 {
+        rrc_rel_maj: u8,
+        rrc_rel_min: u8,
+        bearer_id: u8,
+        phy_cell_id: u16,
+        earfcn: u16,
+        sfn_subfn: u16,
+        pdu_num: u8,
+        len: u16,
+        #[deku(count = "len")]
+        packet: Vec<u8>,
+    },
+    #[deku(id_pat = "5..=7")]
+    V5 {
+        rrc_rel_maj: u8,
+        rrc_rel_min: u8,
+        bearer_id: u8,
+        phy_cell_id: u16,
+        earfcn: u16,
+        sfn_subfn: u16,
+        pdu_num: u8,
+        sib_mask: u32,
+        len: u16,
+        #[deku(count = "len")]
+        packet: Vec<u8>,
+    },
+    #[deku(id_pat = "8..=24")]
+    V8 {
+        rrc_rel_maj: u8,
+        rrc_rel_min: u8,
+        bearer_id: u8,
+        phy_cell_id: u16,
+        earfcn: u32,
+        sfn_subfn: u16,
+        pdu_num: u8,
+        sib_mask: u32,
+        len: u16,
+        #[deku(count = "len")]
+        packet: Vec<u8>,
+    },
+    #[deku(id_pat = "25..")]
+    V25 {
+        rrc_rel_maj: u8,
+        rrc_rel_min: u8,
+        nr_rrc_rel_maj: u8,
+        nr_rrc_rel_min: u8,
+        bearer_id: u8,
+        phy_cell_id: u16,
+        earfcn: u32,
+        sfn_subfn: u16,
+        pdu_num: u8,
+        sib_mask: u32,
+        len: u16,
+        #[deku(count = "len")]
+        packet: Vec<u8>,
+    },
 }
 
-fn read_lte_rrc_ota_message_log_msg(rest: &BitSlice<u8, Msb0>) -> Result<(&BitSlice<u8, Msb0>, Vec<u8>), DekuError> {
-    let (mut rest, length) = u16::read(rest, ())?;
-    if length != rest.len() as u16 / 8 {
-        let (new_rest, _) = u16::read(rest, ())?;
-        rest = new_rest;
+impl LteRrcOtaPacket {
+    fn get_sfn_subfn(&self) -> u16 {
+        match self {
+            LteRrcOtaPacket::V0 { sfn_subfn, .. } => *sfn_subfn,
+            LteRrcOtaPacket::V5 { sfn_subfn, .. } => *sfn_subfn,
+            LteRrcOtaPacket::V8 { sfn_subfn, .. } => *sfn_subfn,
+            LteRrcOtaPacket::V25 { sfn_subfn, .. } => *sfn_subfn,
+        }
     }
-    let (new_rest, length) = u16::read(rest, ())?;
-    rest = new_rest;
-    if length != rest.len() as u16 / 8 {
-        return Err(DekuError::Incomplete(NeedSize::new(length as usize * 8)));
+    pub fn get_sfn(&self) -> u16 {
+        self.get_sfn_subfn() >> 4
     }
-    let mut result = Vec::new();
-    for _ in 0..length {
-        let (new_rest, byte) = u8::read(rest, ())?;
-        rest = new_rest;
-        result.push(byte);
+
+    pub fn get_subfn(&self) -> u16 {
+        self.get_sfn_subfn() & 0xf
     }
-    Ok((rest, result))
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead)]
@@ -340,15 +399,18 @@ mod test {
             timestamp: Timestamp { ts: 72659535985485082 },
             body: LogBody::LteRrcOtaMessage {
                 ext_header_version: 20,
-                rrc_rel: 14,
-                rrc_version: 48,
-                nc_rrc_rel: None,
-                bearer_id: 0,
-                phy_cell_id: 160,
-                freq: 2050,
-                sfn: 4057,
-                channel_type: 5,
-                msg: vec![0x40, 0x1, 0xee, 0xad, 0xd5, 0x4d, 0xd0],
+                packet: LteRrcOtaPacket::V8 {
+                    rrc_rel_maj: 14,
+                    rrc_rel_min: 48,
+                    bearer_id: 0,
+                    phy_cell_id: 160,
+                    earfcn: 2050,
+                    sfn_subfn: 4057,
+                    pdu_num: 5,
+                    sib_mask: 0,
+                    len: 7,
+                    packet: vec![0x40, 0x1, 0xee, 0xad, 0xd5, 0x4d, 0xd0],
+                },
             },
         });
     }
