@@ -23,16 +23,23 @@ pub enum HdlcError {
 
 pub fn hdlc_encapsulate(data: &[u8], crc: &Crc<u16>) -> Vec<u8> {
     let mut result: Vec<u8> = vec![];
-    result.put_u16_le(crc.checksum(&data));
 
-    let escaped = data.iter()
-        .flat_map(|&b| match b {
-            // TODO: is this too expensive?
-            0x7e => vec![0x7d, 0x5e],
-            0x7d => vec![0x7d, 0x5d],
-            _ => vec![b],
-        });
-    result.extend(escaped);
+    for &b in data {
+        match b {
+            0x7e => result.extend([0x7d, 0x5e]),
+            0x7d => result.extend([0x7d, 0x5d]),
+            _ => result.push(b),
+        }
+    }
+
+    for b in crc.checksum(&data).to_le_bytes() {
+        match b {
+            0x7e => result.extend([0x7d, 0x5e]),
+            0x7d => result.extend([0x7d, 0x5d]),
+            _ => result.push(b),
+        }
+    }
+
     result.push(0x7e);
     result
 }
@@ -43,14 +50,13 @@ pub fn hdlc_decapsulate(data: &[u8], crc: &Crc<u16>) -> Result<Vec<u8>, HdlcErro
         return Err(HdlcError::TooShort);
     }
 
-    let last_char = data[data.len() - 1]; // safe since len() >= 3
-    if last_char != 0x7e {
-        return Err(HdlcError::NoTrailingCharacter(last_char));
+    if data[data.len() - 1] != 0x7e {
+        return Err(HdlcError::NoTrailingCharacter(data[data.len() - 1]));
     }
 
     let mut unescaped = Vec::new();
     let mut escaping = false;
-    for &b in data {
+    for &b in &data[..data.len() - 1] {
         if escaping {
             match b {
                 0x5e => unescaped.push(0x7e),
