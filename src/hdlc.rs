@@ -21,35 +21,36 @@ pub enum HdlcError {
     TooShort,
 }
 
-pub fn hdlc_encapsulate(mut data: Vec<u8>, crc: &Crc<u16>) -> Vec<u8> {
-    data.put_u16_le(crc.checksum(&data));
+pub fn hdlc_encapsulate(data: &[u8], crc: &Crc<u16>) -> Vec<u8> {
+    let mut result: Vec<u8> = vec![];
+    result.put_u16_le(crc.checksum(&data));
 
-    let mut result: Vec<u8> = data.iter()
+    let escaped = data.iter()
         .flat_map(|&b| match b {
             // TODO: is this too expensive?
             0x7e => vec![0x7d, 0x5e],
             0x7d => vec![0x7d, 0x5d],
             _ => vec![b],
-        })
-        .collect();
+        });
+    result.extend(escaped);
     result.push(0x7e);
     result
 }
 
-pub fn hdlc_decapsulate(mut data: Vec<u8>, crc: &Crc<u16>) -> Result<Vec<u8>, HdlcError> {
+pub fn hdlc_decapsulate(data: &[u8], crc: &Crc<u16>) -> Result<Vec<u8>, HdlcError> {
     // TODO: return errors instead of panicking
     if data.len() < 3 {
         return Err(HdlcError::TooShort);
     }
 
-    let last_char = data.pop().unwrap(); // safe since len() >= 3
+    let last_char = data[data.len() - 1]; // safe since len() >= 3
     if last_char != 0x7e {
         return Err(HdlcError::NoTrailingCharacter(last_char));
     }
 
     let mut unescaped = Vec::new();
     let mut escaping = false;
-    for b in data {
+    for &b in data {
         if escaping {
             match b {
                 0x5e => unescaped.push(0x7e),
@@ -84,8 +85,8 @@ mod tests {
         let crc = Crc::<u16>::new(&crate::diag_device::CRC_CCITT_ALG);
         let data = vec![0x01, 0x02, 0x03, 0x04];
         let expected = vec![1, 2, 3, 4, 145, 57, 126];
-        let encapsulated = hdlc_encapsulate(data.clone(), &crc);
+        let encapsulated = hdlc_encapsulate(&data, &crc);
         assert_eq!(&encapsulated, &expected);
-        assert_eq!(hdlc_decapsulate(encapsulated, &crc), Ok(data));
+        assert_eq!(hdlc_decapsulate(&encapsulated, &crc), Ok(data));
     }
 }

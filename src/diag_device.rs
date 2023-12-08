@@ -95,7 +95,7 @@ impl DiagDevice {
     fn parse_response_container(&self, container: MessagesContainer) -> DiagResult<Vec<Message>> {
         let mut result = Vec::new();
         for msg in container.messages {
-            match hdlc_decapsulate(msg.data, &self.crc) {
+            match hdlc_decapsulate(&msg.data, &self.crc) {
                 Ok(data) => match Message::from_bytes((&data, 0)) {
                     Ok(((_, leftover_bytes), res)) => {
                         if leftover_bytes > 0 {
@@ -110,6 +110,7 @@ impl DiagDevice {
                 },
                 Err(err) => {
                     println!("error decapsulating response: {:?}", err);
+                    println!("{:?}", &msg.data);
                 }
             }
         }
@@ -138,7 +139,7 @@ impl DiagDevice {
             data_type: DataType::UserSpace,
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
-            hdlc_encapsulated_request: hdlc_encapsulate(req.to_bytes().unwrap(), &self.crc),
+            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes().unwrap(), &self.crc),
         }.to_bytes().unwrap();
         unsafe {
             let fd = self.file.as_raw_fd();
