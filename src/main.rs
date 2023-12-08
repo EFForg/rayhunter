@@ -6,7 +6,9 @@ mod log_codes;
 use crate::diag_device::DiagDevice;
 
 fn main() -> diag_device::DiagResult<()> {
+    // this should eventually be removed for prod
     env_logger::init();
+
     let mut dev = DiagDevice::new()?;
     dev.config_logs()?;
 
