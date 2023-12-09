@@ -9,7 +9,11 @@ fn main() -> diag_device::DiagResult<()> {
     // this should eventually be removed for prod
     env_logger::init();
 
-    let mut dev = DiagDevice::new()?;
+    let file = std::fs::File::options()
+        .read(true)
+        .write(true)
+        .open("/dev/diag")?;
+    let mut dev = DiagDevice::new(&file)?;
     dev.config_logs()?;
 
     loop {

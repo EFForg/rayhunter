@@ -68,24 +68,22 @@ const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
-pub struct DiagDevice {
-    file: File,
+pub struct DiagDevice<'a> {
+    file: &'a File,
+    accumulator: Vec<u8>,
     use_mdm: i32,
     crc: Crc<u16>,
 }
 
-impl DiagDevice {
-    pub fn new() -> DiagResult<Self> {
-        let file = File::options()
-            .read(true)
-            .write(true)
-            .open("/dev/diag")?;
+impl<'a> DiagDevice<'a> {
+    pub fn new(file: &'a File) -> DiagResult<Self> {
         let fd = file.as_raw_fd();
 
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
         let use_mdm = determine_use_mdm(fd)?;
 
         Ok(DiagDevice {
+            accumulator: vec![],
             file,
             crc: Crc::<u16>::new(&CRC_CCITT_ALG),
             use_mdm,
@@ -117,18 +115,23 @@ impl DiagDevice {
         Ok(result)
     }
 
-    pub fn read_response(&mut self) -> DiagResult<Vec<Message>> {
-        let mut packet_buf = vec![0; BUFFER_LEN];
+    fn next_packet(&mut self) -> DiagResult<Vec<u8>> {
+        let mut read_buf = vec![0; BUFFER_LEN];
+        while !self.accumulator.contains(&0x7e) {
+            let bytes_read = self.file.read(&mut read_buf).unwrap();
+            self.accumulator.extend(&read_buf[0..bytes_read]);
+            // clear out the buffer so we don't accidentally read stale data
+            read_buf.clear();
+            read_buf.resize(BUFFER_LEN, 0);
+        }
 
+        let idx = self.accumulator.iter().position(|&x| x == 0x7e).unwrap();
+        Ok(self.accumulator.drain(0..idx + 1).collect::<Vec<u8>>())
+    }
+
+    pub fn read_response(&mut self) -> DiagResult<Vec<Message>> {
         loop {
-            let mut packet = vec![];
-            while !packet.ends_with(&[0x7e]) {
-                let bytes_read = self.file.read(&mut packet_buf)?;
-                packet.extend(&packet_buf[0..bytes_read]);
-                // clear out the buffer so we don't accidentally read stale data
-                packet_buf.clear();
-                packet_buf.resize(BUFFER_LEN, 0);
-            }
+            let packet = self.next_packet()?;
             let ((leftover_bytes, _), res_container) = MessagesContainer::from_bytes((&packet, 0))?;
             if leftover_bytes.len() > 0 {
                 println!("warning: {} leftover bytes when parsing ResponseContainer", leftover_bytes.len());
