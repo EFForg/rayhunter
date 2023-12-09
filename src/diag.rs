@@ -1,7 +1,7 @@
 //! Diag protocol serialization/deserialization
 
 use chrono::{DateTime, FixedOffset};
-use deku::{prelude::*, bitvec::{BitSlice, Msb0}};
+use deku::prelude::*;
 
 #[derive(Debug, Clone, DekuWrite)]
 pub struct RequestContainer {
@@ -147,28 +147,6 @@ pub enum LogBody {
         msg: Vec<u8>,
     }
 }
-
-/*
-        item_struct = namedtuple('QcDiagLteRrcOtaPacket', 'rrc_rel_maj rrc_rel_min rbid pci earfcn sfn_subfn pdu_num len')
-        item_struct_v5 = namedtuple('QcDiagLteRrcOtaPacketV5', 'rrc_rel_maj rrc_rel_min rbid pci earfcn sfn_subfn pdu_num sib_mask len')
-        item_struct_v25 = namedtuple('QcDiagLteRrcOtaPacketV25', 'rrc_rel_maj rrc_rel_min nr_rrc_rel_maj nr_rrc_rel_min rbid pci earfcn sfn_subfn pdu_num sib_mask len')
-        if pkt_version >= 25:
-            # Version 25, 26, 27
-            item = item_struct_v25._make(struct.unpack('<BBBB BHLH BLH', pkt_body[1:21]))
-            msg_content = pkt_body[21:]
-        elif pkt_version >= 8:
-            # Version 8, 9, 12, 13, 15, 16, 19, 20, 22, 24
-            item = item_struct_v5._make(struct.unpack('<BB BHLH BLH', pkt_body[1:19]))
-            msg_content = pkt_body[19:]
-        elif pkt_version >= 5:
-            # Version 6, 7
-            item = item_struct_v5._make(struct.unpack('<BB BHHH BLH', pkt_body[1:17]))
-            msg_content = pkt_body[17:]
-        else:
-            # Version 2, 3, 4
-            item = item_struct._make(struct.unpack('<BB BHHH BH', pkt_body[1:13]))
-            msg_content = pkt_body[13:]
-*/
 
 #[derive(Debug, Clone, PartialEq, DekuRead)]
 #[deku(ctx = "ext_header_version: u8", id = "ext_header_version")]

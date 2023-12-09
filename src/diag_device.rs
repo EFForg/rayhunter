@@ -63,7 +63,7 @@ pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     log_codes::LOG_DATA_PROTOCOL_LOGGING_C // 0x11eb
 ];
 
-const BUFFER_LEN: usize = 1024 * 1024 * 10;
+const BUFFER_LEN: usize = 1024 * 10;
 const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
@@ -97,9 +97,9 @@ impl DiagDevice {
         for msg in container.messages {
             match hdlc_decapsulate(&msg.data, &self.crc) {
                 Ok(data) => match Message::from_bytes((&data, 0)) {
-                    Ok(((_, leftover_bytes), res)) => {
-                        if leftover_bytes > 0 {
-                            println!("warning: {} leftover bytes when parsing Message", leftover_bytes);
+                    Ok(((leftover_bytes, _), res)) => {
+                        if leftover_bytes.len() > 0 {
+                            println!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
                         }
                         result.push(res);
                     },
@@ -118,13 +118,20 @@ impl DiagDevice {
     }
 
     pub fn read_response(&mut self) -> DiagResult<Vec<Message>> {
-        let mut buf = vec![0; BUFFER_LEN];
+        let mut packet_buf = vec![0; BUFFER_LEN];
 
         loop {
-            let _ = self.file.read(&mut buf)?;
-            let ((_, leftover_bytes), res_container) = MessagesContainer::from_bytes((&buf, 0))?;
-            if leftover_bytes > 0 {
-                println!("warning: {} leftover bytes when parsing ResponseContainer", leftover_bytes);
+            let mut packet = vec![];
+            while !packet.ends_with(&[0x7e]) {
+                let bytes_read = self.file.read(&mut packet_buf)?;
+                packet.extend(&packet_buf[0..bytes_read]);
+                // clear out the buffer so we don't accidentally read stale data
+                packet_buf.clear();
+                packet_buf.resize(BUFFER_LEN, 0);
+            }
+            let ((leftover_bytes, _), res_container) = MessagesContainer::from_bytes((&packet, 0))?;
+            if leftover_bytes.len() > 0 {
+                println!("warning: {} leftover bytes when parsing ResponseContainer", leftover_bytes.len());
             }
             if res_container.data_type == DataType::UserSpace {
                 return self.parse_response_container(res_container);

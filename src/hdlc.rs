@@ -4,7 +4,7 @@
 //! https://github.com/P1sec/QCSuper/blob/master/docs/The%20Diag%20protocol.md#the-diag-protocol-over-usb
 
 use crc::Crc;
-use bytes::{Buf, BufMut};
+use bytes::Buf;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
@@ -45,7 +45,6 @@ pub fn hdlc_encapsulate(data: &[u8], crc: &Crc<u16>) -> Vec<u8> {
 }
 
 pub fn hdlc_decapsulate(data: &[u8], crc: &Crc<u16>) -> Result<Vec<u8>, HdlcError> {
-    // TODO: return errors instead of panicking
     if data.len() < 3 {
         return Err(HdlcError::TooShort);
     }
