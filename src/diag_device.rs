@@ -70,7 +70,7 @@ const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
 pub struct DiagDevice<'a> {
     file: &'a File,
-    accumulator: Vec<u8>,
+    read_buf: Vec<u8>,
     use_mdm: i32,
     crc: Crc<u16>,
 }
@@ -83,7 +83,7 @@ impl<'a> DiagDevice<'a> {
         let use_mdm = determine_use_mdm(fd)?;
 
         Ok(DiagDevice {
-            accumulator: vec![],
+            read_buf: vec![0; BUFFER_LEN],
             file,
             crc: Crc::<u16>::new(&CRC_CCITT_ALG),
             use_mdm,
@@ -93,22 +93,24 @@ impl<'a> DiagDevice<'a> {
     fn parse_response_container(&self, container: MessagesContainer) -> DiagResult<Vec<Message>> {
         let mut result = Vec::new();
         for msg in container.messages {
-            match hdlc_decapsulate(&msg.data, &self.crc) {
-                Ok(data) => match Message::from_bytes((&data, 0)) {
-                    Ok(((leftover_bytes, _), res)) => {
-                        if leftover_bytes.len() > 0 {
-                            println!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
-                        }
-                        result.push(res);
+            for sub_msg in msg.data.split_inclusive(|&b| b == 0x7e) {
+                match hdlc_decapsulate(&sub_msg, &self.crc) {
+                    Ok(data) => match Message::from_bytes((&data, 0)) {
+                        Ok(((leftover_bytes, _), res)) => {
+                            if leftover_bytes.len() > 0 {
+                                println!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
+                            }
+                            result.push(res);
+                        },
+                        Err(e) => {
+                            println!("error parsing response: {:?}", e);
+                            println!("{:?}", data);
+                        },
                     },
-                    Err(e) => {
-                        println!("error parsing response: {:?}", e);
-                        println!("{:?}", data);
-                    },
-                },
-                Err(err) => {
-                    println!("error decapsulating response: {:?}", err);
-                    println!("{:?}", &msg.data);
+                    Err(err) => {
+                        println!("error decapsulating response: {:?}", err);
+                        println!("{:?}", &sub_msg);
+                    }
                 }
             }
         }
@@ -116,10 +118,9 @@ impl<'a> DiagDevice<'a> {
     }
 
     pub fn read_response(&mut self) -> DiagResult<Vec<Message>> {
-        let mut read_buf = vec![0; BUFFER_LEN];
         loop {
-            let bytes_read = self.file.read(&mut read_buf).unwrap();
-            let ((leftover_bytes, _), res_container) = MessagesContainer::from_bytes((&read_buf[0..bytes_read], 0))?;
+            let bytes_read = self.file.read(&mut self.read_buf).unwrap();
+            let ((leftover_bytes, _), res_container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
             if leftover_bytes.len() > 0 {
                 println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
             }
