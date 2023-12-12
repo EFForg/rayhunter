@@ -46,8 +46,8 @@ pub enum DataType {
 #[derive(Debug, Clone, DekuRead)]
 pub struct MessagesContainer {
     pub data_type: DataType,
-    pub num_responses: u32,
-    #[deku(count = "num_responses")]
+    pub num_messages: u32,
+    #[deku(count = "num_messages")]
     pub messages: Vec<HdlcEncapsulatedMessage>,
 }
 
@@ -362,7 +362,6 @@ mod test {
 
     #[test]
     fn test_logs() {
-        env_logger::init();
         let data = vec![
             16, 0, 38, 0, 38, 0, 192, 176, 26, 165, 245, 135, 118, 35, 2, 1, 20,
             14, 48, 0, 160, 0, 2, 8, 0, 0, 217, 15, 5, 0, 0, 0, 0, 7, 0, 64, 1,
@@ -391,5 +390,12 @@ mod test {
                 },
             },
         });
+    }
+
+    #[test]
+    fn test_fuck() {
+        env_logger::init();
+        let data = vec![32, 0, 0, 0, 1, 0, 0, 0, 122, 1, 0, 0, 16, 0, 38, 0, 38, 0, 192, 176, 153, 128, 249, 211, 218, 62, 2, 1, 20, 14, 48, 0, 160, 0, 14, 6, 1, 0, 217, 39, 5, 0, 0, 0, 0, 7, 0, 64, 2, 14, 213, 72, 153, 192, 168, 216, 126];
+        dbg!(MessagesContainer::from_bytes((&data, 0)).unwrap());
     }
 }

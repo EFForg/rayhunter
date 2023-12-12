@@ -63,7 +63,7 @@ pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     log_codes::LOG_DATA_PROTOCOL_LOGGING_C // 0x11eb
 ];
 
-const BUFFER_LEN: usize = 1024 * 10;
+const BUFFER_LEN: usize = 1024 * 1024 * 10;
 const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
@@ -115,26 +115,13 @@ impl<'a> DiagDevice<'a> {
         Ok(result)
     }
 
-    fn next_packet(&mut self) -> DiagResult<Vec<u8>> {
-        let mut read_buf = vec![0; BUFFER_LEN];
-        while !self.accumulator.contains(&0x7e) {
-            let bytes_read = self.file.read(&mut read_buf).unwrap();
-            self.accumulator.extend(&read_buf[0..bytes_read]);
-            // clear out the buffer so we don't accidentally read stale data
-            read_buf.clear();
-            read_buf.resize(BUFFER_LEN, 0);
-        }
-
-        let idx = self.accumulator.iter().position(|&x| x == 0x7e).unwrap();
-        Ok(self.accumulator.drain(0..idx + 1).collect::<Vec<u8>>())
-    }
-
     pub fn read_response(&mut self) -> DiagResult<Vec<Message>> {
+        let mut read_buf = vec![0; BUFFER_LEN];
         loop {
-            let packet = self.next_packet()?;
-            let ((leftover_bytes, _), res_container) = MessagesContainer::from_bytes((&packet, 0))?;
+            let bytes_read = self.file.read(&mut read_buf).unwrap();
+            let ((leftover_bytes, _), res_container) = MessagesContainer::from_bytes((&read_buf[0..bytes_read], 0))?;
             if leftover_bytes.len() > 0 {
-                println!("warning: {} leftover bytes when parsing ResponseContainer", leftover_bytes.len());
+                println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
             }
             if res_container.data_type == DataType::UserSpace {
                 return self.parse_response_container(res_container);
