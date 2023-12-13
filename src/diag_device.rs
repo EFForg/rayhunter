@@ -69,37 +69,35 @@ const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
-const FAILSAFE_PATH: &str = "/data/wavehunter-failsafe";
-
 pub struct DiagDevice<'a> {
     file: &'a File,
-    failsafe_file: File,
+    debug_file: Option<File>,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
 
 #[derive(Debug, DekuRead, DekuWrite)]
 #[deku(endian = "little")]
-struct FailsafeReadBlock<'a> {
+struct DebugReadBlock<'a> {
     size: u32,
     #[deku(count = "size")]
     data: &'a [u8],
 }
 
-pub struct FailsafeFileReader {
+pub struct DebugFileReader {
     file: File,
 }
 
-impl FailsafeFileReader {
+impl DebugFileReader {
     pub fn new<P>(path: P) -> DiagResult<Self> where P: AsRef<std::path::Path> {
         let file = std::fs::File::options()
             .read(true)
             .open(path)?;
-        Ok(FailsafeFileReader { file })
+        Ok(DebugFileReader { file })
     }
 }
 
-pub trait DiagInterface {
+pub trait DiagReader {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer>;
 
     fn read_response(&mut self) -> DiagResult<Vec<Message>> {
@@ -142,7 +140,7 @@ pub trait DiagInterface {
 }
 
 
-impl DiagInterface for FailsafeFileReader {
+impl DiagReader for DebugFileReader {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
         let mut bytes_read_buf = [0; 4];
         match self.file.read_exact(&mut bytes_read_buf) {
@@ -150,7 +148,7 @@ impl DiagInterface for FailsafeFileReader {
             Err(e) => {
                 dbg!(e.kind());
                 if e.kind() == std::io::ErrorKind::UnexpectedEof {
-                    println!("reached end of failsafe file, exiting...");
+                    println!("reached end of debug file, exiting...");
                     std::process::exit(0);
                 }
                 return Err(e.into());
@@ -167,16 +165,16 @@ impl DiagInterface for FailsafeFileReader {
     }
 }
 
-impl<'a> DiagInterface for DiagDevice<'a> {
+impl<'a> DiagReader for DiagDevice<'a> {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
         let bytes_read = self.file.read(&mut self.read_buf).unwrap();
-        {
-            let failsafe_block = FailsafeReadBlock {
+        if let Some(debug_file) = self.debug_file.as_mut() {
+            let debug_block = DebugReadBlock {
                 size: bytes_read as u32,
                 data: &self.read_buf[0..bytes_read],
             };
-            let failsafe_block_bytes = failsafe_block.to_bytes().unwrap();
-            self.failsafe_file.write_all(&failsafe_block_bytes).unwrap();
+            let debug_block_bytes = debug_block.to_bytes().unwrap();
+            debug_file.write_all(&debug_block_bytes).unwrap();
         }
         let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
         if leftover_bytes.len() > 0 {
@@ -193,19 +191,25 @@ impl<'a> DiagDevice<'a> {
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
         let use_mdm = determine_use_mdm(fd)?;
 
-        let failsafe_file = std::fs::File::options()
-            .create(true)
-            .write(true)
-            .open(FAILSAFE_PATH)?;
-
         Ok(DiagDevice {
             read_buf: vec![0; BUFFER_LEN],
             file,
-            failsafe_file,
+            debug_file: None,
             use_mdm,
         })
     }
 
+    // Creates a file at the given path where all binary output from /dev/diag
+    // will be recorded.
+    pub fn enable_debug_mode<P>(&mut self, path: P) -> DiagResult<()> where P: AsRef<std::path::Path> {
+        let debug_file = std::fs::File::options()
+            .create(true)
+            .write(true)
+            .open(path)?;
+        println!("enabling debug mode, writing debug output to {:?}", debug_file);
+        self.debug_file = Some(debug_file);
+        Ok(())
+    }
 
     pub fn write_request(&mut self, req: &Request) -> DiagResult<()> {
         let buf = RequestContainer {

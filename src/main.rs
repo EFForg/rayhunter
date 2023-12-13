@@ -3,7 +3,7 @@ mod diag;
 mod diag_device;
 mod log_codes;
 
-use crate::diag_device::{DiagDevice, DiagInterface};
+use crate::diag_device::{DiagDevice, DiagReader};
 
 fn main() -> diag_device::DiagResult<()> {
     // this should eventually be removed for prod
@@ -14,6 +14,7 @@ fn main() -> diag_device::DiagResult<()> {
         .write(true)
         .open("/dev/diag")?;
     let mut dev = DiagDevice::new(&file)?;
+    dev.enable_debug_mode("/data/wavehunter-debug")?;
     dev.config_logs()?;
 
     loop {
