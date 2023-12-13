@@ -3,7 +3,7 @@ use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfig
 use crate::log_codes;
 
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write, Seek};
 use std::os::fd::AsRawFd;
 use thiserror::Error;
 use crc::{Crc, Algorithm};
@@ -41,6 +41,7 @@ pub const CRC_CCITT_ALG: Algorithm<u16> = Algorithm {
     check: 0x2189,
     residue: 0x0000,
 };
+pub const CRC_CCITT: Crc<u16> = Crc::<u16>::new(&CRC_CCITT_ALG);
 
 pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     // Layer 2:
@@ -68,33 +69,55 @@ const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
+const FAILSAFE_PATH: &str = "/data/wavehunter-failsafe";
+
 pub struct DiagDevice<'a> {
     file: &'a File,
+    failsafe_file: File,
     read_buf: Vec<u8>,
     use_mdm: i32,
-    crc: Crc<u16>,
 }
 
-impl<'a> DiagDevice<'a> {
-    pub fn new(file: &'a File) -> DiagResult<Self> {
-        let fd = file.as_raw_fd();
+#[derive(Debug, DekuRead, DekuWrite)]
+#[deku(endian = "little")]
+struct FailsafeReadBlock<'a> {
+    size: u32,
+    #[deku(count = "size")]
+    data: &'a [u8],
+}
 
-        enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
-        let use_mdm = determine_use_mdm(fd)?;
+pub struct FailsafeFileReader {
+    file: File,
+}
 
-        Ok(DiagDevice {
-            read_buf: vec![0; BUFFER_LEN],
-            file,
-            crc: Crc::<u16>::new(&CRC_CCITT_ALG),
-            use_mdm,
-        })
+impl FailsafeFileReader {
+    pub fn new<P>(path: P) -> DiagResult<Self> where P: AsRef<std::path::Path> {
+        let file = std::fs::File::options()
+            .read(true)
+            .open(path)?;
+        Ok(FailsafeFileReader { file })
+    }
+}
+
+pub trait DiagInterface {
+    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer>;
+
+    fn read_response(&mut self) -> DiagResult<Vec<Message>> {
+        loop {
+            let container = self.get_next_messages_container()?;
+            if container.data_type == DataType::UserSpace {
+                return self.parse_response_container(container);
+            } else {
+                println!("skipping non-userspace message...")
+            }
+        }
     }
 
     fn parse_response_container(&self, container: MessagesContainer) -> DiagResult<Vec<Message>> {
         let mut result = Vec::new();
         for msg in container.messages {
             for sub_msg in msg.data.split_inclusive(|&b| b == 0x7e) {
-                match hdlc_decapsulate(&sub_msg, &self.crc) {
+                match hdlc_decapsulate(&sub_msg, &CRC_CCITT) {
                     Ok(data) => match Message::from_bytes((&data, 0)) {
                         Ok(((leftover_bytes, _), res)) => {
                             if leftover_bytes.len() > 0 {
@@ -116,28 +139,80 @@ impl<'a> DiagDevice<'a> {
         }
         Ok(result)
     }
+}
 
-    pub fn read_response(&mut self) -> DiagResult<Vec<Message>> {
-        loop {
-            let bytes_read = self.file.read(&mut self.read_buf).unwrap();
-            let ((leftover_bytes, _), res_container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
-            if leftover_bytes.len() > 0 {
-                println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
-            }
-            if res_container.data_type == DataType::UserSpace {
-                return self.parse_response_container(res_container);
-            } else {
-                println!("skipping non-userspace message...")
-            }
+
+impl DiagInterface for FailsafeFileReader {
+    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
+        let mut bytes_read_buf = [0; 4];
+        match self.file.read_exact(&mut bytes_read_buf) {
+            Ok(_) => {},
+            Err(e) => {
+                dbg!(e.kind());
+                if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                    println!("reached end of failsafe file, exiting...");
+                    std::process::exit(0);
+                }
+                return Err(e.into());
+            },
         }
+        let bytes_read = u32::from_le_bytes(bytes_read_buf) as usize;
+        let mut data = vec![0; bytes_read as usize];
+        self.file.read_exact(&mut data)?;
+        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&data, 0))?;
+        if leftover_bytes.len() > 0 {
+            println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+        }
+        Ok(container)
     }
+}
+
+impl<'a> DiagInterface for DiagDevice<'a> {
+    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
+        let bytes_read = self.file.read(&mut self.read_buf).unwrap();
+        {
+            let failsafe_block = FailsafeReadBlock {
+                size: bytes_read as u32,
+                data: &self.read_buf[0..bytes_read],
+            };
+            let failsafe_block_bytes = failsafe_block.to_bytes().unwrap();
+            self.failsafe_file.write_all(&failsafe_block_bytes).unwrap();
+        }
+        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
+        if leftover_bytes.len() > 0 {
+            println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+        }
+        Ok(container)
+    }
+}
+
+impl<'a> DiagDevice<'a> {
+    pub fn new(file: &'a File) -> DiagResult<Self> {
+        let fd = file.as_raw_fd();
+
+        enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
+        let use_mdm = determine_use_mdm(fd)?;
+
+        let failsafe_file = std::fs::File::options()
+            .create(true)
+            .write(true)
+            .open(FAILSAFE_PATH)?;
+
+        Ok(DiagDevice {
+            read_buf: vec![0; BUFFER_LEN],
+            file,
+            failsafe_file,
+            use_mdm,
+        })
+    }
+
 
     pub fn write_request(&mut self, req: &Request) -> DiagResult<()> {
         let buf = RequestContainer {
             data_type: DataType::UserSpace,
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
-            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes().unwrap(), &self.crc),
+            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes().unwrap(), &CRC_CCITT),
         }.to_bytes().unwrap();
         unsafe {
             let fd = self.file.as_raw_fd();

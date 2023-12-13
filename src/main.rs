@@ -3,7 +3,7 @@ mod diag;
 mod diag_device;
 mod log_codes;
 
-use crate::diag_device::DiagDevice;
+use crate::diag_device::{DiagDevice, DiagInterface};
 
 fn main() -> diag_device::DiagResult<()> {
     // this should eventually be removed for prod
