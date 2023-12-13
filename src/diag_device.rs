@@ -1,12 +1,13 @@
-use crate::hdlc::{hdlc_encapsulate, hdlc_decapsulate, HdlcError};
+use crate::hdlc::{hdlc_encapsulate, HdlcError};
 use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
+use crate::diag_reader::{DiagReader, CRC_CCITT};
+use crate::debug_file::DebugFileBlock;
 use crate::log_codes;
 
 use std::fs::File;
-use std::io::{Read, Write, Seek};
+use std::io::{Read, Write};
 use std::os::fd::AsRawFd;
 use thiserror::Error;
-use crc::{Crc, Algorithm};
 use deku::prelude::*;
 
 pub type DiagResult<T> = Result<T, DiagDeviceError>;
@@ -28,20 +29,6 @@ pub enum DiagDeviceError {
     #[error("Deku error {0}")]
     DekuError(#[from] DekuError),
 }
-
-// this is sorta based on the params qcsuper uses, plus what seems to be used in
-// https://github.com/fgsect/scat/blob/f1538b397721df3ab8ba12acd26716abcf21f78b/util.py#L47
-pub const CRC_CCITT_ALG: Algorithm<u16> = Algorithm {
-    poly: 0x1021,
-    init: 0xffff,
-    refin: true,
-    refout: true,
-    width: 16,
-    xorout: 0xffff,
-    check: 0x2189,
-    residue: 0x0000,
-};
-pub const CRC_CCITT: Crc<u16> = Crc::<u16>::new(&CRC_CCITT_ALG);
 
 pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     // Layer 2:
@@ -76,100 +63,13 @@ pub struct DiagDevice<'a> {
     use_mdm: i32,
 }
 
-#[derive(Debug, DekuRead, DekuWrite)]
-#[deku(endian = "little")]
-struct DebugReadBlock<'a> {
-    size: u32,
-    #[deku(count = "size")]
-    data: &'a [u8],
-}
 
-pub struct DebugFileReader {
-    file: File,
-}
-
-impl DebugFileReader {
-    pub fn new<P>(path: P) -> DiagResult<Self> where P: AsRef<std::path::Path> {
-        let file = std::fs::File::options()
-            .read(true)
-            .open(path)?;
-        Ok(DebugFileReader { file })
-    }
-}
-
-pub trait DiagReader {
-    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer>;
-
-    fn read_response(&mut self) -> DiagResult<Vec<Message>> {
-        loop {
-            let container = self.get_next_messages_container()?;
-            if container.data_type == DataType::UserSpace {
-                return self.parse_response_container(container);
-            } else {
-                println!("skipping non-userspace message...")
-            }
-        }
-    }
-
-    fn parse_response_container(&self, container: MessagesContainer) -> DiagResult<Vec<Message>> {
-        let mut result = Vec::new();
-        for msg in container.messages {
-            for sub_msg in msg.data.split_inclusive(|&b| b == 0x7e) {
-                match hdlc_decapsulate(&sub_msg, &CRC_CCITT) {
-                    Ok(data) => match Message::from_bytes((&data, 0)) {
-                        Ok(((leftover_bytes, _), res)) => {
-                            if leftover_bytes.len() > 0 {
-                                println!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
-                            }
-                            result.push(res);
-                        },
-                        Err(e) => {
-                            println!("error parsing response: {:?}", e);
-                            println!("{:?}", data);
-                        },
-                    },
-                    Err(err) => {
-                        println!("error decapsulating response: {:?}", err);
-                        println!("{:?}", &sub_msg);
-                    }
-                }
-            }
-        }
-        Ok(result)
-    }
-}
-
-
-impl DiagReader for DebugFileReader {
-    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
-        let mut bytes_read_buf = [0; 4];
-        match self.file.read_exact(&mut bytes_read_buf) {
-            Ok(_) => {},
-            Err(e) => {
-                dbg!(e.kind());
-                if e.kind() == std::io::ErrorKind::UnexpectedEof {
-                    println!("reached end of debug file, exiting...");
-                    std::process::exit(0);
-                }
-                return Err(e.into());
-            },
-        }
-        let bytes_read = u32::from_le_bytes(bytes_read_buf) as usize;
-        let mut data = vec![0; bytes_read as usize];
-        self.file.read_exact(&mut data)?;
-        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&data, 0))?;
-        if leftover_bytes.len() > 0 {
-            println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
-        }
-        Ok(container)
-    }
-}
 
 impl<'a> DiagReader for DiagDevice<'a> {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
         let bytes_read = self.file.read(&mut self.read_buf).unwrap();
         if let Some(debug_file) = self.debug_file.as_mut() {
-            let debug_block = DebugReadBlock {
+            let debug_block = DebugFileBlock {
                 size: bytes_read as u32,
                 data: &self.read_buf[0..bytes_read],
             };

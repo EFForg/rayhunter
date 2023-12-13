@@ -1,9 +1,12 @@
 mod hdlc;
 mod diag;
 mod diag_device;
+mod diag_reader;
+mod debug_file;
 mod log_codes;
 
-use crate::diag_device::{DiagDevice, DiagReader};
+use crate::diag_device::DiagDevice;
+use crate::diag_reader::DiagReader;
 
 fn main() -> diag_device::DiagResult<()> {
     // this should eventually be removed for prod
