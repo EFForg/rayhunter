@@ -1,14 +1,8 @@
-mod hdlc;
-mod diag;
-mod diag_device;
-mod diag_reader;
-mod debug_file;
-mod log_codes;
+use wavehunter::debug_file::DebugFileReader;
+use wavehunter::diag_reader::DiagReader;
+use wavehunter::diag_device::DiagResult;
 
-use crate::debug_file::DebugFileReader;
-use crate::diag_reader::DiagReader;
-
-fn main() -> diag_device::DiagResult<()> {
+fn main() -> DiagResult<()> {
     // this should eventually be removed for prod
     env_logger::init();
     let args: Vec<String> = std::env::args().collect();

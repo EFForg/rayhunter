@@ -198,21 +198,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diag"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "chrono",
- "crc",
- "deku",
- "env_logger",
- "libc",
- "log",
- "pcap-file",
- "thiserror",
-]
-
-[[package]]
 name = "env_logger"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -595,6 +580,21 @@ name = "wasm-bindgen-shared"
 version = "0.2.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ab9b36309365056cd639da3134bf87fa8f3d86008abf99e612384a6eecd459f"
+
+[[package]]
+name = "wavehunter"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "chrono",
+ "crc",
+ "deku",
+ "env_logger",
+ "libc",
+ "log",
+ "pcap-file",
+ "thiserror",
+]
 
 [[package]]
 name = "winapi"

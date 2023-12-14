@@ -1,13 +1,21 @@
 [package]
-name = "diag"
+name = "wavehunter"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "wavehunter"
+path = "src/lib.rs"
+
 [[bin]]
-name = "debug_reader"
-path = "src/debug_reader.rs"
+name = "wavehunter-reader"
+path = "src/bin/wavehunter_reader.rs"
+
+[[bin]]
+name = "wavehunter"
+path = "src/bin/wavehunter.rs"
 
 [dependencies]
 bytes = "1.5.0"
