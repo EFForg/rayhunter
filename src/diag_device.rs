@@ -57,25 +57,23 @@ const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
-pub struct DiagDevice<'a> {
-    file: &'a File,
+pub struct DiagDevice {
+    file: File,
     debug_file: Option<File>,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
 
-
-
-impl<'a> DiagReader for DiagDevice<'a> {
+impl DiagReader for DiagDevice {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
-        let bytes_read = self.file.read(&mut self.read_buf).unwrap();
+        let bytes_read = self.file.read(&mut self.read_buf)?;
         if let Some(debug_file) = self.debug_file.as_mut() {
             let debug_block = DebugFileBlock {
                 size: bytes_read as u32,
                 data: &self.read_buf[0..bytes_read],
             };
-            let debug_block_bytes = debug_block.to_bytes().unwrap();
-            debug_file.write_all(&debug_block_bytes).unwrap();
+            let debug_block_bytes = debug_block.to_bytes()?;
+            debug_file.write_all(&debug_block_bytes)?;
         }
         let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
         if leftover_bytes.len() > 0 {
@@ -85,8 +83,12 @@ impl<'a> DiagReader for DiagDevice<'a> {
     }
 }
 
-impl<'a> DiagDevice<'a> {
-    pub fn new(file: &'a File) -> DiagResult<Self> {
+impl DiagDevice {
+    pub fn new() -> DiagResult<Self> {
+        let file = std::fs::File::options()
+            .read(true)
+            .write(true)
+            .open("/dev/diag")?;
         let fd = file.as_raw_fd();
 
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
@@ -117,8 +119,8 @@ impl<'a> DiagDevice<'a> {
             data_type: DataType::UserSpace,
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
-            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes().unwrap(), &CRC_CCITT),
-        }.to_bytes().unwrap();
+            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes()?, &CRC_CCITT),
+        }.to_bytes()?;
         unsafe {
             let fd = self.file.as_raw_fd();
             let buf_ptr = buf.as_ptr() as *const libc::c_void;
