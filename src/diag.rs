@@ -219,12 +219,39 @@ impl LteRrcOtaPacket {
             LteRrcOtaPacket::V25 { sfn_subfn, .. } => *sfn_subfn,
         }
     }
-    pub fn get_sfn(&self) -> u16 {
-        self.get_sfn_subfn() >> 4
+    pub fn get_sfn(&self) -> u32 {
+        self.get_sfn_subfn() as u32 >> 4
     }
 
-    pub fn get_subfn(&self) -> u16 {
-        self.get_sfn_subfn() & 0xf
+    pub fn get_subfn(&self) -> u8 {
+        (self.get_sfn_subfn() & 0xf) as u8
+    }
+
+    pub fn get_pdu_num(&self) -> u8 {
+        match self {
+            LteRrcOtaPacket::V0 { pdu_num, .. } => *pdu_num,
+            LteRrcOtaPacket::V5 { pdu_num, .. } => *pdu_num,
+            LteRrcOtaPacket::V8 { pdu_num, .. } => *pdu_num,
+            LteRrcOtaPacket::V25 { pdu_num, .. } => *pdu_num,
+        }
+    }
+
+    pub fn get_earfcn(&self) -> u32 {
+        match self {
+            LteRrcOtaPacket::V0 { earfcn, .. } => *earfcn as u32,
+            LteRrcOtaPacket::V5 { earfcn, .. } => *earfcn as u32,
+            LteRrcOtaPacket::V8 { earfcn, .. } => *earfcn,
+            LteRrcOtaPacket::V25 { earfcn, .. } => *earfcn,
+        }
+    }
+
+    pub fn take_payload(self) -> Vec<u8> {
+        match self {
+            LteRrcOtaPacket::V0 { packet, .. } => packet,
+            LteRrcOtaPacket::V5 { packet, .. } => packet,
+            LteRrcOtaPacket::V8 { packet, .. } => packet,
+            LteRrcOtaPacket::V25 { packet, .. } => packet,
+        }
     }
 }
 
