@@ -1,11 +1,7 @@
-mod hdlc;
-mod diag;
-mod diag_device;
-mod log_codes;
+use wavehunter::diag_device::{DiagDevice, DiagResult};
+use wavehunter::diag_reader::DiagReader;
 
-use crate::diag_device::DiagDevice;
-
-fn main() -> diag_device::DiagResult<()> {
+fn main() -> DiagResult<()> {
     // this should eventually be removed for prod
     env_logger::init();
 
@@ -14,6 +10,7 @@ fn main() -> diag_device::DiagResult<()> {
         .write(true)
         .open("/dev/diag")?;
     let mut dev = DiagDevice::new(&file)?;
+    dev.enable_debug_mode("/data/wavehunter-debug")?;
     dev.config_logs()?;
 
     loop {

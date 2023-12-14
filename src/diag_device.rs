@@ -1,12 +1,13 @@
-use crate::hdlc::{hdlc_encapsulate, hdlc_decapsulate, HdlcError};
+use crate::hdlc::{hdlc_encapsulate, HdlcError};
 use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
+use crate::diag_reader::{DiagReader, CRC_CCITT};
+use crate::debug_file::DebugFileBlock;
 use crate::log_codes;
 
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::os::fd::AsRawFd;
 use thiserror::Error;
-use crc::{Crc, Algorithm};
 use deku::prelude::*;
 
 pub type DiagResult<T> = Result<T, DiagDeviceError>;
@@ -28,19 +29,6 @@ pub enum DiagDeviceError {
     #[error("Deku error {0}")]
     DekuError(#[from] DekuError),
 }
-
-// this is sorta based on the params qcsuper uses, plus what seems to be used in
-// https://github.com/fgsect/scat/blob/f1538b397721df3ab8ba12acd26716abcf21f78b/util.py#L47
-pub const CRC_CCITT_ALG: Algorithm<u16> = Algorithm {
-    poly: 0x1021,
-    init: 0xffff,
-    refin: true,
-    refout: true,
-    width: 16,
-    xorout: 0xffff,
-    check: 0x2189,
-    residue: 0x0000,
-};
 
 pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     // Layer 2:
@@ -70,9 +58,30 @@ const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
 pub struct DiagDevice<'a> {
     file: &'a File,
+    debug_file: Option<File>,
     read_buf: Vec<u8>,
     use_mdm: i32,
-    crc: Crc<u16>,
+}
+
+
+
+impl<'a> DiagReader for DiagDevice<'a> {
+    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
+        let bytes_read = self.file.read(&mut self.read_buf).unwrap();
+        if let Some(debug_file) = self.debug_file.as_mut() {
+            let debug_block = DebugFileBlock {
+                size: bytes_read as u32,
+                data: &self.read_buf[0..bytes_read],
+            };
+            let debug_block_bytes = debug_block.to_bytes().unwrap();
+            debug_file.write_all(&debug_block_bytes).unwrap();
+        }
+        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
+        if leftover_bytes.len() > 0 {
+            println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+        }
+        Ok(container)
+    }
 }
 
 impl<'a> DiagDevice<'a> {
@@ -85,51 +94,21 @@ impl<'a> DiagDevice<'a> {
         Ok(DiagDevice {
             read_buf: vec![0; BUFFER_LEN],
             file,
-            crc: Crc::<u16>::new(&CRC_CCITT_ALG),
+            debug_file: None,
             use_mdm,
         })
     }
 
-    fn parse_response_container(&self, container: MessagesContainer) -> DiagResult<Vec<Message>> {
-        let mut result = Vec::new();
-        for msg in container.messages {
-            for sub_msg in msg.data.split_inclusive(|&b| b == 0x7e) {
-                match hdlc_decapsulate(&sub_msg, &self.crc) {
-                    Ok(data) => match Message::from_bytes((&data, 0)) {
-                        Ok(((leftover_bytes, _), res)) => {
-                            if leftover_bytes.len() > 0 {
-                                println!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
-                            }
-                            result.push(res);
-                        },
-                        Err(e) => {
-                            println!("error parsing response: {:?}", e);
-                            println!("{:?}", data);
-                        },
-                    },
-                    Err(err) => {
-                        println!("error decapsulating response: {:?}", err);
-                        println!("{:?}", &sub_msg);
-                    }
-                }
-            }
-        }
-        Ok(result)
-    }
-
-    pub fn read_response(&mut self) -> DiagResult<Vec<Message>> {
-        loop {
-            let bytes_read = self.file.read(&mut self.read_buf).unwrap();
-            let ((leftover_bytes, _), res_container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
-            if leftover_bytes.len() > 0 {
-                println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
-            }
-            if res_container.data_type == DataType::UserSpace {
-                return self.parse_response_container(res_container);
-            } else {
-                println!("skipping non-userspace message...")
-            }
-        }
+    // Creates a file at the given path where all binary output from /dev/diag
+    // will be recorded.
+    pub fn enable_debug_mode<P>(&mut self, path: P) -> DiagResult<()> where P: AsRef<std::path::Path> {
+        let debug_file = std::fs::File::options()
+            .create(true)
+            .write(true)
+            .open(path)?;
+        println!("enabling debug mode, writing debug output to {:?}", debug_file);
+        self.debug_file = Some(debug_file);
+        Ok(())
     }
 
     pub fn write_request(&mut self, req: &Request) -> DiagResult<()> {
@@ -137,7 +116,7 @@ impl<'a> DiagDevice<'a> {
             data_type: DataType::UserSpace,
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
-            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes().unwrap(), &self.crc),
+            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes().unwrap(), &CRC_CCITT),
         }.to_bytes().unwrap();
         unsafe {
             let fd = self.file.as_raw_fd();
