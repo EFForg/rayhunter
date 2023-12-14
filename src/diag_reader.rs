@@ -3,6 +3,7 @@ use crate::diag_device::DiagResult;
 
 use crc::{Crc, Algorithm};
 use deku::prelude::*;
+use log::{debug, info, warn, error};
 
 // this is sorta based on the params qcsuper uses, plus what seems to be used in
 // https://github.com/fgsect/scat/blob/f1538b397721df3ab8ba12acd26716abcf21f78b/util.py#L47
@@ -27,7 +28,7 @@ pub trait DiagReader {
             if container.data_type == DataType::UserSpace {
                 return self.parse_response_container(container);
             } else {
-                println!("skipping non-userspace message...")
+                info!("skipping non-userspace message...")
             }
         }
     }
@@ -40,18 +41,18 @@ pub trait DiagReader {
                     Ok(data) => match Message::from_bytes((&data, 0)) {
                         Ok(((leftover_bytes, _), res)) => {
                             if leftover_bytes.len() > 0 {
-                                println!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
+                                warn!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
                             }
                             result.push(res);
                         },
                         Err(e) => {
-                            println!("error parsing response: {:?}", e);
-                            println!("{:?}", data);
+                            error!("error parsing response: {:?}", e);
+                            debug!("{:?}", data);
                         },
                     },
                     Err(err) => {
-                        println!("error decapsulating response: {:?}", err);
-                        println!("{:?}", &sub_msg);
+                        error!("error decapsulating response: {:?}", err);
+                        debug!("{:?}", &sub_msg);
                     }
                 }
             }

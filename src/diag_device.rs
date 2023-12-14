@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::os::fd::AsRawFd;
 use thiserror::Error;
+use log::{info, warn, error};
 use deku::prelude::*;
 
 pub type DiagResult<T> = Result<T, DiagDeviceError>;
@@ -78,7 +79,7 @@ impl<'a> DiagReader for DiagDevice<'a> {
         }
         let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
         if leftover_bytes.len() > 0 {
-            println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+            warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
         }
         Ok(container)
     }
@@ -106,7 +107,7 @@ impl<'a> DiagDevice<'a> {
             .create(true)
             .write(true)
             .open(path)?;
-        println!("enabling debug mode, writing debug output to {:?}", debug_file);
+        info!("enabling debug mode, writing debug output to {:?}", debug_file);
         self.debug_file = Some(debug_file);
         Ok(())
     }
@@ -136,7 +137,7 @@ impl<'a> DiagDevice<'a> {
 
         for msg in self.read_response()? {
             match msg {
-                Message::Log { .. } => println!("skipping log response..."),
+                Message::Log { .. } => info!("skipping log response..."),
                 Message::Response { payload, status, .. } => match payload {
                     ResponsePayload::LogConfig(LogConfigResponse::RetrieveIdRanges { log_mask_sizes }) => {
                         if status != 0 {
@@ -144,7 +145,7 @@ impl<'a> DiagDevice<'a> {
                         }
                         return Ok(log_mask_sizes);
                     },
-                    _ => println!("skipping non-LogConfigResponse response..."),
+                    _ => info!("skipping non-LogConfigResponse response..."),
                 },
             }
         }
@@ -158,7 +159,7 @@ impl<'a> DiagDevice<'a> {
 
         for msg in self.read_response()? {
             match msg {
-                Message::Log { .. } => println!("skipping log response..."),
+                Message::Log { .. } => info!("skipping log response..."),
                 Message::Response { payload, status, .. } => {
                     if let ResponsePayload::LogConfig(LogConfigResponse::SetMask) = payload {
                         if status != 0 {
@@ -174,13 +175,13 @@ impl<'a> DiagDevice<'a> {
     }
 
     pub fn config_logs(&mut self) -> DiagResult<()> {
-        println!("retrieving diag logging capabilities...");
+        info!("retrieving diag logging capabilities...");
         let log_mask_sizes = self.retrieve_id_ranges()?;
 
         for (log_type, &log_mask_bitsize) in log_mask_sizes.iter().enumerate() {
             if log_mask_bitsize > 0 {
                 self.set_log_mask(log_type as u32, log_mask_bitsize)?;
-                println!("enabled logging for log type {}", log_type);
+                info!("enabled logging for log type {}", log_type);
             }
         }
 
