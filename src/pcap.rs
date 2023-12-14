@@ -27,6 +27,7 @@ pub struct PcapFile {
     ip_id: u16,
 }
 
+const IP_HEADER_LEN: u16 = 20;
 #[derive(DekuWrite)]
 #[deku(endian = "big")]
 struct IpHeader {
@@ -43,6 +44,8 @@ struct IpHeader {
     dst_addr: u32,
 }
 
+const UDP_HEADER_LEN: u16 = 8;
+const GSMTAP_PORT: u16 = 4729;
 #[derive(DekuWrite)]
 #[deku(endian = "big")]
 struct UdpHeader {
@@ -74,12 +77,16 @@ impl PcapFile {
 
     pub fn write_gsmtap_message(&mut self, msg: GsmtapMessage, timestamp: Timestamp) -> Result<(), PcapFileError> {
         let time_since_epoch = timestamp.to_datetime().signed_duration_since(DateTime::UNIX_EPOCH);
-        let duration = std::time::Duration::new(time_since_epoch.num_seconds() as u64, time_since_epoch.num_nanoseconds().unwrap() as u32);
+        let secs_since_epoch = time_since_epoch.num_seconds() as u64;
+        let nsecs_since_epoch = time_since_epoch.num_nanoseconds().unwrap_or(0) as u32;
+        // FIXME: although the duration value is correct here, when it shows up in
+        // the pcap it's WAY off, like in the year 55920
+        let duration = std::time::Duration::new(secs_since_epoch, nsecs_since_epoch);
         let msg_bytes = msg.to_bytes()?;
         let ip_header = IpHeader {
             version_and_ihl: 0x45,
             dscp: 0,
-            total_len: msg_bytes.len() as u16 + 20 + 8,
+            total_len: msg_bytes.len() as u16 + IP_HEADER_LEN + UDP_HEADER_LEN,
             identification: self.ip_id,
             flags_and_frag_offset: 0x40,
             idk: 0,
@@ -91,8 +98,8 @@ impl PcapFile {
         };
         let udp_header = UdpHeader {
             src_port: 13337,
-            dst_port: 4729,
-            length: msg_bytes.len() as u16 + 8,
+            dst_port: GSMTAP_PORT,
+            length: msg_bytes.len() as u16 + UDP_HEADER_LEN,
             checksum: 0xffff,
         };
         let mut data: Vec<u8> = Vec::new();
