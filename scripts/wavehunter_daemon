@@ -1,16 +1,17 @@
-#! /bin/sh
+#! /bin/sshell
 
 set -e
 
 case "$1" in
 start)
     echo -n "Starting wavehunter: "
-    start-stop-daemon -S -b -a /data/wavehunter
+    start-stop-daemon -S -b --make-pidfile --pidfile /tmp/wavehunter.pid \
+    --startas /bin/bash -- -c "exec /data/wavehunter > /data/wavehunter.log 2>&1"
     echo "done"
     ;;
   stop)
     echo -n "Stopping wavehunter: "
-    start-stop-daemon -K -n /data/wavehunter
+    start-stop-daemon -K -p /tmp/wavehunter.pid
     echo "done"
     ;;
   restart)
