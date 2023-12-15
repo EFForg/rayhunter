@@ -1,2 +1,2 @@
-cross rustc --target armv7-unknown-linux-gnueabihf --  -C target-feature=+crt-static
-adb push target/armv7-unknown-linux-gnueabihf/debug/diag /tmp/diag
+cargo build
+adb push target/armv7-unknown-linux-gnueabihf/debug/wavehunter /tmp/wavehunter

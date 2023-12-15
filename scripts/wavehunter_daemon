@@ -1,0 +1,26 @@
+#! /bin/sh
+
+set -e
+
+case "$1" in
+start)
+    echo -n "Starting wavehunter: "
+    start-stop-daemon -S -b -a /data/wavehunter
+    echo "done"
+    ;;
+  stop)
+    echo -n "Stopping wavehunter: "
+    start-stop-daemon -K -n /data/wavehunter
+    echo "done"
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "Usage atfwd_daemon{ start | stop | restart }" >&2
+    exit 1
+    ;;
+esac
+
+exit 0
