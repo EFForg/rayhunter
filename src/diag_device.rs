@@ -69,9 +69,7 @@ impl DiagReader for DiagDevice {
         let mut bytes_read;
         loop {
             bytes_read = self.file.read(&mut self.read_buf)?;
-            if bytes_read == 0 {
-                println!("read 0 bytes from /dev/diag, retrying...");
-            } else {
+            if bytes_read > 0 {
                 break;
             }
         }
