@@ -5,6 +5,7 @@ use crate::diag::*;
 use deku::prelude::*;
 use std::fs::File;
 use std::io::Read;
+use log::{warn, info};
 
 #[derive(Debug, DekuRead, DekuWrite)]
 #[deku(endian = "little")]
@@ -27,13 +28,12 @@ impl DebugFileReader {
     }
 }
 
-
 impl DiagReader for DebugFileReader {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
         let mut bytes_read_buf = [0; 4];
         if let Err(e) = self.file.read_exact(&mut bytes_read_buf) {
             if e.kind() == std::io::ErrorKind::UnexpectedEof {
-                println!("reached end of debug file, exiting...");
+                info!("reached end of debug file, exiting...");
                 std::process::exit(0);
             }
             return Err(e.into());
@@ -43,7 +43,7 @@ impl DiagReader for DebugFileReader {
         self.file.read_exact(&mut data)?;
         let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&data, 0))?;
         if leftover_bytes.len() > 0 {
-            println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+            warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
         }
         Ok(container)
     }

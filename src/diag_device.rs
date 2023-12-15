@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::os::fd::AsRawFd;
 use thiserror::Error;
+use log::{info, warn, error};
 use deku::prelude::*;
 
 pub type DiagResult<T> = Result<T, DiagDeviceError>;
@@ -56,16 +57,14 @@ const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
-pub struct DiagDevice<'a> {
-    file: &'a File,
+pub struct DiagDevice {
+    file: File,
     debug_file: Option<File>,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
 
-
-
-impl<'a> DiagReader for DiagDevice<'a> {
+impl DiagReader for DiagDevice {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
         let mut bytes_read;
         loop {
@@ -81,19 +80,23 @@ impl<'a> DiagReader for DiagDevice<'a> {
                 size: bytes_read as u32,
                 data: &self.read_buf[0..bytes_read],
             };
-            let debug_block_bytes = debug_block.to_bytes().unwrap();
-            debug_file.write_all(&debug_block_bytes).unwrap();
+            let debug_block_bytes = debug_block.to_bytes()?;
+            debug_file.write_all(&debug_block_bytes)?;
         }
         let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
         if leftover_bytes.len() > 0 {
-            println!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+            warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
         }
         Ok(container)
     }
 }
 
-impl<'a> DiagDevice<'a> {
-    pub fn new(file: &'a File) -> DiagResult<Self> {
+impl DiagDevice {
+    pub fn new() -> DiagResult<Self> {
+        let file = std::fs::File::options()
+            .read(true)
+            .write(true)
+            .open("/dev/diag")?;
         let fd = file.as_raw_fd();
 
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
@@ -114,7 +117,7 @@ impl<'a> DiagDevice<'a> {
             .create(true)
             .write(true)
             .open(path)?;
-        println!("enabling debug mode, writing debug output to {:?}", debug_file);
+        info!("enabling debug mode, writing debug output to {:?}", debug_file);
         self.debug_file = Some(debug_file);
         Ok(())
     }
@@ -124,8 +127,8 @@ impl<'a> DiagDevice<'a> {
             data_type: DataType::UserSpace,
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
-            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes().unwrap(), &CRC_CCITT),
-        }.to_bytes().unwrap();
+            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes()?, &CRC_CCITT),
+        }.to_bytes()?;
         unsafe {
             let fd = self.file.as_raw_fd();
             let buf_ptr = buf.as_ptr() as *const libc::c_void;
@@ -144,7 +147,7 @@ impl<'a> DiagDevice<'a> {
 
         for msg in self.read_response()? {
             match msg {
-                Message::Log { .. } => println!("skipping log response..."),
+                Message::Log { .. } => info!("skipping log response..."),
                 Message::Response { payload, status, .. } => match payload {
                     ResponsePayload::LogConfig(LogConfigResponse::RetrieveIdRanges { log_mask_sizes }) => {
                         if status != 0 {
@@ -152,7 +155,7 @@ impl<'a> DiagDevice<'a> {
                         }
                         return Ok(log_mask_sizes);
                     },
-                    _ => println!("skipping non-LogConfigResponse response..."),
+                    _ => info!("skipping non-LogConfigResponse response..."),
                 },
             }
         }
@@ -166,7 +169,7 @@ impl<'a> DiagDevice<'a> {
 
         for msg in self.read_response()? {
             match msg {
-                Message::Log { .. } => println!("skipping log response..."),
+                Message::Log { .. } => info!("skipping log response..."),
                 Message::Response { payload, status, .. } => {
                     if let ResponsePayload::LogConfig(LogConfigResponse::SetMask) = payload {
                         if status != 0 {
@@ -182,13 +185,13 @@ impl<'a> DiagDevice<'a> {
     }
 
     pub fn config_logs(&mut self) -> DiagResult<()> {
-        println!("retrieving diag logging capabilities...");
+        info!("retrieving diag logging capabilities...");
         let log_mask_sizes = self.retrieve_id_ranges()?;
 
         for (log_type, &log_mask_bitsize) in log_mask_sizes.iter().enumerate() {
             if log_mask_bitsize > 0 {
                 self.set_log_mask(log_type as u32, log_mask_bitsize)?;
-                println!("enabled logging for log type {}", log_type);
+                info!("enabled logging for log type {}", log_type);
             }
         }
 
