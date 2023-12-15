@@ -67,7 +67,15 @@ pub struct DiagDevice<'a> {
 
 impl<'a> DiagReader for DiagDevice<'a> {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
-        let bytes_read = self.file.read(&mut self.read_buf).unwrap();
+        let mut bytes_read;
+        loop {
+            bytes_read = self.file.read(&mut self.read_buf)?;
+            if bytes_read == 0 {
+                println!("read 0 bytes from /dev/diag, retrying...");
+            } else {
+                break;
+            }
+        }
         if let Some(debug_file) = self.debug_file.as_mut() {
             let debug_block = DebugFileBlock {
                 size: bytes_read as u32,
