@@ -9,11 +9,14 @@ fn main() -> DiagResult<()> {
     env_logger::init();
 
     let mut dev = DiagDevice::new()?;
-    dev.enable_debug_mode("/data/wavehunter-debug")?;
+    dev.enable_debug_mode("/data/wavehunter/wavehunter-debug")?;
     dev.config_logs()?;
 
+    println!("The orca is hunting for stingrays...");
+
     let mut gsmtap_parser = GsmtapParser::new();
-    let mut pcap_file = PcapFile::new("/data/wavehunter.pcap").unwrap();
+    // We are going to want to add a timestamp to this pcap file eventually
+    let mut pcap_file = PcapFile::new("/data/wavehunter/wavehunter.pcap").unwrap();
     pcap_file.write_iface_header().unwrap();
 
     loop {
