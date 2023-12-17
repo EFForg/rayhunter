@@ -19,7 +19,7 @@ start)
     $0 start
     ;;
   *)
-    echo "Usage atfwd_daemon{ start | stop | restart }" >&2
+    echo "Usage wavehunter_daemon{ start | stop | restart }" >&2
     exit 1
     ;;
 esac
