@@ -1,5 +1,6 @@
 //! Enumerates some releVant diag log codes. Copied from QCSuper
 
+#![allow(unused)]
 
 // These are 2G-related log types.
 
