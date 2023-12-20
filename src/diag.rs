@@ -68,6 +68,7 @@ pub enum Message {
         inner_length: u16,
         log_type: u16,
         timestamp: Timestamp,
+        // pass the log type and log length (inner_length - (sizeof(log_type) + sizeof(timestamp)))
         #[deku(ctx = "*log_type, *inner_length - 12")]
         body: LogBody,
     },
@@ -130,7 +131,7 @@ pub enum LogBody {
         rrc_rel: u8,
         rrc_version_minor: u8,
         rrc_version_major: u8,
-        // is this right?? based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/src/scat/parsers/qualcomm/diagltelogparser.py#L1327
+        // message length = hdr_len - (sizeof(ext_header_version) + sizeof(rrc_rel) + sizeof(rrc_version_minor) + sizeof(rrc_version_major))
         #[deku(count = "hdr_len - 4")]
         msg: Vec<u8>,
     },
