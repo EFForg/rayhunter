@@ -21,9 +21,17 @@ pub enum GsmtapType {
     LteMacFramed, /* LTE MAC with context hdr */
     OsmocoreLog, /* libosmocore logging */
     QcDiag, /* Qualcomm DIAG frame */
-    LteNas, /* LTE Non-Access Stratum */
+    LteNas(LteNasSubtype), /* LTE Non-Access Stratum */
     E1T1, /* E1/T1 Lines */
     GsmRlp, /* GSM RLP frames as per 3GPP TS 24.022 */
+}
+
+// based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/src/scat/parsers/qualcomm/diagltelogparser.py#L1337
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum LteNasSubtype {
+    Plain = 0,
+    Secure = 1,
 }
 
 #[repr(u8)]
@@ -162,7 +170,7 @@ impl GsmtapType {
             GsmtapType::LteMacFramed => 0x0f,
             GsmtapType::OsmocoreLog => 0x10,
             GsmtapType::QcDiag => 0x11,
-            GsmtapType::LteNas => 0x12,
+            GsmtapType::LteNas(_) => 0x12,
             GsmtapType::E1T1 => 0x13,
             GsmtapType::GsmRlp => 0x14,
         }
@@ -173,6 +181,7 @@ impl GsmtapType {
             GsmtapType::Um(subtype) => *subtype as u8,
             GsmtapType::UmtsRrc(subtype) => *subtype as u8,
             GsmtapType::LteRrc(subtype) => *subtype as u8,
+            GsmtapType::LteNas(subtype) => *subtype as u8,
             _ => 0,
         }
     }

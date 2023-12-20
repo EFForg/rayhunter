@@ -116,6 +116,14 @@ impl GsmtapParser {
                     payload: packet.take_payload(),
                 }))
             },
+            LogBody::Nas4GMessage { msg, .. } => {
+                // currently we only handle "plain" (i.e. non-secure) NAS messages
+                let header = GsmtapHeader::new(GsmtapType::LteNas(LteNasSubtype::Plain));
+                Ok(Some(GsmtapMessage {
+                    header,
+                    payload: msg,
+                }))
+            },
             _ => {
                 error!("gsmtap_sink: ignoring unhandled log type: {:?}", value);
                 Ok(None)

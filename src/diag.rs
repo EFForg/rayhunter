@@ -119,6 +119,11 @@ pub enum LogBody {
         #[deku(ctx = "*ext_header_version")]
         packet: LteRrcOtaPacket,
     },
+    // the four NAS command opcodes refer to:
+    // * 0xb0e2: plain ESM NAS message (incoming)
+    // * 0xb0e3: plain ESM NAS message (outgoing)
+    // * 0xb0ec: plain EMM NAS message (incoming)
+    // * 0xb0ed: plain EMM NAS message (outgoing)
     #[deku(id_pat = "0xb0e2 | 0xb0e3 | 0xb0ec | 0xb0ed")]
     Nas4GMessage {
         ext_header_version: u8,
@@ -132,7 +137,7 @@ pub enum LogBody {
     #[deku(id = "0x11eb")]
     IpTraffic {
         // is this right?? based on https://github.com/P1sec/QCSuper/blob/81dbaeee15ec7747e899daa8e3495e27cdcc1264/src/modules/pcap_dump.py#L378
-        #[deku(count = "hdr_len - 8")] // is this right???
+        #[deku(count = "hdr_len - 8")]
         msg: Vec<u8>,
     },
     #[deku(id = "0x713a")]
