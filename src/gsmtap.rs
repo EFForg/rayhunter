@@ -189,14 +189,14 @@ pub struct GsmtapHeader {
     #[deku(assert_eq = "4")]
     pub header_len: u8, // length in 4-byte words
     #[deku(update = "self.gsmtap_type.get_type()")]
-    packet_type: u8,
+    pub packet_type: u8,
     pub timeslot: u8,
     pub arfcn: u16,
     pub signal_dbm: i8,
     pub signal_noise_ratio_db: u8,
     pub frame_number: u32,
     #[deku(update = "self.gsmtap_type.get_subtype()")]
-    subtype: u8,
+    pub subtype: u8,
     pub antenna_number: u8,
     pub subslot: u8,
     #[deku(assert_eq = "0")]
