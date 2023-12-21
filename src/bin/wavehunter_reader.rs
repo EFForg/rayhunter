@@ -1,6 +1,6 @@
 use wavehunter::debug_file::DebugFileReader;
 use wavehunter::diag_reader::DiagReader;
-use wavehunter::diag_device::DiagResult;
+use wavehunter::diag_device::{DiagResult, DiagDeviceError};
 use wavehunter::gsmtap_parser::GsmtapParser;
 use wavehunter::pcap::PcapFile;
 
@@ -21,12 +21,21 @@ fn main() -> DiagResult<()> {
     pcap_file.write_iface_header().unwrap();
 
     loop {
-        for msg in debug_reader.read_response()? {
-            debug!("msg: {:?}", msg);
-            if let Some((timestamp, gsmtap_msg)) = gsmtap_parser.recv_message(msg).unwrap() {
-                debug!("gsmtap_msg: {:?}", gsmtap_msg);
-                pcap_file.write_gsmtap_message(gsmtap_msg, timestamp).unwrap();
-            }
+        match debug_reader.read_response() {
+            Ok(msgs) => {
+                for msg in msgs {
+                    debug!("msg: {:?}", msg);
+                    if let Some((timestamp, gsmtap_msg)) = gsmtap_parser.recv_message(msg).unwrap() {
+                        debug!("gsmtap_msg: {:?}", gsmtap_msg);
+                        pcap_file.write_gsmtap_message(gsmtap_msg, timestamp).unwrap();
+                    }
+                }
+            },
+            Err(DiagDeviceError::IO(err)) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
+                println!("Reached end of debug file, exiting...");
+                std::process::exit(0);
+            },
+            Err(err) => panic!("Error reading debug file {}", err),
         }
     }
 }
