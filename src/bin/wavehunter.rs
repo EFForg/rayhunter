@@ -75,12 +75,21 @@ fn main() -> Result<(), WavehunterError> {
         .map_err(WavehunterError::PcapFileWriteError)?;
 
     loop {
-        for msg in dev.read_response().map_err(WavehunterError::DiagReadError)? {
-            debug!("msg: {:?}", msg);
-            if let Some((timestamp, gsmtap_msg)) = gsmtap_parser.recv_message(msg).map_err(WavehunterError::GsmtapParsingError)? {
-                debug!("gsmtap_msg: {:?}", gsmtap_msg);
-                pcap_file.write_gsmtap_message(gsmtap_msg, timestamp)
-                    .map_err(WavehunterError::PcapFileWriteError)?;
+        for maybe_msg in dev.read_response().map_err(WavehunterError::DiagReadError)? {
+            match maybe_msg {
+                Ok(msg) => {
+                    debug!("msg: {:?}", msg);
+                    let maybe_gsmtap_msg = gsmtap_parser.recv_message(msg)
+                        .map_err(WavehunterError::GsmtapParsingError)?;
+                    if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
+                        debug!("gsmtap_msg: {:?}", gsmtap_msg);
+                        pcap_file.write_gsmtap_message(gsmtap_msg, timestamp)
+                            .map_err(WavehunterError::PcapFileWriteError)?;
+                    }
+                },
+                Err(e) => {
+                    dbg!("error parsing message: {:?}", e);
+                },
             }
         }
     }

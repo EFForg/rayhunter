@@ -1,9 +1,11 @@
 use crate::diag;
 use crate::{diag::*, hdlc::hdlc_decapsulate};
+use crate::hdlc;
 
 use crc::{Crc, Algorithm};
 use deku::prelude::*;
-use log::{debug, info, warn, error};
+use log::{info, warn, error};
+use thiserror::Error;
 
 // this is sorta based on the params qcsuper uses, plus what seems to be used in
 // https://github.com/fgsect/scat/blob/f1538b397721df3ab8ba12acd26716abcf21f78b/util.py#L47
@@ -19,12 +21,22 @@ pub const CRC_CCITT_ALG: Algorithm<u16> = Algorithm {
 };
 pub const CRC_CCITT: Crc<u16> = Crc::<u16>::new(&CRC_CCITT_ALG);
 
+#[derive(Debug, Error)]
+pub enum DiagParsingError {
+    #[error("Failed to parse Message: {0}, data: {1:?}")]
+    MessageParsingError(deku::DekuError, Vec<u8>),
+    #[error("HDLC decapsulation of message failed: {0}, data: {1:?}")]
+    HdlcDecapsulationError(hdlc::HdlcError, Vec<u8>),
+}
+
+type MaybeMessage = Result<Message, DiagParsingError>;
+
 pub trait DiagReader {
     type Err;
 
     fn get_next_messages_container(&mut self) -> Result<MessagesContainer, Self::Err>;
 
-    fn read_response(&mut self) -> Result<Vec<Message>, Self::Err> {
+    fn read_response(&mut self) -> Result<Vec<MaybeMessage>, Self::Err> {
         loop {
             let container = self.get_next_messages_container()?;
             if container.data_type == DataType::UserSpace {
@@ -35,7 +47,7 @@ pub trait DiagReader {
         }
     }
 
-    fn parse_response_container(&self, container: MessagesContainer) -> Result<Vec<Message>, Self::Err> {
+    fn parse_response_container(&self, container: MessagesContainer) -> Result<Vec<MaybeMessage>, Self::Err> {
         let mut result = Vec::new();
         for msg in container.messages {
             for sub_msg in msg.data.split_inclusive(|&b| b == diag::MESSAGE_TERMINATOR) {
@@ -45,16 +57,14 @@ pub trait DiagReader {
                             if leftover_bytes.len() > 0 {
                                 warn!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
                             }
-                            result.push(res);
+                            result.push(Ok(res));
                         },
                         Err(e) => {
-                            error!("error parsing response: {:?}", e);
-                            debug!("{:?}", data);
+                            result.push(Err(DiagParsingError::MessageParsingError(e, data)));
                         },
                     },
                     Err(err) => {
-                        error!("error decapsulating response: {:?}", err);
-                        debug!("{:?}", &sub_msg);
+                        result.push(Err(DiagParsingError::HdlcDecapsulationError(err, sub_msg.to_vec())));
                     }
                 }
             }

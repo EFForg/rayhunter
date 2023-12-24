@@ -20,21 +20,21 @@ fn main() {
     pcap_file.write_iface_header().unwrap();
 
     loop {
-        match qmdl_reader.read_response() {
-            Ok(msgs) => {
-                for msg in msgs {
+        for maybe_msg in qmdl_reader.read_response().expect("error reading qmdl file") {
+            match maybe_msg {
+                Ok(msg) => {
                     debug!("msg: {:?}", msg);
-                    if let Some((timestamp, gsmtap_msg)) = gsmtap_parser.recv_message(msg).unwrap() {
+                    let maybe_gsmtap_msg = gsmtap_parser.recv_message(msg).expect("error parsing gsmtap message");
+                    if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
                         debug!("gsmtap_msg: {:?}", gsmtap_msg);
-                        pcap_file.write_gsmtap_message(gsmtap_msg, timestamp).unwrap();
+                        pcap_file.write_gsmtap_message(gsmtap_msg, timestamp)
+                            .expect("error writing pcap packet");
                     }
-                }
-            },
-            Err(err) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
-                println!("Reached end of QMDL file, exiting...");
-                std::process::exit(0);
-            },
-            Err(err) => panic!("Error reading QMDL file {}", err),
+                },
+                Err(e) => {
+                    dbg!("error parsing message: {:?}", e);
+                },
+            }
         }
     }
 }

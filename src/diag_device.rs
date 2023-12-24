@@ -137,8 +137,8 @@ impl DiagDevice {
 
         for msg in self.read_response()? {
             match msg {
-                Message::Log { .. } => info!("skipping log response..."),
-                Message::Response { payload, status, .. } => match payload {
+                Ok(Message::Log { .. }) => info!("skipping log response..."),
+                Ok(Message::Response { payload, status, .. }) => match payload {
                     ResponsePayload::LogConfig(LogConfigResponse::RetrieveIdRanges { log_mask_sizes }) => {
                         if status != 0 {
                             return Err(DiagDeviceError::RequestFailed(status, req));
@@ -147,6 +147,7 @@ impl DiagDevice {
                     },
                     _ => info!("skipping non-LogConfigResponse response..."),
                 },
+                Err(e) => error!("error parsing message: {:?}", e),
             }
         }
 
@@ -159,8 +160,8 @@ impl DiagDevice {
 
         for msg in self.read_response()? {
             match msg {
-                Message::Log { .. } => info!("skipping log response..."),
-                Message::Response { payload, status, .. } => {
+                Ok(Message::Log { .. }) => info!("skipping log response..."),
+                Ok(Message::Response { payload, status, .. }) => {
                     if let ResponsePayload::LogConfig(LogConfigResponse::SetMask) = payload {
                         if status != 0 {
                             return Err(DiagDeviceError::RequestFailed(status, req));
@@ -168,6 +169,7 @@ impl DiagDevice {
                         return Ok(());
                     }
                 },
+                Err(e) => error!("error parsing message: {:?}", e),
             }
         }
 
