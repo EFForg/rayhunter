@@ -3,6 +3,12 @@
 use chrono::{DateTime, FixedOffset};
 use deku::prelude::*;
 
+pub const MESSAGE_TERMINATOR: u8 = 0x7e;
+pub const MESSAGE_ESCAPE_CHAR: u8 = 0x7d;
+
+pub const ESCAPED_MESSAGE_TERMINATOR: u8 = 0x5e;
+pub const ESCAPED_MESSAGE_ESCAPE_CHAR: u8 = 0x5d;
+
 #[derive(Debug, Clone, DekuWrite)]
 pub struct RequestContainer {
     pub data_type: DataType,

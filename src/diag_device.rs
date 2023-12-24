@@ -1,11 +1,11 @@
 use crate::hdlc::{hdlc_encapsulate, HdlcError};
 use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
 use crate::diag_reader::{DiagReader, CRC_CCITT};
-use crate::debug_file::DebugFileBlock;
+use crate::qmdl::QmdlFileWriter;
 use crate::log_codes;
 
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::os::fd::AsRawFd;
 use thiserror::Error;
 use log::{info, warn, error};
@@ -59,7 +59,7 @@ const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
 pub struct DiagDevice {
     file: File,
-    debug_file: Option<File>,
+    pub qmdl_file: QmdlFileWriter,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
@@ -70,51 +70,34 @@ impl DiagReader for DiagDevice {
         while bytes_read == 0 {
             bytes_read = self.file.read(&mut self.read_buf)?;
         }
-        if let Some(debug_file) = self.debug_file.as_mut() {
-            let debug_block = DebugFileBlock {
-                size: bytes_read as u32,
-                data: &self.read_buf[0..bytes_read],
-            };
-            let debug_block_bytes = debug_block.to_bytes()?;
-            debug_file.write_all(&debug_block_bytes)?;
-        }
         let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
         if leftover_bytes.len() > 0 {
             warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
         }
+        self.qmdl_file.write_container(&container)?;
         Ok(container)
     }
 }
 
 impl DiagDevice {
-    pub fn new() -> DiagResult<Self> {
-        let file = std::fs::File::options()
+    pub fn new<P>(qmdl_path: P) -> DiagResult<Self> where P: AsRef<std::path::Path> {
+        let diag_file = std::fs::File::options()
             .read(true)
             .write(true)
             .open("/dev/diag")?;
-        let fd = file.as_raw_fd();
+        let fd = diag_file.as_raw_fd();
+
+        let qmdl_file = QmdlFileWriter::new(qmdl_path)?;
 
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
         let use_mdm = determine_use_mdm(fd)?;
 
         Ok(DiagDevice {
             read_buf: vec![0; BUFFER_LEN],
-            file,
-            debug_file: None,
+            file: diag_file,
+            qmdl_file,
             use_mdm,
         })
-    }
-
-    // Creates a file at the given path where all binary output from /dev/diag
-    // will be recorded.
-    pub fn enable_debug_mode<P>(&mut self, path: P) -> DiagResult<()> where P: AsRef<std::path::Path> {
-        let debug_file = std::fs::File::options()
-            .create(true)
-            .write(true)
-            .open(path)?;
-        info!("enabling debug mode, writing debug output to {:?}", debug_file);
-        self.debug_file = Some(debug_file);
-        Ok(())
     }
 
     pub fn write_request(&mut self, req: &Request) -> DiagResult<()> {

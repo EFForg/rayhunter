@@ -1,3 +1,4 @@
+use crate::diag;
 use crate::{diag::*, hdlc::hdlc_decapsulate};
 use crate::diag_device::DiagResult;
 
@@ -36,7 +37,7 @@ pub trait DiagReader {
     fn parse_response_container(&self, container: MessagesContainer) -> DiagResult<Vec<Message>> {
         let mut result = Vec::new();
         for msg in container.messages {
-            for sub_msg in msg.data.split_inclusive(|&b| b == 0x7e) {
+            for sub_msg in msg.data.split_inclusive(|&b| b == diag::MESSAGE_TERMINATOR) {
                 match hdlc_decapsulate(&sub_msg, &CRC_CCITT) {
                     Ok(data) => match Message::from_bytes((&data, 0)) {
                         Ok(((leftover_bytes, _), res)) => {

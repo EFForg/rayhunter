@@ -7,6 +7,8 @@ use crc::Crc;
 use bytes::Buf;
 use thiserror::Error;
 
+use crate::diag::{MESSAGE_ESCAPE_CHAR, MESSAGE_TERMINATOR, ESCAPED_MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR};
+
 #[derive(Debug, Error, PartialEq)]
 pub enum HdlcError {
     #[error("Invalid checksum (expected {0}, got {1})")]
@@ -22,25 +24,25 @@ pub enum HdlcError {
 }
 
 pub fn hdlc_encapsulate(data: &[u8], crc: &Crc<u16>) -> Vec<u8> {
-    let mut result: Vec<u8> = vec![];
+    let mut result: Vec<u8> = Vec::with_capacity(data.len());
 
     for &b in data {
         match b {
-            0x7e => result.extend([0x7d, 0x5e]),
-            0x7d => result.extend([0x7d, 0x5d]),
+            MESSAGE_TERMINATOR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR]),
+            MESSAGE_ESCAPE_CHAR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_ESCAPE_CHAR]),
             _ => result.push(b),
         }
     }
 
     for b in crc.checksum(&data).to_le_bytes() {
         match b {
-            0x7e => result.extend([0x7d, 0x5e]),
-            0x7d => result.extend([0x7d, 0x5d]),
+            MESSAGE_TERMINATOR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR]),
+            MESSAGE_ESCAPE_CHAR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_ESCAPE_CHAR]),
             _ => result.push(b),
         }
     }
 
-    result.push(0x7e);
+    result.push(MESSAGE_TERMINATOR);
     result
 }
 
@@ -49,21 +51,21 @@ pub fn hdlc_decapsulate(data: &[u8], crc: &Crc<u16>) -> Result<Vec<u8>, HdlcErro
         return Err(HdlcError::TooShort);
     }
 
-    if data[data.len() - 1] != 0x7e {
+    if data[data.len() - 1] != MESSAGE_TERMINATOR {
         return Err(HdlcError::NoTrailingCharacter(data[data.len() - 1]));
     }
 
-    let mut unescaped = Vec::new();
+    let mut unescaped = Vec::with_capacity(data.len());
     let mut escaping = false;
     for &b in &data[..data.len() - 1] {
         if escaping {
             match b {
-                0x5e => unescaped.push(0x7e),
-                0x5d => unescaped.push(0x7d),
+                ESCAPED_MESSAGE_TERMINATOR => unescaped.push(MESSAGE_TERMINATOR),
+                ESCAPED_MESSAGE_ESCAPE_CHAR => unescaped.push(MESSAGE_ESCAPE_CHAR),
                 _ => return Err(HdlcError::InvalidEscapeSequence(b)),
             }
             escaping = false;
-        } else if b == 0x7d {
+        } else if b == MESSAGE_ESCAPE_CHAR {
             escaping = true
         } else {
             unescaped.push(b);

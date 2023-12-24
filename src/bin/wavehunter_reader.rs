@@ -1,4 +1,4 @@
-use wavehunter::debug_file::DebugFileReader;
+use wavehunter::qmdl::QmdlFileReader;
 use wavehunter::diag_reader::DiagReader;
 use wavehunter::diag_device::{DiagResult, DiagDeviceError};
 use wavehunter::gsmtap_parser::GsmtapParser;
@@ -11,17 +11,17 @@ fn main() -> DiagResult<()> {
 
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
-        error!("Usage: {} /path/to/debug/file", args[0]);
+        error!("Usage: {} /path/to/qmdl/file", args[0]);
         std::process::exit(1);
     }
-    let mut debug_reader = DebugFileReader::new(&args[1])?;
+    let mut qmdl_reader = QmdlFileReader::new(&args[1])?;
 
     let mut gsmtap_parser = GsmtapParser::new();
     let mut pcap_file = PcapFile::new("./wavehunter.pcap").unwrap();
     pcap_file.write_iface_header().unwrap();
 
     loop {
-        match debug_reader.read_response() {
+        match qmdl_reader.read_response() {
             Ok(msgs) => {
                 for msg in msgs {
                     debug!("msg: {:?}", msg);
@@ -32,10 +32,10 @@ fn main() -> DiagResult<()> {
                 }
             },
             Err(DiagDeviceError::IO(err)) if err.kind() == std::io::ErrorKind::UnexpectedEof => {
-                println!("Reached end of debug file, exiting...");
+                println!("Reached end of QMDL file, exiting...");
                 std::process::exit(0);
             },
-            Err(err) => panic!("Error reading debug file {}", err),
+            Err(err) => panic!("Error reading QMDL file {}", err),
         }
     }
 }
