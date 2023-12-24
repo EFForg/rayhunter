@@ -2,7 +2,6 @@
 //! just a series of of concatenated HDLC encapsulated diag::Message structs.
 
 use crate::diag_reader::DiagReader;
-use crate::diag_device::DiagResult;
 use crate::diag::{MessagesContainer, MESSAGE_TERMINATOR, HdlcEncapsulatedMessage, DataType};
 
 use std::fs::File;
@@ -14,7 +13,7 @@ pub struct QmdlFileWriter {
 }
 
 impl QmdlFileWriter {
-    pub fn new<P>(path: P) -> DiagResult<Self> where P: AsRef<std::path::Path> {
+    pub fn new<P>(path: P) -> std::io::Result<Self> where P: AsRef<std::path::Path> {
         let file = std::fs::File::options()
             .create(true)
             .append(true)
@@ -25,7 +24,7 @@ impl QmdlFileWriter {
         })
     }
 
-    pub fn write_container(&mut self, container: &MessagesContainer) -> DiagResult<()> {
+    pub fn write_container(&mut self, container: &MessagesContainer) -> std::io::Result<()> {
         for msg in &container.messages {
             self.file.write_all(&msg.data)?;
             self.total_written += msg.data.len();
@@ -40,7 +39,7 @@ pub struct QmdlFileReader {
 }
 
 impl QmdlFileReader {
-    pub fn new<P>(path: P) -> DiagResult<Self> where P: AsRef<std::path::Path> {
+    pub fn new<P>(path: P) -> std::io::Result<Self> where P: AsRef<std::path::Path> {
         let file = std::fs::File::options()
             .read(true)
             .open(path)?;
@@ -52,7 +51,9 @@ impl QmdlFileReader {
 }
 
 impl DiagReader for QmdlFileReader {
-    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
+    type Err = std::io::Error;
+
+    fn get_next_messages_container(&mut self) -> std::io::Result<MessagesContainer> {
         let bytes_read = self.file.read_until(MESSAGE_TERMINATOR, &mut self.buf)?;
 
         // Since QMDL is just a flat list of messages, we can't actually

@@ -1,6 +1,5 @@
 use crate::diag;
 use crate::{diag::*, hdlc::hdlc_decapsulate};
-use crate::diag_device::DiagResult;
 
 use crc::{Crc, Algorithm};
 use deku::prelude::*;
@@ -21,9 +20,11 @@ pub const CRC_CCITT_ALG: Algorithm<u16> = Algorithm {
 pub const CRC_CCITT: Crc<u16> = Crc::<u16>::new(&CRC_CCITT_ALG);
 
 pub trait DiagReader {
-    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer>;
+    type Err;
 
-    fn read_response(&mut self) -> DiagResult<Vec<Message>> {
+    fn get_next_messages_container(&mut self) -> Result<MessagesContainer, Self::Err>;
+
+    fn read_response(&mut self) -> Result<Vec<Message>, Self::Err> {
         loop {
             let container = self.get_next_messages_container()?;
             if container.data_type == DataType::UserSpace {
@@ -34,7 +35,7 @@ pub trait DiagReader {
         }
     }
 
-    fn parse_response_container(&self, container: MessagesContainer) -> DiagResult<Vec<Message>> {
+    fn parse_response_container(&self, container: MessagesContainer) -> Result<Vec<Message>, Self::Err> {
         let mut result = Vec::new();
         for msg in container.messages {
             for sub_msg in msg.data.split_inclusive(|&b| b == diag::MESSAGE_TERMINATOR) {

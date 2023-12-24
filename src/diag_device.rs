@@ -1,4 +1,4 @@
-use crate::hdlc::{hdlc_encapsulate, HdlcError};
+use crate::hdlc::hdlc_encapsulate;
 use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
 use crate::diag_reader::{DiagReader, CRC_CCITT};
 use crate::qmdl::QmdlFileWriter;
@@ -15,20 +15,24 @@ pub type DiagResult<T> = Result<T, DiagDeviceError>;
 
 #[derive(Error, Debug)]
 pub enum DiagDeviceError {
-    #[error("IO error {0}")]
-    IO(#[from] std::io::Error),
     #[error("Failed to initialize /dev/diag: {0}")]
     InitializationFailed(String),
     #[error("Failed to read diag device: {0}")]
-    DeviceReadFailed(String),
+    DeviceReadFailed(std::io::Error),
+    #[error("Failed to write diag device: {0}")]
+    DeviceWriteFailed(String),
     #[error("Nonzero status code {0} for diag request: {1:?}")]
     RequestFailed(u32, Request),
     #[error("Didn't receive response for request: {0:?}")]
     NoResponse(Request),
-    #[error("HDLC error {0}")]
-    HdlcError(#[from] HdlcError),
-    #[error("Deku error {0}")]
-    DekuError(#[from] DekuError),
+    #[error("Failed to open QMDL file: {0}")]
+    OpenQmdlFileError(std::io::Error),
+    #[error("Failed to write to QMDL file: {0}")]
+    QmdlFileWriteError(std::io::Error),
+    #[error("Failed to open diag device: {0}")]
+    OpenDiagDeviceError(std::io::Error),
+    #[error("Failed to parse MessagesContainer: {0}")]
+    ParseMessagesContainerError(deku::DekuError),
 }
 
 pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
@@ -65,16 +69,21 @@ pub struct DiagDevice {
 }
 
 impl DiagReader for DiagDevice {
+    type Err = DiagDeviceError;
+
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
         let mut bytes_read = 0;
         while bytes_read == 0 {
-            bytes_read = self.file.read(&mut self.read_buf)?;
+            bytes_read = self.file.read(&mut self.read_buf)
+                .map_err(DiagDeviceError::DeviceReadFailed)?;
         }
-        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
+        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))
+            .map_err(DiagDeviceError::ParseMessagesContainerError)?;
         if leftover_bytes.len() > 0 {
             warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
         }
-        self.qmdl_file.write_container(&container)?;
+        self.qmdl_file.write_container(&container)
+            .map_err(DiagDeviceError::QmdlFileWriteError)?;
         Ok(container)
     }
 }
@@ -84,10 +93,12 @@ impl DiagDevice {
         let diag_file = std::fs::File::options()
             .read(true)
             .write(true)
-            .open("/dev/diag")?;
+            .open("/dev/diag")
+            .map_err(DiagDeviceError::OpenDiagDeviceError)?;
         let fd = diag_file.as_raw_fd();
 
-        let qmdl_file = QmdlFileWriter::new(qmdl_path)?;
+        let qmdl_file = QmdlFileWriter::new(qmdl_path)
+            .map_err(DiagDeviceError::OpenQmdlFileError)?;
 
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
         let use_mdm = determine_use_mdm(fd)?;
@@ -101,19 +112,20 @@ impl DiagDevice {
     }
 
     pub fn write_request(&mut self, req: &Request) -> DiagResult<()> {
+        let req_bytes = &req.to_bytes().expect("Failed to serialize Request");
         let buf = RequestContainer {
             data_type: DataType::UserSpace,
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
-            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes()?, &CRC_CCITT),
-        }.to_bytes()?;
+            hdlc_encapsulated_request: hdlc_encapsulate(&req_bytes, &CRC_CCITT),
+        }.to_bytes().expect("Failed to serialize RequestContainer");
         unsafe {
             let fd = self.file.as_raw_fd();
             let buf_ptr = buf.as_ptr() as *const libc::c_void;
             let ret = libc::write(fd, buf_ptr, buf.len());
             if ret < 0 {
                 let msg = format!("write failed with error code {}", ret);
-                return Err(DiagDeviceError::DeviceReadFailed(msg));
+                return Err(DiagDeviceError::DeviceWriteFailed(msg));
             }
         }
         Ok(())
