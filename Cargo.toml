@@ -30,4 +30,7 @@ thiserror = "1.0.50"
 # TODO: split into binary-only dependencies
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
-
+tokio = { version = "1.35.1", features = ["full"] }
+axum = "0.7.2"
+axum-extra = { version = "0.9.0", features = ["async-read-body"] }
+futures-core = "0.3.30"
