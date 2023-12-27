@@ -1,7 +1,7 @@
 use crate::hdlc::hdlc_encapsulate;
 use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
 use crate::diag_reader::{DiagReader, CRC_CCITT};
-use crate::qmdl::QmdlFileWriter;
+use crate::qmdl::QmdlWriter;
 use crate::log_codes;
 
 use std::fs::File;
@@ -44,14 +44,14 @@ pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     log_codes::WCDMA_SIGNALLING_MESSAGE, // 0x412f
     log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C, // 0xb0c0
     log_codes::LOG_NR_RRC_OTA_MSG_LOG_C, // 0xb821
-    
+
     // NAS:
     log_codes::LOG_UMTS_NAS_OTA_MESSAGE_LOG_PACKET_C, // 0x713a
     log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C, // 0xb0e2
     log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C, // 0xb0e3
     log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C, // 0xb0ec
     log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C, // 0xb0ed
-    
+
     // User IP traffic:
     log_codes::LOG_DATA_PROTOCOL_LOGGING_C // 0x11eb
 ];
@@ -63,7 +63,8 @@ const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
 
 pub struct DiagDevice {
     file: File,
-    pub qmdl_file: QmdlFileWriter,
+    pub qmdl_writer: QmdlWriter<File>,
+    fully_initialized: bool,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
@@ -82,8 +83,11 @@ impl DiagReader for DiagDevice {
         if leftover_bytes.len() > 0 {
             warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
         }
-        self.qmdl_file.write_container(&container)
-            .map_err(DiagDeviceError::QmdlFileWriteError)?;
+
+        if self.fully_initialized {
+            self.qmdl_writer.write_container(&container)
+                .map_err(DiagDeviceError::QmdlFileWriteError)?;
+        }
         Ok(container)
     }
 }
@@ -97,8 +101,20 @@ impl DiagDevice {
             .map_err(DiagDeviceError::OpenDiagDeviceError)?;
         let fd = diag_file.as_raw_fd();
 
-        let qmdl_file = QmdlFileWriter::new(qmdl_path)
+        let qmdl_file = File::options()
+            .create(true)
+            .append(true)
+            .open(&qmdl_path)
             .map_err(DiagDeviceError::OpenQmdlFileError)?;
+        let qmdl_metadata = qmdl_file.metadata().map_err(DiagDeviceError::OpenQmdlFileError)?;
+        if qmdl_metadata.len() != 0 {
+            info!(
+                "QMDL file {} already contains data ({} bytes), appending to it",
+                qmdl_path.as_ref().display(),
+                qmdl_metadata.len()
+            );
+        }
+        let qmdl_writer = QmdlWriter::new_with_existing_size(qmdl_file, qmdl_metadata.len() as usize);
 
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
         let use_mdm = determine_use_mdm(fd)?;
@@ -106,7 +122,8 @@ impl DiagDevice {
         Ok(DiagDevice {
             read_buf: vec![0; BUFFER_LEN],
             file: diag_file,
-            qmdl_file,
+            fully_initialized: false,
+            qmdl_writer,
             use_mdm,
         })
     }
@@ -187,6 +204,7 @@ impl DiagDevice {
             }
         }
 
+        self.fully_initialized = true;
         Ok(())
     }
 }
