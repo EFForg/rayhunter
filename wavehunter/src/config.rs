@@ -7,12 +7,14 @@ use toml;
 struct ConfigFile {
     qmdl_path: Option<String>,
     port: Option<u16>,
+    debug_mode: Option<bool>,
 }
 
 #[derive(Debug)]
 pub struct Config {
     pub qmdl_path: String,
     pub port: u16,
+    pub debug_mode: bool,
 }
 
 impl Default for Config {
@@ -20,6 +22,7 @@ impl Default for Config {
         Config {
             qmdl_path: "./wavehunter.qmdl".to_string(),
             port: 8080,
+            debug_mode: false,
         }
     }
 }
@@ -31,7 +34,8 @@ pub fn parse_config<P>(path: P) -> Result<Config, WavehunterError> where P: AsRe
         .map_err(WavehunterError::ConfigFileParsingError)?;
     let mut config = Config::default();
     parsed_config.qmdl_path.map(|path| config.qmdl_path = path);
-    parsed_config.port.map(|path| config.port = path);
+    parsed_config.port.map(|port| config.port = port);
+    parsed_config.debug_mode.map(|debug_mode| config.debug_mode = debug_mode);
     Ok(config)
 }
 

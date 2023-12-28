@@ -11,6 +11,7 @@ use orca::diag_reader::DiagReader;
 
 use axum::routing::get;
 use axum::Router;
+use tokio::fs::File;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -32,6 +33,21 @@ fn run_diag_read_thread(mut dev: DiagDevice, bytes_read_lock: Arc<RwLock<usize>>
     })
 }
 
+async fn run_server(config: &config::Config, qmdl_bytes_written: Arc<RwLock<usize>>) -> Result<(), WavehunterError> {
+    let state = Arc::new(ServerState {
+        qmdl_bytes_written,
+        qmdl_path: config.qmdl_path.clone(),
+    });
+
+    let app = Router::new()
+        .route("/output.pcap", get(serve_pcap))
+        .with_state(state);
+    let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
+    let listener = TcpListener::bind(&addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), WavehunterError> {
     env_logger::init();
@@ -39,28 +55,23 @@ async fn main() -> Result<(), WavehunterError> {
     let args = parse_args();
     let config = parse_config(&args.config_path)?;
 
-    let mut dev = DiagDevice::new(&config.qmdl_path)
-        .map_err(WavehunterError::DiagInitError)?;
-    dev.config_logs()
-        .map_err(WavehunterError::DiagInitError)?;
+    let qmdl_bytes_lock: Arc<RwLock<usize>>;
+    if !config.debug_mode {
+        let mut dev = DiagDevice::new(&config.qmdl_path)
+            .map_err(WavehunterError::DiagInitError)?;
+        dev.config_logs()
+            .map_err(WavehunterError::DiagInitError)?;
+        qmdl_bytes_lock = Arc::new(RwLock::new(dev.qmdl_writer.total_written));
 
-    let qmdl_bytes_lock = Arc::new(RwLock::new(dev.qmdl_writer.total_written));
-    // TODO: handle exiting gracefully
-    let _read_thread_handle = run_diag_read_thread(dev, qmdl_bytes_lock.clone());
+        // TODO: handle exiting gracefully
+        let _read_thread_handle = run_diag_read_thread(dev, qmdl_bytes_lock.clone());
+    } else {
+        let qmdl_file = File::open(&config.qmdl_path).await.expect("couldn't open QMDL file");
+        let qmdl_file_size = qmdl_file.metadata().await.expect("couldn't get QMDL file metadata")
+            .len() as usize;
+        qmdl_bytes_lock = Arc::new(RwLock::new(qmdl_file_size));
+    }
 
     println!("The orca is hunting for stingrays...");
-
-    let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
-    let listener = TcpListener::bind(&addr).await?;
-    let state = Arc::new(ServerState {
-        qmdl_bytes_written: qmdl_bytes_lock,
-        qmdl_path: config.qmdl_path,
-    });
-
-    let app = Router::new()
-        .route("/output.pcap", get(serve_pcap))
-        .with_state(state);
-    axum::serve(listener, app).await.unwrap();
-
-    Ok(())
+    run_server(&config, qmdl_bytes_lock).await
 }
