@@ -17,6 +17,8 @@ pub enum GsmtapPcapError {
     Io(#[from] std::io::Error),
     #[error("Pcap error: {0}")]
     Pcap(#[from] PcapError),
+    #[error("Timestamp out of range: {0}")]
+    TimestampOutOfRange(#[from] chrono::OutOfRangeError),
     #[error("Deku error: {0}")]
     Deku(#[from] DekuError),
 }
@@ -71,12 +73,15 @@ impl<T> GsmtapPcapWriter<T> where T: Write {
     }
 
     pub fn write_gsmtap_message(&mut self, msg: GsmtapMessage, timestamp: Timestamp) -> Result<(), GsmtapPcapError> {
-        let time_since_epoch = timestamp.to_datetime().signed_duration_since(DateTime::UNIX_EPOCH);
-        let secs_since_epoch = time_since_epoch.num_seconds() as u64;
-        let nsecs_since_epoch = time_since_epoch.num_nanoseconds().unwrap_or(0) as u32;
-        // FIXME: although the duration value is correct here, when it shows up in
-        // the pcap it's WAY off, like in the year 55920
-        let duration = std::time::Duration::new(secs_since_epoch, nsecs_since_epoch);
+        let duration = timestamp.to_datetime()
+            .signed_duration_since(DateTime::UNIX_EPOCH)
+            .to_std()?;
+
+        // despite the timestamp above being correct, we have reduce it by
+        // orders of magnitude due to a bug in pcap_file:
+        // https://github.com/courvoif/pcap-file/pull/32
+        let duration = std::time::Duration::from_nanos(duration.as_micros() as u64);
+
         let msg_bytes = msg.to_bytes()?;
         let ip_header = IpHeader {
             version_and_ihl: 0x45,
