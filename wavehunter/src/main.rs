@@ -3,7 +3,7 @@ mod error;
 mod server;
 
 use crate::config::{parse_config, parse_args};
-use crate::server::{ServerState, serve_pcap};
+use crate::server::{ServerState, serve_pcap, serve_qmdl};
 use crate::error::WavehunterError;
 
 use log::debug;
@@ -46,6 +46,7 @@ async fn run_server(config: &config::Config, qmdl_bytes_written: Arc<RwLock<usiz
 
     let app = Router::new()
         .route("/output.pcap", get(serve_pcap))
+        .route("/output.qmdl", get(serve_qmdl))
         .with_state(state);
     let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
     let listener = TcpListener::bind(&addr).await.unwrap();

@@ -8,11 +8,14 @@ use axum::http::header::CONTENT_TYPE;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{Response, IntoResponse};
+use tokio::io::AsyncReadExt;
 use std::fs::File;
 use std::io::Write;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::fs::File as AsyncFile;
+use tokio_util::io::ReaderStream;
 use std::task::{Poll, Context};
 use futures_core::Stream;
 use log::error;
@@ -56,9 +59,7 @@ pub async fn serve_pcap(State(state): State<Arc<ServerState>>) -> Result<Respons
                                         .expect("error writing pcap packet");
                                 }
                             },
-                            Err(e) => {
-                                error!("error parsing message: {:?}", e);
-                            },
+                            Err(e) => error!("error parsing message: {:?}", e),
                         }
                     }
                 },
@@ -108,6 +109,18 @@ impl Stream for ChannelReader {
             Poll::Pending => Poll::Pending,
         }
     }
+}
+
+pub async fn serve_qmdl(State(state): State<Arc<ServerState>>) -> Result<Response, (StatusCode, String)> {
+    let qmdl_file = AsyncFile::open(&state.qmdl_path).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("error opening QMDL file: {}", e)))?;
+    let qmdl_bytes_written = *state.qmdl_bytes_written.read().await;
+    let limited_qmdl_file = qmdl_file.take(qmdl_bytes_written as u64);
+    let qmdl_stream = ReaderStream::new(limited_qmdl_file);
+
+    let headers = [(CONTENT_TYPE, "application/octet-stream")];
+    let body = Body::from_stream(qmdl_stream);
+    Ok((headers, body).into_response())
 }
 
 pub struct ServerState {
