@@ -6,6 +6,7 @@ use crate::config::{parse_config, parse_args};
 use crate::server::{ServerState, serve_pcap};
 use crate::error::WavehunterError;
 
+use log::debug;
 use orca::diag_device::DiagDevice;
 use orca::diag_reader::DiagReader;
 
@@ -23,12 +24,16 @@ fn run_diag_read_thread(mut dev: DiagDevice, bytes_read_lock: Arc<RwLock<usize>>
             // TODO: once we're actually doing analysis, we'll wanna use the messages
             // returned here. Until then, the DiagDevice has already written those messages
             // to the QMDL file, so we can just ignore them.
+            debug!("reading response from diag device...");
             let _messages = dev.read_response().map_err(WavehunterError::DiagReadError)?;
+            debug!("got diag response ({} messages)", _messages.len());
 
             // keep track of how many bytes were written to the QMDL file so we can read
             // a valid block of data from it in the HTTP server
+            debug!("total QMDL bytes written: {}, updating state...", dev.qmdl_writer.total_written);
             let mut bytes_read = bytes_read_lock.blocking_write();
             *bytes_read = dev.qmdl_writer.total_written;
+            debug!("done!");
         }
     })
 }
