@@ -58,8 +58,16 @@ pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
 const MEMORY_DEVICE_MODE: i32 = 2;
+
+#[cfg(target_arch = "arm")]
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
+#[cfg(target_arch = "x86_64")]
+const DIAG_IOCTL_REMOTE_DEV: u64 = 32;
+
+#[cfg(target_arch = "arm")]
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
+#[cfg(target_arch = "x86_64")]
+const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 
 pub struct DiagDevice {
     file: File,
@@ -80,7 +88,7 @@ impl DiagReader for DiagDevice {
         }
         let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))
             .map_err(DiagDeviceError::ParseMessagesContainerError)?;
-        if leftover_bytes.len() > 0 {
+        if !leftover_bytes.is_empty() {
             warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
         }
 
@@ -134,7 +142,7 @@ impl DiagDevice {
             data_type: DataType::UserSpace,
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
-            hdlc_encapsulated_request: hdlc_encapsulate(&req_bytes, &CRC_CCITT),
+            hdlc_encapsulated_request: hdlc_encapsulate(req_bytes, &CRC_CCITT),
         }.to_bytes().expect("Failed to serialize RequestContainer");
         unsafe {
             let fd = self.file.as_raw_fd();
@@ -212,10 +220,10 @@ impl DiagDevice {
 // Triggers the diag device's debug logging mode
 fn enable_frame_readwrite(fd: i32, mode: i32) -> DiagResult<()> {
     unsafe {
-        if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING.into(), mode, 0, 0, 0) < 0 {
+        if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
             let ret = libc::ioctl(
                 fd,
-                DIAG_IOCTL_SWITCH_LOGGING.into(),
+                DIAG_IOCTL_SWITCH_LOGGING,
                 &mut [mode, -1, 0] as *mut _, // diag_logging_mode_param_t
                 std::mem::size_of::<[i32; 3]>(), 0, 0, 0, 0
             );
@@ -233,7 +241,7 @@ fn enable_frame_readwrite(fd: i32, mode: i32) -> DiagResult<()> {
 fn determine_use_mdm(fd: i32) -> DiagResult<i32> {
     let use_mdm: i32 = 0;
     unsafe {
-        if libc::ioctl(fd, DIAG_IOCTL_REMOTE_DEV.into(), &use_mdm as *const i32) < 0 {
+        if libc::ioctl(fd, DIAG_IOCTL_REMOTE_DEV, &use_mdm as *const i32) < 0 {
             let msg = format!("DIAG_IOCTL_REMOTE_DEV ioctl failed with error code {}", 0);
             return Err(DiagDeviceError::InitializationFailed(msg))
         }

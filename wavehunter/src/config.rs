@@ -1,7 +1,6 @@
 use crate::error::WavehunterError;
 
 use serde::Deserialize;
-use toml;
 
 #[derive(Deserialize)]
 struct ConfigFile {
@@ -33,9 +32,9 @@ pub fn parse_config<P>(path: P) -> Result<Config, WavehunterError> where P: AsRe
     let parsed_config: ConfigFile = toml::from_str(&config_file)
         .map_err(WavehunterError::ConfigFileParsingError)?;
     let mut config = Config::default();
-    parsed_config.qmdl_path.map(|path| config.qmdl_path = path);
-    parsed_config.port.map(|port| config.port = port);
-    parsed_config.debug_mode.map(|debug_mode| config.debug_mode = debug_mode);
+    if let Some(path) = parsed_config.qmdl_path { config.qmdl_path = path }
+    if let Some(port) = parsed_config.port { config.port = port }
+    if let Some(debug_mode) = parsed_config.debug_mode { config.debug_mode = debug_mode }
     Ok(config)
 }
 

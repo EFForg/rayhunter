@@ -51,10 +51,10 @@ pub trait DiagReader {
         let mut result = Vec::new();
         for msg in container.messages {
             for sub_msg in msg.data.split_inclusive(|&b| b == diag::MESSAGE_TERMINATOR) {
-                match hdlc_decapsulate(&sub_msg, &CRC_CCITT) {
+                match hdlc_decapsulate(sub_msg, &CRC_CCITT) {
                     Ok(data) => match Message::from_bytes((&data, 0)) {
                         Ok(((leftover_bytes, _), res)) => {
-                            if leftover_bytes.len() > 0 {
+                            if !leftover_bytes.is_empty() {
                                 warn!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
                             }
                             result.push(Ok(res));

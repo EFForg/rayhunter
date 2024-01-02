@@ -7,6 +7,12 @@ use thiserror::Error;
 pub struct GsmtapParser {
 }
 
+impl Default for GsmtapParser {
+    fn default() -> Self {
+        GsmtapParser::new()
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum GsmtapParserError {
     #[error("Invalid LteRrcOtaMessage ext header version {0}")]
@@ -57,7 +63,7 @@ impl GsmtapParser {
                         15 => GsmtapType::LteRrc(LteRrcSubtype::UlDcch),
                         pdu => return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(ext_header_version, pdu)),
                     },
-                    0x0e | 0x0f | 0x10 => match packet.get_pdu_num() {
+                    0x0e..=0x10 => match packet.get_pdu_num() {
                         1 => GsmtapType::LteRrc(LteRrcSubtype::BcchBch),
                         2 => GsmtapType::LteRrc(LteRrcSubtype::BcchDlSch),
                         4 => GsmtapType::LteRrc(LteRrcSubtype::MCCH),

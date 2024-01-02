@@ -34,7 +34,7 @@ pub fn hdlc_encapsulate(data: &[u8], crc: &Crc<u16>) -> Vec<u8> {
         }
     }
 
-    for b in crc.checksum(&data).to_le_bytes() {
+    for b in crc.checksum(data).to_le_bytes() {
         match b {
             MESSAGE_TERMINATOR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR]),
             MESSAGE_ESCAPE_CHAR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_ESCAPE_CHAR]),
