@@ -66,14 +66,9 @@ pub struct DiagDevice {
 
 impl DiagReader for DiagDevice {
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
-        let mut bytes_read;
-        loop {
+        let mut bytes_read = 0;
+        while bytes_read == 0 {
             bytes_read = self.file.read(&mut self.read_buf)?;
-            if bytes_read == 0 {
-                println!("read 0 bytes from /dev/diag, retrying...");
-            } else {
-                break;
-            }
         }
         if let Some(debug_file) = self.debug_file.as_mut() {
             let debug_block = DebugFileBlock {

@@ -68,6 +68,7 @@ pub enum Message {
         inner_length: u16,
         log_type: u16,
         timestamp: Timestamp,
+        // pass the log type and log length (inner_length - (sizeof(log_type) + sizeof(timestamp)))
         #[deku(ctx = "*log_type, *inner_length - 12")]
         body: LogBody,
     },
@@ -119,20 +120,25 @@ pub enum LogBody {
         #[deku(ctx = "*ext_header_version")]
         packet: LteRrcOtaPacket,
     },
+    // the four NAS command opcodes refer to:
+    // * 0xb0e2: plain ESM NAS message (incoming)
+    // * 0xb0e3: plain ESM NAS message (outgoing)
+    // * 0xb0ec: plain EMM NAS message (incoming)
+    // * 0xb0ed: plain EMM NAS message (outgoing)
     #[deku(id_pat = "0xb0e2 | 0xb0e3 | 0xb0ec | 0xb0ed")]
     Nas4GMessage {
         ext_header_version: u8,
         rrc_rel: u8,
         rrc_version_minor: u8,
         rrc_version_major: u8,
-        // is this right?? based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/src/scat/parsers/qualcomm/diagltelogparser.py#L1327
+        // message length = hdr_len - (sizeof(ext_header_version) + sizeof(rrc_rel) + sizeof(rrc_version_minor) + sizeof(rrc_version_major))
         #[deku(count = "hdr_len - 4")]
         msg: Vec<u8>,
     },
     #[deku(id = "0x11eb")]
     IpTraffic {
         // is this right?? based on https://github.com/P1sec/QCSuper/blob/81dbaeee15ec7747e899daa8e3495e27cdcc1264/src/modules/pcap_dump.py#L378
-        #[deku(count = "hdr_len - 8")] // is this right???
+        #[deku(count = "hdr_len - 8")]
         msg: Vec<u8>,
     },
     #[deku(id = "0x713a")]
