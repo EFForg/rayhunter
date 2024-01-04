@@ -1,30 +1,7 @@
-[package]
-name = "wavehunter"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-name = "wavehunter"
-path = "src/lib.rs"
-
-[[bin]]
-name = "wavehunter-reader"
-path = "src/bin/wavehunter_reader.rs"
-
-[[bin]]
-name = "wavehunter"
-path = "src/bin/wavehunter.rs"
-
-[dependencies]
-bytes = "1.5.0"
-chrono = "0.4.31"
-crc = "3.0.1"
-deku = { version = "0.16.0", features = ["logging"] }
-env_logger = "0.10.1"
-libc = "0.2.150"
-log = "0.4.20"
-pcap-file = "2.0.0"
-thiserror = "1.0.50"
-
+members = [
+    "orca",
+    "wavehunter",
+]
+resolver = "2"

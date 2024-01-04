@@ -1,11 +1,11 @@
-use crate::hdlc::{hdlc_encapsulate, HdlcError};
+use crate::hdlc::hdlc_encapsulate;
 use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
 use crate::diag_reader::{DiagReader, CRC_CCITT};
-use crate::debug_file::DebugFileBlock;
+use crate::qmdl::QmdlWriter;
 use crate::log_codes;
 
 use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::os::fd::AsRawFd;
 use thiserror::Error;
 use log::{info, warn, error};
@@ -15,20 +15,24 @@ pub type DiagResult<T> = Result<T, DiagDeviceError>;
 
 #[derive(Error, Debug)]
 pub enum DiagDeviceError {
-    #[error("IO error {0}")]
-    IO(#[from] std::io::Error),
     #[error("Failed to initialize /dev/diag: {0}")]
     InitializationFailed(String),
     #[error("Failed to read diag device: {0}")]
-    DeviceReadFailed(String),
+    DeviceReadFailed(std::io::Error),
+    #[error("Failed to write diag device: {0}")]
+    DeviceWriteFailed(String),
     #[error("Nonzero status code {0} for diag request: {1:?}")]
     RequestFailed(u32, Request),
     #[error("Didn't receive response for request: {0:?}")]
     NoResponse(Request),
-    #[error("HDLC error {0}")]
-    HdlcError(#[from] HdlcError),
-    #[error("Deku error {0}")]
-    DekuError(#[from] DekuError),
+    #[error("Failed to open QMDL file: {0}")]
+    OpenQmdlFileError(std::io::Error),
+    #[error("Failed to write to QMDL file: {0}")]
+    QmdlFileWriteError(std::io::Error),
+    #[error("Failed to open diag device: {0}")]
+    OpenDiagDeviceError(std::io::Error),
+    #[error("Failed to parse MessagesContainer: {0}")]
+    ParseMessagesContainerError(deku::DekuError),
 }
 
 pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
@@ -40,97 +44,113 @@ pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     log_codes::WCDMA_SIGNALLING_MESSAGE, // 0x412f
     log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C, // 0xb0c0
     log_codes::LOG_NR_RRC_OTA_MSG_LOG_C, // 0xb821
-    
+
     // NAS:
     log_codes::LOG_UMTS_NAS_OTA_MESSAGE_LOG_PACKET_C, // 0x713a
     log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C, // 0xb0e2
     log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C, // 0xb0e3
     log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C, // 0xb0ec
     log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C, // 0xb0ed
-    
+
     // User IP traffic:
     log_codes::LOG_DATA_PROTOCOL_LOGGING_C // 0x11eb
 ];
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
 const MEMORY_DEVICE_MODE: i32 = 2;
+
+#[cfg(target_arch = "arm")]
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
+#[cfg(target_arch = "x86_64")]
+const DIAG_IOCTL_REMOTE_DEV: u64 = 32;
+
+#[cfg(target_arch = "arm")]
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
+#[cfg(target_arch = "x86_64")]
+const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 
 pub struct DiagDevice {
     file: File,
-    debug_file: Option<File>,
+    pub qmdl_writer: QmdlWriter<File>,
+    fully_initialized: bool,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
 
 impl DiagReader for DiagDevice {
+    type Err = DiagDeviceError;
+
     fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
         let mut bytes_read = 0;
         while bytes_read == 0 {
-            bytes_read = self.file.read(&mut self.read_buf)?;
+            bytes_read = self.file.read(&mut self.read_buf)
+                .map_err(DiagDeviceError::DeviceReadFailed)?;
         }
-        if let Some(debug_file) = self.debug_file.as_mut() {
-            let debug_block = DebugFileBlock {
-                size: bytes_read as u32,
-                data: &self.read_buf[0..bytes_read],
-            };
-            let debug_block_bytes = debug_block.to_bytes()?;
-            debug_file.write_all(&debug_block_bytes)?;
-        }
-        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))?;
-        if leftover_bytes.len() > 0 {
+        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))
+            .map_err(DiagDeviceError::ParseMessagesContainerError)?;
+        if !leftover_bytes.is_empty() {
             warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+        }
+
+        if self.fully_initialized {
+            self.qmdl_writer.write_container(&container)
+                .map_err(DiagDeviceError::QmdlFileWriteError)?;
         }
         Ok(container)
     }
 }
 
 impl DiagDevice {
-    pub fn new() -> DiagResult<Self> {
-        let file = std::fs::File::options()
+    pub fn new<P>(qmdl_path: P) -> DiagResult<Self> where P: AsRef<std::path::Path> {
+        let diag_file = std::fs::File::options()
             .read(true)
             .write(true)
-            .open("/dev/diag")?;
-        let fd = file.as_raw_fd();
+            .open("/dev/diag")
+            .map_err(DiagDeviceError::OpenDiagDeviceError)?;
+        let fd = diag_file.as_raw_fd();
+
+        let qmdl_file = File::options()
+            .create(true)
+            .append(true)
+            .open(&qmdl_path)
+            .map_err(DiagDeviceError::OpenQmdlFileError)?;
+        let qmdl_metadata = qmdl_file.metadata().map_err(DiagDeviceError::OpenQmdlFileError)?;
+        if qmdl_metadata.len() != 0 {
+            info!(
+                "QMDL file {} already contains data ({} bytes), appending to it",
+                qmdl_path.as_ref().display(),
+                qmdl_metadata.len()
+            );
+        }
+        let qmdl_writer = QmdlWriter::new_with_existing_size(qmdl_file, qmdl_metadata.len() as usize);
 
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
         let use_mdm = determine_use_mdm(fd)?;
 
         Ok(DiagDevice {
             read_buf: vec![0; BUFFER_LEN],
-            file,
-            debug_file: None,
+            file: diag_file,
+            fully_initialized: false,
+            qmdl_writer,
             use_mdm,
         })
     }
 
-    // Creates a file at the given path where all binary output from /dev/diag
-    // will be recorded.
-    pub fn enable_debug_mode<P>(&mut self, path: P) -> DiagResult<()> where P: AsRef<std::path::Path> {
-        let debug_file = std::fs::File::options()
-            .create(true)
-            .write(true)
-            .open(path)?;
-        info!("enabling debug mode, writing debug output to {:?}", debug_file);
-        self.debug_file = Some(debug_file);
-        Ok(())
-    }
-
     pub fn write_request(&mut self, req: &Request) -> DiagResult<()> {
+        let req_bytes = &req.to_bytes().expect("Failed to serialize Request");
         let buf = RequestContainer {
             data_type: DataType::UserSpace,
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
-            hdlc_encapsulated_request: hdlc_encapsulate(&req.to_bytes()?, &CRC_CCITT),
-        }.to_bytes()?;
+            hdlc_encapsulated_request: hdlc_encapsulate(req_bytes, &CRC_CCITT),
+        }.to_bytes().expect("Failed to serialize RequestContainer");
         unsafe {
             let fd = self.file.as_raw_fd();
             let buf_ptr = buf.as_ptr() as *const libc::c_void;
             let ret = libc::write(fd, buf_ptr, buf.len());
             if ret < 0 {
                 let msg = format!("write failed with error code {}", ret);
-                return Err(DiagDeviceError::DeviceReadFailed(msg));
+                return Err(DiagDeviceError::DeviceWriteFailed(msg));
             }
         }
         Ok(())
@@ -142,8 +162,8 @@ impl DiagDevice {
 
         for msg in self.read_response()? {
             match msg {
-                Message::Log { .. } => info!("skipping log response..."),
-                Message::Response { payload, status, .. } => match payload {
+                Ok(Message::Log { .. }) => info!("skipping log response..."),
+                Ok(Message::Response { payload, status, .. }) => match payload {
                     ResponsePayload::LogConfig(LogConfigResponse::RetrieveIdRanges { log_mask_sizes }) => {
                         if status != 0 {
                             return Err(DiagDeviceError::RequestFailed(status, req));
@@ -152,6 +172,7 @@ impl DiagDevice {
                     },
                     _ => info!("skipping non-LogConfigResponse response..."),
                 },
+                Err(e) => error!("error parsing message: {:?}", e),
             }
         }
 
@@ -164,8 +185,8 @@ impl DiagDevice {
 
         for msg in self.read_response()? {
             match msg {
-                Message::Log { .. } => info!("skipping log response..."),
-                Message::Response { payload, status, .. } => {
+                Ok(Message::Log { .. }) => info!("skipping log response..."),
+                Ok(Message::Response { payload, status, .. }) => {
                     if let ResponsePayload::LogConfig(LogConfigResponse::SetMask) = payload {
                         if status != 0 {
                             return Err(DiagDeviceError::RequestFailed(status, req));
@@ -173,6 +194,7 @@ impl DiagDevice {
                         return Ok(());
                     }
                 },
+                Err(e) => error!("error parsing message: {:?}", e),
             }
         }
 
@@ -190,6 +212,7 @@ impl DiagDevice {
             }
         }
 
+        self.fully_initialized = true;
         Ok(())
     }
 }
@@ -197,10 +220,10 @@ impl DiagDevice {
 // Triggers the diag device's debug logging mode
 fn enable_frame_readwrite(fd: i32, mode: i32) -> DiagResult<()> {
     unsafe {
-        if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING.into(), mode, 0, 0, 0) < 0 {
+        if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
             let ret = libc::ioctl(
                 fd,
-                DIAG_IOCTL_SWITCH_LOGGING.into(),
+                DIAG_IOCTL_SWITCH_LOGGING,
                 &mut [mode, -1, 0] as *mut _, // diag_logging_mode_param_t
                 std::mem::size_of::<[i32; 3]>(), 0, 0, 0, 0
             );
@@ -218,7 +241,7 @@ fn enable_frame_readwrite(fd: i32, mode: i32) -> DiagResult<()> {
 fn determine_use_mdm(fd: i32) -> DiagResult<i32> {
     let use_mdm: i32 = 0;
     unsafe {
-        if libc::ioctl(fd, DIAG_IOCTL_REMOTE_DEV.into(), &use_mdm as *const i32) < 0 {
+        if libc::ioctl(fd, DIAG_IOCTL_REMOTE_DEV, &use_mdm as *const i32) < 0 {
             let msg = format!("DIAG_IOCTL_REMOTE_DEV ioctl failed with error code {}", 0);
             return Err(DiagDeviceError::InitializationFailed(msg))
         }

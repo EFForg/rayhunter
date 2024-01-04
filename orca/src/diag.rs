@@ -3,6 +3,12 @@
 use chrono::{DateTime, FixedOffset};
 use deku::prelude::*;
 
+pub const MESSAGE_TERMINATOR: u8 = 0x7e;
+pub const MESSAGE_ESCAPE_CHAR: u8 = 0x7d;
+
+pub const ESCAPED_MESSAGE_TERMINATOR: u8 = 0x5e;
+pub const ESCAPED_MESSAGE_ESCAPE_CHAR: u8 = 0x5d;
+
 #[derive(Debug, Clone, DekuWrite)]
 pub struct RequestContainer {
     pub data_type: DataType,
@@ -43,7 +49,7 @@ pub enum DataType {
     Other(u32),
 }
 
-#[derive(Debug, Clone, DekuRead)]
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 pub struct MessagesContainer {
     pub data_type: DataType,
     pub num_messages: u32,
@@ -51,14 +57,14 @@ pub struct MessagesContainer {
     pub messages: Vec<HdlcEncapsulatedMessage>,
 }
 
-#[derive(Debug, Clone, DekuRead)]
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 pub struct HdlcEncapsulatedMessage {
     pub len: u32,
     #[deku(count = "len")]
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone, PartialEq, DekuRead)]
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(type = "u8")]
 pub enum Message {
     #[deku(id = "16")]
@@ -87,7 +93,7 @@ pub enum Message {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, DekuRead)]
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(ctx = "log_type: u16, hdr_len: u16", id = "log_type")]
 pub enum LogBody {
     #[deku(id = "0x412f")]
@@ -155,7 +161,7 @@ pub enum LogBody {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, DekuRead)]
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(ctx = "ext_header_version: u8", id = "ext_header_version")]
 pub enum LteRrcOtaPacket {
     #[deku(id_pat = "0..=4")]
@@ -262,7 +268,7 @@ impl LteRrcOtaPacket {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, DekuRead)]
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "little")]
 pub struct Timestamp {
     pub ts: u64,
@@ -282,14 +288,14 @@ impl Timestamp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, DekuRead)]
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(ctx = "opcode: u32, subopcode: u32", id = "opcode")]
 pub enum ResponsePayload {
     #[deku(id = "115")]
     LogConfig(#[deku(ctx = "subopcode")] LogConfigResponse),
 }
 
-#[derive(Debug, Clone, PartialEq, DekuRead)]
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(ctx = "subopcode: u32", id = "subopcode")]
 pub enum LogConfigResponse {
     #[deku(id = "1")]

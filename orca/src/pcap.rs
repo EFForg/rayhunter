@@ -1,9 +1,8 @@
 use crate::gsmtap::GsmtapMessage;
 use crate::diag::Timestamp;
 
-use std::fs::File;
+use std::io::Write;
 use std::borrow::Cow;
-use std::path::Path;
 use chrono::prelude::*;
 use deku::prelude::*;
 use pcap_file::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
@@ -13,17 +12,19 @@ use pcap_file::PcapError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum PcapFileError {
+pub enum GsmtapPcapError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
     #[error("Pcap error: {0}")]
     Pcap(#[from] PcapError),
+    #[error("Timestamp out of range: {0}")]
+    TimestampOutOfRange(#[from] chrono::OutOfRangeError),
     #[error("Deku error: {0}")]
     Deku(#[from] DekuError),
 }
 
-pub struct PcapFile {
-    writer: PcapNgWriter<File>,
+pub struct GsmtapPcapWriter<T> where T: Write {
+    writer: PcapNgWriter<T>,
     ip_id: u16,
 }
 
@@ -55,17 +56,13 @@ struct UdpHeader {
     checksum: u16,
 }
 
-impl PcapFile {
-    pub fn new<P>(path: P) -> Result<Self, PcapFileError> where P: AsRef<Path> {
-        let file = std::fs::File::options()
-            .create(true)
-            .write(true)
-            .open(path)?;
-        let writer = PcapNgWriter::new(file)?;
-        Ok(PcapFile { writer, ip_id: 0 })
+impl<T> GsmtapPcapWriter<T> where T: Write {
+    pub fn new(writer: T) -> Result<Self, GsmtapPcapError> {
+        let writer = PcapNgWriter::new(writer)?;
+        Ok(GsmtapPcapWriter { writer, ip_id: 0 })
     }
 
-    pub fn write_iface_header(&mut self) -> Result<(), PcapFileError> {
+    pub fn write_iface_header(&mut self) -> Result<(), GsmtapPcapError> {
         let interface = InterfaceDescriptionBlock {
             linktype: pcap_file::DataLink::IPV4,
             snaplen: 0xffff,
@@ -75,13 +72,16 @@ impl PcapFile {
         Ok(())
     }
 
-    pub fn write_gsmtap_message(&mut self, msg: GsmtapMessage, timestamp: Timestamp) -> Result<(), PcapFileError> {
-        let time_since_epoch = timestamp.to_datetime().signed_duration_since(DateTime::UNIX_EPOCH);
-        let secs_since_epoch = time_since_epoch.num_seconds() as u64;
-        let nsecs_since_epoch = time_since_epoch.num_nanoseconds().unwrap_or(0) as u32;
-        // FIXME: although the duration value is correct here, when it shows up in
-        // the pcap it's WAY off, like in the year 55920
-        let duration = std::time::Duration::new(secs_since_epoch, nsecs_since_epoch);
+    pub fn write_gsmtap_message(&mut self, msg: GsmtapMessage, timestamp: Timestamp) -> Result<(), GsmtapPcapError> {
+        let duration = timestamp.to_datetime()
+            .signed_duration_since(DateTime::UNIX_EPOCH)
+            .to_std()?;
+
+        // despite the timestamp above being correct, we have reduce it by
+        // orders of magnitude due to a bug in pcap_file:
+        // https://github.com/courvoif/pcap-file/pull/32
+        let duration = std::time::Duration::from_nanos(duration.as_micros() as u64);
+
         let msg_bytes = msg.to_bytes()?;
         let ip_header = IpHeader {
             version_and_ihl: 0x45,

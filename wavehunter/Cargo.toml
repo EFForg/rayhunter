@@ -1,0 +1,18 @@
+[package]
+name = "wavehunter"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+orca = { path = "../orca" }
+toml = "0.8.8"
+serde = { version = "1.0.193", features = ["derive"] }
+tokio = { version = "1.35.1", features = ["full"] }
+axum = "0.7.2"
+futures-core = "0.3.30"
+thiserror = "1.0.52"
+log = "0.4.20"
+env_logger = "0.10.1"
+tokio-util = { version = "0.7.10", features = ["io"] }
