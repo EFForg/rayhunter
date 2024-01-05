@@ -16,3 +16,5 @@ thiserror = "1.0.52"
 log = "0.4.20"
 env_logger = "0.10.1"
 tokio-util = { version = "0.7.10", features = ["io"] }
+include_dir = "0.7.3"
+mime_guess = "2.0.4"
