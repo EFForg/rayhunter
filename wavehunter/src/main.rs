@@ -1,24 +1,29 @@
 mod config;
 mod error;
+mod pcap;
 mod server;
+mod stats;
 
 use crate::config::{parse_config, parse_args};
-use crate::server::{ServerState, serve_pcap, serve_qmdl};
+use crate::server::{ServerState, get_qmdl, serve_static};
+use crate::pcap::get_pcap;
+use crate::stats::{get_system_stats, get_diag_stats};
 use crate::error::WavehunterError;
 
-use log::debug;
+use axum::response::Redirect;
 use orca::diag_device::DiagDevice;
 use orca::diag_reader::DiagReader;
-
 use axum::routing::get;
 use axum::Router;
 use tokio::fs::File;
+use log::debug;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
 use std::sync::Arc;
 
-fn run_diag_read_thread(mut dev: DiagDevice, bytes_read_lock: Arc<RwLock<usize>>) -> tokio::task::JoinHandle<Result<(), WavehunterError>> {
+fn run_diag_read_thread(mut dev: DiagDevice, bytes_read_lock: Arc<RwLock<usize>>) -> JoinHandle<Result<(), WavehunterError>> {
     tokio::task::spawn_blocking(move || {
         loop {
             // TODO: once we're actually doing analysis, we'll wanna use the messages
@@ -45,8 +50,12 @@ async fn run_server(config: &config::Config, qmdl_bytes_written: Arc<RwLock<usiz
     });
 
     let app = Router::new()
-        .route("/output.pcap", get(serve_pcap))
-        .route("/output.qmdl", get(serve_qmdl))
+        .route("/api/pcap/latest.pcap", get(get_pcap))
+        .route("/api/qmdl/latest.qmdl", get(get_qmdl))
+        .route("/api/system-stats", get(get_system_stats))
+        .route("/api/diag-stats", get(get_diag_stats))
+        .route("/", get(|| async { Redirect::permanent("/index.html") }))
+        .route("/*path", get(serve_static))
         .with_state(state);
     let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
     let listener = TcpListener::bind(&addr).await.unwrap();
