@@ -6,7 +6,7 @@ case "$1" in
 start)
     echo -n "Starting wavehunter: "
     start-stop-daemon -S -b --make-pidfile --pidfile /tmp/wavehunter.pid \
-    --startas /bin/bash -- -c "exec /data/wavehunter/wavehunter > /data/wavehunter/wavehunter.log 2>&1"
+    --startas /bin/bash -- -c "exec /data/wavehunter/wavehunter /data/wavehunter/config.toml > /data/wavehunter/wavehunter.log 2>&1"
     echo "done"
     ;;
   stop)

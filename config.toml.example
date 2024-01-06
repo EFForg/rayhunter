@@ -1,0 +1,3 @@
+# cat config.toml 
+port = 8080
+qmdl_path = "wavehunter.qmdl"
