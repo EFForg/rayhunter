@@ -2,6 +2,8 @@
 
 members = [
     "orca",
+    "serial",
+    "rootshell",
     "wavehunter",
 ]
 resolver = "2"
