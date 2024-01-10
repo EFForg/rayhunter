@@ -38,7 +38,9 @@ fn send_command<T: UsbContext>(
     let mut response = [0; 256];
     match handle.write_control(0x21, 0x22, 3, 1, &[], timeout) {
 	Ok(_) => match handle.write_bulk(0x2, data.as_bytes(), timeout) {
+	    // Consume the echoed back command
 	    Ok(_) => match handle.read_bulk(0x82, &mut response, timeout) {
+		// Read the actual response
 		Ok(_) => match handle.read_bulk(0x82, &mut response, timeout) {
 		    Ok(_) => {
 			let responsestr = str::from_utf8(&response).unwrap();
@@ -61,20 +63,35 @@ fn switch_device<T: UsbContext>(
 ) {
     // Send a command to switch the device into generic mode, exposing serial
     let timeout = Duration::from_secs(1);
-    match handle.write_control(0xc0, 0xa0, 0, 0, &[], timeout) {
+    match handle.write_control(0x40, 0xa0, 0, 0, &[], timeout) {
 	Ok(_) => (),
-	Err(e) => panic!("Failed to send device switch control request: {0}", e),
+	Err(e) => {
+	    // If the device reboots while the command is still executing we
+	    // may get a pipe error here
+	    if e == rusb::Error::Pipe {
+		return;
+	    }
+	    panic!("Failed to send device switch control request: {0}", e);
+	},
     }
 }
 
 fn open_orbic<T: UsbContext>(
     context: &mut T,
 ) -> Option<DeviceHandle<T>> {
+    // Device after initial mode switch
     match open_device(context, 0x05c6, 0xf601) {
 	Some(handle) => return Some(handle),
 	None => (),
     }
-    match open_device(context, 0x11f6, 0x900e) {
+    // Device with rndis enabled as well
+    match open_device(context, 0x05c6, 0xf622) {
+	Some(handle) => return Some(handle),
+	None => (),
+    }
+
+    // Device in out-of-the-box state, need to switch to diag mode
+    match open_device(context, 0x05c6, 0xf626) {
 	Some(mut handle) => switch_device(&mut handle),
 	None => panic!("No Orbic device detected")
     }
