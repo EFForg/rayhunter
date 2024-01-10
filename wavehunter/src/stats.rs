@@ -1,10 +1,11 @@
+use std::sync::Arc;
+
+use crate::qmdl_store::ManifestEntry;
 use crate::server::ServerState;
 
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use std::sync::Arc;
 use log::error;
 use serde::Serialize;
 use tokio::process::Command;
@@ -97,7 +98,8 @@ fn humanize_kb(kb: usize) -> String {
 }
 
 pub async fn get_system_stats(State(state): State<Arc<ServerState>>) -> Result<Json<SystemStats>, (StatusCode, String)> {
-    match SystemStats::new(&state.qmdl_path).await {
+    let qmdl_store = state.qmdl_store_lock.read().await;
+    match SystemStats::new(qmdl_store.path.to_str().unwrap()).await {
         Ok(stats) => Ok(Json(stats)),
         Err(err) => {
             error!("error getting system stats: {}", err);
@@ -109,13 +111,18 @@ pub async fn get_system_stats(State(state): State<Arc<ServerState>>) -> Result<J
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct DiagStats {
-    bytes_written: usize,
+#[derive(Serialize)]
+pub struct ManifestStats {
+    pub entries: Vec<ManifestEntry>,
+    pub current_entry: Option<ManifestEntry>,
 }
 
-pub async fn get_diag_stats(State(state): State<Arc<ServerState>>) -> impl IntoResponse {
-    Json(DiagStats {
-        bytes_written: *state.qmdl_bytes_written.read().await,
-    })
+pub async fn get_qmdl_manifest(State(state): State<Arc<ServerState>>) -> Result<Json<ManifestStats>, (StatusCode, String)> {
+    let qmdl_store = state.qmdl_store_lock.read().await;
+    let mut entries = qmdl_store.manifest.entries.clone();
+    let current_entry = qmdl_store.current_entry.map(|index| entries.remove(index));
+    Ok(Json(ManifestStats {
+        entries,
+        current_entry,
+    }))
 }

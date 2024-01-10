@@ -4,19 +4,35 @@
     <link rel="stylesheet" type="text/css" href="css/style.css">
     <script src="js/main.js"></script>
     <script>
+        async function repeatedlyPopulate() {
+            await populateDivs();
+            setTimeout(repeatedlyPopulate, 1000);
+        }
         window.onload = function() {
-            setInterval(function() {
-                populateDivs();
-            }, 1000);
+            repeatedlyPopulate();
         }
     </script>
 </head>
 <body>
-    <div id="downloads">
-        <span><a href="/api/pcap/latest.pcap">Latest PCAP</a></span>
-        <span><a href="/api/qmdl/latest.qmdl">Latest QMDL</a></span>
+    <div>
+        <button onclick="startRecording()">Start Recording</button>
+        <button onclick="stopRecording()">Stop Recording</button>
     </div>
-    <pre id="system-stats">Loading...</pre>
-    <pre id="diag-stats">Loading...</pre>
+    <table id="qmdl-manifest-table">
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Date Started</th>
+                <th scope="col">Date Stopped</th>
+                <th scope="col">Size (bytes)</th>
+                <th scope="col">PCAP</th>
+                <th scope="col">QMDL</th>
+            </tr>
+        </thead>
+    </table>
+    <div>
+        <h3>System stats</h3>
+        <pre id="system-stats">Loading...</pre>
+    </div>
 </body>
 </html>

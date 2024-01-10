@@ -71,7 +71,7 @@ const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 
 pub struct DiagDevice {
     file: File,
-    pub qmdl_writer: QmdlWriter<File>,
+    pub qmdl_writer: Option<QmdlWriter<File>>,
     fully_initialized: bool,
     read_buf: Vec<u8>,
     use_mdm: i32,
@@ -92,37 +92,24 @@ impl DiagReader for DiagDevice {
             warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
         }
 
-        if self.fully_initialized {
-            self.qmdl_writer.write_container(&container)
-                .map_err(DiagDeviceError::QmdlFileWriteError)?;
+        if let Some(qmdl_writer) = self.qmdl_writer.as_mut() {
+            if self.fully_initialized {
+                qmdl_writer.write_container(&container)
+                    .map_err(DiagDeviceError::QmdlFileWriteError)?;
+            }
         }
         Ok(container)
     }
 }
 
 impl DiagDevice {
-    pub fn new<P>(qmdl_path: P) -> DiagResult<Self> where P: AsRef<std::path::Path> {
+    pub fn new(qmdl_writer: Option<QmdlWriter<File>>) -> DiagResult<Self> {
         let diag_file = std::fs::File::options()
             .read(true)
             .write(true)
             .open("/dev/diag")
             .map_err(DiagDeviceError::OpenDiagDeviceError)?;
         let fd = diag_file.as_raw_fd();
-
-        let qmdl_file = File::options()
-            .create(true)
-            .append(true)
-            .open(&qmdl_path)
-            .map_err(DiagDeviceError::OpenQmdlFileError)?;
-        let qmdl_metadata = qmdl_file.metadata().map_err(DiagDeviceError::OpenQmdlFileError)?;
-        if qmdl_metadata.len() != 0 {
-            info!(
-                "QMDL file {} already contains data ({} bytes), appending to it",
-                qmdl_path.as_ref().display(),
-                qmdl_metadata.len()
-            );
-        }
-        let qmdl_writer = QmdlWriter::new_with_existing_size(qmdl_file, qmdl_metadata.len() as usize);
 
         enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
         let use_mdm = determine_use_mdm(fd)?;
