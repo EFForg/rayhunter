@@ -120,6 +120,7 @@ impl QmdlStore {
         Ok(file)
     }
 
+    // Returns the corresponding QMDL file for a given entry
     pub async fn open_entry(&self, entry: &ManifestEntry) -> Result<File, QmdlStoreError> {
         let mut file_path = self.path.join(&entry.name);
         file_path.set_extension("qmdl");

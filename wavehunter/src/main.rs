@@ -30,6 +30,9 @@ use tokio::net::TcpListener;
 use tokio::sync::{RwLock, oneshot};
 use std::sync::Arc;
 
+// Runs the axum server, taking all the elements needed to build up our
+// ServerState and a oneshot Receiver that'll fire when it's time to shutdown
+// (i.e. user hit ctrl+c)
 async fn run_server(
     task_tracker: &TaskTracker,
     config: &config::Config,
@@ -68,6 +71,8 @@ async fn server_shutdown_signal(server_shutdown_rx: oneshot::Receiver<()>) {
     info!("Server received shutdown signal, exiting...");
 }
 
+// Loads a QmdlStore if one exists, and if not, only create one if we're not in
+// readonly mode.
 async fn init_qmdl_store(config: &config::Config) -> Result<QmdlStore, WavehunterError> {
     match (QmdlStore::exists(&config.qmdl_store_path).await?, config.readonly_mode) {
         (true, _) => Ok(QmdlStore::load(&config.qmdl_store_path).await?),
@@ -76,6 +81,9 @@ async fn init_qmdl_store(config: &config::Config) -> Result<QmdlStore, Wavehunte
     }
 }
 
+// Start a thread that'll track when user hits ctrl+c. When that happens,
+// trigger various cleanup tasks, including sending signals to other threads to
+// shutdown
 fn run_ctrl_c_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
@@ -112,6 +120,8 @@ async fn main() -> Result<(), WavehunterError> {
     let args = parse_args();
     let config = parse_config(&args.config_path)?;
 
+    // TaskTrackers give us an interface to spawn tokio threads, and then
+    // eventually await all of them ending
     let task_tracker = TaskTracker::new();
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));

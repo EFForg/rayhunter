@@ -23,7 +23,12 @@ pub enum DiagDeviceCtrlMessage {
 }
 
 pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>, qmdl_store_lock: Arc<RwLock<QmdlStore>>) -> JoinHandle<Result<(), WavehunterError>> {
+    // mpsc channel for updating QmdlStore entry filesizes. First usize is the
+    // index, second is the size in bytes
     let (tx, mut rx) = mpsc::channel::<(usize, usize)>(1);
+
+    // Spawn a thread to monitor the (usize, usize) channel for updates,
+    // triggering QmdlStore updates
     let qmdl_store_lock_clone = qmdl_store_lock.clone();
     task_tracker.spawn(async move {
         while let Some((entry_idx, new_size)) = rx.recv().await {
@@ -34,13 +39,19 @@ pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut
         info!("QMDL store size updater thread exiting...");
     });
 
+    // Spawn a thread to drive the DiagDevice reading loop. Since DiagDevice
+    // works via synchronous I/O, we have to spawn a "blocking" thread to avoid
+    // gumming up tokio's event loop.
     task_tracker.spawn_blocking(move || {
         loop {
+            // First check if we've gotten any control meesages
             match qmdl_file_rx.try_recv() {
                 Ok(DiagDeviceCtrlMessage::StartRecording(qmdl_writer)) => {
                     dev.qmdl_writer = Some(qmdl_writer);
                 },
                 Ok(DiagDeviceCtrlMessage::StopRecording) => dev.qmdl_writer = None,
+                // Disconnected means all the Senders have been dropped, so it's
+                // time to go
                 Ok(DiagDeviceCtrlMessage::Exit) | Err(TryRecvError::Disconnected) => {
                     info!("Diag reader thread exiting...");
                     return Ok(())

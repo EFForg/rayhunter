@@ -4,7 +4,6 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct ConfigFile {
-    qmdl_path: Option<String>,
     qmdl_store_path: Option<String>,
     port: Option<u16>,
     readonly_mode: Option<bool>,
@@ -12,7 +11,6 @@ struct ConfigFile {
 
 #[derive(Debug)]
 pub struct Config {
-    pub qmdl_path: String,
     pub qmdl_store_path: String,
     pub port: u16,
     pub readonly_mode: bool,
@@ -21,7 +19,6 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            qmdl_path: "./wavehunter.qmdl".to_string(),
             qmdl_store_path: "/data/wavehunter".to_string(),
             port: 8080,
             readonly_mode: false,
@@ -34,7 +31,6 @@ pub fn parse_config<P>(path: P) -> Result<Config, WavehunterError> where P: AsRe
     if let Ok(config_file) = std::fs::read_to_string(&path) {
         let parsed_config: ConfigFile = toml::from_str(&config_file)
             .map_err(WavehunterError::ConfigFileParsingError)?;
-        if let Some(path) = parsed_config.qmdl_path { config.qmdl_path = path }
         if let Some(path) = parsed_config.qmdl_store_path { config.qmdl_store_path = path }
         if let Some(port) = parsed_config.port { config.port = port }
         if let Some(debug_mode) = parsed_config.readonly_mode { config.readonly_mode = debug_mode }
