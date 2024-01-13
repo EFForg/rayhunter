@@ -34,14 +34,32 @@ _      _      _      _      _      _      _      _
                  \__;
 ```
 
-diag helper binary for the Orbic mobile hotspot. Based on code from [QCSuper](https://github.com/P1sec/QCSuper)
+IMSI Catcher Catcher for the Orbic mobile hotspot. Based on code from [QCSuper](https://github.com/P1sec/QCSuper)
 
-Build for arm using `cargo build` or just use the makefile 
+**THIS CODE IS PROOF OF CONCEPT AND SHOULD NOT BE RELIED UPON IN HIGH RISK SITUATIONS**
+
+Code is built and tested for the Orbic RC400L mobile hotspot, it may work on other orbics and other 
+linux/qualcom devices but this is the only one we have tested on. Buy the orbic [using bezos bucks](https://www.amazon.com/gp/product/B09CLS6Z7X/)
+
+Root your device on windows using the instructions here: https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183
+(script to root on linux coming soon) 
+
+
+
+## Setup
+on your linux laptop install rust the usual way and then install cross compiling dependences. 
+run `sudo apt install  build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf`
+
+set up cross compliing for rust:
+```
+rustup target add x86_64-unknown-linux-gnu
+rustup target add armv7-unknown-linux-gnueabihf
+```
+
+Build for arm using `cargo build` 
 
 Run tests using `cargo test_pc`
 
-## Setup
-Root your device using the instructions here: https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183
 
 Push the scripts in `scripts/` to /etc/init.d  on device and make a directory called /data/wavehunter using `adb shell` (and sshell for your root shell if you followed the steps above) 
 
