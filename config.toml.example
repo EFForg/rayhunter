@@ -1,0 +1,4 @@
+# cat config.toml
+qmdl_store_path = "/data/wavehunter/qmdl"
+port = 8080
+readonly_mode = false
