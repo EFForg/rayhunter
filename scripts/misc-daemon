@@ -41,9 +41,9 @@ case "$1" in
            /etc/init.d/start_atfwd_daemon start
         fi
 
-        if [ -f /etc/init.d/wavehunter_daemon ]
+        if [ -f /etc/init.d/rayhunter_daemon ]
         then
-           /etc/init.d/wavehunter_daemon start
+           /etc/init.d/rayhunter_daemon start
         fi
 
         if [ -f /etc/init.d/start_stop_qti_ppp_le ]
@@ -72,9 +72,9 @@ case "$1" in
            /etc/init.d/start_loc_launcher stop
         fi
 
-        if [ -f /etc/init.d/wavehunter_daemon ]
+        if [ -f /etc/init.d/rayhunter_daemon ]
         then
-           /etc/init.d/wavehunter_daemon stop
+           /etc/init.d/rayhunter_daemon stop
         fi
 
         if [ -f /etc/init.d/init_qcom_audio ]

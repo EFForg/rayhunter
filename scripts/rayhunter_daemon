@@ -1,0 +1,27 @@
+#! /bin/sshell
+
+set -e
+
+case "$1" in
+start)
+    echo -n "Starting rayhunter: "
+    start-stop-daemon -S -b --make-pidfile --pidfile /tmp/rayhunter.pid \
+    --startas /bin/bash -- -c "exec /data/rayhunter/rayhunter /data/rayhunter/config.toml > /data/rayhunter/rayhunter.log 2>&1"
+    echo "done"
+    ;;
+  stop)
+    echo -n "Stopping rayhunter: "
+    start-stop-daemon -K -p /tmp/rayhunter.pid
+    echo "done"
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "Usage atfwd_daemon{ start | stop | restart }" >&2
+    exit 1
+    ;;
+esac
+
+exit 0
