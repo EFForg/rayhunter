@@ -12,7 +12,7 @@ use tokio::sync::mpsc::error::TryRecvError;
 use tokio::task::JoinHandle;
 use tokio_util::task::TaskTracker;
 
-use crate::error::WavehunterError;
+use crate::error::RayhunterError;
 use crate::qmdl_store::QmdlStore;
 use crate::server::ServerState;
 
@@ -22,7 +22,7 @@ pub enum DiagDeviceCtrlMessage {
     Exit,
 }
 
-pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>, qmdl_store_lock: Arc<RwLock<QmdlStore>>) -> JoinHandle<Result<(), WavehunterError>> {
+pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>, qmdl_store_lock: Arc<RwLock<QmdlStore>>) -> JoinHandle<Result<(), RayhunterError>> {
     // mpsc channel for updating QmdlStore entry filesizes. First usize is the
     // index, second is the size in bytes
     let (tx, mut rx) = mpsc::channel::<(usize, usize)>(1);
@@ -67,7 +67,7 @@ pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut
             // returned here. Until then, the DiagDevice has already written those messages
             // to the QMDL file, so we can just ignore them.
             debug!("reading response from diag device...");
-            let _messages = dev.read_response().map_err(WavehunterError::DiagReadError)?;
+            let _messages = dev.read_response().map_err(RayhunterError::DiagReadError)?;
             debug!("got diag response ({} messages)", _messages.len());
 
             // keep track of how many bytes were written to the QMDL file so we can read

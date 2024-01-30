@@ -4,7 +4,7 @@ use orca::diag_device::DiagDeviceError;
 use crate::qmdl_store::QmdlStoreError;
 
 #[derive(Error, Debug)]
-pub enum WavehunterError {
+pub enum RayhunterError{
     #[error("Config file parsing error: {0}")]
     ConfigFileParsingError(#[from] toml::de::Error),
     #[error("Diag intialization error: {0}")]

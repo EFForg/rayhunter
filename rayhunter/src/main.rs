@@ -12,7 +12,7 @@ use crate::qmdl_store::QmdlStore;
 use crate::server::{ServerState, get_qmdl, serve_static};
 use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
-use crate::error::WavehunterError;
+use crate::error::RayhunterError;
 
 use axum::response::Redirect;
 use diag::{DiagDeviceCtrlMessage, start_recording, stop_recording};
@@ -73,11 +73,11 @@ async fn server_shutdown_signal(server_shutdown_rx: oneshot::Receiver<()>) {
 
 // Loads a QmdlStore if one exists, and if not, only create one if we're not in
 // readonly mode.
-async fn init_qmdl_store(config: &config::Config) -> Result<QmdlStore, WavehunterError> {
+async fn init_qmdl_store(config: &config::Config) -> Result<QmdlStore, RayhunterError> {
     match (QmdlStore::exists(&config.qmdl_store_path).await?, config.readonly_mode) {
         (true, _) => Ok(QmdlStore::load(&config.qmdl_store_path).await?),
         (false, false) => Ok(QmdlStore::create(&config.qmdl_store_path).await?),
-        (false, true) => Err(WavehunterError::NoStoreReadonlyMode(config.qmdl_store_path.clone())),
+        (false, true) => Err(RayhunterError::NoStoreReadonlyMode(config.qmdl_store_path.clone())),
     }
 }
 
@@ -89,7 +89,7 @@ fn run_ctrl_c_thread(
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     server_shutdown_tx: oneshot::Sender<()>,
     qmdl_store_lock: Arc<RwLock<QmdlStore>>
-) -> JoinHandle<Result<(), WavehunterError>> {
+) -> JoinHandle<Result<(), RayhunterError>> {
     task_tracker.spawn(async move {
         match tokio::signal::ctrl_c().await {
             Ok(()) => {
@@ -114,7 +114,7 @@ fn run_ctrl_c_thread(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), WavehunterError> {
+async fn main() -> Result<(), RayhunterError> {
     env_logger::init();
 
     let args = parse_args();
@@ -130,9 +130,9 @@ async fn main() -> Result<(), WavehunterError> {
         let qmdl_file = qmdl_store_lock.write().await.new_entry().await?;
         let qmdl_writer = QmdlWriter::new(qmdl_file.into_std().await);
         let mut dev = DiagDevice::new(Some(qmdl_writer))
-            .map_err(WavehunterError::DiagInitError)?;
+            .map_err(RayhunterError::DiagInitError)?;
         dev.config_logs()
-            .map_err(WavehunterError::DiagInitError)?;
+            .map_err(RayhunterError::DiagInitError)?;
 
         run_diag_read_thread(&task_tracker, dev, rx, qmdl_store_lock.clone());
     }
