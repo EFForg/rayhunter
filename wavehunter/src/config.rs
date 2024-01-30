@@ -19,7 +19,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            qmdl_store_path: "/data/wavehunter/qmdl".to_string(),
+            qmdl_store_path: "/data/rayhunter/qmdl".to_string(),
             port: 8080,
             readonly_mode: false,
         }

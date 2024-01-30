@@ -1,2 +1,2 @@
-cargo build
-adb push target/armv7-unknown-linux-gnueabihf/debug/rayhunter /data/rayhunter/rayhunter
+cargo build --release
+adb push target/armv7-unknown-linux-gnueabihf/release/rayhunter /data/rayhunter/rayhunter

@@ -25,7 +25,7 @@ _      _      _      _      _      _      _      _
                  \__;
 ```
 
-Ray Hunter is an IMSI Catcher Catcher for the Orbic mobile hotspot. Based on code from [QCSuper](https://github.com/P1sec/QCSuper)
+Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot. Based on code from [QCSuper](https://github.com/P1sec/QCSuper)
 
 **THIS CODE IS PROOF OF CONCEPT AND SHOULD NOT BE RELIED UPON IN HIGH RISK SITUATIONS**
 
