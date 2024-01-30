@@ -2,6 +2,6 @@
 
 members = [
     "orca",
-    "wavehunter",
+    "rayhunter",
 ]
 resolver = "2"
