@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "orca",
-    "rayhunter",
+    "lib",
+    "bin",
 ]
 resolver = "2"

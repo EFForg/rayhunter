@@ -1,5 +1,5 @@
 use thiserror::Error;
-use orca::diag_device::DiagDeviceError;
+use rayhunter::diag_device::DiagDeviceError;
 
 use crate::qmdl_store::QmdlStoreError;
 
