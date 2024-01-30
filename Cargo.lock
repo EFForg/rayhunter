@@ -751,21 +751,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
-name = "orca"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "chrono",
- "crc",
- "deku",
- "env_logger",
- "libc",
- "log",
- "pcap-file",
- "thiserror",
-]
-
-[[package]]
 name = "parking_lot"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -903,6 +888,21 @@ checksum = "9c33a3c44ca05fa6f1807d8e6743f3824e8509beca625669633be0acbdf509dc"
 name = "rayhunter"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "chrono",
+ "crc",
+ "deku",
+ "env_logger",
+ "libc",
+ "log",
+ "pcap-file",
+ "thiserror",
+]
+
+[[package]]
+name = "rayhunter-daemon"
+version = "0.1.0"
+dependencies = [
  "axum",
  "chrono",
  "env_logger",
@@ -911,7 +911,7 @@ dependencies = [
  "include_dir",
  "log",
  "mime_guess",
- "orca",
+ "rayhunter",
  "serde",
  "tempdir",
  "thiserror",

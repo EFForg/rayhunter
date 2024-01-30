@@ -1,10 +1,10 @@
-use orca::diag::{
+use rayhunter::diag::{
     Message,
     LogBody,
     LteRrcOtaPacket,
     Timestamp,
 };
-use orca::gsmtap_parser::GsmtapParser;
+use rayhunter::gsmtap_parser::GsmtapParser;
 use deku::prelude::*;
 
 // Tests here are based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/tests/test_diagltelogparser.py
