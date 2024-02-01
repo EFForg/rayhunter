@@ -5,28 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[build-dependencies]
-asn1-compiler = "0.6.1"
-asn1-codecs = "0.6.1"
-asn1_codecs_derive = "0.6.1"
-serde = { version = "1.0" , features = ["derive"]}
-trybuild = { version = "1.0" }
-hex = { version = "0.4" }
-bitvec = { version = "1.0" , features = ["serde"]}
-log = { version = "0.4" }
-criterion = { version = "0.5" , features = ["rayon"]}
-env_logger = { version = "0.9" }
-
 [dependencies]
 asn1-compiler = "0.6.1"
 asn1-codecs = "0.6.1"
 asn1_codecs_derive = "0.6.1"
-bitvec = "1.0"
+bitvec = { version = "1.0", features = ["serde"] }
 log = "0.4"
-
-[dev-dependencies]
-asn1-compiler = "0.6.1"
-asn1-codecs = "0.6.1"
-asn1_codecs_derive = "0.6.1"
-bitvec = "1.0"
-log = "0.4"
+thiserror = "1.0.56"
+serde = { version = "1.0.196", features = ["derive"] }

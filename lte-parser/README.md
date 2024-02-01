@@ -6,7 +6,7 @@ Rust code for parsing these messages. We're using [hampi](https://github.com/yst
 
 ## Generating the parser
 
-To install the hampi tools, run:
+To install the hampi compiler, run:
 
 ```
 > cargo install asn1-compiler
@@ -15,7 +15,7 @@ To install the hampi tools, run:
 To generate the parser, run:
 
 ```
-> ampi-rs-asn1c --codec uper --module src/lte_rrc.rs -- specs/*
+> hampi-rs-asn1c --codec uper --derive clone --derive partial-eq --derive serialize --module src/lte_rrc.rs -- specs/*
 ```
 
 ## Sourcing the ASN.1 files
