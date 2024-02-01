@@ -1,8 +1,8 @@
 [package]
-name = "orca"
+name = "rayhunter"
 version = "0.1.0"
 edition = "2021"
-description = "Orbic Realtime Cellular Analysis"
+description = "Realtime cellular data decoding and analysis for IMSI catcher detection"
 
 [dependencies]
 bytes = "1.5.0"

@@ -1,9 +1,9 @@
 [workspace]
 
 members = [
-    "orca",
+    "lib",
+    "bin",
     "serial",
     "rootshell",
-    "wavehunter",
 ]
 resolver = "2"

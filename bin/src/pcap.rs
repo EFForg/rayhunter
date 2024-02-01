@@ -1,15 +1,14 @@
 use crate::ServerState;
 
-use orca::gsmtap_parser::GsmtapParser;
-use orca::pcap::GsmtapPcapWriter;
-use orca::qmdl::{QmdlReader, QmdlReaderError};
-use orca::diag_reader::DiagReader;
+use rayhunter::gsmtap_parser::GsmtapParser;
+use rayhunter::pcap::GsmtapPcapWriter;
+use rayhunter::qmdl::{QmdlReader, QmdlReaderError};
+use rayhunter::diag_reader::DiagReader;
 use axum::body::Body;
 use axum::http::header::CONTENT_TYPE;
-use axum::extract::State;
+use axum::extract::{State, Path};
 use axum::http::StatusCode;
 use axum::response::{Response, IntoResponse};
-use std::fs::File;
 use std::io::Write;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -22,14 +21,19 @@ use tokio::sync::mpsc;
 // written so far. This is done by spawning a blocking thread (a tokio thread
 // capable of handling blocking operations) which streams chunks of pcap data to
 // a channel that's piped to the client.
-pub async fn get_pcap(State(state): State<Arc<ServerState>>) -> Result<Response, (StatusCode, String)> {
-    let qmdl_bytes_written = *state.qmdl_bytes_written.read().await;
-    if qmdl_bytes_written == 0 {
+pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
+    let qmdl_store = state.qmdl_store_lock.read().await;
+    let entry = qmdl_store.entry_for_name(&qmdl_name)
+        .ok_or((StatusCode::NOT_FOUND, format!("couldn't find qmdl file with name {}", qmdl_name)))?;
+    if entry.size_bytes == 0 {
         return Err((
             StatusCode::SERVICE_UNAVAILABLE,
             "QMDL file is empty, try again in a bit!".to_string()
         ));
     }
+    let qmdl_file = qmdl_store.open_entry(&entry).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)))?
+        .into_std().await;
 
     let (tx, rx) = mpsc::channel(1);
     let channel_reader = ChannelReader { rx };
@@ -37,8 +41,7 @@ pub async fn get_pcap(State(state): State<Arc<ServerState>>) -> Result<Response,
     tokio::task::spawn_blocking(move || {
         // the QMDL reader should stop at the last successfully written data
         // chunk (qmdl_bytes_written)
-        let qmdl_file = File::open(&state.qmdl_path).unwrap();
-        let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_bytes_written));
+        let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(entry.size_bytes));
 
         let mut gsmtap_parser = GsmtapParser::new();
         let mut pcap_writer = GsmtapPcapWriter::new(channel_writer).unwrap();

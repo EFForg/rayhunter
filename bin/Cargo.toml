@@ -1,20 +1,25 @@
 [package]
-name = "wavehunter"
+name = "rayhunter-daemon"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "rayhunter"
+path = "src/main.rs"
 
 [dependencies]
-orca = { path = "../orca" }
+rayhunter = { path = "../lib" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
 tokio = { version = "1.35.1", features = ["full"] }
-axum = "0.7.2"
+axum = "0.7.3"
 futures-core = "0.3.30"
 thiserror = "1.0.52"
 log = "0.4.20"
 env_logger = "0.10.1"
-tokio-util = { version = "0.7.10", features = ["io"] }
+tokio-util = { version = "0.7.10", features = ["rt"] }
+futures-macro = "0.3.30"
 include_dir = "0.7.3"
 mime_guess = "2.0.4"
+tempdir = "0.3.7"
+chrono = { version = "0.4.31", features = ["serde"] }
