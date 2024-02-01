@@ -3,5 +3,7 @@
 members = [
     "lib",
     "bin",
+    "serial",
+    "rootshell",
 ]
 resolver = "2"
