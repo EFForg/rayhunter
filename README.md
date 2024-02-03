@@ -24,6 +24,7 @@ _      _      _      _      _      _      _      _
                 \   |                         apc     '._|
                  \__;
 ```
+![Tests](https://github.com/EFForg/rayhunter/actions/workflows/rust.yml/badge.svg)
 
 Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot. Based on code from [QCSuper](https://github.com/P1sec/QCSuper)
 

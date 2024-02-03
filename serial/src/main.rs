@@ -1,3 +1,24 @@
+//! Serial communication with the orbic device 
+//! 
+//! This binary has two main functions, putting the orbic device in update mode which enables ADB 
+//! and running AT commands on the serial modem interface which can be used to upload a shell and chown it to root
+//! 
+//! # Panics
+//! 
+//! No device found - make sure your device is plugged in and turned on. If it is, it's possible you have a device with a different 
+//! usb id, file a bug with the output of `lsusb` attached. 
+//! 
+//! # Examples
+//! ```
+//! match rusb::Context::new() {
+//!	    Ok(mut context) => match open_orbic(&mut context) {
+//!	    Some(mut handle) => {
+//!		send_command(&mut handle, &args[1])
+//!	    },
+//!	    None => panic!("No Orbic device found"),
+//!	},
+//!	Err(e) => panic!("Failed to initialize libusb: {0}", e),
+//! ````
 use std::str;
 use std::thread::sleep;
 use std::time::Duration;
@@ -24,7 +45,9 @@ fn main() {
 	Err(e) => panic!("Failed to initialize libusb: {0}", e),
     }
 }
-
+/// Sends an AT command to the usb device over the serial port
+/// 
+/// First establish a USB handle and context by calling `open_orbic(<T>)
 fn send_command<T: UsbContext>(
     handle: &mut DeviceHandle<T>,
     command: &str,
@@ -55,10 +78,12 @@ fn send_command<T: UsbContext>(
     }
 }
 
+/// Send a command to switch the device into generic mode, exposing serial
+/// 
+/// If the device reboots while the command is still executing you may get a pipe error here, not sure what to do about this race condition.
 fn switch_device<T: UsbContext>(
     handle: &mut DeviceHandle<T>,
 ) {
-    // Send a command to switch the device into generic mode, exposing serial
     let timeout = Duration::from_secs(1);
 
     if let Err(e) = handle.write_control(0x40, 0xa0, 0, 0, &[], timeout) {
@@ -71,6 +96,9 @@ fn switch_device<T: UsbContext>(
     }
 }
 
+/// Get a handle and contet for the orbic device
+/// 
+/// If the device isn't already in command mode this function will call swtich_device to switch it into command mode
 fn open_orbic<T: UsbContext>(
     context: &mut T,
 ) -> Option<DeviceHandle<T>> {
@@ -99,6 +127,7 @@ fn open_orbic<T: UsbContext>(
     panic!("No Orbic device detected")
 }
 
+/// Generic function to open a USB device
 fn open_device<T: UsbContext>(
     context: &mut T,
     vid: u16,
