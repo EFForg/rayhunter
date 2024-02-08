@@ -5,6 +5,6 @@ members = [
     "bin",
     "serial",
     "rootshell",
-    "lte-parser",
+    "telcom-parser",
 ]
 resolver = "2"

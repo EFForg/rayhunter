@@ -14,4 +14,4 @@ libc = "0.2.150"
 log = "0.4.20"
 pcap-file = "2.0.0"
 thiserror = "1.0.50"
-lte-parser = { path = "../lte-parser" }
+telcom-parser = { path = "../telcom-parser" }

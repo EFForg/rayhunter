@@ -1,19 +1,30 @@
-use lte_parser::{decode, lte_rrc};
+//! The term "information element" is used by 3GPP to describe "structural
+//! elements containing single or multiple fields" in 2G/3G/4G/5G. We use
+//! the term to refer to a structured, fully parsed message in any telcom
+//! standard.
+
+use telcom_parser::{decode, lte_rrc};
 use thiserror::Error;
-use super::gsmtap::{GsmtapType, LteRrcSubtype, GsmtapMessage};
+use crate::gsmtap::{GsmtapType, LteRrcSubtype, GsmtapMessage};
 
 #[derive(Error, Debug)]
-pub enum MessageParsingError {
+pub enum InformationElementError {
     #[error("Failed decoding")]
-    DecodingError(#[from] lte_parser::ParsingError),
-    #[error("Unknown Gsmtap message type {0:?}")]
-    UnknownGsmtapType(GsmtapType),
+    DecodingError(#[from] telcom_parser::ParsingError),
     #[error("Unsupported LTE RRC subtype {0:?}")]
-    UnsupportedLteRrcSubtype(LteRrcSubtype),
+    UnsupportedGsmtapType(GsmtapType),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Message {
+pub enum InformationElement {
+    GSM,
+    UMTS,
+    LTE(LteInformationElement),
+    FiveG,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LteInformationElement {
     DlCcch(lte_rrc::DL_CCCH_Message),
     DlDcch(lte_rrc::DL_DCCH_Message),
     UlCcch(lte_rrc::UL_CCCH_Message),
@@ -41,13 +52,13 @@ pub enum Message {
     //ScMcchNb(),
 }
 
-impl TryFrom<&GsmtapMessage> for Message {
-    type Error = MessageParsingError;
+impl TryFrom<&GsmtapMessage> for LteInformationElement {
+    type Error = InformationElementError;
 
     fn try_from(gsmtap_msg: &GsmtapMessage) -> Result<Self, Self::Error> {
         if let GsmtapType::LteRrc(lte_rrc_subtype) = gsmtap_msg.header.gsmtap_type {
             use LteRrcSubtype as L;
-            use Message as R;
+            use LteInformationElement as R;
             return match lte_rrc_subtype {
                 L::DlCcch => Ok(R::DlCcch(decode(&gsmtap_msg.payload)?)),
                 L::DlDcch => Ok(R::DlDcch(decode(&gsmtap_msg.payload)?)),
@@ -63,9 +74,9 @@ impl TryFrom<&GsmtapMessage> for Message {
                 L::BcchDlSchMbms => Ok(R::BcchDlSchMbms(decode(&gsmtap_msg.payload)?)),
                 L::SbcchSlBch => Ok(R::SbcchSlBch(decode(&gsmtap_msg.payload)?)),
                 L::SbcchSlBchV2x => Ok(R::SbcchSlBchV2x(decode(&gsmtap_msg.payload)?)),
-                subtype => Err(MessageParsingError::UnsupportedLteRrcSubtype(subtype)),
+                subtype => Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
             };
         }
-        Err(MessageParsingError::UnknownGsmtapType(gsmtap_msg.header.gsmtap_type))
+        Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type))
     }
 }
