@@ -74,7 +74,7 @@ impl TryFrom<&GsmtapMessage> for LteInformationElement {
                 L::BcchDlSchMbms => Ok(R::BcchDlSchMbms(decode(&gsmtap_msg.payload)?)),
                 L::SbcchSlBch => Ok(R::SbcchSlBch(decode(&gsmtap_msg.payload)?)),
                 L::SbcchSlBchV2x => Ok(R::SbcchSlBchV2x(decode(&gsmtap_msg.payload)?)),
-                subtype => Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
+                _ => Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
             };
         }
         Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type))

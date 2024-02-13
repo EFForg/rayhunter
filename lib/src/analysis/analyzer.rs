@@ -47,7 +47,5 @@ pub trait Analyzer {
     /// heuristic deems it relevant. Again, be mindful of any state your
     /// [Analyzer] updates per message, since it may be run over hundreds or
     /// thousands of them alongside many other [Analyzers](Analyzer).
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
-        None
-    }
+    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event>;
 }
