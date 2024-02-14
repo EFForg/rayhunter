@@ -1,15 +1,15 @@
 use crate::hdlc::hdlc_encapsulate;
-use crate::diag::{Message, ResponsePayload, Request, LogConfigRequest, LogConfigResponse, build_log_mask_request, RequestContainer, DataType, MessagesContainer};
-use crate::diag_reader::{DiagReader, CRC_CCITT};
-use crate::qmdl::QmdlWriter;
+use crate::diag::{build_log_mask_request, DataType, DiagParsingError, LogConfigRequest, LogConfigResponse, Message, MessagesContainer, Request, RequestContainer, ResponsePayload, CRC_CCITT};
 use crate::log_codes;
 
-use std::fs::File;
-use std::io::Read;
+use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
+use futures_core::TryStream;
 use thiserror::Error;
 use log::{info, warn, error};
 use deku::prelude::*;
+use tokio::fs::File;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 pub type DiagResult<T> = Result<T, DiagDeviceError>;
 
@@ -20,7 +20,7 @@ pub enum DiagDeviceError {
     #[error("Failed to read diag device: {0}")]
     DeviceReadFailed(std::io::Error),
     #[error("Failed to write diag device: {0}")]
-    DeviceWriteFailed(String),
+    DeviceWriteFailed(std::io::Error),
     #[error("Nonzero status code {0} for diag request: {1:?}")]
     RequestFailed(u32, Request),
     #[error("Didn't receive response for request: {0:?}")]
@@ -71,43 +71,18 @@ const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 
 pub struct DiagDevice {
     file: File,
-    pub qmdl_writer: Option<QmdlWriter<File>>,
     fully_initialized: bool,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
 
-impl DiagReader for DiagDevice {
-    type Err = DiagDeviceError;
-
-    fn get_next_messages_container(&mut self) -> DiagResult<MessagesContainer> {
-        let mut bytes_read = 0;
-        while bytes_read == 0 {
-            bytes_read = self.file.read(&mut self.read_buf)
-                .map_err(DiagDeviceError::DeviceReadFailed)?;
-        }
-        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))
-            .map_err(DiagDeviceError::ParseMessagesContainerError)?;
-        if !leftover_bytes.is_empty() {
-            warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
-        }
-
-        if let Some(qmdl_writer) = self.qmdl_writer.as_mut() {
-            if self.fully_initialized {
-                qmdl_writer.write_container(&container)
-                    .map_err(DiagDeviceError::QmdlFileWriteError)?;
-            }
-        }
-        Ok(container)
-    }
-}
-
 impl DiagDevice {
-    pub fn new(qmdl_writer: Option<QmdlWriter<File>>) -> DiagResult<Self> {
-        let diag_file = std::fs::File::options()
+    pub async fn new() -> DiagResult<Self> {
+        let diag_file = File::options()
             .read(true)
             .write(true)
             .open("/dev/diag")
+            .await
             .map_err(DiagDeviceError::OpenDiagDeviceError)?;
         let fd = diag_file.as_raw_fd();
 
@@ -118,12 +93,32 @@ impl DiagDevice {
             read_buf: vec![0; BUFFER_LEN],
             file: diag_file,
             fully_initialized: false,
-            qmdl_writer,
             use_mdm,
         })
     }
 
-    fn write_request(&mut self, req: &Request) -> DiagResult<()> {
+    pub fn as_stream(&mut self) -> impl TryStream<Ok = MessagesContainer, Error = DiagDeviceError> + '_ {
+        futures::stream::try_unfold(self, |dev| async {
+            let container = dev.get_next_messages_container().await?;
+            Ok(Some((container, dev)))
+        })
+    }
+
+    async fn get_next_messages_container(&mut self) -> Result<MessagesContainer, DiagDeviceError> {
+        let mut bytes_read = 0;
+        while bytes_read == 0 {
+            bytes_read = self.file.read(&mut self.read_buf).await
+                .map_err(DiagDeviceError::DeviceReadFailed)?;
+        }
+        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))
+            .map_err(DiagDeviceError::ParseMessagesContainerError)?;
+        if !leftover_bytes.is_empty() {
+            warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+        }
+        Ok(container)
+    }
+
+    async fn write_request(&mut self, req: &Request) -> DiagResult<()> {
         let req_bytes = &req.to_bytes().expect("Failed to serialize Request");
         let buf = RequestContainer {
             data_type: DataType::UserSpace,
@@ -131,23 +126,35 @@ impl DiagDevice {
             mdm_field: -1,
             hdlc_encapsulated_request: hdlc_encapsulate(req_bytes, &CRC_CCITT),
         }.to_bytes().expect("Failed to serialize RequestContainer");
-        unsafe {
-            let fd = self.file.as_raw_fd();
-            let buf_ptr = buf.as_ptr() as *const libc::c_void;
-            let ret = libc::write(fd, buf_ptr, buf.len());
-            if ret < 0 {
-                let msg = format!("write failed with error code {}", ret);
-                return Err(DiagDeviceError::DeviceWriteFailed(msg));
+        if let Err(err) = self.file.write(&buf).await {
+            // For reasons I don't entirely understand, calls to write(2) on
+            // /dev/diag always return 0 bytes written, though the written
+            // requests end up being interpreted. As such, we're not concerned
+            // about WriteZero errors
+            if err.kind() != ErrorKind::WriteZero {
+                return Err(DiagDeviceError::DeviceWriteFailed(err));
             }
         }
+        self.file.flush().await
+            .map_err(DiagDeviceError::DeviceWriteFailed)?;
         Ok(())
     }
 
-    fn retrieve_id_ranges(&mut self) -> DiagResult<[u32; 16]> {
-        let req = Request::LogConfig(LogConfigRequest::RetrieveIdRanges);
-        self.write_request(&req)?;
+    async fn read_response(&mut self) -> DiagResult<Vec<Result<Message, DiagParsingError>>> {
+        loop {
+            let container = self.get_next_messages_container().await?;
+            if container.data_type != DataType::UserSpace {
+                continue;
+            }
+            return Ok(container.into_messages());
+        }
+    }
 
-        for msg in self.read_response()? {
+    async fn retrieve_id_ranges(&mut self) -> DiagResult<[u32; 16]> {
+        let req = Request::LogConfig(LogConfigRequest::RetrieveIdRanges);
+        self.write_request(&req).await?;
+
+        for msg in self.read_response().await? {
             match msg {
                 Ok(Message::Log { .. }) => info!("skipping log response..."),
                 Ok(Message::Response { payload, status, .. }) => match payload {
@@ -166,11 +173,11 @@ impl DiagDevice {
         Err(DiagDeviceError::NoResponse(req))
     }
 
-    fn set_log_mask(&mut self, log_type: u32, log_mask_bitsize: u32) -> DiagResult<()> {
+    async fn set_log_mask(&mut self, log_type: u32, log_mask_bitsize: u32) -> DiagResult<()> {
         let req = build_log_mask_request(log_type, log_mask_bitsize, &LOG_CODES_FOR_RAW_PACKET_LOGGING);
-        self.write_request(&req)?;
+        self.write_request(&req).await?;
 
-        for msg in self.read_response()? {
+        for msg in self.read_response().await? {
             match msg {
                 Ok(Message::Log { .. }) => info!("skipping log response..."),
                 Ok(Message::Response { payload, status, .. }) => {
@@ -188,13 +195,13 @@ impl DiagDevice {
         Err(DiagDeviceError::NoResponse(req))
     }
 
-    pub fn config_logs(&mut self) -> DiagResult<()> {
+    pub async fn config_logs(&mut self) -> DiagResult<()> {
         info!("retrieving diag logging capabilities...");
-        let log_mask_sizes = self.retrieve_id_ranges()?;
+        let log_mask_sizes = self.retrieve_id_ranges().await?;
 
         for (log_type, &log_mask_bitsize) in log_mask_sizes.iter().enumerate() {
             if log_mask_bitsize > 0 {
-                self.set_log_mask(log_type as u32, log_mask_bitsize)?;
+                self.set_log_mask(log_type as u32, log_mask_bitsize).await?;
                 info!("enabled logging for log type {}", log_type);
             }
         }

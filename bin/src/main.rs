@@ -20,7 +20,6 @@ use log::{info, error};
 use rayhunter::diag_device::DiagDevice;
 use axum::routing::{get, post};
 use axum::Router;
-use rayhunter::qmdl::QmdlWriter;
 use stats::get_qmdl_manifest;
 use tokio::sync::mpsc::{self, Sender};
 use tokio::task::JoinHandle;
@@ -127,11 +126,9 @@ async fn main() -> Result<(), RayhunterError> {
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
     if !config.readonly_mode {
-        let qmdl_file = qmdl_store_lock.write().await.new_entry().await?;
-        let qmdl_writer = QmdlWriter::new(qmdl_file.into_std().await);
-        let mut dev = DiagDevice::new(Some(qmdl_writer))
+        let mut dev = DiagDevice::new().await
             .map_err(RayhunterError::DiagInitError)?;
-        dev.config_logs()
+        dev.config_logs().await
             .map_err(RayhunterError::DiagInitError)?;
 
         run_diag_read_thread(&task_tracker, dev, rx, qmdl_store_lock.clone());
