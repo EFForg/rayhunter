@@ -33,7 +33,7 @@ pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut
     task_tracker.spawn(async move {
         while let Some((entry_idx, new_size)) = rx.recv().await {
             let mut qmdl_store = qmdl_store_lock_clone.write().await;
-            qmdl_store.update_entry_size(entry_idx, new_size).await
+            qmdl_store.update_entry(entry_idx, new_size).await
                 .expect("failed to update qmdl file size");
         }
         info!("QMDL store size updater thread exiting...");

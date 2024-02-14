@@ -37,7 +37,7 @@ pub struct Manifest {
 pub struct ManifestEntry {
     pub name: String,
     pub start_time: DateTime<Local>,
-    pub end_time: Option<DateTime<Local>>,
+    pub last_message_time: Option<DateTime<Local>>,
     pub size_bytes: usize,
 }
 
@@ -47,7 +47,7 @@ impl ManifestEntry {
         ManifestEntry {
             name: format!("{}", now.timestamp()),
             start_time: now,
-            end_time: None,
+            last_message_time: None,
             size_bytes: 0,
         }
     }
@@ -128,18 +128,21 @@ impl QmdlStore {
             .map_err(QmdlStoreError::ReadFileError)
     }
 
-    // Sets the current entry's end_time, updates the manifest, and unsets the
-    // current entry
+    // Unsets the current entry
     pub async fn close_current_entry(&mut self) -> Result<(), QmdlStoreError> {
-        let entry_index = self.current_entry.take()
-            .ok_or(QmdlStoreError::NoCurrentEntry)?;
-        self.manifest.entries[entry_index].end_time = Some(Local::now());
-        self.write_manifest().await
+        match self.current_entry {
+            Some(_) => {
+                self.current_entry = None;
+                Ok(())
+            },
+            None => Err(QmdlStoreError::NoCurrentEntry)
+        }
     }
 
-    // Sets the given entry's size, updating the manifest
-    pub async fn update_entry_size(&mut self, entry_index: usize, size_bytes: usize) -> Result<(), QmdlStoreError> {
+    // Sets the given entry's size and updates the last_message_time to now, updating the manifest
+    pub async fn update_entry(&mut self, entry_index: usize, size_bytes: usize) -> Result<(), QmdlStoreError> {
         self.manifest.entries[entry_index].size_bytes = size_bytes;
+        self.manifest.entries[entry_index].last_message_time = Some(Local::now());
         self.write_manifest().await
     }
 
@@ -185,17 +188,15 @@ mod tests {
         let _ = store.new_entry().await.unwrap();
         let entry_index = store.current_entry.unwrap();
         assert_eq!(QmdlStore::read_manifest(dir.path()).await.unwrap(), store.manifest);
+        assert!(store.manifest.entries[entry_index].last_message_time.is_none());
 
-        store.update_entry_size(entry_index, 1000).await.unwrap();
+        store.update_entry(entry_index, 1000).await.unwrap();
+        let entry = store.entry_for_name(&store.manifest.entries[entry_index].name).unwrap();
+        assert!(entry.last_message_time.is_some());
         assert_eq!(store.manifest.entries[entry_index].size_bytes, 1000);
         assert_eq!(QmdlStore::read_manifest(dir.path()).await.unwrap(), store.manifest);
 
-        assert!(store.manifest.entries[entry_index].end_time.is_none());
         store.close_current_entry().await.unwrap();
-        let entry = store.entry_for_name(&store.manifest.entries[entry_index].name).unwrap();
-        assert!(entry.end_time.is_some());
-        assert_eq!(QmdlStore::read_manifest(dir.path()).await.unwrap(), store.manifest);
-
         assert!(matches!(store.close_current_entry().await, Err(QmdlStoreError::NoCurrentEntry)));
     }
 
