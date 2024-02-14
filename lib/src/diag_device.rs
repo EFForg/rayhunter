@@ -123,7 +123,7 @@ impl DiagDevice {
         })
     }
 
-    pub fn write_request(&mut self, req: &Request) -> DiagResult<()> {
+    fn write_request(&mut self, req: &Request) -> DiagResult<()> {
         let req_bytes = &req.to_bytes().expect("Failed to serialize Request");
         let buf = RequestContainer {
             data_type: DataType::UserSpace,
