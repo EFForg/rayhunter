@@ -103,10 +103,10 @@ pub async fn get_system_stats(State(state): State<Arc<ServerState>>) -> Result<J
         Ok(stats) => Ok(Json(stats)),
         Err(err) => {
             error!("error getting system stats: {}", err);
-            return Err((
+            Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "error getting system stats".to_string()
-            ));
+            ))
         },
     }
 }

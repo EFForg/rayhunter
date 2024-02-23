@@ -77,7 +77,7 @@ pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut
 
 pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(StatusCode, String), (StatusCode, String)> {
     if state.readonly_mode {
-        return Err((StatusCode::FORBIDDEN, format!("server is in readonly mode")));
+        return Err((StatusCode::FORBIDDEN, "server is in readonly mode".to_string()));
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
     let qmdl_file = qmdl_store.new_entry().await
@@ -85,17 +85,17 @@ pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(S
     let qmdl_writer = QmdlWriter::new(qmdl_file);
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StartRecording(qmdl_writer)).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    Ok((StatusCode::ACCEPTED, format!("ok")))
+    Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
 pub async fn stop_recording(State(state): State<Arc<ServerState>>) -> Result<(StatusCode, String), (StatusCode, String)> {
     if state.readonly_mode {
-        return Err((StatusCode::FORBIDDEN, format!("server is in readonly mode")));
+        return Err((StatusCode::FORBIDDEN, "server is in readonly mode".to_string()));
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
     qmdl_store.close_current_entry().await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't close current qmdl entry: {}", e)))?;
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    Ok((StatusCode::ACCEPTED, format!("ok")))
+    Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
