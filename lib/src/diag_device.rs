@@ -71,7 +71,6 @@ const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 
 pub struct DiagDevice {
     file: File,
-    fully_initialized: bool,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
@@ -92,7 +91,6 @@ impl DiagDevice {
         Ok(DiagDevice {
             read_buf: vec![0; BUFFER_LEN],
             file: diag_file,
-            fully_initialized: false,
             use_mdm,
         })
     }
@@ -206,7 +204,6 @@ impl DiagDevice {
             }
         }
 
-        self.fully_initialized = true;
         Ok(())
     }
 }
