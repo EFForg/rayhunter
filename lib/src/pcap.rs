@@ -1,14 +1,14 @@
 use crate::gsmtap::GsmtapMessage;
 use crate::diag::Timestamp;
 
-use std::io::Write;
+use tokio::io::AsyncWrite;
 use std::borrow::Cow;
 use chrono::prelude::*;
 use deku::prelude::*;
-use pcap_file::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
-use pcap_file::pcapng::blocks::interface_description::InterfaceDescriptionBlock;
-use pcap_file::pcapng::PcapNgWriter;
-use pcap_file::PcapError;
+use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
+use pcap_file_tokio::pcapng::blocks::interface_description::InterfaceDescriptionBlock;
+use pcap_file_tokio::pcapng::PcapNgWriter;
+use pcap_file_tokio::PcapError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -23,7 +23,7 @@ pub enum GsmtapPcapError {
     Deku(#[from] DekuError),
 }
 
-pub struct GsmtapPcapWriter<T> where T: Write {
+pub struct GsmtapPcapWriter<T> where T: AsyncWrite {
     writer: PcapNgWriter<T>,
     ip_id: u16,
 }
@@ -56,23 +56,23 @@ struct UdpHeader {
     checksum: u16,
 }
 
-impl<T> GsmtapPcapWriter<T> where T: Write {
-    pub fn new(writer: T) -> Result<Self, GsmtapPcapError> {
-        let writer = PcapNgWriter::new(writer)?;
+impl<T> GsmtapPcapWriter<T> where T: AsyncWrite + Unpin + Send {
+    pub async fn new(writer: T) -> Result<Self, GsmtapPcapError> {
+        let writer = PcapNgWriter::new(writer).await?;
         Ok(GsmtapPcapWriter { writer, ip_id: 0 })
     }
 
-    pub fn write_iface_header(&mut self) -> Result<(), GsmtapPcapError> {
+    pub async fn write_iface_header(&mut self) -> Result<(), GsmtapPcapError> {
         let interface = InterfaceDescriptionBlock {
-            linktype: pcap_file::DataLink::IPV4,
+            linktype: pcap_file_tokio::DataLink::IPV4,
             snaplen: 0xffff,
             options: vec![],
         };
-        self.writer.write_pcapng_block(interface)?;
+        self.writer.write_pcapng_block(interface).await?;
         Ok(())
     }
 
-    pub fn write_gsmtap_message(&mut self, msg: GsmtapMessage, timestamp: Timestamp) -> Result<(), GsmtapPcapError> {
+    pub async fn write_gsmtap_message(&mut self, msg: GsmtapMessage, timestamp: Timestamp) -> Result<(), GsmtapPcapError> {
         let duration = timestamp.to_datetime()
             .signed_duration_since(DateTime::UNIX_EPOCH)
             .to_std()?;
@@ -113,7 +113,7 @@ impl<T> GsmtapPcapWriter<T> where T: Write {
             data: Cow::Owned(data),
             options: vec![],
         };
-        self.writer.write_pcapng_block(packet)?;
+        self.writer.write_pcapng_block(packet).await?;
         self.ip_id = self.ip_id.wrapping_add(1);
         Ok(())
     }

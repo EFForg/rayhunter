@@ -9,8 +9,6 @@ pub enum RayhunterError{
     ConfigFileParsingError(#[from] toml::de::Error),
     #[error("Diag intialization error: {0}")]
     DiagInitError(DiagDeviceError),
-    #[error("Diag read error: {0}")]
-    DiagReadError(DiagDeviceError),
     #[error("Tokio error: {0}")]
     TokioError(#[from] tokio::io::Error),
     #[error("QmdlStore error: {0}")]

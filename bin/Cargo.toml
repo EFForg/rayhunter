@@ -23,3 +23,5 @@ include_dir = "0.7.3"
 mime_guess = "2.0.4"
 tempdir = "0.3.7"
 chrono = { version = "0.4.31", features = ["serde"] }
+tokio-stream = "0.1.14"
+futures = "0.3.30"

@@ -1,6 +1,6 @@
 use asn1_codecs::{uper::UperCodec, PerCodecData, PerCodecError};
 use thiserror::Error;
-#[allow(unreachable_patterns, non_camel_case_types)]
+#[allow(warnings, unused, unreachable_patterns, non_camel_case_types)]
 pub mod lte_rrc;
 
 #[derive(Error, Debug)]
@@ -14,5 +14,5 @@ pub fn decode<T>(data: &[u8]) -> Result<T, ParsingError>
 {
     let mut asn_data = PerCodecData::from_slice_uper(data);
     T::uper_decode(&mut asn_data)
-        .map_err(|e| ParsingError::UperDecodeError(e))
+        .map_err(ParsingError::UperDecodeError)
 }

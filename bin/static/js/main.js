@@ -29,7 +29,7 @@ function createEntryRow(entry) {
     name.scope = 'row';
     name.innerText = entry.name;
     row.appendChild(name);
-    for (const key of ['start_time', 'end_time', 'size_bytes']) {
+    for (const key of ['start_time', 'last_message_time', 'size_bytes']) {
         const td = document.createElement('td');
         td.innerText = entry[key];
         row.appendChild(td);
@@ -57,10 +57,15 @@ async function getQmdlManifest() {
     const manifest = JSON.parse(await req('GET', '/api/qmdl-manifest'));
     if (manifest.current_entry) {
         manifest.current_entry.start_time = new Date(manifest.current_entry.start_time);
+        if (manifest.current_entry.last_message_time === undefined) {
+            manifest.current_entry.last_message_time = "N/A";
+        } else {
+            manifest.current_entry.last_message_time = new Date(manifest.current_entry.last_message_time);
+        }
     }
     for (entry of manifest.entries) {
         entry.start_time = new Date(entry.start_time);
-        entry.end_time = new Date(entry.end_time);
+        entry.last_message_time = new Date(entry.last_message_time);
     }
     // sort them in reverse chronological order
     manifest.entries.reverse();
