@@ -133,8 +133,11 @@ impl DiagDevice {
                 return Err(DiagDeviceError::DeviceWriteFailed(err));
             }
         }
-        self.file.flush().await
-            .map_err(DiagDeviceError::DeviceWriteFailed)?;
+        if let Err(err) = self.file.flush().await {
+            if err.kind() != ErrorKind::WriteZero {
+                return Err(DiagDeviceError::DeviceWriteFailed(err));
+            }
+        }
         Ok(())
     }
 
