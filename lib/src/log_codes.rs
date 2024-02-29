@@ -1,4 +1,4 @@
-//! Enumerates some releVant diag log codes. Copied from QCSuper
+//! Enumerates some relevant diag log codes. Copied from QCSuper
 
 
 // These are 2G-related log types.

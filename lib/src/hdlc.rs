@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::diag::{MESSAGE_ESCAPE_CHAR, MESSAGE_TERMINATOR, ESCAPED_MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR};
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Clone, Error, PartialEq)]
 pub enum HdlcError {
     #[error("Invalid checksum (expected {0}, got {1})")]
     InvalidChecksum(u16, u16),
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_hdlc_encapsulate() {
-        let crc = Crc::<u16>::new(&crate::diag_reader::CRC_CCITT_ALG);
+        let crc = Crc::<u16>::new(&crate::diag::CRC_CCITT_ALG);
         let data = vec![0x01, 0x02, 0x03, 0x04];
         let expected = vec![1, 2, 3, 4, 145, 57, 126];
         let encapsulated = hdlc_encapsulate(&data, &crc);

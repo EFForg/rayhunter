@@ -1,11 +1,3 @@
-[build]
-target = "armv7-unknown-linux-gnueabihf"
-rustflags = ["-C", "target-feature=+crt-static"]
-
-[alias]
-test_pc = "test --target=x86_64-unknown-linux-gnu"
-build_pc = "build --target=x86_64-unknown-linux-gnu"
-
-
 [target.armv7-unknown-linux-gnueabihf]
 linker = "arm-linux-gnueabihf-gcc"
+rustflags = ["-C", "target-feature=+crt-static"]
