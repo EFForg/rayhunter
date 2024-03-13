@@ -26,7 +26,7 @@ impl GsmtapParser {
         GsmtapParser {}
     }
 
-    pub fn recv_message(&mut self, msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapParserError> {
+    pub fn parse(&mut self, msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapParserError> {
         if let Message::Log { timestamp, body, .. } = msg {
             match self.log_to_gsmtap(body)? {
                 Some(msg) => Ok(Some((timestamp, msg))),

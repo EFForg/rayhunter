@@ -48,7 +48,7 @@ pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
             for maybe_msg in container.into_messages() {
                 match maybe_msg {
                     Ok(msg) => {
-                        let maybe_gsmtap_msg = gsmtap_parser.recv_message(msg)
+                        let maybe_gsmtap_msg = gsmtap_parser.parse(msg)
                             .expect("error parsing gsmtap message");
                         if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
                             pcap_writer.write_gsmtap_message(gsmtap_msg, timestamp).await

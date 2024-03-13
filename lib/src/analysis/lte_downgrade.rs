@@ -5,10 +5,10 @@ use super::information_element::{InformationElement, LteInformationElement};
 use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1, CellReselectionPriority, SystemInformationBlockType7, SystemInformationCriticalExtensions, SystemInformation_r8_IEsSib_TypeAndInfo, SystemInformation_r8_IEsSib_TypeAndInfo_Entry};
 
 /// Based on heuristic T7 from Shinjo Park's "Why We Cannot Win".
-pub struct LteSib7DowngradeAnalyzer {
+pub struct LteSib6And7DowngradeAnalyzer {
 }
 
-impl LteSib7DowngradeAnalyzer {
+impl LteSib6And7DowngradeAnalyzer {
     fn unpack_system_information<'a>(&self, ie: &'a InformationElement) -> Option<&'a SystemInformation_r8_IEsSib_TypeAndInfo> {
         if let InformationElement::LTE(LteInformationElement::BcchDlSch(bcch_dl_sch_message)) = ie {
             if let BCCH_DL_SCH_MessageType::C1(BCCH_DL_SCH_MessageType_c1::SystemInformation(system_information)) = &bcch_dl_sch_message.message {
@@ -22,13 +22,13 @@ impl LteSib7DowngradeAnalyzer {
 }
 
 // TODO: keep track of SIB state to compare LTE reselection blocks w/ 2g/3g ones
-impl Analyzer for LteSib7DowngradeAnalyzer {
+impl Analyzer for LteSib6And7DowngradeAnalyzer {
     fn get_name(&self) -> Cow<str> {
-        Cow::from("LTE SIB 7 Downgrade")
+        Cow::from("LTE SIB 6/7 Downgrade")
     }
 
     fn get_description(&self) -> Cow<str> {
-        Cow::from("Tests for LTE cells broadcasting a SIB type 7 which include 2G/3G frequencies with higher priorities.")
+        Cow::from("Tests for LTE cells broadcasting a SIB type 6 and 7 which include 2G/3G frequencies with higher priorities.")
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<super::analyzer::Event> {
@@ -41,7 +41,7 @@ impl Analyzer for LteSib7DowngradeAnalyzer {
                             if let Some(CellReselectionPriority(p)) = carrier_info.cell_reselection_priority {
                                 if p == 0 {
                                     return Some(Event {
-                                        event_type: EventType::QualitativeWarning(Severity::High),
+                                        event_type: EventType::QualitativeWarning { severity: Severity::High },
                                         message: "LTE cell advertised a 3G cell for priority 0 reselection".to_string(),
                                     });
                                 }
@@ -53,7 +53,7 @@ impl Analyzer for LteSib7DowngradeAnalyzer {
                             if let Some(CellReselectionPriority(p)) = carrier_info.cell_reselection_priority {
                                 if p == 0 {
                                     return Some(Event {
-                                        event_type: EventType::QualitativeWarning(Severity::High),
+                                        event_type: EventType::QualitativeWarning { severity: Severity::High },
                                         message: "LTE cell advertised a 3G cell for priority 0 reselection".to_string(),
                                     });
                                 }
@@ -66,7 +66,7 @@ impl Analyzer for LteSib7DowngradeAnalyzer {
                         if let Some(CellReselectionPriority(p)) = carrier_info.common_info.cell_reselection_priority {
                             if p == 0 {
                                 return Some(Event {
-                                    event_type: EventType::QualitativeWarning(Severity::High),
+                                    event_type: EventType::QualitativeWarning { severity: Severity::High },
                                     message: "LTE cell advertised a 2G cell for priority 0 reselection".to_string(),
                                 });
                             }
