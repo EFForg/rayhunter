@@ -6,13 +6,14 @@ use axum::http::StatusCode;
 use rayhunter::diag::DataType;
 use rayhunter::diag_device::DiagDevice;
 use tokio::sync::RwLock;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 use rayhunter::qmdl::QmdlWriter;
 use log::{debug, error, info};
 use tokio::fs::File;
 use tokio_util::task::TaskTracker;
 use futures::{StreamExt, TryStreamExt};
 
+use crate::analysis::AnalysisMessage;
 use crate::qmdl_store::QmdlStore;
 use crate::server::ServerState;
 
@@ -22,7 +23,13 @@ pub enum DiagDeviceCtrlMessage {
     Exit,
 }
 
-pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>, qmdl_store_lock: Arc<RwLock<QmdlStore>>) {
+pub fn run_diag_read_thread(
+    task_tracker: &TaskTracker,
+    mut dev: DiagDevice,
+    mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
+    qmdl_store_lock: Arc<RwLock<QmdlStore>>,
+    analysis_tx: Sender<AnalysisMessage>
+) {
     task_tracker.spawn(async move {
         let initial_file = qmdl_store_lock.write().await.new_entry().await.expect("failed creating QMDL file entry");
         let mut qmdl_writer: Option<QmdlWriter<File>> = Some(QmdlWriter::new(initial_file));
@@ -33,8 +40,14 @@ pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut
                     match msg {
                         Some(DiagDeviceCtrlMessage::StartRecording(new_writer)) => {
                             qmdl_writer = Some(new_writer);
+                            analysis_tx.send(AnalysisMessage::Reset).await
+                                .expect("failed to send message to analysis thread");
                         },
-                        Some(DiagDeviceCtrlMessage::StopRecording) => qmdl_writer = None,
+                        Some(DiagDeviceCtrlMessage::StopRecording) => {
+                            qmdl_writer = None;
+                            analysis_tx.send(AnalysisMessage::Reset).await
+                                .expect("failed to send message to analysis thread");
+                        },
                         // None means all the Senders have been dropped, so it's
                         // time to go
                         Some(DiagDeviceCtrlMessage::Exit) | None => {
@@ -59,6 +72,9 @@ pub fn run_diag_read_thread(task_tracker: &TaskTracker, mut dev: DiagDevice, mut
                                 let index = qmdl_store.current_entry.expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
                                 qmdl_store.update_entry(index, writer.total_written).await
                                     .expect("failed to update qmdl file size");
+                                debug!("sending container to analysis thread...");
+                                analysis_tx.send(AnalysisMessage::AnalyzeContainer(container)).await
+                                    .expect("failed sending messages container to analysis thread");
                                 debug!("done!");
                             } else {
                                 debug!("no qmdl_writer set, continuing...");

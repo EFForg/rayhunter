@@ -1,7 +1,7 @@
 use crate::ServerState;
 
 use rayhunter::diag::DataType;
-use rayhunter::gsmtap_parser::GsmtapParser;
+use rayhunter::gsmtap_parser;
 use rayhunter::pcap::GsmtapPcapWriter;
 use rayhunter::qmdl::QmdlReader;
 use axum::body::Body;
@@ -34,7 +34,6 @@ pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)))?;
     // the QMDL reader should stop at the last successfully written data chunk
     // (entry.size_bytes)
-    let mut gsmtap_parser = GsmtapParser::new();
     let (reader, writer) = duplex(1024);
     let mut pcap_writer = GsmtapPcapWriter::new(writer).await.unwrap();
     pcap_writer.write_iface_header().await.unwrap();
@@ -48,7 +47,7 @@ pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
             for maybe_msg in container.into_messages() {
                 match maybe_msg {
                     Ok(msg) => {
-                        let maybe_gsmtap_msg = gsmtap_parser.parse(msg)
+                        let maybe_gsmtap_msg = gsmtap_parser::parse(msg)
                             .expect("error parsing gsmtap message");
                         if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
                             pcap_writer.write_gsmtap_message(gsmtap_msg, timestamp).await

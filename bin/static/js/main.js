@@ -3,6 +3,10 @@ async function populateDivs() {
     const systemStatsDiv = document.getElementById('system-stats');
     systemStatsDiv.innerHTML = JSON.stringify(systemStats, null, 2);
 
+    const analysisReport = await getAnalysisReport();
+    const analysisReportDiv = document.getElementById('analysis-report');
+    analysisReportDiv.innerHTML = JSON.stringify(analysisReport, null, 2);
+
     const qmdlManifest = await getQmdlManifest();
     updateQmdlManifestTable(qmdlManifest);
 }
@@ -47,6 +51,10 @@ function createEntryRow(entry) {
     qmdl_td.appendChild(qmdl_link);
     row.appendChild(qmdl_td);
     return row;
+}
+
+async function getAnalysisReport() {
+    return JSON.parse(await req('GET', '/api/analysis-report'));
 }
 
 async function getSystemStats() {

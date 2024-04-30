@@ -1,3 +1,4 @@
+mod analysis;
 mod config;
 mod error;
 mod pcap;
@@ -14,6 +15,7 @@ use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
 
+use analysis::{get_analysis_report, run_analysis_thread, AnalysisMessage};
 use axum::response::Redirect;
 use diag::{DiagDeviceCtrlMessage, start_recording, stop_recording};
 use log::{info, error};
@@ -37,12 +39,14 @@ async fn run_server(
     config: &config::Config,
     qmdl_store_lock: Arc<RwLock<QmdlStore>>,
     server_shutdown_rx: oneshot::Receiver<()>,
-    diag_device_sender: Sender<DiagDeviceCtrlMessage>
+    diag_device_sender: Sender<DiagDeviceCtrlMessage>,
+    maybe_analysis_tx: Option<Sender<AnalysisMessage>>
 ) -> JoinHandle<()> {
     let state = Arc::new(ServerState {
         qmdl_store_lock,
         diag_device_ctrl_sender: diag_device_sender,
         readonly_mode: config.readonly_mode,
+        maybe_analysis_tx,
     });
 
     let app = Router::new()
@@ -52,6 +56,7 @@ async fn run_server(
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
         .route("/api/start-recording", post(start_recording))
         .route("/api/stop-recording", post(stop_recording))
+        .route("/api/analysis-report", get(get_analysis_report))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/*path", get(serve_static))
         .with_state(state);
@@ -87,7 +92,8 @@ fn run_ctrl_c_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     server_shutdown_tx: oneshot::Sender<()>,
-    qmdl_store_lock: Arc<RwLock<QmdlStore>>
+    qmdl_store_lock: Arc<RwLock<QmdlStore>>,
+    maybe_analysis_tx: Option<Sender<AnalysisMessage>>
 ) -> JoinHandle<Result<(), RayhunterError>> {
     task_tracker.spawn(async move {
         match tokio::signal::ctrl_c().await {
@@ -103,6 +109,10 @@ fn run_ctrl_c_thread(
                     .expect("couldn't send server shutdown signal");
                 diag_device_sender.send(DiagDeviceCtrlMessage::Exit).await
                     .expect("couldn't send Exit message to diag thread");
+                if let Some(analysis_tx) = maybe_analysis_tx {
+                    analysis_tx.send(AnalysisMessage::StopThread).await
+                        .expect("couldn't send Exit message to analysis thread")
+                }
             },
             Err(err) => {
                 error!("Unable to listen for shutdown signal: {}", err);
@@ -125,18 +135,21 @@ async fn main() -> Result<(), RayhunterError> {
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
+    let mut maybe_analysis_tx = None;
     if !config.readonly_mode {
         let mut dev = DiagDevice::new().await
             .map_err(RayhunterError::DiagInitError)?;
         dev.config_logs().await
             .map_err(RayhunterError::DiagInitError)?;
 
-        run_diag_read_thread(&task_tracker, dev, rx, qmdl_store_lock.clone());
+        let analysis_tx = run_analysis_thread(&task_tracker);
+        run_diag_read_thread(&task_tracker, dev, rx, qmdl_store_lock.clone(), analysis_tx.clone());
+        maybe_analysis_tx = Some(analysis_tx);
     }
 
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
-    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, qmdl_store_lock.clone());
-    run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, tx).await;
+    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, qmdl_store_lock.clone(), maybe_analysis_tx.clone());
+    run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, tx, maybe_analysis_tx).await;
 
     task_tracker.close();
     task_tracker.wait().await;

@@ -11,6 +11,7 @@ use tokio::sync::RwLock;
 use tokio_util::io::ReaderStream;
 use include_dir::{include_dir, Dir};
 
+use crate::analysis::AnalysisMessage;
 use crate::DiagDeviceCtrlMessage;
 use crate::qmdl_store::QmdlStore;
 
@@ -18,6 +19,7 @@ pub struct ServerState {
     pub qmdl_store_lock: Arc<RwLock<QmdlStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
     pub readonly_mode: bool,
+    pub maybe_analysis_tx: Option<Sender<AnalysisMessage>>,
 }
 
 pub async fn get_qmdl(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
