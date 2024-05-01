@@ -1,11 +1,12 @@
-cd serial 
-cargo build_pc
-cd ..
-cd rootshell
-cargo build --release
-cd ..
+#!/bin/env bash
+
+set -e
+
+cargo build --bin serial
+cargo build --bin rootshell --target armv7-unknown-linux-gnueabihf --release
+
 # Force a switch into the debug mode to enable ADB
-target/x86_64-unknown-linux-gnu/debug/serial AT
+cargo run --bin serial -- AT
 echo -n "adb enabled, waiting for reboot"
 until adb shell true 2> /dev/null
 do
@@ -15,11 +16,11 @@ done
 echo
 echo "it's alive!"
 adb push target/armv7-unknown-linux-gnueabihf/release/rootshell /tmp/
-target/x86_64-unknown-linux-gnu/debug/serial "AT+SYSCMD=mv /tmp/rootshell /bin/rootshell"
+cargo run --bin serial -- "AT+SYSCMD=mv /tmp/rootshell /bin/rootshell"
 sleep 1
-target/x86_64-unknown-linux-gnu/debug/serial "AT+SYSCMD=chown root /bin/rootshell"
+cargo run --bin serial -- "AT+SYSCMD=chown root /bin/rootshell"
 sleep 1
-target/x86_64-unknown-linux-gnu/debug/serial "AT+SYSCMD=chmod 4755 /bin/rootshell"
+cargo run --bin serial -- "AT+SYSCMD=chmod 4755 /bin/rootshell"
 echo "we have root!"
 adb shell /bin/rootshell -c id
 adb shell '/bin/rootshell -c "mkdir /data/rayhunter"'
