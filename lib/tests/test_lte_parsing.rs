@@ -3,7 +3,7 @@ use rayhunter::{diag::{
 }, gsmtap_parser};
 use deku::prelude::*;
 
-// Tests here are based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/tests/test_diaglteloggsmtap_parser::py
+// Tests here are based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/tests/test_diagltelogparser.py
 
 #[test]
 fn test_lte_rrc_ota() {
