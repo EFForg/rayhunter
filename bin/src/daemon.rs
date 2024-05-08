@@ -55,7 +55,7 @@ async fn run_server(
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/*path", get(serve_static))
         .with_state(state);
-    let addr = SocketAddr::from(([127, 0, 0, 1], config.port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     let listener = TcpListener::bind(&addr).await.unwrap();
     task_tracker.spawn(async move {
         info!("The orca is hunting for stingrays...");
