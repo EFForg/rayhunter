@@ -33,7 +33,7 @@ function createEntryRow(entry) {
     name.scope = 'row';
     name.innerText = entry.name;
     row.appendChild(name);
-    for (const key of ['start_time', 'last_message_time', 'size_bytes']) {
+    for (const key of ['start_time', 'last_message_time', 'qmdl_size_bytes']) {
         const td = document.createElement('td');
         td.innerText = entry[key];
         row.appendChild(td);
@@ -54,7 +54,10 @@ function createEntryRow(entry) {
 }
 
 async function getAnalysisReport() {
-    return JSON.parse(await req('GET', '/api/analysis-report'));
+    const rows = await req('GET', '/api/analysis-report');
+    return rows.split('\n')
+        .filter(row => row.length > 0)
+        .map(row => JSON.parse(row));
 }
 
 async function getSystemStats() {

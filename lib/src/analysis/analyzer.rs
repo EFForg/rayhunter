@@ -66,11 +66,6 @@ pub struct AnalyzerMetadata {
 
 #[derive(Serialize, Debug)]
 pub struct ReportMetadata {
-    num_packets_analyzed: usize,
-    num_packets_skipped: usize,
-    num_warnings: usize,
-    first_packet_time: Option<DateTime<FixedOffset>>,
-    last_packet_time: Option<DateTime<FixedOffset>>,
     analyzers: Vec<AnalyzerMetadata>,
 }
 
@@ -81,32 +76,25 @@ pub struct PacketAnalysis {
 }
 
 #[derive(Serialize, Debug)]
-pub struct AnalysisReport {
-    metadata: ReportMetadata,
-    analysis: Vec<PacketAnalysis>,
+pub struct AnalysisRow {
+    pub timestamp: DateTime<FixedOffset>,
+    pub skipped_message_reasons: Vec<String>,
+    pub analysis: Vec<PacketAnalysis>,
+}
+
+impl AnalysisRow {
+    pub fn is_empty(&self) -> bool {
+        self.skipped_message_reasons.is_empty() && self.analysis.is_empty()
+    }
 }
 
 pub struct Harness {
     analyzers: Vec<Box<dyn Analyzer + Send>>,
-    pub num_packets_analyzed: usize,
-    pub num_warnings: usize,
-    pub skipped_message_reasons: Vec<String>,
-    pub first_packet_time: Option<DateTime<FixedOffset>>,
-    pub last_packet_time: Option<DateTime<FixedOffset>>,
-    pub analysis: Vec<PacketAnalysis>,
 }
 
 impl Harness {
     pub fn new() -> Self {
-        Self {
-            analyzers: Vec::new(),
-            num_packets_analyzed: 0,
-            skipped_message_reasons: Vec::new(),
-            num_warnings: 0,
-            first_packet_time: None,
-            last_packet_time: None,
-            analysis: Vec::new(),
-        }
+        Self { analyzers: Vec::new() }
     }
 
     pub fn new_with_all_analyzers() -> Self {
@@ -119,12 +107,17 @@ impl Harness {
         self.analyzers.push(analyzer);
     }
 
-    pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) {
+    pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> AnalysisRow {
+        let mut row = AnalysisRow {
+            timestamp: chrono::Local::now().fixed_offset(),
+            skipped_message_reasons: Vec::new(),
+            analysis: Vec::new(),
+        };
         for maybe_qmdl_message in container.into_messages() {
             let qmdl_message = match maybe_qmdl_message {
                 Ok(msg) => msg,
                 Err(err) => {
-                    self.skipped_message_reasons.push(format!("{:?}", err));
+                    row.skipped_message_reasons.push(format!("{:?}", err));
                     continue;
                 }
             };
@@ -132,7 +125,7 @@ impl Harness {
             let gsmtap_message = match gsmtap_parser::parse(qmdl_message) {
                 Ok(msg) => msg,
                 Err(err) => {
-                    self.skipped_message_reasons.push(format!("{:?}", err));
+                    row.skipped_message_reasons.push(format!("{:?}", err));
                     continue;
                 }
             };
@@ -144,28 +137,20 @@ impl Harness {
             let element = match InformationElement::try_from(&gsmtap_msg) {
                 Ok(element) => element,
                 Err(err) => {
-                    self.skipped_message_reasons.push(format!("{:?}", err));
+                    row.skipped_message_reasons.push(format!("{:?}", err));
                     continue;
                 }
             };
 
-            if self.first_packet_time.is_none() {
-                self.first_packet_time = Some(timestamp.to_datetime());
-            }
-
-            self.last_packet_time = Some(timestamp.to_datetime());
-            self.num_packets_analyzed += 1;
             let analysis_result = self.analyze_information_element(&element);
             if analysis_result.iter().any(Option::is_some) {
-                self.num_warnings += analysis_result.iter()
-                    .filter(|maybe_event| matches!(maybe_event, Some(Event { event_type: EventType::QualitativeWarning { .. }, .. })))
-                    .count();
-                self.analysis.push(PacketAnalysis {
+                row.analysis.push(PacketAnalysis {
                     timestamp: timestamp.to_datetime(),
                     events: analysis_result,
                 });
             }
         }
+        row
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
@@ -186,7 +171,7 @@ impl Harness {
             .collect()
     }
 
-    pub fn build_analysis_report(&self) -> AnalysisReport {
+    pub fn get_metadata(&self) -> ReportMetadata {
         let names = self.get_names();
         let descriptions = self.get_names();
         let mut analyzers = Vec::new();
@@ -197,16 +182,8 @@ impl Harness {
             });
         }
 
-        AnalysisReport {
-            metadata: ReportMetadata {
-                num_packets_analyzed: self.num_packets_analyzed,
-                num_packets_skipped: self.skipped_message_reasons.len(),
-                num_warnings: self.num_warnings,
-                first_packet_time: self.first_packet_time,
-                last_packet_time: self.last_packet_time,
-                analyzers,
-            },
-            analysis: self.analysis.clone(),
+        ReportMetadata {
+            analyzers,
         }
     }
 }

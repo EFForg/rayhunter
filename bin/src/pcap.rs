@@ -23,14 +23,14 @@ pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
     let qmdl_store = state.qmdl_store_lock.read().await;
     let entry = qmdl_store.entry_for_name(&qmdl_name)
         .ok_or((StatusCode::NOT_FOUND, format!("couldn't find qmdl file with name {}", qmdl_name)))?;
-    if entry.size_bytes == 0 {
+    if entry.qmdl_size_bytes == 0 {
         return Err((
             StatusCode::SERVICE_UNAVAILABLE,
             "QMDL file is empty, try again in a bit!".to_string()
         ));
     }
 
-    let qmdl_file = qmdl_store.open_entry(&entry).await
+    let qmdl_file = qmdl_store.open_entry_qmdl(&entry).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)))?;
     // the QMDL reader should stop at the last successfully written data chunk
     // (entry.size_bytes)
@@ -39,7 +39,7 @@ pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
     pcap_writer.write_iface_header().await.unwrap();
 
     tokio::spawn(async move {
-        let mut reader = QmdlReader::new(qmdl_file, Some(entry.size_bytes));
+        let mut reader = QmdlReader::new(qmdl_file, Some(entry.qmdl_size_bytes));
         let mut messages_stream = pin!(reader.as_stream()
             .try_filter(|container| future::ready(container.data_type == DataType::UserSpace)));
         

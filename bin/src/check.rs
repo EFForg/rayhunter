@@ -23,10 +23,9 @@ async fn main() {
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(file_size as usize));
     let mut qmdl_stream = pin!(qmdl_reader.as_stream()
         .try_filter(|container| future::ready(container.data_type == DataType::UserSpace)));
+    println!("{}\n", serde_json::to_string(&harness.get_metadata()).expect("failed to serialize report metadata"));
     while let Some(container) = qmdl_stream.try_next().await.expect("failed getting QMDL container") {
-        harness.analyze_qmdl_messages(container)
+        let row = harness.analyze_qmdl_messages(container);
+        println!("{}\n", serde_json::to_string(&row).expect("failed to serialize row"));
     }
-
-    let report = harness.build_analysis_report();
-    println!("{}", serde_json::to_string(&report).expect("failed to serialize report"));
 }
