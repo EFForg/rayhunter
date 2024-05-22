@@ -2,7 +2,7 @@ name: Build Release
 
 on:
   push:
-    branches: [workflows] # FIXME: replace w/ main before merging
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
