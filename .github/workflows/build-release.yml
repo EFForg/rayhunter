@@ -1,0 +1,79 @@
+name: Build Release
+
+on:
+  push:
+    branches: [workflows] # FIXME: replace w/ main before merging
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_serial:
+    strategy:
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            build_name: serial
+          - os: windows-latest
+            build_name: serial.exe
+          - os: macos-latest
+            build_name: serial
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build serial
+        run: cargo build --bin serial --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: serial-${{ matrix.platform.os }}
+          path: ./target/release/${{ matrix.platform.build_name }}
+          if-no-files-found: error
+  build_rootshell_and_rayhunter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-unknown-linux-gnueabihf
+      - name: Install cross-compilation dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
+          version: 1.0
+      - name: Build rootshell (arm32)
+        run: cargo build --bin rootshell --target armv7-unknown-linux-gnueabihf --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rootshell
+          path: target/armv7-unknown-linux-gnueabihf/release/rootshell
+          if-no-files-found: error
+      - name: Build rayhunter-daemon (arm32)
+        run: cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rayhunter-daemon
+          path: target/armv7-unknown-linux-gnueabihf/release/rayhunter-daemon
+          if-no-files-found: error
+  build_release_zip:
+    needs:
+      - build_serial
+      - build_rootshell_and_rayhunter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - name: Setup release directory
+        run: mv rayhunter-daemon/rayhunter-daemon rootshell/rootshell serial-* dist
+      - name: Archive release directory
+        uses: thedoctor0/zip-release@0.7.5
+        with:
+          type: 'zip'
+          filename: 'release.zip'
+          directory: 'dist'
+      # TODO: have this create a release directly
+      - name: Upload release
+        uses: actions/upload-artifact@v4
+        with:
+          name: release.zip
+          path: dist/release.zip
+          if-no-files-found: error
