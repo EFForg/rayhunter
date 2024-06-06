@@ -8,14 +8,14 @@ mod diag;
 
 use crate::config::{parse_config, parse_args};
 use crate::diag::run_diag_read_thread;
-use crate::qmdl_store::QmdlStore;
+use crate::qmdl_store::RecordingStore;
 use crate::server::{ServerState, get_qmdl, serve_static};
 use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
 
 use axum::response::Redirect;
-use diag::{DiagDeviceCtrlMessage, start_recording, stop_recording};
+use diag::{get_analysis_report, start_recording, stop_recording, DiagDeviceCtrlMessage};
 use log::{info, error};
 use rayhunter::diag_device::DiagDevice;
 use axum::routing::{get, post};
@@ -35,14 +35,14 @@ use std::sync::Arc;
 async fn run_server(
     task_tracker: &TaskTracker,
     config: &config::Config,
-    qmdl_store_lock: Arc<RwLock<QmdlStore>>,
+    qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     server_shutdown_rx: oneshot::Receiver<()>,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>
 ) -> JoinHandle<()> {
     let state = Arc::new(ServerState {
         qmdl_store_lock,
         diag_device_ctrl_sender: diag_device_sender,
-        readonly_mode: config.readonly_mode,
+        readonly_mode: config.readonly_mode
     });
 
     let app = Router::new()
@@ -52,6 +52,7 @@ async fn run_server(
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
         .route("/api/start-recording", post(start_recording))
         .route("/api/stop-recording", post(stop_recording))
+        .route("/api/analysis-report", get(get_analysis_report))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/*path", get(serve_static))
         .with_state(state);
@@ -72,10 +73,10 @@ async fn server_shutdown_signal(server_shutdown_rx: oneshot::Receiver<()>) {
 
 // Loads a QmdlStore if one exists, and if not, only create one if we're not in
 // readonly mode.
-async fn init_qmdl_store(config: &config::Config) -> Result<QmdlStore, RayhunterError> {
-    match (QmdlStore::exists(&config.qmdl_store_path).await?, config.readonly_mode) {
-        (true, _) => Ok(QmdlStore::load(&config.qmdl_store_path).await?),
-        (false, false) => Ok(QmdlStore::create(&config.qmdl_store_path).await?),
+async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, RayhunterError> {
+    match (RecordingStore::exists(&config.qmdl_store_path).await?, config.readonly_mode) {
+        (true, _) => Ok(RecordingStore::load(&config.qmdl_store_path).await?),
+        (false, false) => Ok(RecordingStore::create(&config.qmdl_store_path).await?),
         (false, true) => Err(RayhunterError::NoStoreReadonlyMode(config.qmdl_store_path.clone())),
     }
 }
@@ -87,7 +88,7 @@ fn run_ctrl_c_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     server_shutdown_tx: oneshot::Sender<()>,
-    qmdl_store_lock: Arc<RwLock<QmdlStore>>
+    qmdl_store_lock: Arc<RwLock<RecordingStore>>
 ) -> JoinHandle<Result<(), RayhunterError>> {
     task_tracker.spawn(async move {
         match tokio::signal::ctrl_c().await {

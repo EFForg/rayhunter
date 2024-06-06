@@ -1,7 +1,7 @@
 use thiserror::Error;
 use rayhunter::diag_device::DiagDeviceError;
 
-use crate::qmdl_store::QmdlStoreError;
+use crate::qmdl_store::RecordingStoreError;
 
 #[derive(Error, Debug)]
 pub enum RayhunterError{
@@ -12,7 +12,7 @@ pub enum RayhunterError{
     #[error("Tokio error: {0}")]
     TokioError(#[from] tokio::io::Error),
     #[error("QmdlStore error: {0}")]
-    QmdlStoreError(#[from] QmdlStoreError),
+    QmdlStoreError(#[from] RecordingStoreError),
     #[error("No QMDL store found at path {0}, but can't create a new one due to readonly mode")]
     NoStoreReadonlyMode(String),
 }
