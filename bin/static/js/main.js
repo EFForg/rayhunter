@@ -3,6 +3,10 @@ async function populateDivs() {
     const systemStatsDiv = document.getElementById('system-stats');
     systemStatsDiv.innerHTML = JSON.stringify(systemStats, null, 2);
 
+    const analysisReport = await getAnalysisReport();
+    const analysisReportDiv = document.getElementById('analysis-report');
+    analysisReportDiv.innerHTML = JSON.stringify(analysisReport, null, 2);
+
     const qmdlManifest = await getQmdlManifest();
     updateQmdlManifestTable(qmdlManifest);
 }
@@ -29,7 +33,7 @@ function createEntryRow(entry) {
     name.scope = 'row';
     name.innerText = entry.name;
     row.appendChild(name);
-    for (const key of ['start_time', 'last_message_time', 'size_bytes']) {
+    for (const key of ['start_time', 'last_message_time', 'qmdl_size_bytes']) {
         const td = document.createElement('td');
         td.innerText = entry[key];
         row.appendChild(td);
@@ -47,6 +51,13 @@ function createEntryRow(entry) {
     qmdl_td.appendChild(qmdl_link);
     row.appendChild(qmdl_td);
     return row;
+}
+
+async function getAnalysisReport() {
+    const rows = await req('GET', '/api/analysis-report');
+    return rows.split('\n')
+        .filter(row => row.length > 0)
+        .map(row => JSON.parse(row));
 }
 
 async function getSystemStats() {

@@ -52,31 +52,34 @@ pub enum LteInformationElement {
     //ScMcchNb(),
 }
 
-impl TryFrom<&GsmtapMessage> for LteInformationElement {
+impl TryFrom<&GsmtapMessage> for InformationElement {
     type Error = InformationElementError;
 
     fn try_from(gsmtap_msg: &GsmtapMessage) -> Result<Self, Self::Error> {
-        if let GsmtapType::LteRrc(lte_rrc_subtype) = gsmtap_msg.header.gsmtap_type {
-            use LteRrcSubtype as L;
-            use LteInformationElement as R;
-            return match lte_rrc_subtype {
-                L::DlCcch => Ok(R::DlCcch(decode(&gsmtap_msg.payload)?)),
-                L::DlDcch => Ok(R::DlDcch(decode(&gsmtap_msg.payload)?)),
-                L::UlCcch => Ok(R::UlCcch(decode(&gsmtap_msg.payload)?)),
-                L::UlDcch => Ok(R::UlDcch(decode(&gsmtap_msg.payload)?)),
-                L::BcchBch => Ok(R::BcchBch(decode(&gsmtap_msg.payload)?)),
-                L::BcchDlSch => Ok(R::BcchDlSch(decode(&gsmtap_msg.payload)?)),
-                L::PCCH => Ok(R::PCCH(decode(&gsmtap_msg.payload)?)),
-                L::MCCH => Ok(R::MCCH(decode(&gsmtap_msg.payload)?)),
-                L::ScMcch => Ok(R::ScMcch(decode(&gsmtap_msg.payload)?)),
-                L::BcchBchMbms => Ok(R::BcchBchMbms(decode(&gsmtap_msg.payload)?)),
-                L::BcchDlSchBr => Ok(R::BcchDlSchBr(decode(&gsmtap_msg.payload)?)),
-                L::BcchDlSchMbms => Ok(R::BcchDlSchMbms(decode(&gsmtap_msg.payload)?)),
-                L::SbcchSlBch => Ok(R::SbcchSlBch(decode(&gsmtap_msg.payload)?)),
-                L::SbcchSlBchV2x => Ok(R::SbcchSlBchV2x(decode(&gsmtap_msg.payload)?)),
-                _ => Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
-            };
+        match gsmtap_msg.header.gsmtap_type {
+            GsmtapType::LteRrc(lte_rrc_subtype) => {
+                use LteRrcSubtype as L;
+                use LteInformationElement as R;
+                let lte = match lte_rrc_subtype {
+                    L::DlCcch => R::DlCcch(decode(&gsmtap_msg.payload)?),
+                    L::DlDcch => R::DlDcch(decode(&gsmtap_msg.payload)?),
+                    L::UlCcch => R::UlCcch(decode(&gsmtap_msg.payload)?),
+                    L::UlDcch => R::UlDcch(decode(&gsmtap_msg.payload)?),
+                    L::BcchBch => R::BcchBch(decode(&gsmtap_msg.payload)?),
+                    L::BcchDlSch => R::BcchDlSch(decode(&gsmtap_msg.payload)?),
+                    L::PCCH => R::PCCH(decode(&gsmtap_msg.payload)?),
+                    L::MCCH => R::MCCH(decode(&gsmtap_msg.payload)?),
+                    L::ScMcch => R::ScMcch(decode(&gsmtap_msg.payload)?),
+                    L::BcchBchMbms => R::BcchBchMbms(decode(&gsmtap_msg.payload)?),
+                    L::BcchDlSchBr => R::BcchDlSchBr(decode(&gsmtap_msg.payload)?),
+                    L::BcchDlSchMbms => R::BcchDlSchMbms(decode(&gsmtap_msg.payload)?),
+                    L::SbcchSlBch => R::SbcchSlBch(decode(&gsmtap_msg.payload)?),
+                    L::SbcchSlBchV2x => R::SbcchSlBchV2x(decode(&gsmtap_msg.payload)?),
+                    _ => return Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
+                };
+                Ok(InformationElement::LTE(lte))
+            },
+            _ => Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
         }
-        Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type))
     }
 }

@@ -23,3 +23,4 @@ telcom-parser = { path = "../telcom-parser" }
 tokio = { version = "1.35.1", features = ["full"] }
 futures-core = "0.3.30"
 futures = "0.3.30"
+serde = { version = "1.0.197", features = ["derive"] }
