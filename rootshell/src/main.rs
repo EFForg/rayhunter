@@ -1,3 +1,6 @@
+//! a simple shell for uploading to the orbic device.
+//! 
+//! It literally just runs bash as UID/GID 0 
 use std::process::Command;
 use std::os::unix::process::CommandExt;
 use std::env;

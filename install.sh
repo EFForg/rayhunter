@@ -32,4 +32,3 @@ adb shell '/bin/rootshell -c "mv /tmp/misc-daemon /etc/init.d/misc-daemon"'
 adb shell '/bin/rootshell -c "chmod 755 /etc/init.d/rayhunter_daemon"'
 adb shell '/bin/rootshell -c "chmod 755 /etc/init.d/misc-daemon"'
 ./make.sh
-adb shell '/bin/rootshell -c "/etc/init.d/rayhunter_daemon start"'

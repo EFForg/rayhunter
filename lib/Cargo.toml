@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 description = "Realtime cellular data decoding and analysis for IMSI catcher detection"
 
+
+[lib]
+name = "rayhunter"
+path = "src/lib.rs"
+
 [dependencies]
 bytes = "1.5.0"
 chrono = "0.4.31"
