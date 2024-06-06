@@ -36,8 +36,8 @@ linux/qualcom devices but this is the only one we have tested on. Buy the orbic 
 ## Setup
 
 1. Install the Android Debug Bridge (ADB) on your computer (don't worry about instructions for installing it on a phone/device yet). You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer).
-2. Download the latest rayhunter release bundle and unzip it.
-3. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`, or `install-windows.bat`).
+2. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and unzip it.
+3. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`).
 4. Once finished, rayhunter should be running! You can verify this by visiting the web UI as described below.
 
 ## Usage
@@ -87,6 +87,6 @@ Now you can root your device and install rayhunter by running `./install.sh` - *
 ## Documentation 
 * Build docs locallly using `RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features  --open`
 
-**LEGAL DISCLAIMER:** Use this program at your own risk. We beilieve running this program does not currently violate any laws or FCC regulations in the United States. However, we are not responsible for civil or criminal liability resulting from the use of this software. If you are located outside of the US please consult with an attorney in your country to help you assess the legal risks of running this program. 
+**LEGAL DISCLAIMER:** Use this program at your own risk. We beilieve running this program does not currently violate any laws or regulations in the United States. However, we are not responsible for civil or criminal liability resulting from the use of this software. If you are located outside of the US please consult with an attorney in your country to help you assess the legal risks of running this program. 
 
 *Good Hunting!*
