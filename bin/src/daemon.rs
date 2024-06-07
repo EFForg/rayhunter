@@ -115,11 +115,11 @@ fn run_ctrl_c_thread(
     })
 }
 
-fn update_ui(task_tracker: &TaskTracker){
-    task_tracker.spawn(async move {
+async fn update_ui(task_tracker: &TaskTracker){
+    task_tracker.spawn_blocking(|| {
         let mut fb: Framebuffer = Framebuffer::new();
-        fb.draw_img("orca.gif")
-    });
+        fb.draw_img("/data/rayhunter/orca.gif");
+    }).await.unwrap();
 }
 
 #[tokio::main]
@@ -146,8 +146,8 @@ async fn main() -> Result<(), RayhunterError> {
 
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, qmdl_store_lock.clone());
-    update_ui(&task_tracker);
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, tx).await;
+    update_ui(&task_tracker).await;
 
     task_tracker.close();
     task_tracker.wait().await;

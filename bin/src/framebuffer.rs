@@ -1,6 +1,7 @@
 use image::{io::Reader as ImageReader, AnimationDecoder, imageops::FilterType, codecs::gif::GifDecoder, DynamicImage};
 use std::{io::BufReader, fs::File, time::Duration};
 use include_dir::{include_dir, Dir};
+use log::{info, error};
 
 const FB_PATH:&str = "/dev/fb0";
 static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
@@ -29,6 +30,7 @@ impl Framebuffer<'_>{
 
 
     fn write(&mut self, img: DynamicImage) {
+
         let resized_img = img.resize( self.dimensions.width, self.dimensions.height, FilterType::CatmullRom);
         let width = self.dimensions.width.min(resized_img.width());
         let height = self.dimensions.height.min(resized_img.height());
@@ -48,9 +50,11 @@ impl Framebuffer<'_>{
 
 
     pub fn draw_img(&mut self, img_name: &str) {
-        let img_path = IMAGE_DIR.get_file(img_name).unwrap().path();
+        //let img_path = IMAGE_DIR.get_file(img_name).unwrap().path();
+        let img_path = img_name;
+        info!("img_path: {:?}", img_path);
         if img_path.ends_with(".gif") {
-            loop {
+            loop{
                 // this is dumb and i'm sure there's a better way to loop this
                 let stream = BufReader::new(File::open(&img_path).unwrap());
                 let decoder = GifDecoder::new(stream).unwrap();
