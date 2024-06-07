@@ -5,6 +5,7 @@ mod server;
 mod stats;
 mod qmdl_store;
 mod diag;
+mod framebuffer;
 
 use crate::config::{parse_config, parse_args};
 use crate::diag::run_diag_read_thread;
@@ -13,6 +14,7 @@ use crate::server::{ServerState, get_qmdl, serve_static};
 use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
+use crate::framebuffer::Framebuffer;
 
 use axum::response::Redirect;
 use diag::{get_analysis_report, start_recording, stop_recording, DiagDeviceCtrlMessage};
@@ -113,6 +115,13 @@ fn run_ctrl_c_thread(
     })
 }
 
+fn update_ui(task_tracker: &TaskTracker){
+    task_tracker.spawn(async move {
+        let mut fb: Framebuffer = Framebuffer::new();
+        fb.draw_img("orca.gif")
+    });
+}
+
 #[tokio::main]
 async fn main() -> Result<(), RayhunterError> {
     env_logger::init();
@@ -137,6 +146,7 @@ async fn main() -> Result<(), RayhunterError> {
 
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, qmdl_store_lock.clone());
+    update_ui(&task_tracker);
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, tx).await;
 
     task_tracker.close();
