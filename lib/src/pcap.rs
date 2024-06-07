@@ -1,3 +1,5 @@
+//! Parse QMDL files and create a pcap file. 
+//! Creates a plausible IP header and [GSMtap](https://osmocom.org/projects/baseband/wiki/GSMTAP) header and then puts the rest of the data under that for wireshark to parse. 
 use crate::gsmtap::GsmtapMessage;
 use crate::diag::Timestamp;
 
