@@ -1,7 +1,6 @@
 use image::{io::Reader as ImageReader, AnimationDecoder, imageops::FilterType, codecs::gif::GifDecoder, DynamicImage};
 use std::{io::BufReader, fs::File, time::Duration};
 use include_dir::{include_dir, Dir};
-use log::{info, error};
 
 const FB_PATH:&str = "/dev/fb0";
 static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
@@ -52,19 +51,16 @@ impl Framebuffer<'_>{
     pub fn draw_img(&mut self, img_name: &str) {
         //let img_path = IMAGE_DIR.get_file(img_name).unwrap().path();
         let img_path = img_name;
-        info!("img_path: {:?}", img_path);
         if img_path.ends_with(".gif") {
-            loop{
-                // this is dumb and i'm sure there's a better way to loop this
-                let stream = BufReader::new(File::open(&img_path).unwrap());
-                let decoder = GifDecoder::new(stream).unwrap();
-                for maybe_frame in decoder.into_frames() {
-                    let frame = maybe_frame.unwrap();
-                    let (numerator, _) = frame.delay().numer_denom_ms();
-                    let img = DynamicImage::from(frame.into_buffer());
-                    self.write(img);
-                    std::thread::sleep(Duration::from_millis(numerator as u64));
-                }
+            // this is dumb and i'm sure there's a better way to loop this
+            let stream = BufReader::new(File::open(&img_path).unwrap());
+            let decoder = GifDecoder::new(stream).unwrap();
+            for maybe_frame in decoder.into_frames() {
+                let frame = maybe_frame.unwrap();
+                let (numerator, _) = frame.delay().numer_denom_ms();
+                let img = DynamicImage::from(frame.into_buffer());
+                self.write(img);
+                std::thread::sleep(Duration::from_millis(numerator as u64));
             }
         } else {
             let img_reader = ImageReader::open(img_path).unwrap();

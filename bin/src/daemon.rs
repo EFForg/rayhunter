@@ -24,6 +24,7 @@ use axum::routing::{get, post};
 use axum::Router;
 use stats::get_qmdl_manifest;
 use tokio::sync::mpsc::{self, Sender};
+use tokio::sync::oneshot::error::TryRecvError;
 use tokio::task::JoinHandle;
 use tokio_util::task::TaskTracker;
 use std::net::SocketAddr;
@@ -90,6 +91,7 @@ fn run_ctrl_c_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     server_shutdown_tx: oneshot::Sender<()>,
+    ui_shutdown_tx: oneshot::Sender<()>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>
 ) -> JoinHandle<Result<(), RayhunterError>> {
     task_tracker.spawn(async move {
@@ -104,6 +106,9 @@ fn run_ctrl_c_thread(
 
                 server_shutdown_tx.send(())
                     .expect("couldn't send server shutdown signal");
+                info!("sending UI shutdown");
+                ui_shutdown_tx.send(())
+                    .expect("couldn't send ui shutdown signal");
                 diag_device_sender.send(DiagDeviceCtrlMessage::Exit).await
                     .expect("couldn't send Exit message to diag thread");
             },
@@ -115,11 +120,23 @@ fn run_ctrl_c_thread(
     })
 }
 
-async fn update_ui(task_tracker: &TaskTracker){
-    task_tracker.spawn_blocking(|| {
+async fn update_ui(task_tracker: &TaskTracker, mut ui_shutdown_rx: oneshot::Receiver<()>){
+    task_tracker.spawn_blocking(move || {
         let mut fb: Framebuffer = Framebuffer::new();
-        fb.draw_img("/data/rayhunter/orca.gif");
+        loop {
+            match ui_shutdown_rx.try_recv() {
+                Ok(_) => {
+                    info!("received UI shutdown");
+                    break;
+                },
+                Err(TryRecvError::Empty) => {},
+                Err(e) => panic!("what the fuck {e}")
+            
+            }
+            fb.draw_img("/data/rayhunter/orca.gif");
+        }
     }).await.unwrap();
+
 }
 
 #[tokio::main]
@@ -143,11 +160,11 @@ async fn main() -> Result<(), RayhunterError> {
 
         run_diag_read_thread(&task_tracker, dev, rx, qmdl_store_lock.clone());
     }
-
+    let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
-    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, qmdl_store_lock.clone());
+    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, ui_shutdown_tx, qmdl_store_lock.clone());
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, tx).await;
-    update_ui(&task_tracker).await;
+    update_ui(&task_tracker, ui_shutdown_rx).await;
 
     task_tracker.close();
     task_tracker.wait().await;
