@@ -28,6 +28,8 @@ use tokio::sync::oneshot::error::TryRecvError;
 use tokio::task::JoinHandle;
 use tokio_util::task::TaskTracker;
 use std::net::SocketAddr;
+use std::thread::sleep;
+use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::{RwLock, oneshot};
 use std::sync::Arc;
@@ -120,7 +122,15 @@ fn run_ctrl_c_thread(
     })
 }
 
-async fn update_ui(task_tracker: &TaskTracker, mut ui_shutdown_rx: oneshot::Receiver<()>){
+async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>){
+    let image = match config.ui_level {
+        0 => {info!("silent UI!"); return},
+        1 => "subtle.png",
+        2 => "orca.gif",
+        _ => "orca.gif"
+    };
+
+    info!("spawning UI with {}", image);
     task_tracker.spawn_blocking(move || {
         let mut fb: Framebuffer = Framebuffer::new();
         loop {
@@ -133,7 +143,8 @@ async fn update_ui(task_tracker: &TaskTracker, mut ui_shutdown_rx: oneshot::Rece
                 Err(e) => panic!("what the fuck {e}")
             
             }
-            fb.draw_img("/data/rayhunter/orca.gif");
+            fb.draw_img(image);
+            sleep(Duration::from_millis(100));
         }
     }).await.unwrap();
 
@@ -164,7 +175,7 @@ async fn main() -> Result<(), RayhunterError> {
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, ui_shutdown_tx, qmdl_store_lock.clone());
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, tx).await;
-    update_ui(&task_tracker, ui_shutdown_rx).await;
+    update_ui(&task_tracker, &config, ui_shutdown_rx).await;
 
     task_tracker.close();
     task_tracker.wait().await;
