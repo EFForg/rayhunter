@@ -2,3 +2,4 @@
 qmdl_store_path = "/data/rayhunter/qmdl"
 port = 8080
 readonly_mode = false
+ui_level = 1
