@@ -29,7 +29,6 @@ impl Framebuffer<'_>{
 
 
     fn write(&mut self, img: DynamicImage) {
-
         let mut width = img.width();
         let mut height = img.height();
         let resized_img: DynamicImage;
