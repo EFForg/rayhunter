@@ -38,7 +38,6 @@ impl Framebuffer<'_>{
             resized_img = img.resize( self.dimensions.width, self.dimensions.height, FilterType::CatmullRom);
             width = self.dimensions.width.min(resized_img.width());
             height = self.dimensions.height.min(resized_img.height());
-
         } else {
             resized_img = img;
         }
