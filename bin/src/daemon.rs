@@ -33,6 +33,7 @@ use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::{RwLock, oneshot};
 use std::sync::Arc;
+use include_dir::{include_dir, Dir};
 
 // Runs the axum server, taking all the elements needed to build up our
 // ServerState and a oneshot Receiver that'll fire when it's time to shutdown
@@ -123,14 +124,16 @@ fn run_ctrl_c_thread(
 }
 
 async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>){
-    let image = match config.ui_level {
+    static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
+    let img_name = match config.ui_level {
         0 => {info!("silent UI!"); return},
         1 => "subtle.png",
         2 => "orca.gif",
         _ => "orca.gif"
     };
+    let img = IMAGE_DIR.get_file(img_name).unwrap();
 
-    info!("spawning UI with {}", image);
+    info!("spawning UI with {:?}", img.path());
     task_tracker.spawn_blocking(move || {
         let mut fb: Framebuffer = Framebuffer::new();
         loop {
@@ -140,10 +143,14 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
                     break;
                 },
                 Err(TryRecvError::Empty) => {},
-                Err(e) => panic!("what the fuck {e}")
+                Err(e) => panic!("error receiving shutdown message: {e}")
             
             }
-            fb.draw_img(image);
+            if img_name.ends_with(".gif"){
+                fb.draw_gif(img.contents());
+            } else {
+                fb.draw_img(img.contents());
+            }
             sleep(Duration::from_millis(100));
         }
     }).await.unwrap();
