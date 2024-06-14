@@ -146,7 +146,9 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
                 Err(e) => panic!("error receiving shutdown message: {e}")
             
             }
-            if img_name.ends_with(".gif"){
+            if img_name == "subtle.png" {
+                fb.draw_line(framebuffer::Color565::Green, 2);
+            } else if img_name.ends_with(".gif"){
                 fb.draw_gif(img.contents());
             } else {
                 fb.draw_img(img.contents());

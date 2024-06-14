@@ -11,6 +11,17 @@ struct Dimensions {
     width: u32,
 }
 
+#[allow(dead_code)]
+pub enum Color565 {
+    Red    = 0b1111100000000000,
+    Green  = 0b0000011111100000,
+    Blue   = 0b0000000000011111,
+    White  = 0b1111111111111111,
+    Black  = 0b0000000000000000,
+    Cyan   = 0b0000011111111111,
+    Yellow = 0b1111111111100000,
+}
+
 #[derive(Copy, Clone)]
 pub struct Framebuffer<'a> {
     dimensions: Dimensions,
@@ -69,5 +80,15 @@ impl Framebuffer<'_>{
     pub fn draw_img(&mut self, img_buffer: &[u8]) {
         let img = image::load_from_memory(img_buffer).unwrap();
         self.write(img);
+    }
+
+    pub fn draw_line(&mut self, color: Color565, height: u32){
+        let px_num= height * self.dimensions.width;
+        let color: u16 = color as u16;
+        let mut buffer: Vec<u8> = Vec::new();
+        for _ in 0..px_num {
+            buffer.extend(color.to_le_bytes());
+        }
+        std::fs::write(self.path, &buffer).unwrap();
     }
 }
