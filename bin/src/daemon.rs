@@ -136,6 +136,8 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
         let img;
         if display_level == 2 {
             img = IMAGE_DIR.get_file("orca.gif").unwrap().contents();
+        } else if display_level == 3{
+            img = IMAGE_DIR.get_file("eff.png").unwrap().contents();
         } else {
             img = &[];
         }
@@ -156,6 +158,9 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
                 2 => {
                     fb.draw_gif(img);
                 },
+                3 => {
+                    fb.draw_img(img)
+                }
                 128 => {
                     fb.draw_line(framebuffer::Color565::Cyan, 128);
                     fb.draw_line(framebuffer::Color565::Pink, 102);
