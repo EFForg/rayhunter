@@ -125,17 +125,20 @@ fn run_ctrl_c_thread(
 
 async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>){
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
-    let img_name = match config.ui_level {
-        0 => {info!("silent UI!"); return},
-        1 => "subtle.png",
-        2 => "orca.gif",
-        _ => "orca.gif"
-    };
-    let img = IMAGE_DIR.get_file(img_name).unwrap();
+    let display_level = config.ui_level;
+    if display_level == 0 {
+        info!("Invisible mode, not spawning UI.");
+    }
 
-    info!("spawning UI with {:?}", img.path());
     task_tracker.spawn_blocking(move || {
         let mut fb: Framebuffer = Framebuffer::new();
+        // this feels wrong, is there a more rusty way to do this?
+        let img;
+        if display_level == 2 {
+            img = IMAGE_DIR.get_file("orca.gif").unwrap().contents();
+        } else {
+            img = &[];
+        }
         loop {
             match ui_shutdown_rx.try_recv() {
                 Ok(_) => {
@@ -146,13 +149,24 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
                 Err(e) => panic!("error receiving shutdown message: {e}")
             
             }
-            if img_name == "subtle.png" {
-                fb.draw_line(framebuffer::Color565::Green, 2);
-            } else if img_name.ends_with(".gif"){
-                fb.draw_gif(img.contents());
-            } else {
-                fb.draw_img(img.contents());
-            }
+            match display_level  {
+                1 => {
+                    fb.draw_line(framebuffer::Color565::Green, 2);
+                },
+                2 => {
+                    fb.draw_gif(img);
+                },
+                128 => {
+                    fb.draw_line(framebuffer::Color565::Cyan, 128);
+                    fb.draw_line(framebuffer::Color565::Pink, 102);
+                    fb.draw_line(framebuffer::Color565::White, 76);
+                    fb.draw_line(framebuffer::Color565::Pink, 50);
+                    fb.draw_line(framebuffer::Color565::Cyan, 25);
+                },
+                _ => {
+                    fb.draw_line(framebuffer::Color565::Green, 2);
+                }
+            };
             sleep(Duration::from_millis(100));
         }
     }).await.unwrap();

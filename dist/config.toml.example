@@ -2,4 +2,8 @@
 qmdl_store_path = "/data/rayhunter/qmdl"
 port = 8080
 readonly_mode = false
+# UI Levels: 
+# 0 = invisible mode, no indicator that rayhunter is running 
+# 1 = Subtle mode, display a green line at the top of the screen when rayhunter is running 
+# 2 = Demo Mode, display a fun orca gif 
 ui_level = 1

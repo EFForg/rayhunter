@@ -20,6 +20,7 @@ pub enum Color565 {
     Black  = 0b0000000000000000,
     Cyan   = 0b0000011111111111,
     Yellow = 0b1111111111100000,
+    Pink =   0b1111010010011111,
 }
 
 #[derive(Copy, Clone)]
