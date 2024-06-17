@@ -3,7 +3,6 @@ use std::{io::Cursor, time::Duration};
 
 const FB_PATH:&str = "/dev/fb0";
 
-
 #[derive(Copy, Clone)]
 // TODO actually poll for this, maybe w/ fbset?
 struct Dimensions {
@@ -37,7 +36,6 @@ impl Framebuffer<'_>{
         }
     }
 
-
     fn write(&mut self, img: DynamicImage) {
         let mut width = img.width();
         let mut height = img.height();
@@ -63,7 +61,6 @@ impl Framebuffer<'_>{
         }
         std::fs::write(self.path, &buf).unwrap();
     }
-
 
     pub fn draw_gif(&mut self, img_buffer: &[u8]) {
         // this is dumb and i'm sure there's a better way to loop this
