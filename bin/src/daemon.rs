@@ -154,11 +154,11 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
                     fb.draw_line(framebuffer::Color565::Green, 2);
                 },
                 2 => {
-                    fb.draw_gif(img);
+                    fb.draw_gif(img.unwrap());
                 },
                 3 => {
-                    fb.draw_img(img)
-                }
+                    fb.draw_img(img.unwrap())
+                },
                 128 => {
                     fb.draw_line(framebuffer::Color565::Cyan, 128);
                     fb.draw_line(framebuffer::Color565::Pink, 102);
