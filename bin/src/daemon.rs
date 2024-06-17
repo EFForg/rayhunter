@@ -133,7 +133,7 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
     task_tracker.spawn_blocking(move || {
         let mut fb: Framebuffer = Framebuffer::new();
         // this feels wrong, is there a more rusty way to do this?
-        let img: Option<&[u8]> = None;
+        let mut img: Option<&[u8]> = None;
         if display_level == 2 {
             img = Some(IMAGE_DIR.get_file("orca.gif").expect("failed to read orca.gif").contents());
         } else if display_level == 3 {
@@ -150,9 +150,6 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
             
             }
             match display_level  {
-                1 | _ => {
-                    fb.draw_line(framebuffer::Color565::Green, 2);
-                },
                 2 => {
                     fb.draw_gif(img.unwrap());
                 },
@@ -165,6 +162,9 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
                     fb.draw_line(framebuffer::Color565::White, 76);
                     fb.draw_line(framebuffer::Color565::Pink, 50);
                     fb.draw_line(framebuffer::Color565::Cyan, 25);
+                },
+                1 | _ => {
+                    fb.draw_line(framebuffer::Color565::Green, 2);
                 },
             };
             sleep(Duration::from_millis(100));
