@@ -5,6 +5,7 @@ mod server;
 mod stats;
 mod qmdl_store;
 mod diag;
+mod framebuffer;
 
 use crate::config::{parse_config, parse_args};
 use crate::diag::run_diag_read_thread;
@@ -13,6 +14,7 @@ use crate::server::{ServerState, get_qmdl, serve_static};
 use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
+use crate::framebuffer::Framebuffer;
 
 use axum::response::Redirect;
 use diag::{get_analysis_report, start_recording, stop_recording, DiagDeviceCtrlMessage};
@@ -22,12 +24,16 @@ use axum::routing::{get, post};
 use axum::Router;
 use stats::get_qmdl_manifest;
 use tokio::sync::mpsc::{self, Sender};
+use tokio::sync::oneshot::error::TryRecvError;
 use tokio::task::JoinHandle;
 use tokio_util::task::TaskTracker;
 use std::net::SocketAddr;
+use std::thread::sleep;
+use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::{RwLock, oneshot};
 use std::sync::Arc;
+use include_dir::{include_dir, Dir};
 
 // Runs the axum server, taking all the elements needed to build up our
 // ServerState and a oneshot Receiver that'll fire when it's time to shutdown
@@ -88,6 +94,7 @@ fn run_ctrl_c_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     server_shutdown_tx: oneshot::Sender<()>,
+    ui_shutdown_tx: oneshot::Sender<()>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>
 ) -> JoinHandle<Result<(), RayhunterError>> {
     task_tracker.spawn(async move {
@@ -102,6 +109,9 @@ fn run_ctrl_c_thread(
 
                 server_shutdown_tx.send(())
                     .expect("couldn't send server shutdown signal");
+                info!("sending UI shutdown");
+                ui_shutdown_tx.send(())
+                    .expect("couldn't send ui shutdown signal");
                 diag_device_sender.send(DiagDeviceCtrlMessage::Exit).await
                     .expect("couldn't send Exit message to diag thread");
             },
@@ -111,6 +121,56 @@ fn run_ctrl_c_thread(
         }
         Ok(())
     })
+}
+
+async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>){
+    static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
+    let display_level = config.ui_level;
+    if display_level == 0 {
+        info!("Invisible mode, not spawning UI.");
+    }
+
+    task_tracker.spawn_blocking(move || {
+        let mut fb: Framebuffer = Framebuffer::new();
+        // this feels wrong, is there a more rusty way to do this?
+        let mut img: Option<&[u8]> = None;
+        if display_level == 2 {
+            img = Some(IMAGE_DIR.get_file("orca.gif").expect("failed to read orca.gif").contents());
+        } else if display_level == 3 {
+            img = Some(IMAGE_DIR.get_file("eff.png").expect("failed to read eff.png").contents());
+        }
+        loop {
+            match ui_shutdown_rx.try_recv() {
+                Ok(_) => {
+                    info!("received UI shutdown");
+                    break;
+                },
+                Err(TryRecvError::Empty) => {},
+                Err(e) => panic!("error receiving shutdown message: {e}")
+            
+            }
+            match display_level  {
+                2 => {
+                    fb.draw_gif(img.unwrap());
+                },
+                3 => {
+                    fb.draw_img(img.unwrap())
+                },
+                128 => {
+                    fb.draw_line(framebuffer::Color565::Cyan, 128);
+                    fb.draw_line(framebuffer::Color565::Pink, 102);
+                    fb.draw_line(framebuffer::Color565::White, 76);
+                    fb.draw_line(framebuffer::Color565::Pink, 50);
+                    fb.draw_line(framebuffer::Color565::Cyan, 25);
+                },
+                1 | _ => {
+                    fb.draw_line(framebuffer::Color565::Green, 2);
+                },
+            };
+            sleep(Duration::from_millis(100));
+        }
+    }).await.unwrap();
+
 }
 
 #[tokio::main]
@@ -134,10 +194,11 @@ async fn main() -> Result<(), RayhunterError> {
 
         run_diag_read_thread(&task_tracker, dev, rx, qmdl_store_lock.clone());
     }
-
+    let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
-    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, qmdl_store_lock.clone());
+    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, ui_shutdown_tx, qmdl_store_lock.clone());
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, tx).await;
+    update_ui(&task_tracker, &config, ui_shutdown_rx).await;
 
     task_tracker.close();
     task_tracker.wait().await;
