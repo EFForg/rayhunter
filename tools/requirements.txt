@@ -1,0 +1,4 @@
+asn1tools==0.166.0
+bitstruct==8.19.0
+diskcache==5.6.3
+pyparsing==3.1.2
