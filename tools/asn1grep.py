@@ -37,17 +37,17 @@ def search_type(haystack, needle):
     if 'members' in haystack.__dict__:
         for name, member in haystack.name_to_member.items():
             for member_result in search_type(member, needle):
-                result.append(f"{haystack.name}.{name} [{member_result}]")
+                result.append(f"{haystack.name} ({haystack.type_name}).{name}\n  {member_result}")
     elif 'root_members' in haystack.__dict__:
         for member in haystack.root_members:
             for member_result in search_type(member, needle):
-                result.append(f"{haystack.name} [{member_result}]")
+                result.append(f"{haystack.name} ({haystack.type_name})\n  {member_result}")
     elif 'element_type' in haystack.__dict__:
         for element_result in search_type(haystack.element_type, needle):
-            result.append(f"{haystack.name}[0] [{element_result}]")
+            result.append(f"{haystack.name}[0] ({haystack.type_name})\n  {element_result}")
     elif 'inner' in haystack.__dict__:
         for inner_result in search_type(haystack.inner, needle):
-            result.append(f"{haystack.name} [{inner_result}]")
+            result.append(inner_result)
 
     return result
 
@@ -64,4 +64,4 @@ if __name__ == "__main__":
 
     for haystack in terminating_types:
         for result in search_type(haystack.type, type_name):
-            print(result)
+            print(result + '\n')
