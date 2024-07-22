@@ -62,10 +62,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
+      - name: Fix executable permissions on serial binaries
+        run: chmod +x serial-*/serial
       - name: Setup release directory
         run: mv rayhunter-daemon/rayhunter-daemon rootshell/rootshell serial-* dist
       - name: Archive release directory
-        run: tar -cvf release.tar dist
+        run: tar -cvf release.tar -C dist .
       # TODO: have this create a release directly
       - name: Upload release
         uses: actions/upload-artifact@v4
