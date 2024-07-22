@@ -65,15 +65,11 @@ jobs:
       - name: Setup release directory
         run: mv rayhunter-daemon/rayhunter-daemon rootshell/rootshell serial-* dist
       - name: Archive release directory
-        uses: thedoctor0/zip-release@0.7.5
-        with:
-          type: 'zip'
-          filename: 'release.zip'
-          directory: 'dist'
+        run: tar -cvf release.tar dist
       # TODO: have this create a release directly
       - name: Upload release
         uses: actions/upload-artifact@v4
         with:
-          name: release.zip
-          path: dist/release.zip
+          name: release.tar
+          path: release.tar
           if-no-files-found: error
