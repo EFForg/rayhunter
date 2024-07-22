@@ -2,7 +2,7 @@ name: Build Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release-*"]
 
 env:
   CARGO_TERM_COLOR: always
