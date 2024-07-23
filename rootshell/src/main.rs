@@ -11,6 +11,9 @@ use nix::unistd::Gid;
 fn main() {
    let mut args = env::args();
 
+   // Android's "paranoid network" feature restricts network access to
+   // processes in specific groups. More info here:
+   // https://www.elinux.org/Android_Security#Paranoid_network-ing
    let gids = &[
       Gid::from_raw(3003), // AID_INET
       Gid::from_raw(3004), // AID_NET_RAW
