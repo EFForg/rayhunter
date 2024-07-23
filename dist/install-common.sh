@@ -9,6 +9,7 @@ install() {
     force_debug_mode
     setup_rootshell
     setup_rayhunter
+    test_rayhunter
 }
 
 check_adb() {
@@ -24,13 +25,17 @@ force_debug_mode() {
     echo "$SERIAL_PATH"
     "$SERIAL_PATH" AT
     echo -n "adb enabled, waiting for reboot"
+    wait_for_adb_shell
+    echo "it's alive!"
+}
+
+wait_for_adb_shell() {
     until adb shell true 2> /dev/null
     do
         echo -n .
         sleep 1
     done
     echo
-    echo "it's alive!"
 }
 
 setup_rootshell() {
@@ -58,5 +63,36 @@ setup_rayhunter() {
     adb shell '/bin/rootshell -c "cp /tmp/misc-daemon /etc/init.d/misc-daemon"'
     adb shell '/bin/rootshell -c "chmod 755 /etc/init.d/rayhunter_daemon"'
     adb shell '/bin/rootshell -c "chmod 755 /etc/init.d/misc-daemon"'
-    adb shell '/bin/rootshell -c "/etc/init.d/rayhunter_daemon start"'
+    echo -n "rebooting, this may take a sec..."
+    adb shell '/bin/rootshell -c reboot'
+
+    # first wait for shutdown (it can take ~10s)
+    until ! adb shell true 2> /dev/null
+    do
+        echo -n '.'
+        sleep 1
+    done
+
+    # now wait for boot to finish
+    wait_for_adb_shell
+
+    echo "rebooted successfully!"
+}
+
+test_rayhunter() {
+    URL="http://localhost:8080"
+    adb forward tcp:8080 tcp:8080
+    echo -n "checking for rayhunter server..."
+
+    SECONDS=0
+    while (( SECONDS < 30 )); do
+        if curl -L --fail-with-body "$URL" -o /dev/null -s; then
+            echo
+            echo "success! you can access rayhunter at $URL"
+            return
+        fi
+        sleep 1
+        echo -n "."
+    done
+    echo "timeout reached! failed to reach rayhunter url $URL, something went wrong :("
 }

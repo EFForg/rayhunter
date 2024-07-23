@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
-        run: chmod +x serial-*/serial rayhunter-daemon
+        run: chmod +x serial-*/serial rayhunter-daemon/rayhunter-daemon
       - name: Setup release directory
         run: mv rayhunter-daemon/rayhunter-daemon rootshell/rootshell serial-* dist
       - name: Archive release directory
