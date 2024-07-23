@@ -22,7 +22,6 @@ check_adb() {
 
 force_debug_mode() {
     # Force a switch into the debug mode to enable ADB
-    echo "$SERIAL_PATH"
     "$SERIAL_PATH" AT
     echo -n "adb enabled, waiting for reboot"
     wait_for_adb_shell
