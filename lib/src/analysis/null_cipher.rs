@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use telcom_parser::lte_rrc::{CipheringAlgorithm_r12, DL_CCCH_MessageType, DL_CCCH_MessageType_c1, DL_DCCH_MessageType, DL_DCCH_MessageType_c1, PCCH_MessageType, PCCH_MessageType_c1, PagingUE_Identity, RRCConnectionReconfiguration, RRCConnectionReconfigurationCriticalExtensions, RRCConnectionReconfigurationCriticalExtensions_c1, RRCConnectionReconfiguration_r8_IEs, RRCConnectionRelease_v890_IEs, SCG_Configuration_r12, SecurityConfigHO_v1530HandoverType_v1530, SecurityModeCommand, SecurityModeCommandCriticalExtensions, SecurityModeCommandCriticalExtensions_c1};
+use telcom_parser::lte_rrc::{CipheringAlgorithm_r12, DL_DCCH_MessageType, DL_DCCH_MessageType_c1, RRCConnectionReconfiguration, RRCConnectionReconfigurationCriticalExtensions, RRCConnectionReconfigurationCriticalExtensions_c1, SCG_Configuration_r12, SecurityConfigHO_v1530HandoverType_v1530, SecurityModeCommand, SecurityModeCommandCriticalExtensions, SecurityModeCommandCriticalExtensions_c1};
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
