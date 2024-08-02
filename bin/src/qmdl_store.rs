@@ -203,12 +203,16 @@ impl RecordingStore {
 
 #[cfg(test)]
 mod tests {
-    use tempdir::TempDir;
+    use tempfile::{TempDir, Builder};
     use super::*;
+
+    fn make_temp_dir() -> TempDir {
+        Builder::new().prefix("qmdl_store_test").tempdir().unwrap()
+    }
 
     #[tokio::test]
     async fn test_load_from_empty_dir() {
-        let dir = TempDir::new("qmdl_store_test").unwrap();
+        let dir = make_temp_dir();
         assert!(!RecordingStore::exists(dir.path()).await.unwrap());
         let _created_store = RecordingStore::create(dir.path()).await.unwrap();
         assert!(RecordingStore::exists(dir.path()).await.unwrap());
@@ -218,7 +222,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_creating_updating_and_closing_entries() {
-        let dir = TempDir::new("qmdl_store_test").unwrap();
+        let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
         let _ = store.new_entry().await.unwrap();
         let entry_index = store.current_entry.unwrap();
@@ -237,7 +241,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_repeated_new_entries() {
-        let dir = TempDir::new("qmdl_store_test").unwrap();
+        let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
         let _ = store.new_entry().await.unwrap();
         let entry_index = store.current_entry.unwrap();
