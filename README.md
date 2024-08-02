@@ -36,7 +36,7 @@ linux/qualcom devices but this is the only one we have tested on. Buy the orbic 
 ## Setup
 
 1. Install the Android Debug Bridge (ADB) on your computer (don't worry about instructions for installing it on a phone/device yet). You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer).
-2. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and unzip it.
+2. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it (on Windows use 7zip).
 3. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`).
 4. Once finished, rayhunter should be running! You can verify this by visiting the web UI as described below.
 
@@ -61,9 +61,9 @@ rustup target add x86_64-unknown-linux-gnu
 rustup target add armv7-unknown-linux-gnueabihf
 ```
 
-Now you can root your device and install rayhunter by running `./install.sh` - **Note:** You will have to install the cross compile tooling below before running this. 
+Now you can root your device and install rayhunter by running `./tools/install-dev.sh` 
 
-### If you aren't on linux or can't run the install scripts 
+### If you are on windows or can't run the install scripts
 * Root your device on windows using the instructions here: https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183
 
 * Build for arm using `cargo build` 

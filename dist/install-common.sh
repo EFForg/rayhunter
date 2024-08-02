@@ -1,5 +1,4 @@
 #!/bin/env bash
-
 install() {
     if [[ -z "${SERIAL_PATH}" ]]; then
         echo "SERIAL_PATH not set, did you run this from install-linux.sh or install-mac.sh?"
@@ -21,8 +20,8 @@ check_adb() {
 }
 
 force_debug_mode() {
-    # Force a switch into the debug mode to enable ADB
-    "$SERIAL_PATH" AT
+    echo " Force a switch into the debug mode to enable ADB"
+    "$SERIAL_PATH" --root
     echo -n "adb enabled, waiting for reboot"
     wait_for_adb_shell
     echo "it's alive!"
