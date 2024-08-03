@@ -89,20 +89,25 @@ fn send_command<T: UsbContext>(handle: &mut DeviceHandle<T>, command: &str) {
 ///
 /// If the device reboots while the command is still executing you may get a pipe error here, not sure what to do about this race condition.
 fn enable_command_mode<T: UsbContext>(context: &mut T) {
-    let timeout = Duration::from_secs(1);
-    match open_device(context, 0x05c6, 0xf626) {
-        Some(handle) => {
-            if let Err(e) = handle.write_control(0x40, 0xa0, 0, 0, &[], timeout) {
-                // If the device reboots while the command is still executing we
-                // may get a pipe error here
-                if e == rusb::Error::Pipe {
-                    return;
-                }
-                panic!("Failed to send device switch control request: {0}", e)
-            }
-        },
-        None => panic!("No Orbic device detected"),
+    if open_orbic(context).is_some() {
+        println!("Device already in command mode. Doing nothing...");
+        return;
     }
+
+    let timeout = Duration::from_secs(1);
+    if let Some(handle) = open_device(context, 0x05c6, 0xf626) {
+        if let Err(e) = handle.write_control(0x40, 0xa0, 0, 0, &[], timeout) {
+            // If the device reboots while the command is still executing we
+            // may get a pipe error here
+            if e == rusb::Error::Pipe {
+                return;
+            }
+            panic!("Failed to send device switch control request: {0}", e)
+        }
+        return;
+    }
+
+    panic!("No Orbic device found");
 }
 
 /// Get a handle and contet for the orbic device
