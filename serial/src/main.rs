@@ -20,7 +20,6 @@
 //!	Err(e) => panic!("Failed to initialize libusb: {0}", e),
 //! ````
 use std::str;
-use std::thread::sleep;
 use std::time::Duration;
 
 use rusb::{Context, DeviceHandle, UsbContext};
@@ -28,19 +27,21 @@ use rusb::{Context, DeviceHandle, UsbContext};
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    if args.len() < 2 {
-        println!("usage: {0} <command>", args[0]);
+    if args.len() != 2 {
+        println!("usage: {0} [<command> | --root]", args[0]);
         return;
     }
 
     match Context::new() {
-        Ok(mut context) => match open_orbic(&mut context) {
-            Some(mut handle) => {
-                if &args[1] != "--root" {
-                    send_command(&mut handle, &args[1])
+        Ok(mut context) => {
+            if args[1] == "--root" {
+                enable_command_mode(&mut context);
+            } else {
+                match open_orbic(&mut context) {
+                    Some(mut handle) => send_command(&mut handle, &args[1]),
+                    None => panic!("No Orbic device found"),
                 }
             }
-            None => panic!("No Orbic device found"),
         },
         Err(e) => panic!("Failed to initialize libusb: {0}", e),
     }
@@ -78,30 +79,33 @@ fn send_command<T: UsbContext>(handle: &mut DeviceHandle<T>, command: &str) {
         .expect("Failed to read response");
 
     let responsestr = str::from_utf8(&response).expect("Failed to parse response");
-    if !responsestr.starts_with("\r\nOK\r\n") {
-        println!("Received unexpected response{0}", responsestr)
+    if !responsestr.contains("\r\nOK\r\n") {
+        println!("Received unexpected response{0}", responsestr);
+        std::process::exit(1);
     }
 }
 
 /// Send a command to switch the device into generic mode, exposing serial
 ///
 /// If the device reboots while the command is still executing you may get a pipe error here, not sure what to do about this race condition.
-fn switch_device<T: UsbContext>(handle: &mut DeviceHandle<T>) {
+fn enable_command_mode<T: UsbContext>(context: &mut T) {
     let timeout = Duration::from_secs(1);
-
-    if let Err(e) = handle.write_control(0x40, 0xa0, 0, 0, &[], timeout) {
-        // If the device reboots while the command is still executing we
-        // may get a pipe error here
-        if e == rusb::Error::Pipe {
-            return;
-        }
-        panic!("Failed to send device switch control request: {0}", e)
+    match open_device(context, 0x05c6, 0xf626) {
+        Some(handle) => {
+            if let Err(e) = handle.write_control(0x40, 0xa0, 0, 0, &[], timeout) {
+                // If the device reboots while the command is still executing we
+                // may get a pipe error here
+                if e == rusb::Error::Pipe {
+                    return;
+                }
+                panic!("Failed to send device switch control request: {0}", e)
+            }
+        },
+        None => panic!("No Orbic device detected"),
     }
 }
 
 /// Get a handle and contet for the orbic device
-///
-/// If the device isn't already in command mode this function will call swtich_device to switch it into command mode
 fn open_orbic<T: UsbContext>(context: &mut T) -> Option<DeviceHandle<T>> {
     // Device after initial mode switch
     if let Some(handle) = open_device(context, 0x05c6, 0xf601) {
@@ -113,19 +117,7 @@ fn open_orbic<T: UsbContext>(context: &mut T) -> Option<DeviceHandle<T>> {
         return Some(handle);
     }
 
-    // Device in out-of-the-box state, need to switch to diag mode
-    match open_device(context, 0x05c6, 0xf626) {
-        Some(mut handle) => switch_device(&mut handle),
-        None => panic!("No Orbic device detected"),
-    }
-
-    for _ in 1..10 {
-        if let Some(handle) = open_device(context, 0x05c6, 0xf601) {
-            return Some(handle);
-        }
-        sleep(Duration::from_secs(10))
-    }
-    panic!("No Orbic device detected")
+    None
 }
 
 /// Generic function to open a USB device
