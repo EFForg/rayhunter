@@ -20,20 +20,28 @@ check_adb() {
 }
 
 force_debug_mode() {
-    echo " Force a switch into the debug mode to enable ADB"
+    echo "Force a switch into the debug mode to enable ADB"
     "$SERIAL_PATH" --root
-    echo -n "adb enabled, waiting for reboot"
+    echo -n "adb enabled, waiting for reboot..."
     wait_for_adb_shell
-    echo "it's alive!"
+    echo " it's alive!"
+    echo -n "waiting for atfwd_daemon to startup..."
+    wait_for_atfwd_daemon
+    echo " done!"
+}
+
+wait_for_atfwd_daemon() {
+    until [ -n "$(adb shell 'pgrep atfwd_daemon')" ]
+    do
+        sleep 1
+    done
 }
 
 wait_for_adb_shell() {
     until adb shell true 2> /dev/null
     do
-        echo -n .
         sleep 1
     done
-    echo
 }
 
 setup_rootshell() {
@@ -43,8 +51,8 @@ setup_rootshell() {
     "$SERIAL_PATH" "AT+SYSCMD=chown root /bin/rootshell"
     sleep 1
     "$SERIAL_PATH" "AT+SYSCMD=chmod 4755 /bin/rootshell"
-    echo "we have root!"
     adb shell /bin/rootshell -c id
+    echo "we have root!"
 }
 
 _adb_push() {
@@ -61,36 +69,34 @@ setup_rayhunter() {
     adb shell '/bin/rootshell -c "cp /tmp/misc-daemon /etc/init.d/misc-daemon"'
     adb shell '/bin/rootshell -c "chmod 755 /etc/init.d/rayhunter_daemon"'
     adb shell '/bin/rootshell -c "chmod 755 /etc/init.d/misc-daemon"'
-    echo -n "rebooting, this may take a sec..."
+    echo -n "waiting for reboot..."
     adb shell '/bin/rootshell -c reboot'
 
     # first wait for shutdown (it can take ~10s)
     until ! adb shell true 2> /dev/null
     do
-        echo -n '.'
         sleep 1
     done
 
     # now wait for boot to finish
     wait_for_adb_shell
 
-    echo "rebooted successfully!"
+    echo " done!"
 }
 
 test_rayhunter() {
     URL="http://localhost:8080"
-    adb forward tcp:8080 tcp:8080
+    adb forward tcp:8080 tcp:8080 > /dev/null
     echo -n "checking for rayhunter server..."
 
     SECONDS=0
     while (( SECONDS < 30 )); do
         if curl -L --fail-with-body "$URL" -o /dev/null -s; then
-            echo
-            echo "success! you can access rayhunter at $URL"
+            echo "success!"
+            echo "you can access rayhunter at $URL"
             return
         fi
         sleep 1
-        echo -n "."
     done
     echo "timeout reached! failed to reach rayhunter url $URL, something went wrong :("
 }
