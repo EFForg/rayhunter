@@ -60,19 +60,19 @@ pub trait Analyzer {
 
 #[derive(Serialize, Debug)]
 pub struct AnalyzerMetadata {
-    name: String,
-    description: String,
+    pub name: String,
+    pub description: String,
 }
 
 #[derive(Serialize, Debug)]
 pub struct ReportMetadata {
-    analyzers: Vec<AnalyzerMetadata>,
+    pub analyzers: Vec<AnalyzerMetadata>,
 }
 
 #[derive(Serialize, Debug, Clone)]
 pub struct PacketAnalysis {
-    timestamp: DateTime<FixedOffset>,
-    events: Vec<Option<Event>>,
+    pub timestamp: DateTime<FixedOffset>,
+    pub events: Vec<Option<Event>>,
 }
 
 #[derive(Serialize, Debug)]
@@ -175,7 +175,7 @@ impl Harness {
 
     pub fn get_metadata(&self) -> ReportMetadata {
         let names = self.get_names();
-        let descriptions = self.get_names();
+        let descriptions = self.get_descriptions();
         let mut analyzers = Vec::new();
         for (name, description) in names.iter().zip(descriptions.iter()) {
             analyzers.push(AnalyzerMetadata {
