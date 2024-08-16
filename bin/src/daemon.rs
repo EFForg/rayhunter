@@ -1,3 +1,4 @@
+mod analysis;
 mod config;
 mod error;
 mod pcap;
@@ -16,6 +17,7 @@ use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
 use crate::framebuffer::Framebuffer;
 
+use analysis::{get_analysis_status, run_analysis_thread, start_analysis, AnalysisCtrlMessage, AnalysisStatus};
 use axum::response::Redirect;
 use diag::{get_analysis_report, start_recording, stop_recording, DiagDeviceCtrlMessage};
 use log::{info, error};
@@ -44,14 +46,18 @@ async fn run_server(
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     server_shutdown_rx: oneshot::Receiver<()>,
     ui_update_tx: Sender<framebuffer::DisplayState>,
-    diag_device_sender: Sender<DiagDeviceCtrlMessage>
+    diag_device_sender: Sender<DiagDeviceCtrlMessage>,
+    analysis_sender: Sender<AnalysisCtrlMessage>,
+    analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
 ) -> JoinHandle<()> {
     info!("spinning up server");
     let state = Arc::new(ServerState {
         qmdl_store_lock,
         diag_device_ctrl_sender: diag_device_sender,
         ui_update_sender: ui_update_tx,
-        readonly_mode: config.readonly_mode
+        debug_mode: config.debug_mode,
+        analysis_status_lock,
+        analysis_sender,
     });
 
     let app = Router::new()
@@ -61,7 +67,9 @@ async fn run_server(
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
         .route("/api/start-recording", post(start_recording))
         .route("/api/stop-recording", post(stop_recording))
-        .route("/api/analysis-report", get(get_analysis_report))
+        .route("/api/analysis-report/*name", get(get_analysis_report))
+        .route("/api/analysis", get(get_analysis_status))
+        .route("/api/analysis/*name", post(start_analysis))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/*path", get(serve_static))
         .with_state(state);
@@ -81,12 +89,12 @@ async fn server_shutdown_signal(server_shutdown_rx: oneshot::Receiver<()>) {
 }
 
 // Loads a QmdlStore if one exists, and if not, only create one if we're not in
-// readonly mode.
+// debug mode.
 async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, RayhunterError> {
-    match (RecordingStore::exists(&config.qmdl_store_path).await?, config.readonly_mode) {
+    match (RecordingStore::exists(&config.qmdl_store_path).await?, config.debug_mode) {
         (true, _) => Ok(RecordingStore::load(&config.qmdl_store_path).await?),
         (false, false) => Ok(RecordingStore::create(&config.qmdl_store_path).await?),
-        (false, true) => Err(RayhunterError::NoStoreReadonlyMode(config.qmdl_store_path.clone())),
+        (false, true) => Err(RayhunterError::NoStoreDebugMode(config.qmdl_store_path.clone())),
     }
 }
 
@@ -97,8 +105,9 @@ fn run_ctrl_c_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     server_shutdown_tx: oneshot::Sender<()>,
-    ui_shutdown_tx: oneshot::Sender<()>,
-    qmdl_store_lock: Arc<RwLock<RecordingStore>>
+    maybe_ui_shutdown_tx: Option<oneshot::Sender<()>>,
+    qmdl_store_lock: Arc<RwLock<RecordingStore>>,
+    analysis_tx: Sender<AnalysisCtrlMessage>,
 ) -> JoinHandle<Result<(), RayhunterError>> {
     task_tracker.spawn(async move {
         match tokio::signal::ctrl_c().await {
@@ -113,10 +122,14 @@ fn run_ctrl_c_thread(
                 server_shutdown_tx.send(())
                     .expect("couldn't send server shutdown signal");
                 info!("sending UI shutdown");
-                ui_shutdown_tx.send(())
-                    .expect("couldn't send ui shutdown signal");
+                if let Some(ui_shutdown_tx) = maybe_ui_shutdown_tx {
+                    ui_shutdown_tx.send(())
+                        .expect("couldn't send ui shutdown signal");
+                }
                 diag_device_sender.send(DiagDeviceCtrlMessage::Exit).await
                     .expect("couldn't send Exit message to diag thread");
+                analysis_tx.send(AnalysisCtrlMessage::Exit).await
+                    .expect("couldn't send Exit message to analysis thread");
             },
             Err(err) => {
                 error!("Unable to listen for shutdown signal: {}", err);
@@ -151,8 +164,7 @@ fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdo
                     break;
                 },
                 Err(TryRecvError::Empty) => {},
-                Err(e) => error!("error receiving shutdown message: {e}")
-            
+                Err(e) => panic!("error receiving shutdown message: {e}")
             }
             match ui_update_rx.try_recv() {
                     Ok(state) => {
@@ -161,7 +173,7 @@ fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdo
                     Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                     Err(e) => error!("error receiving framebuffer update message: {e}")
             }
-            
+
             match display_level  {
                 2 => {
                     fb.draw_gif(img.unwrap());
@@ -200,8 +212,11 @@ async fn main() -> Result<(), RayhunterError> {
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<framebuffer::DisplayState>(1);
-    let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
-    if !config.readonly_mode {
+    let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
+    let mut maybe_ui_shutdown_tx = None;
+    if !config.debug_mode {
+        let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
+        maybe_ui_shutdown_tx = Some(ui_shutdown_tx);
         let mut dev = DiagDevice::new().await
             .map_err(RayhunterError::DiagInitError)?;
         dev.config_logs().await
@@ -214,8 +229,10 @@ async fn main() -> Result<(), RayhunterError> {
     }
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     info!("create shutdown thread");
-    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, ui_shutdown_tx, qmdl_store_lock.clone());
-    run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx).await;
+    let analysis_status_lock = Arc::new(RwLock::new(AnalysisStatus::default()));
+    run_analysis_thread(&task_tracker, analysis_rx, qmdl_store_lock.clone(), analysis_status_lock.clone());
+    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, maybe_ui_shutdown_tx, qmdl_store_lock.clone(), analysis_tx.clone());
+    run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx, analysis_tx, analysis_status_lock).await;
 
     task_tracker.close();
     task_tracker.wait().await;
