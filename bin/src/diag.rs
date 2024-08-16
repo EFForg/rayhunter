@@ -2,7 +2,7 @@ use std::pin::pin;
 use std::sync::Arc;
 
 use axum::body::Body;
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -15,7 +15,8 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use rayhunter::qmdl::QmdlWriter;
 use log::{debug, error, info};
 use tokio::fs::File;
-use tokio::io::{BufWriter, AsyncWriteExt};
+use tokio::io::BufWriter;
+use tokio::io::AsyncWriteExt;
 use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 use futures::{StreamExt, TryStreamExt};
@@ -171,8 +172,8 @@ pub fn run_diag_read_thread(
 }
 
 pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if state.readonly_mode {
-        return Err((StatusCode::FORBIDDEN, "server is in readonly mode".to_string()));
+    if state.debug_mode {
+        return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
     let (qmdl_file, analysis_file) = qmdl_store.new_entry().await
@@ -186,8 +187,8 @@ pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(S
 }
 
 pub async fn stop_recording(State(state): State<Arc<ServerState>>) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if state.readonly_mode {
-        return Err((StatusCode::FORBIDDEN, "server is in readonly mode".to_string()));
+    if state.debug_mode {
+        return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
     qmdl_store.close_current_entry().await
@@ -199,15 +200,20 @@ pub async fn stop_recording(State(state): State<Arc<ServerState>>) -> Result<(St
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
-pub async fn get_analysis_report(State(state): State<Arc<ServerState>>) -> Result<Response, (StatusCode, String)> {
+pub async fn get_analysis_report(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
-    let Some(entry) = qmdl_store.get_current_entry() else {
-        return Err((
+    let (entry_index, _) = if qmdl_name == "live" {
+        qmdl_store.get_current_entry().ok_or((
             StatusCode::SERVICE_UNAVAILABLE,
             "No QMDL data's being recorded to analyze, try starting a new recording!".to_string()
-        ));
+        ))?
+    } else {
+        qmdl_store.entry_for_name(&qmdl_name).ok_or((
+            StatusCode::NOT_FOUND,
+            format!("Couldn't find QMDL entry with name \"{}\"", qmdl_name)
+        ))?
     };
-    let analysis_file = qmdl_store.open_entry_analysis(entry).await
+    let analysis_file = qmdl_store.open_entry_analysis(entry_index).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)))?;
     let analysis_stream = ReaderStream::new(analysis_file);
 

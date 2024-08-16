@@ -6,7 +6,7 @@ use serde::Deserialize;
 struct ConfigFile {
     qmdl_store_path: Option<String>,
     port: Option<u16>,
-    readonly_mode: Option<bool>,
+    debug_mode: Option<bool>,
     ui_level: Option<u8>,
 }
 
@@ -14,7 +14,7 @@ struct ConfigFile {
 pub struct Config {
     pub qmdl_store_path: String,
     pub port: u16,
-    pub readonly_mode: bool,
+    pub debug_mode: bool,
     pub ui_level: u8,
 }
 
@@ -23,7 +23,7 @@ impl Default for Config {
         Config {
             qmdl_store_path: "/data/rayhunter/qmdl".to_string(),
             port: 8080,
-            readonly_mode: false,
+            debug_mode: false,
             ui_level: 1,
         }
     }
@@ -36,7 +36,7 @@ pub fn parse_config<P>(path: P) -> Result<Config, RayhunterError> where P: AsRef
             .map_err(RayhunterError::ConfigFileParsingError)?;
         if let Some(path) = parsed_config.qmdl_store_path { config.qmdl_store_path = path }
         if let Some(port) = parsed_config.port { config.port = port }
-        if let Some(readonly_mode) = parsed_config.readonly_mode { config.readonly_mode = readonly_mode }
+        if let Some(debug_mode) = parsed_config.debug_mode { config.debug_mode = debug_mode }
         if let Some(ui_level) = parsed_config.ui_level { config.ui_level = ui_level }
     }
     Ok(config)

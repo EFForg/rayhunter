@@ -13,6 +13,6 @@ pub enum RayhunterError{
     TokioError(#[from] tokio::io::Error),
     #[error("QmdlStore error: {0}")]
     QmdlStoreError(#[from] RecordingStoreError),
-    #[error("No QMDL store found at path {0}, but can't create a new one due to readonly mode")]
-    NoStoreReadonlyMode(String),
+    #[error("No QMDL store found at path {0}, but can't create a new one due to debug mode")]
+    NoStoreDebugMode(String),
 }

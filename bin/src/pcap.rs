@@ -21,7 +21,7 @@ use futures::TryStreamExt;
 // pcap data to a channel that's piped to the client.
 pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
-    let entry = qmdl_store.entry_for_name(&qmdl_name)
+    let (entry_index, entry) = qmdl_store.entry_for_name(&qmdl_name)
         .ok_or((StatusCode::NOT_FOUND, format!("couldn't find qmdl file with name {}", qmdl_name)))?;
     if entry.qmdl_size_bytes == 0 {
         return Err((
@@ -29,8 +29,8 @@ pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
             "QMDL file is empty, try again in a bit!".to_string()
         ));
     }
-
-    let qmdl_file = qmdl_store.open_entry_qmdl(&entry).await
+    let qmdl_size_bytes = entry.qmdl_size_bytes;
+    let qmdl_file = qmdl_store.open_entry_qmdl(entry_index).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)))?;
     // the QMDL reader should stop at the last successfully written data chunk
     // (entry.size_bytes)
@@ -39,10 +39,10 @@ pub async fn get_pcap(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
     pcap_writer.write_iface_header().await.unwrap();
 
     tokio::spawn(async move {
-        let mut reader = QmdlReader::new(qmdl_file, Some(entry.qmdl_size_bytes));
+        let mut reader = QmdlReader::new(qmdl_file, Some(qmdl_size_bytes));
         let mut messages_stream = pin!(reader.as_stream()
             .try_filter(|container| future::ready(container.data_type == DataType::UserSpace)));
-        
+
         while let Some(container) = messages_stream.try_next().await.expect("failed getting QMDL container") {
             for maybe_msg in container.into_messages() {
                 match maybe_msg {
