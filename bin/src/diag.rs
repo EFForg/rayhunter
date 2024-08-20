@@ -20,6 +20,7 @@ use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 use futures::{StreamExt, TryStreamExt};
 
+use crate::framebuffer;
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
 
@@ -172,6 +173,8 @@ pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(S
     let qmdl_writer = QmdlWriter::new(qmdl_file);
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StartRecording((qmdl_writer, analysis_file))).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
+    state.ui_update_sender.send(framebuffer::Color565::Green).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
@@ -184,6 +187,8 @@ pub async fn stop_recording(State(state): State<Arc<ServerState>>) -> Result<(St
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't close current qmdl entry: {}", e)))?;
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
+    state.ui_update_sender.send(framebuffer::Color565::White).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 

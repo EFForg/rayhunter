@@ -11,12 +11,13 @@ use tokio::sync::RwLock;
 use tokio_util::io::ReaderStream;
 use include_dir::{include_dir, Dir};
 
-use crate::DiagDeviceCtrlMessage;
+use crate::{framebuffer, DiagDeviceCtrlMessage};
 use crate::qmdl_store::RecordingStore;
 
 pub struct ServerState {
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
+    pub ui_update_sender: Sender<framebuffer::Color565>,
     pub readonly_mode: bool
 }
 

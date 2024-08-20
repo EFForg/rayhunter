@@ -11,6 +11,7 @@ struct Dimensions {
 }
 
 #[allow(dead_code)]
+#[derive(Copy, Clone)]
 pub enum Color565 {
     Red    = 0b1111100000000000,
     Green  = 0b0000011111100000,
