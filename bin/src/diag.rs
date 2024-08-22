@@ -34,6 +34,7 @@ struct AnalysisWriter {
     writer: BufWriter<File>,
     harness: Harness,
     bytes_written: usize,
+    has_warning: bool,
 }
 
 // We write our analysis results to a file immediately to minimize the amount of
@@ -48,6 +49,7 @@ impl AnalysisWriter {
             writer: BufWriter::new(file),
             harness: Harness::new_with_all_analyzers(),
             bytes_written: 0,
+            has_warning: false,
         };
         let metadata = result.harness.get_metadata();
         result.write(&metadata).await?;
@@ -60,6 +62,7 @@ impl AnalysisWriter {
         let row = self.harness.analyze_qmdl_messages(container);
         if !row.is_empty() {
             self.write(&row).await?;
+            self.has_warning = ! &row.analysis.is_empty()
         }
         Ok(self.bytes_written)
     }
@@ -150,6 +153,8 @@ pub fn run_diag_read_thread(
                                 let index = qmdl_store.current_entry.expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
                                 qmdl_store.update_entry_analysis_size(index, analysis_file_len as usize).await
                                     .expect("failed to update analysis file size");
+                                qmdl_store.update_entry_has_warning(index, analysis_writer.has_warning).await
+                                    .expect("failed to update analysis file has warning");
                             }
                         },
                         Err(err) => {

@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use crate::qmdl_store::ManifestEntry;
+use crate::{framebuffer, qmdl_store::ManifestEntry};
 use crate::server::ServerState;
 
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use log::error;
+use log::{error, info};
 use serde::Serialize;
 use tokio::process::Command;
 
@@ -121,6 +121,11 @@ pub async fn get_qmdl_manifest(State(state): State<Arc<ServerState>>) -> Result<
     let qmdl_store = state.qmdl_store_lock.read().await;
     let mut entries = qmdl_store.manifest.entries.clone();
     let current_entry = qmdl_store.current_entry.map(|index| entries.remove(index));
+    if current_entry.clone().unwrap().has_warning {
+        info!("a heuristic triggered on this run!");
+        state.ui_update_sender.send(framebuffer::Color565::Red).await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
+    }
     Ok(Json(ManifestStats {
         entries,
         current_entry,
