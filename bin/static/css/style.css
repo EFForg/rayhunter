@@ -22,6 +22,11 @@ th[scope='row'] {
 }
 
 tr.current {
+  background-color: #53fe7b;
+  font-weight: bold;
+}
+
+tr.warning {
   background-color: #fe537b;
   font-weight: bold;
 }
