@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use chrono::{DateTime, FixedOffset};
 use serde::Serialize;
+use log::warn;
 
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
@@ -102,7 +103,9 @@ impl Harness {
         harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer{}));
         harness.add_analyzer(Box::new(ImsiProvidedAnalyzer{}));
         harness.add_analyzer(Box::new(NullCipherAnalyzer{}));
-        if cfg!(debug_assertions) {
+
+        #[cfg(feature="debug")] {
+            warn!("Loading test analyzers!");
             harness.add_analyzer(Box::new(TestAnalyzer{count:0}));
         }
         harness
