@@ -34,7 +34,6 @@ struct AnalysisWriter {
     writer: BufWriter<File>,
     harness: Harness,
     bytes_written: usize,
-    has_warning: bool,
 }
 
 // We write our analysis results to a file immediately to minimize the amount of
@@ -49,7 +48,6 @@ impl AnalysisWriter {
             writer: BufWriter::new(file),
             harness: Harness::new_with_all_analyzers(),
             bytes_written: 0,
-            has_warning: false,
         };
         let metadata = result.harness.get_metadata();
         result.write(&metadata).await?;
@@ -62,9 +60,8 @@ impl AnalysisWriter {
         let row = self.harness.analyze_qmdl_messages(container);
         if !row.is_empty() {
             self.write(&row).await?;
-            self.has_warning = ! &row.analysis.is_empty()
         }
-        Ok((self.bytes_written, self.has_warning))
+        Ok((self.bytes_written, ! &row.analysis.is_empty()))
     }
 
     async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
