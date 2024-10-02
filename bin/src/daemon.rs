@@ -198,16 +198,16 @@ async fn main() -> Result<(), RayhunterError> {
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
+    let (ui_update_tx, ui_update_rx) = mpsc::channel::<framebuffer::Color565>(1);
     if !config.readonly_mode {
         let mut dev = DiagDevice::new().await
             .map_err(RayhunterError::DiagInitError)?;
         dev.config_logs().await
             .map_err(RayhunterError::DiagInitError)?;
 
-        run_diag_read_thread(&task_tracker, dev, rx, qmdl_store_lock.clone());
+        run_diag_read_thread(&task_tracker, dev, rx, ui_update_tx.clone(), qmdl_store_lock.clone());
     }
     let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
-    let (ui_update_tx, ui_update_rx) = mpsc::channel::<framebuffer::Color565>(1);
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, ui_shutdown_tx, qmdl_store_lock.clone());
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx).await;

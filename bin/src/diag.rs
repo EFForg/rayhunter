@@ -11,7 +11,7 @@ use rayhunter::diag::{DataType, MessagesContainer};
 use rayhunter::diag_device::DiagDevice;
 use serde::Serialize;
 use tokio::sync::RwLock;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 use rayhunter::qmdl::QmdlWriter;
 use log::{debug, error, info};
 use tokio::fs::File;
@@ -58,13 +58,13 @@ impl AnalysisWriter {
 
     // Runs the analysis harness on the given container, serializing the results
     // to the analysis file and returning the file's new length.
-    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<usize, std::io::Error> {
+    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<(usize, bool), std::io::Error> {
         let row = self.harness.analyze_qmdl_messages(container);
         if !row.is_empty() {
             self.write(&row).await?;
             self.has_warning = ! &row.analysis.is_empty()
         }
-        Ok(self.bytes_written)
+        Ok((self.bytes_written, self.has_warning))
     }
 
     async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
@@ -87,6 +87,7 @@ pub fn run_diag_read_thread(
     task_tracker: &TaskTracker,
     mut dev: DiagDevice,
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
+    ui_update_sender: Sender<framebuffer::Color565>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>
 ) {
     task_tracker.spawn(async move {
@@ -147,8 +148,14 @@ pub fn run_diag_read_thread(
                             }
 
                             if let Some(analysis_writer) = maybe_analysis_writer.as_mut() {
-                                let analysis_file_len = analysis_writer.analyze(container).await
+                                let analysis_output = analysis_writer.analyze(container).await
                                     .expect("failed to analyze container");
+                                let (analysis_file_len, heuristic_warning) = analysis_output;
+                                if heuristic_warning {
+                                    info!("a heuristic triggered on this run!");
+                                    ui_update_sender.send(framebuffer::Color565::Red).await
+                                        .expect("couldn't send ui update message: {}");
+                                }
                                 let mut qmdl_store = qmdl_store_lock.write().await;
                                 let index = qmdl_store.current_entry.expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
                                 qmdl_store.update_entry_analysis_size(index, analysis_file_len as usize).await
