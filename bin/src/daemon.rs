@@ -43,7 +43,7 @@ async fn run_server(
     config: &config::Config,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     server_shutdown_rx: oneshot::Receiver<()>,
-    ui_update_tx: Sender<framebuffer::Color565>,
+    ui_update_tx: Sender<framebuffer::DisplayState>,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>
 ) -> JoinHandle<()> {
     let state = Arc::new(ServerState {
@@ -125,7 +125,7 @@ fn run_ctrl_c_thread(
     })
 }
 
-async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<framebuffer::Color565>){
+async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<framebuffer::DisplayState>){
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
     let display_level = config.ui_level;
     if display_level == 0 {
@@ -154,8 +154,8 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
             
             }
             match ui_update_rx.try_recv() {
-                    Ok(color) => {
-                        display_color = color;
+                    Ok(state) => {
+                        display_color = Framebuffer::get_color_from_state(state);
                     },
                     Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                     Err(e) => panic!("error receiving framebuffer update message: {e}")
@@ -198,7 +198,7 @@ async fn main() -> Result<(), RayhunterError> {
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
-    let (ui_update_tx, ui_update_rx) = mpsc::channel::<framebuffer::Color565>(1);
+    let (ui_update_tx, ui_update_rx) = mpsc::channel::<framebuffer::DisplayState>(1);
     if !config.readonly_mode {
         let mut dev = DiagDevice::new().await
             .map_err(RayhunterError::DiagInitError)?;

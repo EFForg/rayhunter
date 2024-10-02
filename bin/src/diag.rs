@@ -87,7 +87,7 @@ pub fn run_diag_read_thread(
     task_tracker: &TaskTracker,
     mut dev: DiagDevice,
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
-    ui_update_sender: Sender<framebuffer::Color565>,
+    ui_update_sender: Sender<framebuffer::DisplayState>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>
 ) {
     task_tracker.spawn(async move {
@@ -153,7 +153,7 @@ pub fn run_diag_read_thread(
                                 let (analysis_file_len, heuristic_warning) = analysis_output;
                                 if heuristic_warning {
                                     info!("a heuristic triggered on this run!");
-                                    ui_update_sender.send(framebuffer::Color565::Red).await
+                                    ui_update_sender.send(framebuffer::DisplayState::WarningDetected).await
                                         .expect("couldn't send ui update message: {}");
                                 }
                                 let mut qmdl_store = qmdl_store_lock.write().await;
@@ -185,7 +185,7 @@ pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(S
     let qmdl_writer = QmdlWriter::new(qmdl_file);
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StartRecording((qmdl_writer, analysis_file))).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    state.ui_update_sender.send(framebuffer::Color565::Green).await
+    state.ui_update_sender.send(framebuffer::DisplayState::Recording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
@@ -199,7 +199,7 @@ pub async fn stop_recording(State(state): State<Arc<ServerState>>) -> Result<(St
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't close current qmdl entry: {}", e)))?;
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    state.ui_update_sender.send(framebuffer::Color565::White).await
+    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
