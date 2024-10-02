@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
-use super::{imsi_provided::ImsiProvidedAnalyzer, information_element::InformationElement, lte_downgrade::LteSib6And7DowngradeAnalyzer, null_cipher::NullCipherAnalyzer, example_analyzer::ExampleAnalyzer};
+use super::{imsi_provided::ImsiProvidedAnalyzer, information_element::InformationElement, lte_downgrade::LteSib6And7DowngradeAnalyzer, null_cipher::NullCipherAnalyzer, test_analyzer::TestAnalyzer};
 
 /// Qualitative measure of how severe a Warning event type is.
 /// The levels should break down like this:
@@ -102,7 +102,9 @@ impl Harness {
         harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer{}));
         harness.add_analyzer(Box::new(ImsiProvidedAnalyzer{}));
         harness.add_analyzer(Box::new(NullCipherAnalyzer{}));
-        harness.add_analyzer(Box::new(ExampleAnalyzer{count:0}));
+        if cfg!(debug_assertions) {
+            harness.add_analyzer(Box::new(TestAnalyzer{count:0}));
+        }
         harness
     }
 

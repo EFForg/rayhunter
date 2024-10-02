@@ -5,11 +5,11 @@ use telcom_parser::lte_rrc::{PCCH_MessageType, PCCH_MessageType_c1, PagingUE_Ide
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
 
-pub struct ExampleAnalyzer{
+pub struct TestAnalyzer{
     pub count: i32,
 }
 
-impl Analyzer for ExampleAnalyzer{
+impl Analyzer for TestAnalyzer{
     fn get_name(&self) -> Cow<str> {
         Cow::from("Example Analyzer")
     }
