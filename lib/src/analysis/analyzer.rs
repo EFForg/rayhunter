@@ -1,11 +1,16 @@
 use std::borrow::Cow;
 use chrono::{DateTime, FixedOffset};
 use serde::Serialize;
-use log::warn;
 
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
-use super::{imsi_provided::ImsiProvidedAnalyzer, information_element::InformationElement, lte_downgrade::LteSib6And7DowngradeAnalyzer, null_cipher::NullCipherAnalyzer, test_analyzer::TestAnalyzer};
+use super::{imsi_provided::ImsiProvidedAnalyzer, information_element::InformationElement, lte_downgrade::LteSib6And7DowngradeAnalyzer, null_cipher::NullCipherAnalyzer};
+
+#[cfg(feature="debug")]
+    use log::warn;
+
+#[cfg(feature="debug")]
+    use super::test_analyzer::TestAnalyzer;
 
 /// Qualitative measure of how severe a Warning event type is.
 /// The levels should break down like this:

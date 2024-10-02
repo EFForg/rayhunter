@@ -40,7 +40,6 @@ pub struct ManifestEntry {
     pub last_message_time: Option<DateTime<Local>>,
     pub qmdl_size_bytes: usize,
     pub analysis_size_bytes: usize,
-    pub has_warning: bool,
 }
 
 impl ManifestEntry {
@@ -52,7 +51,6 @@ impl ManifestEntry {
             last_message_time: None,
             qmdl_size_bytes: 0,
             analysis_size_bytes: 0,
-            has_warning: false,
         }
     }
 
@@ -169,11 +167,6 @@ impl RecordingStore {
     pub async fn update_entry_qmdl_size(&mut self, entry_index: usize, size_bytes: usize) -> Result<(), RecordingStoreError> {
         self.manifest.entries[entry_index].qmdl_size_bytes = size_bytes;
         self.manifest.entries[entry_index].last_message_time = Some(Local::now());
-        self.write_manifest().await
-    }
-    
-    pub async fn update_entry_has_warning(&mut self, entry_index: usize, has_warning: bool) -> Result<(), RecordingStoreError> {
-        self.manifest.entries[entry_index].has_warning = has_warning;
         self.write_manifest().await
     }
 

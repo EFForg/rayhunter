@@ -160,8 +160,6 @@ pub fn run_diag_read_thread(
                                 let index = qmdl_store.current_entry.expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
                                 qmdl_store.update_entry_analysis_size(index, analysis_file_len as usize).await
                                     .expect("failed to update analysis file size");
-                                qmdl_store.update_entry_has_warning(index, analysis_writer.has_warning).await
-                                    .expect("failed to update analysis file has warning");
                             }
                         },
                         Err(err) => {

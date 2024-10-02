@@ -33,7 +33,7 @@ function createEntryRow(entry) {
     name.scope = 'row';
     name.innerText = entry.name;
     row.appendChild(name);
-    for (const key of ['start_time', 'last_message_time', 'qmdl_size_bytes', 'has_warning']) {
+    for (const key of ['start_time', 'last_message_time', 'qmdl_size_bytes']) {
         const td = document.createElement('td');
         td.innerText = entry[key];
         row.appendChild(td);
@@ -50,9 +50,6 @@ function createEntryRow(entry) {
     qmdl_link.innerText = 'qmdl';
     qmdl_td.appendChild(qmdl_link);
     row.appendChild(qmdl_td);
-    if(entry["has_warning"]){
-        row.classList.add('warning');
-    }
     return row;
 }
 
