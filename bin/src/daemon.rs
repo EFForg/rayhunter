@@ -46,6 +46,7 @@ async fn run_server(
     ui_update_tx: Sender<framebuffer::DisplayState>,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>
 ) -> JoinHandle<()> {
+    info!("spinning up server");
     let state = Arc::new(ServerState {
         qmdl_store_lock,
         diag_device_ctrl_sender: diag_device_sender,
@@ -125,7 +126,7 @@ fn run_ctrl_c_thread(
     })
 }
 
-async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<framebuffer::DisplayState>){
+fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<framebuffer::DisplayState>) -> JoinHandle<()> {
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
     let display_level = config.ui_level;
     if display_level == 0 {
@@ -150,15 +151,15 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
                     break;
                 },
                 Err(TryRecvError::Empty) => {},
-                Err(e) => panic!("error receiving shutdown message: {e}")
+                Err(e) => error!("error receiving shutdown message: {e}")
             
             }
             match ui_update_rx.try_recv() {
                     Ok(state) => {
-                        display_color = Framebuffer::get_color_from_state(state);
+                        display_color = state.into();
                     },
                     Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
-                    Err(e) => panic!("error receiving framebuffer update message: {e}")
+                    Err(e) => error!("error receiving framebuffer update message: {e}")
             }
             
             match display_level  {
@@ -179,10 +180,9 @@ async fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_
                     fb.draw_line(display_color, 2);
                 },
             };
-            sleep(Duration::from_millis(100));
+            sleep(Duration::from_millis(1000));
         }
-    }).await.unwrap();
-
+    })
 }
 
 #[tokio::main]
@@ -195,26 +195,31 @@ async fn main() -> Result<(), RayhunterError> {
     // TaskTrackers give us an interface to spawn tokio threads, and then
     // eventually await all of them ending
     let task_tracker = TaskTracker::new();
+    println!("R A Y H U N T E R 🐳");
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<framebuffer::DisplayState>(1);
+    let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
     if !config.readonly_mode {
         let mut dev = DiagDevice::new().await
             .map_err(RayhunterError::DiagInitError)?;
         dev.config_logs().await
             .map_err(RayhunterError::DiagInitError)?;
 
+        info!("Starting Diag Thread");
         run_diag_read_thread(&task_tracker, dev, rx, ui_update_tx.clone(), qmdl_store_lock.clone());
+        info!("Starting UI");
+        update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
     }
-    let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
+    info!("create shutdown thread");
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, ui_shutdown_tx, qmdl_store_lock.clone());
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx).await;
-    update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx).await;
 
     task_tracker.close();
     task_tracker.wait().await;
 
+    info!("see you space cowboy...");
     Ok(())
 }
