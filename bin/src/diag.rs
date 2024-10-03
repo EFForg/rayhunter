@@ -11,7 +11,7 @@ use rayhunter::diag::{DataType, MessagesContainer};
 use rayhunter::diag_device::DiagDevice;
 use serde::Serialize;
 use tokio::sync::RwLock;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 use rayhunter::qmdl::QmdlWriter;
 use log::{debug, error, info};
 use tokio::fs::File;
@@ -20,6 +20,7 @@ use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 use futures::{StreamExt, TryStreamExt};
 
+use crate::framebuffer;
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
 
@@ -55,12 +56,12 @@ impl AnalysisWriter {
 
     // Runs the analysis harness on the given container, serializing the results
     // to the analysis file and returning the file's new length.
-    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<usize, std::io::Error> {
+    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<(usize, bool), std::io::Error> {
         let row = self.harness.analyze_qmdl_messages(container);
         if !row.is_empty() {
             self.write(&row).await?;
         }
-        Ok(self.bytes_written)
+        Ok((self.bytes_written, ! &row.analysis.is_empty()))
     }
 
     async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
@@ -83,6 +84,7 @@ pub fn run_diag_read_thread(
     task_tracker: &TaskTracker,
     mut dev: DiagDevice,
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
+    ui_update_sender: Sender<framebuffer::DisplayState>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>
 ) {
     task_tracker.spawn(async move {
@@ -143,8 +145,14 @@ pub fn run_diag_read_thread(
                             }
 
                             if let Some(analysis_writer) = maybe_analysis_writer.as_mut() {
-                                let analysis_file_len = analysis_writer.analyze(container).await
+                                let analysis_output = analysis_writer.analyze(container).await
                                     .expect("failed to analyze container");
+                                let (analysis_file_len, heuristic_warning) = analysis_output;
+                                if heuristic_warning {
+                                    info!("a heuristic triggered on this run!");
+                                    ui_update_sender.send(framebuffer::DisplayState::WarningDetected).await
+                                        .expect("couldn't send ui update message: {}");
+                                }
                                 let mut qmdl_store = qmdl_store_lock.write().await;
                                 let index = qmdl_store.current_entry.expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
                                 qmdl_store.update_entry_analysis_size(index, analysis_file_len as usize).await
@@ -172,6 +180,8 @@ pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(S
     let qmdl_writer = QmdlWriter::new(qmdl_file);
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StartRecording((qmdl_writer, analysis_file))).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
+    state.ui_update_sender.send(framebuffer::DisplayState::Recording).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
@@ -184,6 +194,8 @@ pub async fn stop_recording(State(state): State<Arc<ServerState>>) -> Result<(St
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't close current qmdl entry: {}", e)))?;
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
+    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 

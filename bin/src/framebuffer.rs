@@ -11,6 +11,7 @@ struct Dimensions {
 }
 
 #[allow(dead_code)]
+#[derive(Copy, Clone)]
 pub enum Color565 {
     Red    = 0b1111100000000000,
     Green  = 0b0000011111100000,
@@ -20,6 +21,12 @@ pub enum Color565 {
     Cyan   = 0b0000011111111111,
     Yellow = 0b1111111111100000,
     Pink =   0b1111010010011111,
+}
+
+pub enum DisplayState {
+    Recording,
+    Paused,
+    WarningDetected,
 }
 
 #[derive(Copy, Clone)]
@@ -33,6 +40,14 @@ impl Framebuffer<'_>{
         Framebuffer{
             dimensions: Dimensions{height: 128, width: 128},
             path: FB_PATH,
+        }
+    }
+
+    pub fn get_color_from_state(state: DisplayState) -> Color565 {
+        match state {
+            DisplayState::Paused => Color565::White,
+            DisplayState::Recording => Color565::Green, 
+            DisplayState::WarningDetected => Color565::Red,
         }
     }
 
