@@ -46,6 +46,7 @@ async fn run_server(
     ui_update_tx: Sender<framebuffer::DisplayState>,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>
 ) -> JoinHandle<()> {
+    info!("spinning up server");
     let state = Arc::new(ServerState {
         qmdl_store_lock,
         diag_device_ctrl_sender: diag_device_sender,
@@ -195,6 +196,7 @@ async fn main() -> Result<(), RayhunterError> {
     // TaskTrackers give us an interface to spawn tokio threads, and then
     // eventually await all of them ending
     let task_tracker = TaskTracker::new();
+    println!("R A Y H U N T E R 🐳");
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
@@ -205,12 +207,15 @@ async fn main() -> Result<(), RayhunterError> {
         dev.config_logs().await
             .map_err(RayhunterError::DiagInitError)?;
 
+        info!("Starting Diag Thread");
         run_diag_read_thread(&task_tracker, dev, rx, ui_update_tx.clone(), qmdl_store_lock.clone());
     }
     let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
+    info!("create shutdown thread");
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, ui_shutdown_tx, qmdl_store_lock.clone());
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx).await;
+    info!("Starting UI");
     update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx).await;
 
     task_tracker.close();
