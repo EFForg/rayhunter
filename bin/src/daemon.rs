@@ -135,7 +135,7 @@ fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdo
 
     let mut display_color = framebuffer::Color565::Green;
 
-    task_tracker.spawn(async move {
+    task_tracker.spawn_blocking(move || {
         let mut fb: Framebuffer = Framebuffer::new();
         // this feels wrong, is there a more rusty way to do this?
         let mut img: Option<&[u8]> = None;
@@ -220,5 +220,6 @@ async fn main() -> Result<(), RayhunterError> {
     task_tracker.close();
     task_tracker.wait().await;
 
+    info!("see you space cowboy...");
     Ok(())
 }
