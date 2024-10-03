@@ -28,7 +28,6 @@ jobs:
           name: serial-${{ matrix.platform.os }}
           path: ./target/release/${{ matrix.platform.build_name }}
           if-no-files-found: error
-    steps:
       - uses: actions/checkout@v4
       - name: Build check
         run: cargo build --bin rayhunter-check --release
