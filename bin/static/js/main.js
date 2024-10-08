@@ -43,11 +43,14 @@ async function updateAnalysisStatus(qmdlManifest) {
 }
 
 function parseNewlineDelimitedJSON(inputStr) {
+    if(! inputStr.includes("{")) {
+        inputStr = atob(inputStr).replaceAll("}{", "}\n{")
+    }
     const lines = inputStr.split('\n');
     const result = [];
     let currentLine = '';
     while (lines.length > 0) {
-        currentLine += lines.shift();
+        currentLine = lines.shift();
         try {
             const entry = JSON.parse(currentLine);
             result.push(entry);
@@ -68,7 +71,7 @@ async function updateEntryAnalysisResult(entry) {
         const timestamp = new Date(row["timestamp"]);
         const analysis = row["analysis"];
         for (const warning of analysis) {
-          entry.warnings.push({
+          entry.analysis.warnings.push({
             timestamp,
             warning,
           })
@@ -140,6 +143,9 @@ function createEntryRow(entry, isCurrent) {
 
     const analysisResult = document.createElement('td');
     analysisResult.innerText = entry.analysis_result;
+    if (entry.analysis.warnings.length > 0) {
+        row.classList.add("warning");
+    }
     row.appendChild(analysisResult);
 
     return row;
