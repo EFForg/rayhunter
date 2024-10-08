@@ -43,17 +43,15 @@ async function updateAnalysisStatus(qmdlManifest) {
 }
 
 function parseNewlineDelimitedJSON(inputStr) {
-    if(! inputStr.includes("{")) {
-        inputStr = atob(inputStr).replaceAll("}{", "}\n{")
-    }
     const lines = inputStr.split('\n');
     const result = [];
     let currentLine = '';
     while (lines.length > 0) {
-        currentLine = lines.shift();
+        currentLine += lines.shift();
         try {
             const entry = JSON.parse(currentLine);
             result.push(entry);
+            currentLine = '';
         // if this chunk wasn't valid JSON, there was an escaped newline in the
         // JSON line, so simply continue to the next one
         } catch (e) {}
