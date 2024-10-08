@@ -8,6 +8,7 @@ struct ConfigFile {
     port: Option<u16>,
     debug_mode: Option<bool>,
     ui_level: Option<u8>,
+    enable_dummy_analyzer: Option<bool>,
 }
 
 #[derive(Debug)]
@@ -16,6 +17,7 @@ pub struct Config {
     pub port: u16,
     pub debug_mode: bool,
     pub ui_level: u8,
+    pub enable_dummy_analyzer: bool,
 }
 
 impl Default for Config {
@@ -25,6 +27,7 @@ impl Default for Config {
             port: 8080,
             debug_mode: false,
             ui_level: 1,
+            enable_dummy_analyzer: false,
         }
     }
 }
@@ -34,10 +37,11 @@ pub fn parse_config<P>(path: P) -> Result<Config, RayhunterError> where P: AsRef
     if let Ok(config_file) = std::fs::read_to_string(&path) {
         let parsed_config: ConfigFile = toml::from_str(&config_file)
             .map_err(RayhunterError::ConfigFileParsingError)?;
-        if let Some(path) = parsed_config.qmdl_store_path { config.qmdl_store_path = path }
-        if let Some(port) = parsed_config.port { config.port = port }
-        if let Some(debug_mode) = parsed_config.debug_mode { config.debug_mode = debug_mode }
-        if let Some(ui_level) = parsed_config.ui_level { config.ui_level = ui_level }
+        parsed_config.qmdl_store_path.map(|v| config.qmdl_store_path = v);
+        parsed_config.port.map(|v| config.port = v);
+        parsed_config.debug_mode.map(|v| config.debug_mode = v);
+        parsed_config.ui_level.map(|v| config.ui_level = v);
+        parsed_config.enable_dummy_analyzer.map(|v| config.enable_dummy_analyzer = v);
     }
     Ok(config)
 }

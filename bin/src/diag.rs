@@ -6,17 +6,13 @@ use axum::extract::{Path, State};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use rayhunter::analysis::analyzer::Harness;
-use rayhunter::diag::{DataType, MessagesContainer};
+use rayhunter::diag::DataType;
 use rayhunter::diag_device::DiagDevice;
-use serde::Serialize;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::{Receiver, Sender};
 use rayhunter::qmdl::QmdlWriter;
 use log::{debug, error, info};
 use tokio::fs::File;
-use tokio::io::BufWriter;
-use tokio::io::AsyncWriteExt;
 use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 use futures::{StreamExt, TryStreamExt};
@@ -24,6 +20,7 @@ use futures::{StreamExt, TryStreamExt};
 use crate::framebuffer;
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
+use crate::analysis::AnalysisWriter;
 
 pub enum DiagDeviceCtrlMessage {
     StopRecording,
@@ -31,68 +28,19 @@ pub enum DiagDeviceCtrlMessage {
     Exit,
 }
 
-struct AnalysisWriter {
-    writer: BufWriter<File>,
-    harness: Harness,
-    bytes_written: usize,
-}
-
-// We write our analysis results to a file immediately to minimize the amount of
-// state Rayhunter has to keep track of in memory. The analysis file's format is
-// Newline Delimited JSON
-// (https://docs.mulesoft.com/dataweave/latest/dataweave-formats-ndjson), which
-// lets us simply append new rows to the end without parsing the entire JSON
-// object beforehand.
-impl AnalysisWriter {
-    pub async fn new(file: File) -> Result<Self, std::io::Error> {
-        let mut result = Self {
-            writer: BufWriter::new(file),
-            harness: Harness::new_with_all_analyzers(),
-            bytes_written: 0,
-        };
-        let metadata = result.harness.get_metadata();
-        result.write(&metadata).await?;
-        Ok(result)
-    }
-
-    // Runs the analysis harness on the given container, serializing the results
-    // to the analysis file and returning the file's new length.
-    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<(usize, bool), std::io::Error> {
-        let row = self.harness.analyze_qmdl_messages(container);
-        if !row.is_empty() {
-            self.write(&row).await?;
-        }
-        Ok((self.bytes_written, ! &row.analysis.is_empty()))
-    }
-
-    async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
-        let mut value_str = serde_json::to_string(value).unwrap();
-        value_str.push('\n');
-        self.bytes_written += value_str.len();
-        self.writer.write_all(value_str.as_bytes()).await?;
-        self.writer.flush().await?;
-        Ok(())
-    }
-
-    // Flushes any pending I/O to disk before dropping the writer
-    pub async fn close(mut self) -> Result<(), std::io::Error> {
-        self.writer.flush().await?;
-        Ok(())
-    }
-}
-
 pub fn run_diag_read_thread(
     task_tracker: &TaskTracker,
     mut dev: DiagDevice,
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
     ui_update_sender: Sender<framebuffer::DisplayState>,
-    qmdl_store_lock: Arc<RwLock<RecordingStore>>
+    qmdl_store_lock: Arc<RwLock<RecordingStore>>,
+    enable_dummy_analyzer: bool,
 ) {
     task_tracker.spawn(async move {
         let (initial_qmdl_file, initial_analysis_file) = qmdl_store_lock.write().await.new_entry().await.expect("failed creating QMDL file entry");
         let mut maybe_qmdl_writer: Option<QmdlWriter<File>> = Some(QmdlWriter::new(initial_qmdl_file));
         let mut diag_stream = pin!(dev.as_stream().into_stream());
-        let mut maybe_analysis_writer = Some(AnalysisWriter::new(initial_analysis_file).await
+        let mut maybe_analysis_writer = Some(AnalysisWriter::new(initial_analysis_file, enable_dummy_analyzer).await
             .expect("failed to create analysis writer"));
         loop {
             tokio::select! {
@@ -103,7 +51,7 @@ pub fn run_diag_read_thread(
                             if let Some(analysis_writer) = maybe_analysis_writer {
                                 analysis_writer.close().await.expect("failed to close analysis writer");
                             }
-                            maybe_analysis_writer = Some(AnalysisWriter::new(new_analysis_file).await
+                            maybe_analysis_writer = Some(AnalysisWriter::new(new_analysis_file, enable_dummy_analyzer).await
                                 .expect("failed to write to analysis file"));
                         },
                         Some(DiagDeviceCtrlMessage::StopRecording) => {

@@ -20,6 +20,7 @@ use tokio_util::task::TaskTracker;
 
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
+use crate::dummy_analyzer::TestAnalyzer;
 
 pub struct AnalysisWriter {
     writer: BufWriter<File>,
@@ -34,11 +35,16 @@ pub struct AnalysisWriter {
 // lets us simply append new rows to the end without parsing the entire JSON
 // object beforehand.
 impl AnalysisWriter {
-    pub async fn new(file: File) -> Result<Self, std::io::Error> {
+    pub async fn new(file: File, enable_dummy_analyzer: bool) -> Result<Self, std::io::Error> {
+        let mut harness = Harness::new_with_all_analyzers();
+        if enable_dummy_analyzer {
+            harness.add_analyzer(Box::new(TestAnalyzer { count: 0 }));
+        }
+
         let mut result = Self {
             writer: BufWriter::new(file),
-            harness: Harness::new_with_all_analyzers(),
             bytes_written: 0,
+            harness,
         };
         let metadata = result.harness.get_metadata();
         result.write(&metadata).await?;
@@ -47,12 +53,12 @@ impl AnalysisWriter {
 
     // Runs the analysis harness on the given container, serializing the results
     // to the analysis file and returning the file's new length.
-    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<usize, std::io::Error> {
+    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<(usize, bool), std::io::Error> {
         let row = self.harness.analyze_qmdl_messages(container);
         if !row.is_empty() {
             self.write(&row).await?;
         }
-        Ok(self.bytes_written)
+        Ok((self.bytes_written, row.contains_warnings()))
     }
 
     async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
@@ -102,6 +108,7 @@ async fn clear_running(analysis_status_lock: Arc<RwLock<AnalysisStatus>>) {
 async fn perform_analysis(
     name: &str,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
+    enable_dummy_analyzer: bool,
 ) -> Result<(), String> {
     info!("Opening QMDL and analysis file for {}...", name);
     let (analysis_file, qmdl_file, entry_index) = {
@@ -121,7 +128,7 @@ async fn perform_analysis(
         (analysis_file, qmdl_file, entry_index)
     };
 
-    let mut analysis_writer = AnalysisWriter::new(analysis_file)
+    let mut analysis_writer = AnalysisWriter::new(analysis_file, enable_dummy_analyzer)
         .await
         .map_err(|e| format!("{:?}", e))?;
     let file_size = qmdl_file
@@ -140,7 +147,7 @@ async fn perform_analysis(
         .await
         .expect("failed getting QMDL container")
     {
-        let size_bytes = analysis_writer
+        let (size_bytes, _) = analysis_writer
             .analyze(container)
             .await
             .map_err(|e| format!("{:?}", e))?;
@@ -166,6 +173,7 @@ pub fn run_analysis_thread(
     mut analysis_rx: Receiver<AnalysisCtrlMessage>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
+    enable_dummy_analyzer: bool,
 ) {
     task_tracker.spawn(async move {
         loop {
@@ -174,7 +182,7 @@ pub fn run_analysis_thread(
                     let count = queued_len(analysis_status_lock.clone()).await;
                     for _ in 0..count {
                         let name = dequeue_to_running(analysis_status_lock.clone()).await;
-                        if let Err(err) = perform_analysis(&name, qmdl_store_lock.clone()).await {
+                        if let Err(err) = perform_analysis(&name, qmdl_store_lock.clone(), enable_dummy_analyzer).await {
                             error!("failed to analyze {}: {}", name, err);
                         }
                         clear_running(analysis_status_lock.clone()).await;

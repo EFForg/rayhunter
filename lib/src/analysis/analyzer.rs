@@ -6,12 +6,6 @@ use crate::{diag::MessagesContainer, gsmtap_parser};
 
 use super::{imsi_provided::ImsiProvidedAnalyzer, information_element::InformationElement, lte_downgrade::LteSib6And7DowngradeAnalyzer, null_cipher::NullCipherAnalyzer};
 
-#[cfg(feature="debug")]
-    use log::warn;
-
-#[cfg(feature="debug")]
-    use super::test_analyzer::TestAnalyzer;
-
 /// Qualitative measure of how severe a Warning event type is.
 /// The levels should break down like this:
 ///   * Low: if combined with a large number of other Warnings, user should investigate
@@ -92,6 +86,19 @@ impl AnalysisRow {
     pub fn is_empty(&self) -> bool {
         self.skipped_message_reasons.is_empty() && self.analysis.is_empty()
     }
+
+    pub fn contains_warnings(&self) -> bool {
+        for analysis in &self.analysis {
+            for maybe_event in &analysis.events {
+                if let Some(event) = maybe_event {
+                    if matches!(event.event_type, EventType::QualitativeWarning { .. }) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
 }
 
 pub struct Harness {
@@ -109,10 +116,6 @@ impl Harness {
         harness.add_analyzer(Box::new(ImsiProvidedAnalyzer{}));
         harness.add_analyzer(Box::new(NullCipherAnalyzer{}));
 
-        #[cfg(feature="debug")] {
-            warn!("Loading test analyzers!");
-            harness.add_analyzer(Box::new(TestAnalyzer{count:0}));
-        }
         harness
     }
 

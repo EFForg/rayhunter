@@ -7,6 +7,7 @@ mod stats;
 mod qmdl_store;
 mod diag;
 mod framebuffer;
+mod dummy_analyzer;
 
 use crate::config::{parse_config, parse_args};
 use crate::diag::run_diag_read_thread;
@@ -223,14 +224,14 @@ async fn main() -> Result<(), RayhunterError> {
             .map_err(RayhunterError::DiagInitError)?;
 
         info!("Starting Diag Thread");
-        run_diag_read_thread(&task_tracker, dev, rx, ui_update_tx.clone(), qmdl_store_lock.clone());
+        run_diag_read_thread(&task_tracker, dev, rx, ui_update_tx.clone(), qmdl_store_lock.clone(), config.enable_dummy_analyzer);
         info!("Starting UI");
         update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
     }
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     info!("create shutdown thread");
     let analysis_status_lock = Arc::new(RwLock::new(AnalysisStatus::default()));
-    run_analysis_thread(&task_tracker, analysis_rx, qmdl_store_lock.clone(), analysis_status_lock.clone());
+    run_analysis_thread(&task_tracker, analysis_rx, qmdl_store_lock.clone(), analysis_status_lock.clone(), config.enable_dummy_analyzer);
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, maybe_ui_shutdown_tx, qmdl_store_lock.clone(), analysis_tx.clone());
     run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx, analysis_tx, analysis_status_lock).await;
 

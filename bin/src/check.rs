@@ -4,6 +4,8 @@ use tokio::fs::{metadata, read_dir, File};
 use clap::Parser;
 use futures::TryStreamExt;
 
+mod dummy_analyzer;
+
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
@@ -12,6 +14,9 @@ struct Args {
 
     #[arg(long)]
     show_skipped: bool,
+
+    #[arg(long)]
+    enable_dummy_analyzer: bool,
 }
 
 async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool) {
@@ -55,6 +60,9 @@ async fn main() {
     let args = Args::parse();
 
     let mut harness = Harness::new_with_all_analyzers();
+    if args.enable_dummy_analyzer {
+        harness.add_analyzer(Box::new(dummy_analyzer::TestAnalyzer { count: 0 }));
+    }
     println!("Analyzers:");
     for analyzer in harness.get_metadata().analyzers {
         println!("    - {}: {}", analyzer.name, analyzer.description);
