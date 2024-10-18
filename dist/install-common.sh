@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 install() {
     if [[ -z "${SERIAL_PATH}" ]]; then
         echo "SERIAL_PATH not set, did you run this from install-linux.sh or install-mac.sh?"

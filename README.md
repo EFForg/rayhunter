@@ -35,8 +35,10 @@ linux/qualcom devices but this is the only one we have tested on. Buy the orbic 
 
 ## Setup
 
+*NOTE: We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
+
 1. Install the Android Debug Bridge (ADB) on your computer (don't worry about instructions for installing it on a phone/device yet). You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer).
-2. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it (on Windows use 7zip).
+2. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it (on Windows use WSL ).
 3. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`).
 4. Once finished, rayhunter should be running! You can verify this by visiting the web UI as described below.
 
