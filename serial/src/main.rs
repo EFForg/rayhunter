@@ -113,12 +113,16 @@ fn enable_command_mode<T: UsbContext>(context: &mut T) {
 /// Get a handle and contet for the orbic device
 fn open_orbic<T: UsbContext>(context: &mut T) -> Option<DeviceHandle<T>> {
     // Device after initial mode switch
-    if let Some(handle) = open_device(context, 0x05c6, 0xf601) {
+    if let Some(mut handle) = open_device(context, 0x05c6, 0xf601) {
+        handle.set_auto_detach_kernel_driver(true).expect("set_auto_detach_kernel_driver failed");
+        handle.claim_interface(1).expect("claim_interface(1) failed");
         return Some(handle);
     }
 
     // Device with rndis enabled as well
-    if let Some(handle) = open_device(context, 0x05c6, 0xf622) {
+    if let Some(mut handle) = open_device(context, 0x05c6, 0xf622) {
+        handle.set_auto_detach_kernel_driver(true).expect("set_auto_detach_kernel_driver failed");
+        handle.claim_interface(1).expect("claim_interface(1) failed");
         return Some(handle);
     }
 
