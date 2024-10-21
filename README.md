@@ -37,10 +37,9 @@ linux/qualcom devices but this is the only one we have tested on. Buy the orbic 
 
 *NOTE: We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
 
-1. Install the Android Debug Bridge (ADB) on your computer (don't worry about instructions for installing it on a phone/device yet). You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer).
-2. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it (on Windows use WSL ).
-3. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`).
-4. Once finished, rayhunter should be running! You can verify this by visiting the web UI as described below.
+1. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it.
+2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`).
+3. Once finished, rayhunter should be running! You can verify this by visiting the web UI as described below.
 
 ## Usage
 
@@ -48,7 +47,7 @@ Once installed, rayhunter will run automatically whenever your Orbic device is r
 
 1. Over wifi: Connect your phone/laptop to the Orbic's wifi network and visit `http://192.168.1.1:8080` (click past your browser warning you about the connection not being secure, rayhunter doesn't have HTTPS yet!)
     * Note that you'll need the Orbic's wifi password for this, which can be retrieved by pressing the "MENU" button on the device and opening the 2.4 GHz menu.
-2. Over usb: Connect the Orbic device to your laptop via usb. Run `adb forward tcp:8080 tcp:8080`, then visit `http://localhost:8080`.
+2. Over usb: Connect the Orbic device to your laptop via usb. Run `adb forward tcp:8080 tcp:8080`, then visit `http://localhost:8080`. For this you will need to install the Android Debug Bridge (ADB) on your computer, you can copy the version that was downloaded inside the releases/platform-tools/` folder to somewhere else in your path or you can install it manually.  You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer), (don't worry about instructions for installing it on a phone/device yet).
 
 ## Development
 * Install ADB  on your computer using the instructions above. 
