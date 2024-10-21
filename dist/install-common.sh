@@ -8,7 +8,6 @@ install() {
         echo "\$ADB not set, did you run this from install-linux.sh or install-mac.sh?"
         exit 1
     fi
-    echo "Using adb at $ADB"
     force_debug_mode
     setup_rootshell
     setup_rayhunter
@@ -16,6 +15,7 @@ install() {
 }
 
 force_debug_mode() {
+    echo $("Using adb at $ADB")
     echo "Force a switch into the debug mode to enable ADB"
     "$SERIAL_PATH" --root
     echo -n "adb enabled, waiting for reboot..."
@@ -27,7 +27,7 @@ force_debug_mode() {
 }
 
 wait_for_atfwd_daemon() {
-    until [ -n "$($ADB shell 'pgrep atfwd_daemon')" ]
+    until [ -n "$ADB shell 'pgrep atfwd_daemon'" ]
     do
         sleep 1
     done
