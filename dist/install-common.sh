@@ -15,7 +15,7 @@ install() {
 }
 
 force_debug_mode() {
-    echo $("Using adb at $ADB")
+    echo "Using adb at $ADB"
     echo "Force a switch into the debug mode to enable ADB"
     "$SERIAL_PATH" --root
     echo -n "adb enabled, waiting for reboot..."
