@@ -63,10 +63,14 @@ const MEMORY_DEVICE_MODE: i32 = 2;
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
 #[cfg(target_arch = "x86_64")]
 const DIAG_IOCTL_REMOTE_DEV: u64 = 32;
+#[cfg(target_arch = "aarch64")]
+const DIAG_IOCTL_REMOTE_DEV: u64 = 32;
 
 #[cfg(target_arch = "arm")]
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
-#[cfg(target_arch = "x86_64")]
+#[cfg(target_arch = "x86_64")] 
+const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
+#[cfg(target_arch = "aarch64")] 
 const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 
 pub struct DiagDevice {
