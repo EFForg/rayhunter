@@ -8,16 +8,19 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_serial:
+  build_serial_and_check:
     strategy:
       matrix:
         platform:
           - os: ubuntu-latest
-            build_name: serial
+            serial_build_name: serial
+            check_build_name: check
           - os: windows-latest
-            build_name: serial.exe
+            serial_build_name: serial.exe
+            check_build_name: check.exe
           - os: macos-latest
-            build_name: serial
+            serial_build_name: serial
+            check_build_name: check
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +29,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: serial-${{ matrix.platform.os }}
-          path: ./target/release/${{ matrix.platform.build_name }}
+          path: ./target/release/${{ matrix.platform.serial_build_name }}
           if-no-files-found: error
       - uses: actions/checkout@v4
       - name: Build check
@@ -34,7 +37,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-check-${{ matrix.platform.os }}
-          path: ./target/release/${{ matrix.platform.build_name }}
+          path: ./target/release/${{ matrix.platform.check_build_name }}
           if-no-files-found: error
   build_rootshell_and_rayhunter:
     runs-on: ubuntu-latest
@@ -64,7 +67,7 @@ jobs:
           if-no-files-found: error
   build_release_zip:
     needs:
-      - build_serial
+      - build_serial_and_check
       - build_rootshell_and_rayhunter
     runs-on: ubuntu-latest
     steps:
