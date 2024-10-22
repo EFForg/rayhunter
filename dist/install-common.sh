@@ -27,7 +27,7 @@ force_debug_mode() {
 }
 
 wait_for_atfwd_daemon() {
-    until [ -n "$ADB shell 'pgrep atfwd_daemon'" ]
+    until [ -n "$($ADB shell 'pgrep atfwd_daemon)'" ]
     do
         sleep 1
     done
