@@ -8,7 +8,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_serial_and_check:
+  build_serial:
     strategy:
       matrix:
         platform:
