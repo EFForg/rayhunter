@@ -27,14 +27,14 @@ force_debug_mode() {
 }
 
 wait_for_atfwd_daemon() {
-    until [ -n "$($ADB shell 'pgrep atfwd_daemon)'" ]
+    until [ -n "$(_adb_shell 'pgrep atfwd_daemon')" ]
     do
         sleep 1
     done
 }
 
 wait_for_adb_shell() {
-    until $ADB shell true 2> /dev/null
+    until _adb_shell true 2> /dev/null
     do
         sleep 1
     done
@@ -47,29 +47,33 @@ setup_rootshell() {
     "$SERIAL_PATH" "AT+SYSCMD=chown root /bin/rootshell"
     sleep 1
     "$SERIAL_PATH" "AT+SYSCMD=chmod 4755 /bin/rootshell"
-    $ADB shell /bin/rootshell -c id
+    _adb_shell '/bin/rootshell -c id'
     echo "we have root!"
 }
 
 _adb_push() {
-    $ADB push "$(dirname "$0")/$1" "$2"
+    "$ADB" push "$(dirname "$0")/$1" "$2"
+}
+
+_adb_shell() {
+    "$ADB" shell "$1"
 }
 
 setup_rayhunter() {
-    $ADB shell '/bin/rootshell -c "mkdir -p /data/rayhunter"'
+    _adb_shell '/bin/rootshell -c "mkdir -p /data/rayhunter"'
     _adb_push config.toml.example /data/rayhunter/config.toml
     _adb_push rayhunter-daemon /data/rayhunter/
     _adb_push scripts/rayhunter_daemon /tmp/rayhunter_daemon
     _adb_push scripts/misc-daemon /tmp/misc-daemon
-    $ADB shell '/bin/rootshell -c "cp /tmp/rayhunter_daemon /etc/init.d/rayhunter_daemon"'
-    $ADB shell '/bin/rootshell -c "cp /tmp/misc-daemon /etc/init.d/misc-daemon"'
-    $ADB shell '/bin/rootshell -c "chmod 755 /etc/init.d/rayhunter_daemon"'
-    $ADB shell '/bin/rootshell -c "chmod 755 /etc/init.d/misc-daemon"'
+    _adb_shell '/bin/rootshell -c "cp /tmp/rayhunter_daemon /etc/init.d/rayhunter_daemon"'
+    _adb_shell '/bin/rootshell -c "cp /tmp/misc-daemon /etc/init.d/misc-daemon"'
+    _adb_shell '/bin/rootshell -c "chmod 755 /etc/init.d/rayhunter_daemon"'
+    _adb_shell '/bin/rootshell -c "chmod 755 /etc/init.d/misc-daemon"'
     echo -n "waiting for reboot..."
-    $ADB shell '/bin/rootshell -c reboot'
+    _adb_shell '/bin/rootshell -c reboot'
 
     # first wait for shutdown (it can take ~10s)
-    until ! $ADB shell true 2> /dev/null
+    until ! _adb_shell true 2> /dev/null
     do
         sleep 1
     done
@@ -82,7 +86,7 @@ setup_rayhunter() {
 
 test_rayhunter() {
     URL="http://localhost:8080"
-    $ADB forward tcp:8080 tcp:8080 > /dev/null
+    "$ADB" forward tcp:8080 tcp:8080 > /dev/null
     echo -n "checking for rayhunter server..."
 
     SECONDS=0
