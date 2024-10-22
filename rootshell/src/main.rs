@@ -16,11 +16,11 @@ fn main() {
    // processes in specific groups. More info here:
    // https://www.elinux.org/Android_Security#Paranoid_network-ing
    #[cfg(target_arch = "arm")] {
-   let gids = &[
-      Gid::from_raw(3003), // AID_INET
-      Gid::from_raw(3004), // AID_NET_RAW
-   ];
-   nix::unistd::setgroups(gids).expect("setgroups failed");
+      let gids = &[
+         Gid::from_raw(3003), // AID_INET
+         Gid::from_raw(3004), // AID_NET_RAW
+      ];
+      nix::unistd::setgroups(gids).expect("setgroups failed");
    }
 
    // discard argv[0]
