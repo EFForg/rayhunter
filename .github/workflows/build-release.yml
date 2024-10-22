@@ -15,9 +15,6 @@ jobs:
           - os: ubuntu-latest
             serial_build_name: serial
             check_build_name: rayhunter-check
-          - os: windows-latest
-            serial_build_name: serial.exe
-            check_build_name: rayhunter-check.exe
           - os: macos-latest
             serial_build_name: serial
             check_build_name: rayhunter-check
