@@ -14,13 +14,13 @@ jobs:
         platform:
           - os: ubuntu-latest
             serial_build_name: serial
-            check_build_name: check
+            check_build_name: rayhunter-check
           - os: windows-latest
             serial_build_name: serial.exe
-            check_build_name: check.exe
+            check_build_name: rayhunter-check.exe
           - os: macos-latest
             serial_build_name: serial
-            check_build_name: check
+            check_build_name: rayhunter-check
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
