@@ -42,11 +42,11 @@ wait_for_adb_shell() {
 
 setup_rootshell() {
     _adb_push rootshell /tmp/
-    "$SERIAL_PATH" "AT+SYSCMD=cp /tmp/rootshell /bin/rootshell"
+    _at_syscmd "cp /tmp/rootshell /bin/rootshell"
     sleep 1
-    "$SERIAL_PATH" "AT+SYSCMD=chown root /bin/rootshell"
+    _at_syscmd "chown root /bin/rootshell"
     sleep 1
-    "$SERIAL_PATH" "AT+SYSCMD=chmod 4755 /bin/rootshell"
+    _at_syscmd "chmod 4755 /bin/rootshell"
     _adb_shell '/bin/rootshell -c id'
     echo "we have root!"
 }
