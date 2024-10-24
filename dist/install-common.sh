@@ -42,11 +42,11 @@ wait_for_adb_shell() {
 
 setup_rootshell() {
     _adb_push rootshell /tmp/
-    "$SERIAL_PATH" "AT+SYSCMD=cp /tmp/rootshell /bin/rootshell"
+    _at_syscmd "cp /tmp/rootshell /bin/rootshell"
     sleep 1
-    "$SERIAL_PATH" "AT+SYSCMD=chown root /bin/rootshell"
+    _at_syscmd "chown root /bin/rootshell"
     sleep 1
-    "$SERIAL_PATH" "AT+SYSCMD=chmod 4755 /bin/rootshell"
+    _at_syscmd "chmod 4755 /bin/rootshell"
     _adb_shell '/bin/rootshell -c id'
     echo "we have root!"
 }
@@ -59,18 +59,22 @@ _adb_shell() {
     "$ADB" shell "$1"
 }
 
+_at_syscmd() {
+    "$SERIAL_PATH" "AT+SYSCMD=$1"
+}
+
 setup_rayhunter() {
-    _adb_shell '/bin/rootshell -c "mkdir -p /data/rayhunter"'
+    _at_syscmd "mkdir -p /data/rayhunter"
     _adb_push config.toml.example /data/rayhunter/config.toml
     _adb_push rayhunter-daemon /data/rayhunter/
     _adb_push scripts/rayhunter_daemon /tmp/rayhunter_daemon
     _adb_push scripts/misc-daemon /tmp/misc-daemon
-    _adb_shell '/bin/rootshell -c "cp /tmp/rayhunter_daemon /etc/init.d/rayhunter_daemon"'
-    _adb_shell '/bin/rootshell -c "cp /tmp/misc-daemon /etc/init.d/misc-daemon"'
-    _adb_shell '/bin/rootshell -c "chmod 755 /etc/init.d/rayhunter_daemon"'
-    _adb_shell '/bin/rootshell -c "chmod 755 /etc/init.d/misc-daemon"'
+    _at_syscmd "cp /tmp/rayhunter_daemon /etc/init.d/rayhunter_daemon"
+    _at_syscmd "cp /tmp/misc-daemon /etc/init.d/misc-daemon"
+    _at_syscmd "chmod 755 /etc/init.d/rayhunter_daemon"
+    _at_syscmd "chmod 755 /etc/init.d/misc-daemon"
     echo -n "waiting for reboot..."
-    _adb_shell '/bin/rootshell -c reboot'
+    _at_syscmd reboot
 
     # first wait for shutdown (it can take ~10s)
     until ! _adb_shell true 2> /dev/null
