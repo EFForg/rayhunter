@@ -80,10 +80,24 @@ impl AnalysisWriter {
     }
 }
 
-#[derive(Debug, Serialize, Clone, Default)]
+#[derive(Debug, Serialize, Clone)]
 pub struct AnalysisStatus {
     queued: Vec<String>,
     running: Option<String>,
+    finished: Vec<String>,
+}
+
+impl AnalysisStatus {
+    pub fn new(store: &RecordingStore) -> Self {
+        let existing_recordings: Vec<String> = store.manifest.entries.iter()
+                .map(|entry| entry.name.clone())
+                .collect();
+        AnalysisStatus {
+            queued: Vec::new(),
+            running: None,
+            finished: existing_recordings,
+        }
+    }
 }
 
 pub enum AnalysisCtrlMessage {
@@ -103,9 +117,10 @@ async fn dequeue_to_running(analysis_status_lock: Arc<RwLock<AnalysisStatus>>) -
     name
 }
 
-async fn clear_running(analysis_status_lock: Arc<RwLock<AnalysisStatus>>) {
+async fn finish_running_analysis(analysis_status_lock: Arc<RwLock<AnalysisStatus>>) {
     let mut analysis_status = analysis_status_lock.write().await;
-    analysis_status.running = None;
+    let finished = analysis_status.running.take().unwrap();
+    analysis_status.finished.push(finished);
 }
 
 async fn perform_analysis(
@@ -191,7 +206,7 @@ pub fn run_analysis_thread(
                         {
                             error!("failed to analyze {}: {}", name, err);
                         }
-                        clear_running(analysis_status_lock.clone()).await;
+                        finish_running_analysis(analysis_status_lock.clone()).await;
                     }
                 }
                 Some(AnalysisCtrlMessage::Exit) | None => return,

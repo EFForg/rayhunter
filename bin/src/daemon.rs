@@ -172,7 +172,9 @@ async fn main() -> Result<(), RayhunterError> {
     let task_tracker = TaskTracker::new();
     println!("R A Y H U N T E R 🐳");
 
-    let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
+    let store = init_qmdl_store(&config).await?;
+    let analysis_status = AnalysisStatus::new(&store);
+    let qmdl_store_lock = Arc::new(RwLock::new(store));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
@@ -201,7 +203,7 @@ async fn main() -> Result<(), RayhunterError> {
     }
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     info!("create shutdown thread");
-    let analysis_status_lock = Arc::new(RwLock::new(AnalysisStatus::default()));
+    let analysis_status_lock = Arc::new(RwLock::new(analysis_status));
     run_analysis_thread(
         &task_tracker,
         analysis_rx,
