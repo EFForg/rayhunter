@@ -78,7 +78,7 @@ setup_rayhunter() {
     _at_syscmd "chmod 755 /etc/init.d/misc-daemon"
 
     echo -n "waiting for reboot..."
-    _at_syscmd reboot
+    _at_syscmd "shutdown -r -t 1 now"
 
     # first wait for shutdown (it can take ~10s)
     until ! _adb_shell true 2> /dev/null
