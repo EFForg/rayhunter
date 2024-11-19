@@ -68,7 +68,7 @@ setup_rayhunter() {
     _adb_push config.toml.example /tmp/config.toml
     _at_syscmd "mv /tmp/config.toml /data/rayhunter"
     _adb_push rayhunter-daemon /tmp/rayhunter-daemon
-    _at_syscmd "mv /tmp/rayhunter-daemon /data/rayhunter"
+    _at_syscmd "mv /tmp/rayhunter-daemon /data/rayhunter-daemon"
     _adb_push scripts/rayhunter_daemon /tmp/rayhunter_daemon
     _at_syscmd "mv /tmp/rayhunter_daemon /etc/init.d/rayhunter_daemon"
     _adb_push scripts/misc-daemon /tmp/misc-daemon
