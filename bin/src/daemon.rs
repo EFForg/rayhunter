@@ -21,6 +21,7 @@ use crate::framebuffer::Framebuffer;
 use analysis::{get_analysis_status, run_analysis_thread, start_analysis, AnalysisCtrlMessage, AnalysisStatus};
 use axum::response::Redirect;
 use diag::{get_analysis_report, start_recording, stop_recording, DiagDeviceCtrlMessage};
+use framebuffer::Color565;
 use log::{info, error};
 use rayhunter::diag_device::DiagDevice;
 use axum::routing::{get, post};
@@ -142,12 +143,17 @@ fn run_ctrl_c_thread(
 
 fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<framebuffer::DisplayState>) -> JoinHandle<()> {
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
+    let mut display_color: Color565;
     let display_level = config.ui_level;
     if display_level == 0 {
         info!("Invisible mode, not spawning UI.");
     }
 
-    let mut display_color = framebuffer::Color565::Green;
+    if config.colorblind_mode {
+        display_color = framebuffer::Color565::Blue;
+    } else {
+        display_color = framebuffer::Color565::Green;
+    }
 
     task_tracker.spawn_blocking(move || {
         let mut fb: Framebuffer = Framebuffer::new();
