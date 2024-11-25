@@ -9,6 +9,7 @@ struct ConfigFile {
     debug_mode: Option<bool>,
     ui_level: Option<u8>,
     enable_dummy_analyzer: Option<bool>,
+    colorblind_mode: Option<bool>,
 }
 
 #[derive(Debug)]
@@ -18,6 +19,7 @@ pub struct Config {
     pub debug_mode: bool,
     pub ui_level: u8,
     pub enable_dummy_analyzer: bool,
+    pub colorblind_mode: bool,
 }
 
 impl Default for Config {
@@ -28,6 +30,7 @@ impl Default for Config {
             debug_mode: false,
             ui_level: 1,
             enable_dummy_analyzer: false,
+            colorblind_mode: false,
         }
     }
 }
@@ -42,6 +45,7 @@ pub fn parse_config<P>(path: P) -> Result<Config, RayhunterError> where P: AsRef
         parsed_config.debug_mode.map(|v| config.debug_mode = v);
         parsed_config.ui_level.map(|v| config.ui_level = v);
         parsed_config.enable_dummy_analyzer.map(|v| config.enable_dummy_analyzer = v);
+        parsed_config.colorblind_mode.map(|v| config.colorblind_mode = v);
     }
     Ok(config)
 }
