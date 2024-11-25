@@ -129,8 +129,16 @@ pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(S
     let qmdl_writer = QmdlWriter::new(qmdl_file);
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StartRecording((qmdl_writer, analysis_file))).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    state.ui_update_sender.send(framebuffer::DisplayState::Recording).await
+
+    let display_state: framebuffer::DisplayState;
+    if state.colorblind_mode { 
+        display_state = framebuffer::DisplayState::RecordingCBM;
+    } else {
+        display_state = framebuffer::DisplayState::Recording;
+    }
+    state.ui_update_sender.send(display_state).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
+
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
