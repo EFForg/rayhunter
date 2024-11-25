@@ -59,6 +59,7 @@ async fn run_server(
         debug_mode: config.debug_mode,
         analysis_status_lock,
         analysis_sender,
+        colorblind_mode: config.colorblind_mode,
     });
 
     let app = Router::new()

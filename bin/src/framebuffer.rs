@@ -27,6 +27,7 @@ pub enum DisplayState {
     Recording,
     Paused,
     WarningDetected,
+    RecordingCBM,
 }
 
 impl From<DisplayState> for Color565 {
@@ -34,6 +35,7 @@ impl From<DisplayState> for Color565 {
         match state {
             DisplayState::Paused => Color565::White,
             DisplayState::Recording => Color565::Green, 
+            DisplayState::RecordingCBM => Color565::Blue, 
             DisplayState::WarningDetected => Color565::Red,
         }
     }
