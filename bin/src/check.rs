@@ -1,5 +1,5 @@
 use std::{collections::HashMap, future, path::PathBuf, pin::pin};
-use rayhunter::{analysis::analyzer::Harness, diag::DataType, qmdl::QmdlReader};
+use rayhunter::{analysis::analyzer::Harness, diag::DataType, gsmtap_parser, pcap::GsmtapPcapWriter, qmdl::QmdlReader};
 use tokio::fs::{metadata, read_dir, File};
 use clap::Parser;
 use futures::TryStreamExt;
@@ -11,6 +11,9 @@ mod dummy_analyzer;
 struct Args {
     #[arg(short, long)]
     qmdl_path: PathBuf,
+
+    #[arg(short, long)]
+    pcapify: bool,
 
     #[arg(long)]
     show_skipped: bool,
@@ -54,6 +57,27 @@ async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool
     println!("{}: {} messages analyzed, {} warnings, {} messages skipped", qmdl_path, total_messages, warnings, skipped);
 }
 
+async fn pcapify(qmdl_path: &PathBuf) {
+    let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open qmdl file");
+    let qmdl_file_size = qmdl_file.metadata().await.unwrap().len();
+    let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_file_size as usize));
+    let mut pcap_path = qmdl_path.clone();
+    pcap_path.set_extension("pcap");
+    let pcap_file = &mut File::create(&pcap_path).await.expect("failed to open pcap file");
+    let mut pcap_writer = GsmtapPcapWriter::new(pcap_file).await.unwrap();
+    pcap_writer.write_iface_header().await.unwrap();
+    while let Some(container) = qmdl_reader.get_next_messages_container().await.expect("failed to get container") {
+        for maybe_msg in container.into_messages() {
+            if let Ok(msg) = maybe_msg {
+                if let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg) {
+                    pcap_writer.write_gsmtap_message(parsed, timestamp).await.expect("failed to write");
+                }
+            }
+        }
+    }
+    println!("wrote pcap to {:?}", &pcap_path);
+}
+
 #[tokio::main]
 async fn main() {
     env_logger::init();
@@ -75,10 +99,19 @@ async fn main() {
             let name = entry.file_name();
             let name_str = name.to_str().unwrap();
             if name_str.ends_with(".qmdl") {
-                analyze_file(&mut harness, entry.path().to_str().unwrap(), args.show_skipped).await;
+                let path = entry.path();
+                let path_str = path.to_str().unwrap();
+                analyze_file(&mut harness, path_str, args.show_skipped).await;
+                if args.pcapify {
+                    pcapify(&path).await;
+                }
             }
         }
     } else {
-        analyze_file(&mut harness, args.qmdl_path.to_str().unwrap(), args.show_skipped).await;
+        let path = args.qmdl_path.to_str().unwrap();
+        analyze_file(&mut harness, path, args.show_skipped).await;
+        if args.pcapify {
+            pcapify(&args.qmdl_path).await;
+        }
     }
 }
