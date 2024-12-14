@@ -60,7 +60,7 @@ impl<T> QmdlReader<T> where T: AsyncRead + Unpin {
         })
     }
 
-    async fn get_next_messages_container(&mut self) -> Result<Option<MessagesContainer>, std::io::Error> {
+    pub async fn get_next_messages_container(&mut self) -> Result<Option<MessagesContainer>, std::io::Error> {
         if let Some(max_bytes) = self.max_bytes {
             if self.bytes_read >= max_bytes {
                 if self.bytes_read > max_bytes {
