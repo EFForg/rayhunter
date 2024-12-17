@@ -26,7 +26,7 @@ def parse_nas_message(buffer, uplink=None):
         parsed = NASLTE.parse_NASLTE_MT(bin)
     
     if parsed[0] is None: # Not a NAS Packet 
-        raise parsed[1]
+        raise TypeError("Not a nas packet")
     return parsed[0]
 
 def heur_ue_imsi_sent(msg):
