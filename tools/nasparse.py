@@ -54,7 +54,7 @@ if __name__ == "__main__":
     buffer = sys.argv[1]
     msg = parse_nas_message(buffer)
     pprint.pprint(msg)
-    (triggered, message)= heur_ue_imsi_sent(msg)
-    if(triggered): 
+    triggered, message = heur_ue_imsi_sent(msg)
+    if triggered: 
         print(message)
         exit(1)
