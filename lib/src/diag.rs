@@ -183,6 +183,8 @@ pub enum LogBody {
     // * 0xb0ed: plain EMM NAS message (outgoing)
     #[deku(id_pat = "0xb0e2 | 0xb0e3 | 0xb0ec | 0xb0ed")]
     Nas4GMessage {
+        #[deku(ctx = "log_type")]
+        direction: Nas4GMessageDirection,
         ext_header_version: u8,
         rrc_rel: u8,
         rrc_version_minor: u8,
@@ -209,6 +211,19 @@ pub enum LogBody {
         #[deku(count = "hdr_len")]
         msg: Vec<u8>,
     }
+}
+
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
+#[deku(ctx = "log_type: u16", id = "log_type")]
+pub enum Nas4GMessageDirection {
+    // * 0xb0e2: plain ESM NAS message (incoming)
+    // * 0xb0e3: plain ESM NAS message (outgoing)
+    // * 0xb0ec: plain EMM NAS message (incoming)
+    // * 0xb0ed: plain EMM NAS message (outgoing)
+    #[deku(id_pat = "0xb0e2 | 0xb0ec")]
+    Inbound,
+    #[deku(id_pat = "0xb0e3 | 0xb0ed")]
+    Outbound,
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
