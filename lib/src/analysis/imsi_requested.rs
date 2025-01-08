@@ -35,7 +35,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
             if self.packet_num < PACKET_THRESHHOLD {
                 return Some(Event {
                     event_type: EventType::QualitativeWarning {
-                        severity: Severity::Low
+                        severity: Severity::Medium
                     },
                     message: format!(
                         "NAS IMSI request detected, however it was within \
