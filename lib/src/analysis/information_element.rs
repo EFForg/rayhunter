@@ -5,7 +5,7 @@
 
 use telcom_parser::{decode, lte_rrc};
 use thiserror::Error;
-use crate::gsmtap::{GsmtapType, LteRrcSubtype, GsmtapMessage};
+use crate::gsmtap::{GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
 
 #[derive(Error, Debug)]
 pub enum InformationElementError {
@@ -39,6 +39,9 @@ pub enum LteInformationElement {
     BcchDlSchMbms(lte_rrc::BCCH_DL_SCH_Message_MBMS),
     SbcchSlBch(lte_rrc::SBCCH_SL_BCH_Message),
     SbcchSlBchV2x(lte_rrc::SBCCH_SL_BCH_Message_V2X_r14),
+
+    // FIXME: actually parse NAS messages
+    NAS(Vec<u8>),
 
     // FIXME: unclear which message these "NB" types map to
     //DlCcchNb(),
@@ -78,6 +81,9 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
                     _ => return Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
                 };
                 Ok(InformationElement::LTE(lte))
+            },
+            GsmtapType::LteNas(LteNasSubtype::Plain) => {
+                Ok(InformationElement::LTE(LteInformationElement::NAS(gsmtap_msg.payload.clone())))
             },
             _ => Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
         }
