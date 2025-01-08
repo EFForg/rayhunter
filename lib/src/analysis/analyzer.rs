@@ -4,7 +4,12 @@ use serde::Serialize;
 
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
-use super::{/*imsi_provided::ImsiProvidedAnalyzer,*/ information_element::InformationElement, lte_downgrade::LteSib6And7DowngradeAnalyzer, null_cipher::NullCipherAnalyzer};
+use super::{
+    imsi_requested::ImsiRequestedAnalyzer,
+    information_element::InformationElement,
+    lte_downgrade::LteSib6And7DowngradeAnalyzer,
+    null_cipher::NullCipherAnalyzer,
+};
 
 /// Qualitative measure of how severe a Warning event type is.
 /// The levels should break down like this:
@@ -18,7 +23,7 @@ pub enum Severity {
     High,
 }
 
-/// [QualitativeWarning] events will always be shown to the user in some manner,
+/// `QualitativeWarning` events will always be shown to the user in some manner,
 /// while `Informational` ones may be hidden based on user settings.
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "type")]
@@ -113,7 +118,7 @@ impl Harness {
     pub fn new_with_all_analyzers() -> Self {
         let mut harness = Harness::new();
         harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer{}));
-        //harness.add_analyzer(Box::new(ImsiProvidedAnalyzer{}));
+        harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new()));
         harness.add_analyzer(Box::new(NullCipherAnalyzer{}));
 
         harness
