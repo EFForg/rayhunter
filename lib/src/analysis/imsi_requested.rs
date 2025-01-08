@@ -38,7 +38,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                         severity: Severity::Low
                     },
                     message: format!(
-                        "NAS identity request detected, however it was within \
+                        "NAS IMSI request detected, however it was within \
                         the first {} packets of this analysis. If you just \
                         turned your device on, this is likely a \
                         false-positive.",
@@ -50,7 +50,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     event_type: EventType::QualitativeWarning {
                         severity: Severity::High
                     },
-                    message: format!("NAS identity request detected"),
+                    message: format!("NAS IMSI request detected"),
                 })
             }
         }
