@@ -5,7 +5,8 @@ use super::information_element::{InformationElement, LteInformationElement};
 use telcom_parser::lte_rrc::{DL_DCCH_Message, DL_DCCH_MessageType, DL_DCCH_MessageType_c1, RRCConnectionReleaseCriticalExtensions, RRCConnectionReleaseCriticalExtensions_c1, RedirectedCarrierInfo};
 use super::util::unpack;
 
-/// Based on heuristic T7 from Shinjo Park's "Why We Cannot Win".
+// Based on HITBSecConf presentation "Forcing a targeted LTE cellphone into an
+// eavesdropping network" by Lin Huang
 pub struct ConnectionRedirect2GDowngradeAnalyzer {
 }
 
