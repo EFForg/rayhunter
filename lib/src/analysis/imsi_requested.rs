@@ -30,7 +30,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
             return None;
         };
 
-        // NAS identity request
+        // NAS identity request, ID type IMSI
         if payload == &[0x07, 0x55, 0x01] {
             if self.packet_num < PACKET_THRESHHOLD {
                 return Some(Event {
@@ -38,7 +38,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                         severity: Severity::Medium
                     },
                     message: format!(
-                        "NAS IMSI request detected, however it was within \
+                        "NAS IMSI identity request detected, however it was within \
                         the first {} packets of this analysis. If you just \
                         turned your device on, this is likely a \
                         false-positive.",
@@ -50,7 +50,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     event_type: EventType::QualitativeWarning {
                         severity: Severity::High
                     },
-                    message: format!("NAS IMSI request detected"),
+                    message: format!("NAS IMSI identity request detected"),
                 })
             }
         }
