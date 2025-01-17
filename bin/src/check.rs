@@ -1,5 +1,6 @@
 use std::{collections::HashMap, future, path::PathBuf, pin::pin};
-use rayhunter::{analysis::analyzer::Harness, diag::DataType, gsmtap_parser, pcap::GsmtapPcapWriter, qmdl::QmdlReader};
+use log::{info, warn};
+use rayhunter::{analysis::analyzer::{EventType, Harness}, diag::DataType, gsmtap_parser, pcap::GsmtapPcapWriter, qmdl::QmdlReader};
 use tokio::fs::{metadata, read_dir, File};
 use clap::Parser;
 use futures::TryStreamExt;
@@ -9,7 +10,7 @@ mod dummy_analyzer;
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    #[arg(short, long)]
+    #[arg(long)]
     qmdl_path: PathBuf,
 
     #[arg(short, long)]
@@ -20,6 +21,9 @@ struct Args {
 
     #[arg(long)]
     enable_dummy_analyzer: bool,
+
+    #[arg(short, long)]
+    quiet: bool,
 }
 
 async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool) {
@@ -41,20 +45,37 @@ async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool
         }
         for analysis in row.analysis {
             for maybe_event in analysis.events {
-                if let Some(event) = maybe_event {
-                    warnings += 1;
-                    println!("{}: {:?}", analysis.timestamp, event);
+                let Some(event) = maybe_event else { continue };
+                match event.event_type {
+                    EventType::Informational => {
+                        info!(
+                            "{}: INFO - {} {}",
+                            qmdl_path,
+                            analysis.timestamp,
+                            event.message,
+                        );
+                    }
+                    EventType::QualitativeWarning { severity } => {
+                        warn!(
+                            "{}: WARNING (Severity: {:?}) - {} {}",
+                            qmdl_path,
+                            severity,
+                            analysis.timestamp,
+                            event.message,
+                        );
+                        warnings += 1;
+                    }
                 }
             }
         }
     }
     if show_skipped && skipped > 0 {
-        println!("{}: messages skipped:", qmdl_path);
+        info!("{}: messages skipped:", qmdl_path);
         for (reason, count) in skipped_reasons.iter() {
-            println!("    - {}: \"{}\"", count, reason);
+            info!("    - {}: \"{}\"", count, reason);
         }
     }
-    println!("{}: {} messages analyzed, {} warnings, {} messages skipped", qmdl_path, total_messages, warnings, skipped);
+    info!("{}: {} messages analyzed, {} warnings, {} messages skipped", qmdl_path, total_messages, warnings, skipped);
 }
 
 async fn pcapify(qmdl_path: &PathBuf) {
@@ -75,21 +96,30 @@ async fn pcapify(qmdl_path: &PathBuf) {
             }
         }
     }
-    println!("wrote pcap to {:?}", &pcap_path);
+    info!("wrote pcap to {:?}", &pcap_path);
 }
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
     let args = Args::parse();
+    let level = if args.quiet {
+        log::LevelFilter::Warn
+    } else {
+        log::LevelFilter::Trace
+    };
+    simple_logger::SimpleLogger::new()
+        .with_colors(true)
+        .without_timestamps()
+        .with_level(level)
+        .init().unwrap();
 
     let mut harness = Harness::new_with_all_analyzers();
     if args.enable_dummy_analyzer {
         harness.add_analyzer(Box::new(dummy_analyzer::TestAnalyzer { count: 0 }));
     }
-    println!("Analyzers:");
+    info!("Analyzers:");
     for analyzer in harness.get_metadata().analyzers {
-        println!("    - {}: {}", analyzer.name, analyzer.description);
+        info!("    - {}: {}", analyzer.name, analyzer.description);
     }
 
     let metadata = metadata(&args.qmdl_path).await.expect("failed to get metadata");
