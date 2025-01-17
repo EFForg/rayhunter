@@ -7,7 +7,7 @@ use crate::{diag::MessagesContainer, gsmtap_parser};
 use super::{
     imsi_requested::ImsiRequestedAnalyzer,
     information_element::InformationElement,
-    lte_downgrade::LteSib6And7DowngradeAnalyzer,
+    lte_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     null_cipher::NullCipherAnalyzer,
 };
 
@@ -117,7 +117,7 @@ impl Harness {
 
     pub fn new_with_all_analyzers() -> Self {
         let mut harness = Harness::new();
-        harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer{}));
+        harness.add_analyzer(Box::new(ConnectionRedirect2GDowngradeAnalyzer{}));
         harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new()));
         harness.add_analyzer(Box::new(NullCipherAnalyzer{}));
 
