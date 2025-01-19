@@ -10,7 +10,11 @@ install() {
     fi
     force_debug_mode
     setup_rootshell
-    setup_rayhunter
+    if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+        setup_rayhunter_adb
+    else
+        setup_rayhunter
+    fi
     test_rayhunter
 }
 
@@ -79,6 +83,35 @@ setup_rayhunter() {
 
     echo -n "waiting for reboot..."
     _at_syscmd "shutdown -r -t 1 now"
+
+    # first wait for shutdown (it can take ~10s)
+    until ! _adb_shell true 2> /dev/null
+    do
+        sleep 1
+    done
+
+    # now wait for boot to finish
+    wait_for_adb_shell
+
+    echo " done!"
+}
+
+setup_rayhunter_adb() {
+    echo "setting up rayhunter with ADB rootshell..."
+    _adb_shell "/bin/rootshell -c 'mkdir -p /data/rayhunter'"
+    _adb_push config.toml.example /tmp/config.toml
+    _adb_shell "/bin/rootshell -c 'mv /tmp/config.toml /data/rayhunter'"
+    _adb_push rayhunter-daemon /tmp/rayhunter-daemon
+    _adb_shell "/bin/rootshell -c 'mv /tmp/rayhunter-daemon /data/rayhunter'"
+    _adb_push scripts/rayhunter_daemon /tmp/rayhunter_daemon
+    _adb_shell "/bin/rootshell -c 'mv /tmp/rayhunter_daemon /etc/init.d/rayhunter_daemon'"
+    _adb_push scripts/misc-daemon /tmp/misc-daemon
+    _adb_shell "/bin/rootshell -c 'mv /tmp/misc-daemon /etc/init.d/misc-daemon'"
+    _adb_shell "/bin/rootshell -c 'chmod 755 /etc/init.d/rayhunter_daemon'"
+    _adb_shell "/bin/rootshell -c 'chmod 755 /etc/init.d/misc-daemon'"
+
+    echo -n "waiting for reboot..."
+    _adb_shell "/bin/rootshell -c 'shutdown -r -t 1 now'"
 
     # first wait for shutdown (it can take ~10s)
     until ! _adb_shell true 2> /dev/null
