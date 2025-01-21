@@ -78,7 +78,10 @@ fn send_command<T: UsbContext>(handle: &mut DeviceHandle<T>, command: &str) {
         .read_bulk(0x82, &mut response, timeout)
         .expect("Failed to read response");
 
-    let responsestr = str::from_utf8(&response).expect("Failed to parse response");
+    // For some reason, on macOS the response buffer gets filled with garbage data that's
+    // rarely valid UTF-8. Luckily we only care about the first couple bytes, so just drop
+    // the garbage with `from_utf8_lossy` and look for our expected success string.
+    let responsestr = String::from_utf8_lossy(&response);
     if !responsestr.contains("\r\nOK\r\n") {
         println!("Received unexpected response{0}", responsestr);
         std::process::exit(1);
