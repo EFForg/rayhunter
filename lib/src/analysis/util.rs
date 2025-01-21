@@ -2,28 +2,28 @@
 /// Unpacks a pattern, or returns None.
 ///
 /// # Examples
-/// Suppose you've got some highly nested enum:
+/// You can use `unpack!` to unroll highly nested enums like this:
 /// ```
+/// use super::util::unpack;
+///
 /// enum Foo {
 ///     A(Bar),
 ///     B,
 /// }
 ///
-/// enum Baz {
-///     C(Bang)
+/// enum Bar {
+///     C(Baz)
 /// }
 ///
-/// struct Bang;
-/// ```
+/// struct Baz;
 ///
-/// You can use `unpack!` to unroll it like this:
-/// ```
-/// fn get_bang(foo: Foo) -> Option<Bang> {
+/// fn get_bang(foo: Foo) -> Option<Baz> {
 ///     unpack!(Foo::A(bar) = foo);
-///     unpack!(Baz::C(bang) = bar);
-///     bang
+///     unpack!(Bar::C(baz) = bar);
+///     baz
 /// }
 /// ```
+///
 macro_rules! unpack {
     ($pat:pat = $val:expr) => {
         let $pat = $val else { return None; };
