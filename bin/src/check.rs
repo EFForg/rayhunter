@@ -10,7 +10,7 @@ mod dummy_analyzer;
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    #[arg(long)]
+    #[arg(short = 'p', long)]
     qmdl_path: PathBuf,
 
     #[arg(short, long)]
