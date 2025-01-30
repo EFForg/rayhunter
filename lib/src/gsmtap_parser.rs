@@ -99,7 +99,6 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 _ => return Err(GsmtapParserError::InvalidLteRrcOtaExtHeaderVersion(ext_header_version)),
             };
             let mut header = GsmtapHeader::new(gsmtap_type);
-            // Wireshark GSMTAP only accepts 14 bits of ARFCN
             header.arfcn = packet.get_earfcn().try_into().unwrap_or(0);
             header.frame_number = packet.get_sfn();
             header.subslot = packet.get_subfn();
@@ -108,9 +107,10 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 payload: packet.take_payload(),
             }))
         },
-        LogBody::Nas4GMessage { msg, .. } => {
+        LogBody::Nas4GMessage { msg, direction, .. } => {
             // currently we only handle "plain" (i.e. non-secure) NAS messages
-            let header = GsmtapHeader::new(GsmtapType::LteNas(LteNasSubtype::Plain));
+            let mut header = GsmtapHeader::new(GsmtapType::LteNas(LteNasSubtype::Plain));
+            header.uplink = matches!(direction,  Nas4GMessageDirection::Uplink);
             Ok(Some(GsmtapMessage {
                 header,
                 payload: msg,
