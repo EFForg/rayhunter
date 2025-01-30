@@ -221,9 +221,9 @@ pub enum Nas4GMessageDirection {
     // * 0xb0ec: plain EMM NAS message (incoming)
     // * 0xb0ed: plain EMM NAS message (outgoing)
     #[deku(id_pat = "0xb0e2 | 0xb0ec")]
-    Inbound,
+    Downlink,
     #[deku(id_pat = "0xb0e3 | 0xb0ed")]
-    Outbound,
+    Uplink,
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]

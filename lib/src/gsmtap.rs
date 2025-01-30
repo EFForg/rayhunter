@@ -17,7 +17,7 @@ pub enum GsmtapType {
     UmtsRlcMac,
     UmtsRrc(UmtsRrcSubtype),
     LteRrc(LteRrcSubtype), /* LTE interface */
-    LteMac, /* LTE MAC interface */ 
+    LteMac, /* LTE MAC interface */
     LteMacFramed, /* LTE MAC with context hdr */
     OsmocoreLog, /* libosmocore logging */
     QcDiag, /* Qualcomm DIAG frame */
@@ -200,6 +200,11 @@ pub struct GsmtapHeader {
     #[deku(update = "self.gsmtap_type.get_type()")]
     pub packet_type: u8,
     pub timeslot: u8,
+    #[deku(bits = 1)]
+    pub pcs_band_indicator: bool,
+    #[deku(bits = 1)]
+    pub uplink: bool,
+    #[deku(bits = 14)]
     pub arfcn: u16,
     pub signal_dbm: i8,
     pub signal_noise_ratio_db: u8,
@@ -222,6 +227,8 @@ impl GsmtapHeader {
             header_len: 4,
             packet_type: gsmtap_type.get_type(),
             timeslot: 0,
+            pcs_band_indicator: false,
+            uplink: false,
             arfcn: 0,
             signal_dbm: 0,
             signal_noise_ratio_db: 0,
