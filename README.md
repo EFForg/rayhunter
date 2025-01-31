@@ -30,16 +30,23 @@ Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 
 **THIS CODE IS PROOF OF CONCEPT AND SHOULD NOT BE RELIED UPON IN HIGH RISK SITUATIONS**
 
+
+## The Hardware 
+
 Code is built and tested for the Orbic RC400L mobile hotspot, it may work on other orbics and other
-linux/qualcom devices but this is the only one we have tested on. Buy the orbic [using bezos bucks](https://www.amazon.com/gp/product/B09CLS6Z7X/)
+linux/qualcom devices but this is the only one we have tested on. 
+Buy the orbic [using bezos bucks](https://www.amazon.com/dp/B08N3CHC4Y)
+Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
 
 ## Setup
 
 *NOTE: We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
 
 1. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it.
-2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`).
+**If you are installing from the cloned github repository please see the development instructions below, running `install-linux.sh` from the git tree will not work.**
+2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`). Install linux has only been tested on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below. 
 3. Once finished, rayhunter should be running! You can verify this by visiting the web UI as described below.
+
 
 ## Usage
 
