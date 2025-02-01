@@ -44,7 +44,7 @@ Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
 
 1. Download the latest [rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it.
 **If you are installing from the cloned github repository please see the development instructions below, running `install-linux.sh` from the git tree will not work.**
-2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`). Install linux has only been tested on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below. 
+2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`). The Linux installer has only been tested on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below. 
 3. Once finished, rayhunter should be running! You can verify this by visiting the web UI as described below.
 
 
