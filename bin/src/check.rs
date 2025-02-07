@@ -23,7 +23,7 @@ struct Args {
     enable_dummy_analyzer: bool,
 
     #[arg(short, long)]
-    quiet: bool,
+    verbose: bool,
 }
 
 async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool) {
@@ -102,10 +102,10 @@ async fn pcapify(qmdl_path: &PathBuf) {
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let level = if args.quiet {
-        log::LevelFilter::Warn
-    } else {
+    let level = if args.verbose {
         log::LevelFilter::Trace
+    } else {
+        log::LevelFilter::Warn
     };
     simple_logger::SimpleLogger::new()
         .with_colors(true)
