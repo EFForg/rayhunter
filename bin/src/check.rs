@@ -13,7 +13,7 @@ struct Args {
     #[arg(short = 'p', long)]
     qmdl_path: PathBuf,
 
-    #[arg(short, long)]
+    #[arg(short = 'c', long)]
     pcapify: bool,
 
     #[arg(long)]
