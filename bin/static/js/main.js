@@ -136,7 +136,7 @@ function createEntryRow(entry, isCurrent) {
     row.appendChild(pcapTd);
 
     const qmdlTd = document.createElement('td');
-    qmdlTd.appendChild(createLink(`/api/qmdl/${entry.name}`, 'qmdl'));
+    qmdlTd.appendChild(createLink(`/api/qmdl/${entry.name}.qmdl`, 'qmdl'));
     row.appendChild(qmdlTd);
 
     const analysisResult = document.createElement('td');
