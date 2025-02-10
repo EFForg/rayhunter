@@ -80,6 +80,11 @@ async function updateEntryAnalysisResult(entry) {
         entry.analysis_result = `0 warnings!`;
     } else {
         entry.analysis_result = `!!! ${entry.analysis.warnings.length} warnings !!!`;
+        for(warning of entry.analysis.warnings){
+            msg = `${warning.timestamp}: ${warning.warning.events[1].message}`
+            console.log(msg)
+            entry.analysis_result += `<br>${msg}`
+        }
     }
 }
 
@@ -140,7 +145,7 @@ function createEntryRow(entry, isCurrent) {
     row.appendChild(qmdlTd);
 
     const analysisResult = document.createElement('td');
-    analysisResult.innerText = entry.analysis_result;
+    analysisResult.innerHTML = entry.analysis_result;
     if (entry.analysis.warnings.length > 0) {
         row.classList.add("warning");
     }
