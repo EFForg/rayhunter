@@ -1,29 +1,6 @@
+![Rayhunter Logo - An Orca taking a bite out of a cellular signal bar](https://www.eff.org/files/styles/media_browser_preview/public/banner_library/rayhunter-banner.png)
 # Rayhunter
 
-```
- @@@@@@@   @@@@@@  @@@ @@@ @@@  @@@ @@@  @@@ @@@  @@@ @@@@@@@ @@@@@@@@ @@@@@@@
- @@!  @@@ @@!  @@@ @@! !@@ @@!  @@@ @@!  @@@ @@!@!@@@   @@!   @@!      @@!  @@@
- @!@!!@!  @!@!@!@!  !@!@!  @!@!@!@! @!@  !@! @!@@!!@!   @!!   @!!!:!   @!@!!@!
- !!: :!!  !!:  !!!   !!:   !!:  !!! !!:  !!! !!:  !!!   !!:   !!:      !!: :!!
-  :   : :  :   : :   .:     :   : :  :.:: :  ::    :     :    : :: :::  :   : :
-
-
-_      _      _      _      _      _      _      _
-)`'-.,_)`'-.,_)`'-.,_)`'-.,_)`'-.,_)`'-.,_)`'-.,_)`'-.,_
-
-                O          .
-             O            ' '
-               o         '   .
-             o         .'
-          __________.-'       '...___
-       .-'                      ###  '''...__
-      /   a###                 ##            ''--.._ ______
-      '.                      #     ########        '   .-'
-        '-._          ..**********####  ___...---'''\   '
-            '-._     __________...---'''             \   l
-                \   |                         apc     '._|
-                 \__;
-```
 ![Tests](https://github.com/EFForg/rayhunter/actions/workflows/check-and-test.yml/badge.svg)
 
 Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
@@ -35,7 +12,7 @@ Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 
 Code is built and tested for the Orbic RC400L mobile hotspot, it may work on other orbics and other
 linux/qualcom devices but this is the only one we have tested on. 
-Buy the orbic [using bezos bucks](https://www.amazon.com/dp/B08N3CHC4Y)
+Buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y)
 Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
 
 ## Setup
