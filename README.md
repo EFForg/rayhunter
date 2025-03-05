@@ -33,6 +33,15 @@ Once installed, rayhunter will run automatically whenever your Orbic device is r
     * Note that you'll need the Orbic's wifi password for this, which can be retrieved by pressing the "MENU" button on the device and opening the 2.4 GHz menu.
 2. Over usb: Connect the Orbic device to your laptop via usb. Run `adb forward tcp:8080 tcp:8080`, then visit `http://localhost:8080`. For this you will need to install the Android Debug Bridge (ADB) on your computer, you can copy the version that was downloaded inside the releases/platform-tools/` folder to somewhere else in your path or you can install it manually.  You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer), (don't worry about instructions for installing it on a phone/device yet).
 
+## FAQ
+
+* Do I need an active SIM card to use rayhunter?
+  * **Yes**, rayhunter requires an active SIM card to communicate with the network and perform its heuristics.
+* Help, rayhunter's line is red! What should I do?
+  * Unfortunately, the circumstances that might lead to a positive CSS signal are quite varied, so don't have a universal recommendation for how to deal with the a positive signal. Please feel free to contact an EFF technologist with more information & a copy of the QMDL in question at [info@eff.org](mailto:info@eff.org).
+* Does rayhunter work outside of the US?
+  * **Yes**
+
 ## Development
 * Install ADB on your computer using the instructions above, and make sure it's in your terminal's PATH
   * You can verify if ADB is in your PATH by running `which adb` in a terminal. If it prints the filepath to where ADB is installed, you're set! Otherwise, try following one of these guides:
