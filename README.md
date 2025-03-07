@@ -40,7 +40,7 @@ Once installed, rayhunter will run automatically whenever your Orbic device is r
     * [macOS](https://www.repeato.app/setting-up-adb-on-macos-a-step-by-step-guide/)
     * [Windows](https://medium.com/@yadav-ajay/a-step-by-step-guide-to-setting-up-adb-path-on-windows-0b833faebf18)
 
-### If your are on x86 linux
+### If you are on x86 linux
 * on your linux laptop install rust the usual way and then install cross compiling dependences.
 * run `sudo apt install  build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf`
 
