@@ -8,10 +8,10 @@ Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 **THIS CODE IS PROOF OF CONCEPT AND SHOULD NOT BE RELIED UPON IN HIGH RISK SITUATIONS**
 
 
-## The Hardware 
+## The Hardware
 
 Code is built and tested for the Orbic RC400L mobile hotspot, it may work on other orbics and other
-linux/qualcom devices but this is the only one we have tested on. 
+linux/qualcom devices but this is the only one we have tested on.
 Buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y)
 Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
 
@@ -22,7 +22,7 @@ Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
 1. Download the latest [Rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it.
 **If you are installing from the cloned github repository please see the development instructions below, running `install-linux.sh` from the git tree will not work.**
 2. Turn on the Orbic device and plug it into your computer using a USB-C Cable.
-2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`). The Linux installer has only been tested on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below. 
+2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`). The Linux installer has only been tested on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
 3. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
 
 
@@ -37,17 +37,17 @@ Once installed, Rayhunter will run automatically whenever your Orbic device is r
 ## Frequently Asked Questions
 
 ### Do I need an active SIM card to use Rayhunter?
- **It Depends**. Operation of Rayhunter does require the insertion of a SIM card into the device but whether that sim card has to be currently active for our tests to work is still under investigation. If you want to use the device as a hotspot in addition to a research device an active plan would of course be necessary, however we have not done enough testing yet to know whether an active subscription is required for detection. If you want to test the device with an inactive SIM card, we would certainly be interested in seeing any data you collect, and especially any runs that trigger an alert! 
+ **It Depends**. Operation of Rayhunter does require the insertion of a SIM card into the device, but whether that SIM card has to be currently active for our tests to work is still under investigation. If you want to use the device as a hotspot in addition to a research device an active plan would of course be necessary, however we have not done enough testing yet to know whether an active subscription is required for detection. If you want to test the device with an inactive SIM card, we would certainly be interested in seeing any data you collect, and especially any runs that trigger an alert!
 ### Help, Rayhunter's line is red! What should I do?
- Unfortunately, the circumstances that might lead to a positive CSS signal are quite varied, so don't have a universal recommendation for how to deal with the a positive signal. You might also want to turn off your phone until you are out of the area (or put it on airplane mode,) and tell your friends to do the same!
- 
- Please feel free to contact an EFF technologist with more information & a copy of the QMDL in question at [info@eff.org](mailto:info@eff.org). Please note that this file may contain sensetive information such as your IMSI and the unique IDs of cell towers you were near which could be used to ascertain your location at the time.  
+ Unfortunately, the circumstances that might lead to a positive CSS signal are quite varied, so we don't have a universal recommendation for how to deal with the a positive signal. You might also want to turn off your phone until you are out of the area (or put it on airplane mode,) and tell your friends to do the same!
+
+ Please feel free to contact an EFF technologist with more information & a copy of the QMDL in question at [info@eff.org](mailto:info@eff.org). Please note that this file may contain sensetive information such as your IMSI and the unique IDs of cell towers you were near which could be used to ascertain your location at the time.
 ### Does Rayhunter work outside of the US?
-**Probably** Some Rayhunter users have reported successfully using it in other countries with unlocked devices and sim cards from local telcos. We can't guarantee whether or not it will work for you though. 
+**Probably**. Some Rayhunter users have reported successfully using it in other countries with unlocked devices and SIM cards from local telcos. We can't guarantee whether or not it will work for you though.
 ### Should I get a locked or unlocked orbic device? What is the difference?
-If you want to use a non verizon sim card you will probably need an unlocked device. But it's not clear how locked the locked devices are nor how to unlock them, we welcome any experimentation and information regarding the use of unlocked devices. 
+If you want to use a non verizon SIM card you will probably need an unlocked device. But it's not clear how locked the locked devices are nor how to unlock them, we welcome any experimentation and information regarding the use of unlocked devices.
 ### Does Rayhunter work on any other devices besides the Orbic RC400L?
-**Maybe** We have not tested Rayhunter on any other hardware but we would love to expand the supported platforms. We will consider giving official support to any hardware platform that can be bought for around $20-30USD. Rayhunter should theoretically work on any linux/android device that has a qualcomm chip with a /dev/diag interface and root access. If you get it working on another device please let us know! 
+**Maybe**. We have not tested Rayhunter on any other hardware but we would love to expand the supported platforms. We will consider giving official support to any hardware platform that can be bought for around $20-30USD. The Rayhunter daemon should theoretically work on any linux/android device that has a qualcomm chip with a /dev/diag interface and root access, though our installer script has only been tested with an Orbic. If you get it working on another device, please let us know!
 
 ## Development
 * Install ADB on your computer using the instructions above, and make sure it's in your terminal's PATH
