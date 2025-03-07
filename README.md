@@ -58,7 +58,7 @@ If you want to use a non verizon SIM card you will probably need an unlocked dev
 
 ### If your are on x86 linux
 * on your linux laptop install rust the usual way and then install cross compiling dependences.
-* run `sudo apt install  build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf`
+* run `sudo apt install curl build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf`
 
 * set up cross compliing for rust:
 ```
