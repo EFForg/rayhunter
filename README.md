@@ -10,8 +10,8 @@ Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 
 ## The Hardware
 
-Code is built and tested for the Orbic RC400L mobile hotspot, it may work on other orbics and other
-linux/qualcom devices but this is the only one we have tested on.
+Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. It may work on other orbics and other
+linux/qualcom devices, but this is the only one we have tested on.
 Buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y)
 Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
 
@@ -56,19 +56,17 @@ If you want to use a non verizon SIM card you will probably need an unlocked dev
     * [macOS](https://www.repeato.app/setting-up-adb-on-macos-a-step-by-step-guide/)
     * [Windows](https://medium.com/@yadav-ajay/a-step-by-step-guide-to-setting-up-adb-path-on-windows-0b833faebf18)
 
-### If your are on x86 linux
-* on your linux laptop install rust the usual way and then install cross compiling dependences.
-* run `sudo apt install curl build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf`
-
-* set up cross compliing for rust:
+### If you're on x86 linux
+Install rust the usual way and then install cross compiling dependences:
 ```
+sudo apt install curl build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
 rustup target add x86_64-unknown-linux-gnu
 rustup target add armv7-unknown-linux-gnueabihf
 ```
 
 Now you can root your device and install Rayhunter by running `./tools/install-dev.sh`
 
-### If you are on windows or can't run the install scripts
+### If you're on windows or can't run the install scripts
 * Root your device on windows using the instructions here: https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183
 
 * Build for arm using `cargo build`
