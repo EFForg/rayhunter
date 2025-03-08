@@ -1,6 +1,6 @@
 use crate::error::RayhunterError;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 struct ConfigFile {
@@ -19,7 +19,7 @@ struct ConfigFile {
     telemetry_include_stats: Option<bool>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Config {
     pub qmdl_store_path: String,
     pub port: u16,

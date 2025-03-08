@@ -265,15 +265,11 @@ pub async fn update_telemetry_settings(
     State(state): State<Arc<ServerState>>,
     Json(new_settings): Json<TelemetrySettings>,
 ) -> Result<Json<TelemetrySettings>, (StatusCode, String)> {
-    // In a real implementation, we would update the config file on disk
-    // and reload the telemetry service with the new settings
-    // For now, we'll just return the new settings that would be applied
-    
     // Create a response with the merged settings
     let updated_settings = TelemetrySettings {
         enabled: new_settings.enabled,
-        endpoint: new_settings.endpoint,
-        api_key: new_settings.api_key,
+        endpoint: new_settings.endpoint.clone(),
+        api_key: new_settings.api_key.clone(),
         send_interval_secs: new_settings.send_interval_secs,
         include_warnings: new_settings.include_warnings,
         include_stats: new_settings.include_stats,
@@ -288,6 +284,10 @@ pub async fn update_telemetry_settings(
     config.telemetry_send_interval_secs = new_settings.send_interval_secs;
     config.telemetry_include_warnings = new_settings.include_warnings;
     config.telemetry_include_stats = new_settings.include_stats;
+
+    // Persist to disk
+    write_config_to_disk(&config, &state.config_path)
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
     if state.telemetry_enabled {
         let _ = state.telemetry_sender.try_send(TelemetryMessage::SendNow);

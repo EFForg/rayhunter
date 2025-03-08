@@ -12,7 +12,8 @@ use tokio::sync::RwLock;
 use tokio_util::io::ReaderStream;
 use include_dir::{include_dir, Dir};
 
-use crate::{framebuffer, DiagDeviceCtrlMessage};
+use crate::framebuffer;
+use crate::diag::DiagDeviceCtrlMessage;
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::qmdl_store::RecordingStore;
 use crate::telemetry;
