@@ -15,6 +15,8 @@ use include_dir::{include_dir, Dir};
 use crate::{framebuffer, DiagDeviceCtrlMessage};
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::qmdl_store::RecordingStore;
+use crate::telemetry;
+use crate::config::Config;
 
 pub struct ServerState {
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
@@ -24,6 +26,11 @@ pub struct ServerState {
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub debug_mode: bool,
     pub colorblind_mode: bool,
+    pub config: Config,
+    pub config_path: String,
+    pub telemetry_sender: Sender<telemetry::TelemetryMessage>,
+    pub telemetry_device_id: String,
+    pub telemetry_enabled: bool,
 }
 
 pub async fn get_qmdl(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {

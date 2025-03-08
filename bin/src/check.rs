@@ -6,6 +6,7 @@ use clap::Parser;
 use futures::TryStreamExt;
 
 mod dummy_analyzer;
+mod telemetry;
 
 #[derive(Parser, Debug)]
 #[command(version, about)]

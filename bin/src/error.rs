@@ -15,4 +15,10 @@ pub enum RayhunterError{
     QmdlStoreError(#[from] RecordingStoreError),
     #[error("No QMDL store found at path {0}, but can't create a new one due to debug mode")]
     NoStoreDebugMode(String),
+    #[error("Telemetry HTTP error: {0}")]
+    TelemetryHttpError(#[from] reqwest::Error),
+    #[error("Telemetry serialization error: {0}")]
+    TelemetrySerializationError(#[from] serde_json::Error),
+    #[error("Telemetry initialization error: {0}")]
+    TelemetryInitError(String),
 }

@@ -8,24 +8,27 @@ use axum::{
 };
 use futures::TryStreamExt;
 use log::{debug, error, info};
-use rayhunter::analysis::analyzer::Harness;
+use rayhunter::analysis::analyzer::{Harness, EventType};
 use rayhunter::diag::{DataType, MessagesContainer};
 use rayhunter::qmdl::QmdlReader;
 use serde::Serialize;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::sync::mpsc::Receiver;
-use tokio::sync::{RwLock, RwLockWriteGuard};
+use tokio::sync::{mpsc, RwLock, RwLockWriteGuard};
 use tokio_util::task::TaskTracker;
 
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
+use crate::telemetry::{TelemetryMessage, TelemetryWarning};
 use crate::dummy_analyzer::TestAnalyzer;
+
 
 pub struct AnalysisWriter {
     writer: BufWriter<File>,
     harness: Harness,
     bytes_written: usize,
+    telemetry_sender: Option<mpsc::Sender<TelemetryMessage>>,
 }
 
 // We write our analysis results to a file immediately to minimize the amount of
@@ -35,7 +38,11 @@ pub struct AnalysisWriter {
 // lets us simply append new rows to the end without parsing the entire JSON
 // object beforehand.
 impl AnalysisWriter {
-    pub async fn new(file: File, enable_dummy_analyzer: bool) -> Result<Self, std::io::Error> {
+    pub async fn new(
+        file: File, 
+        enable_dummy_analyzer: bool,
+        telemetry_sender: Option<mpsc::Sender<TelemetryMessage>>
+    ) -> Result<Self, std::io::Error> {
         let mut harness = Harness::new_with_all_analyzers();
         if enable_dummy_analyzer {
             harness.add_analyzer(Box::new(TestAnalyzer { count: 0 }));
@@ -45,6 +52,7 @@ impl AnalysisWriter {
             writer: BufWriter::new(file),
             bytes_written: 0,
             harness,
+            telemetry_sender,
         };
         let metadata = result.harness.get_metadata();
         result.write(&metadata).await?;
@@ -55,10 +63,38 @@ impl AnalysisWriter {
     // to the analysis file and returning the file's new length.
     pub async fn analyze(&mut self, container: MessagesContainer) -> Result<(usize, bool), std::io::Error> {
         let row = self.harness.analyze_qmdl_messages(container);
+        let has_warnings = row.contains_warnings();
+        
+        // Send warnings to telemetry if enabled
+        if has_warnings && self.telemetry_sender.is_some() {
+            let telemetry_sender = self.telemetry_sender.as_ref().unwrap();
+            
+            for analysis in &row.analysis {
+                for maybe_event in &analysis.events {
+                    if let Some(event) = maybe_event {
+                        if let EventType::QualitativeWarning { severity } = &event.event_type {
+                            // Convert to telemetry warning format
+                            let warning = TelemetryWarning {
+                                timestamp: analysis.timestamp,
+                                warning_type: "QualitativeWarning".to_string(),
+                                message: event.message.clone(),
+                                severity: format!("{:?}", severity),
+                            };
+                            
+                            // Send to telemetry system
+                            if let Err(e) = telemetry_sender.try_send(TelemetryMessage::AddWarning(warning)) {
+                                error!("Failed to send warning to telemetry: {}", e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         if !row.is_empty() {
             self.write(&row).await?;
         }
-        Ok((self.bytes_written, row.contains_warnings()))
+        Ok((self.bytes_written, has_warnings))
     }
 
     async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
@@ -128,7 +164,7 @@ async fn perform_analysis(
         (analysis_file, qmdl_file, entry_index)
     };
 
-    let mut analysis_writer = AnalysisWriter::new(analysis_file, enable_dummy_analyzer)
+    let mut analysis_writer = AnalysisWriter::new(analysis_file, enable_dummy_analyzer, None)
         .await
         .map_err(|e| format!("{:?}", e))?;
     let file_size = qmdl_file

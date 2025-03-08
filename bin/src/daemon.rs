@@ -8,6 +8,7 @@ mod qmdl_store;
 mod diag;
 mod framebuffer;
 mod dummy_analyzer;
+mod telemetry;
 
 use crate::config::{parse_config, parse_args};
 use crate::diag::run_diag_read_thread;
@@ -17,6 +18,7 @@ use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
 use crate::framebuffer::Framebuffer;
+use crate::telemetry::TelemetryManager;
 
 use analysis::{get_analysis_status, run_analysis_thread, start_analysis, AnalysisCtrlMessage, AnalysisStatus};
 use axum::response::Redirect;
@@ -50,8 +52,11 @@ async fn run_server(
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
     analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
+    telemetry_tx: Sender<telemetry::TelemetryMessage>,
+    telemetry_device_id: String,
 ) -> JoinHandle<()> {
     info!("spinning up server");
+
     let state = Arc::new(ServerState {
         qmdl_store_lock,
         diag_device_ctrl_sender: diag_device_sender,
@@ -60,6 +65,11 @@ async fn run_server(
         analysis_status_lock,
         analysis_sender,
         colorblind_mode: config.colorblind_mode,
+        config: config.clone(),
+        config_path: config_path.clone(),
+        telemetry_sender: telemetry_tx.clone(),
+        telemetry_device_id,
+        telemetry_enabled: config.telemetry_enabled,
     });
 
     let app = Router::new()
@@ -72,6 +82,8 @@ async fn run_server(
         .route("/api/analysis-report/*name", get(get_analysis_report))
         .route("/api/analysis", get(get_analysis_status))
         .route("/api/analysis/*name", post(start_analysis))
+        .route("/api/telemetry", get(telemetry::get_telemetry_status))
+        .route("/api/telemetry", post(telemetry::update_telemetry_settings))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/*path", get(serve_static))
         .with_state(state);
@@ -110,6 +122,7 @@ fn run_ctrl_c_thread(
     maybe_ui_shutdown_tx: Option<oneshot::Sender<()>>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_tx: Sender<AnalysisCtrlMessage>,
+    telemetry_tx: Sender<telemetry::TelemetryMessage>,
 ) -> JoinHandle<Result<(), RayhunterError>> {
     task_tracker.spawn(async move {
         match tokio::signal::ctrl_c().await {
@@ -120,6 +133,10 @@ fn run_ctrl_c_thread(
                     qmdl_store.close_current_entry().await?;
                     info!("Done!");
                 }
+
+                // Send exit signal to telemetry
+                telemetry_tx.send(telemetry::TelemetryMessage::Exit).await
+                .expect("couldn't send Exit message to telemetry thread");
 
                 server_shutdown_tx.send(())
                     .expect("couldn't send server shutdown signal");
@@ -210,11 +227,17 @@ async fn main() -> Result<(), RayhunterError> {
 
     let args = parse_args();
     let config = parse_config(&args.config_path)?;
+    let config_path = args.config_path.clone(); // for telemetry
 
     // TaskTrackers give us an interface to spawn tokio threads, and then
     // eventually await all of them ending
     let task_tracker = TaskTracker::new();
     println!("R A Y H U N T E R 🐳");
+
+    // Telemetry setup
+    let (telemetry_tx, telemetry_rx) = mpsc::channel::<telemetry::TelemetryMessage>(100);
+    let telemetry_manager = telemetry::TelemetryManager::new(config.clone());
+    let telemetry_device_id = telemetry_manager.get_device_id().clone();
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
@@ -230,16 +253,23 @@ async fn main() -> Result<(), RayhunterError> {
             .map_err(RayhunterError::DiagInitError)?;
 
         info!("Starting Diag Thread");
-        run_diag_read_thread(&task_tracker, dev, rx, ui_update_tx.clone(), qmdl_store_lock.clone(), config.enable_dummy_analyzer);
+        run_diag_read_thread(&task_tracker, dev, rx, ui_update_tx.clone(), 
+            qmdl_store_lock.clone(), config.enable_dummy_analyzer, Some(telemetry_tx.clone()));
         info!("Starting UI");
         update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
     }
+
+    // Start telemetry thread if enabled
+    if config.telemetry_enabled {
+        telemetry_manager.run_telemetry_thread(&task_tracker, qmdl_store_lock.clone(), telemetry_rx);
+    }
+
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     info!("create shutdown thread");
     let analysis_status_lock = Arc::new(RwLock::new(AnalysisStatus::default()));
     run_analysis_thread(&task_tracker, analysis_rx, qmdl_store_lock.clone(), analysis_status_lock.clone(), config.enable_dummy_analyzer);
-    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, maybe_ui_shutdown_tx, qmdl_store_lock.clone(), analysis_tx.clone());
-    run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx, analysis_tx, analysis_status_lock).await;
+    run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, maybe_ui_shutdown_tx, qmdl_store_lock.clone(), analysis_tx.clone(), telemetry_tx.clone());
+    run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx, analysis_tx, analysis_status_lock, telemetry_tx, telemetry_device_id).await;
 
     task_tracker.close();
     task_tracker.wait().await;

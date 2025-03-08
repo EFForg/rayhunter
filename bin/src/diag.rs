@@ -17,6 +17,7 @@ use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 use futures::{StreamExt, TryStreamExt};
 
+use crate::telemetry;
 use crate::framebuffer;
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
@@ -35,12 +36,13 @@ pub fn run_diag_read_thread(
     ui_update_sender: Sender<framebuffer::DisplayState>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     enable_dummy_analyzer: bool,
+    telemetry_sender: Option<mpsc::Sender<telemetry::TelemetryMessage>>,
 ) {
     task_tracker.spawn(async move {
         let (initial_qmdl_file, initial_analysis_file) = qmdl_store_lock.write().await.new_entry().await.expect("failed creating QMDL file entry");
         let mut maybe_qmdl_writer: Option<QmdlWriter<File>> = Some(QmdlWriter::new(initial_qmdl_file));
         let mut diag_stream = pin!(dev.as_stream().into_stream());
-        let mut maybe_analysis_writer = Some(AnalysisWriter::new(initial_analysis_file, enable_dummy_analyzer).await
+        let mut maybe_analysis_writer = Some(AnalysisWriter::new(initial_analysis_file, enable_dummy_analyzer, telemetry_sender.clone()).await
             .expect("failed to create analysis writer"));
         loop {
             tokio::select! {
@@ -51,7 +53,7 @@ pub fn run_diag_read_thread(
                             if let Some(analysis_writer) = maybe_analysis_writer {
                                 analysis_writer.close().await.expect("failed to close analysis writer");
                             }
-                            maybe_analysis_writer = Some(AnalysisWriter::new(new_analysis_file, enable_dummy_analyzer).await
+                            maybe_analysis_writer = Some(AnalysisWriter::new(new_analysis_file, enable_dummy_analyzer, telemetry_sender.clone()).await
                                 .expect("failed to write to analysis file"));
                         },
                         Some(DiagDeviceCtrlMessage::StopRecording) => {

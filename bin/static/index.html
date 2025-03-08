@@ -11,6 +11,12 @@
         window.onload = function() {
             repeatedlyPopulate();
         }
+        window.onload = function() {
+            repeatedlyPopulate();
+            // Initialize telemetry UI in the settings section
+            const settingsSection = document.getElementById('settings-section');
+            window.telemetry.createTelemetryUI(settingsSection);
+        }
     </script>
 </head>
 <body>
@@ -38,6 +44,11 @@
     <div>
         <h3>Analysis Report of Current Capture</h3>
         <pre id="analysis-report">Loading...</pre>
+    </div>
+    <div>
+        <h3>Settings</h3>
+        <div id="settings-section"></div>
+        <!-- Telemetry UI will be injected here -->
     </div>
 </body>
 </html>
