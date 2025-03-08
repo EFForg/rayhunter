@@ -8,7 +8,7 @@ mod qmdl_store;
 mod diag;
 mod framebuffer;
 mod dummy_analyzer;
-mod telemetry;
+pub mod telemetry;
 
 use crate::config::{parse_config, parse_args};
 use crate::diag::run_diag_read_thread;
@@ -18,7 +18,6 @@ use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
 use crate::framebuffer::Framebuffer;
-use crate::telemetry::TelemetryManager;
 
 use analysis::{get_analysis_status, run_analysis_thread, start_analysis, AnalysisCtrlMessage, AnalysisStatus};
 use axum::response::Redirect;
@@ -46,6 +45,7 @@ use include_dir::{include_dir, Dir};
 async fn run_server(
     task_tracker: &TaskTracker,
     config: &config::Config,
+    config_path: String,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     server_shutdown_rx: oneshot::Receiver<()>,
     ui_update_tx: Sender<framebuffer::DisplayState>,
@@ -269,7 +269,7 @@ async fn main() -> Result<(), RayhunterError> {
     let analysis_status_lock = Arc::new(RwLock::new(AnalysisStatus::default()));
     run_analysis_thread(&task_tracker, analysis_rx, qmdl_store_lock.clone(), analysis_status_lock.clone(), config.enable_dummy_analyzer);
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, maybe_ui_shutdown_tx, qmdl_store_lock.clone(), analysis_tx.clone(), telemetry_tx.clone());
-    run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx, analysis_tx, analysis_status_lock, telemetry_tx, telemetry_device_id).await;
+    run_server(&task_tracker, &config, config_path, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx, analysis_tx, analysis_status_lock, telemetry_tx, telemetry_device_id).await;
 
     task_tracker.close();
     task_tracker.wait().await;

@@ -9,7 +9,7 @@ use axum::response::{IntoResponse, Response};
 use rayhunter::diag::DataType;
 use rayhunter::diag_device::DiagDevice;
 use tokio::sync::RwLock;
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::mpsc::{self, Receiver, Sender};
 use rayhunter::qmdl::QmdlWriter;
 use log::{debug, error, info};
 use tokio::fs::File;

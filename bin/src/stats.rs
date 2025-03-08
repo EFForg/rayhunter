@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
+use crate::server::ServerState; 
 use crate::qmdl_store::ManifestEntry;
-use crate::server::ServerState;
 
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use log::error;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SystemStats {
     pub disk_stats: DiskStats,
     pub memory_stats: MemoryStats,
@@ -25,7 +25,7 @@ impl SystemStats {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize )]
 pub struct DiskStats {
     partition: String,
     total_size: String,
@@ -55,7 +55,7 @@ impl DiskStats {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MemoryStats {
     total: String,
     used: String,

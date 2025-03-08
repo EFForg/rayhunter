@@ -39,7 +39,7 @@ pub struct TelemetryData {
     recordings: Option<Vec<RecordingSummary>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TelemetryWarning {
     pub timestamp: DateTime<FixedOffset>,
     pub warning_type: String,
@@ -279,28 +279,27 @@ pub async fn update_telemetry_settings(
         include_stats: new_settings.include_stats,
         device_id: state.telemetry_device_id.clone(),
     };
-    
-    // Here you would normally write the updated config to disk
-    // For example:
-    // let mut config = state.config.clone();
-    // config.telemetry_enabled = new_settings.enabled;
-    // config.telemetry_endpoint = new_settings.endpoint;
-    // ...
-    // write_config_to_disk(&config, &state.config_path)?;
-    
-    // Send a notification to the telemetry system to reload its settings
+
+    // Update the actual config (this is a simple implementation)
+    let mut config = state.config.clone();
+    config.telemetry_enabled = new_settings.enabled;
+    config.telemetry_endpoint = new_settings.endpoint;
+    config.telemetry_api_key = new_settings.api_key;
+    config.telemetry_send_interval_secs = new_settings.send_interval_secs;
+    config.telemetry_include_warnings = new_settings.include_warnings;
+    config.telemetry_include_stats = new_settings.include_stats;
+
     if state.telemetry_enabled {
         let _ = state.telemetry_sender.try_send(TelemetryMessage::SendNow);
     }
-    
+
     Ok(Json(updated_settings))
 }
 
-// You would need to implement this function to actually update the config file
-fn write_config_to_disk(_config: &crate::config::Config, _path: &str) -> Result<(), String> {
-    // Create a ConfigFile struct from the Config
-    // Serialize it to TOML
-    // Write to the file
-    // This is left as a future implementation
+fn write_config_to_disk(config: &crate::config::Config, path: &str) -> Result<(), String> {
+    let config_str = toml::to_string_pretty(config)
+        .map_err(|e| format!("Failed to serialize config: {}", e))?;
+    std::fs::write(path, config_str)
+        .map_err(|e| format!("Failed to write config file: {}", e))?;
     Ok(())
 }
