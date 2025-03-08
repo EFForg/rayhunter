@@ -19,6 +19,4 @@ pub enum RayhunterError{
     TelemetryHttpError(#[from] reqwest::Error),
     #[error("Telemetry serialization error: {0}")]
     TelemetrySerializationError(#[from] serde_json::Error),
-    #[error("Telemetry initialization error: {0}")]
-    TelemetryInitError(String),
 }
