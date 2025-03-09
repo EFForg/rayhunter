@@ -321,8 +321,31 @@ impl DashboardView {
             }
         );
 
+        // First, define the SVG separately with proper type annotation
+        let logo: Element<Message> = svg::Svg::new(svg::Handle::from_path("assets/rayhunter.svg"))
+        .width(Length::Fixed(64.0))
+        .height(Length::Fixed(64.0))
+        .into();
+
+        // Then use the properly typed logo in your row
+        let header_section = row![
+            logo,
+            // Title and subtitle
+            column![
+                text("Rayhunter").size(32).style(self.theme.accent_color()),
+                text("IMSI Catcher Catcher").size(16).style(self.theme.text_color()),
+            ].spacing(5),
+            horizontal_space(Length::Fill),
+            // Status indicator in the header
+            self.status_indicator(),
+        ]
+        .spacing(20)
+        .padding(10)
+        .align_items(iced::Alignment::Center);
+        
         // Main layout
         let content = column![
+            header_section,
             control_row,
             row![system_stats_section, current_recording].spacing(20),
             row![analysis_status, recent_recordings].spacing(20),
