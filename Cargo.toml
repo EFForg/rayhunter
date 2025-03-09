@@ -6,5 +6,6 @@ members = [
     "serial",
     "rootshell",
     "telcom-parser",
+    "iced-ui",
 ]
 resolver = "2"
