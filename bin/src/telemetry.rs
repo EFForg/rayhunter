@@ -203,7 +203,7 @@ impl TelemetryManager {
         &self.device_id
     }
     
-        /// Starts the telemetry background thread
+    /// Starts the telemetry background thread
     ///
     /// This method initializes the telemetry system and begins collecting
     /// and sending data according to the configured settings. If telemetry
