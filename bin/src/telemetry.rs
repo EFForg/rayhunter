@@ -217,15 +217,13 @@ fn summarize_recordings(entries: &[ManifestEntry]) -> Vec<RecordingSummary> {
             name: entry.name.clone(),
             start_time: entry.start_time,
             duration_secs: duration,
-            warning_count: 0, // We would ideally parse the analysis file to count warnings
+            warning_count: 0, // TODO: parse the analysis file to count warnings
             size_bytes: entry.qmdl_size_bytes,
         }
     }).collect()
 }
 
 fn generate_device_id() -> String {
-    // Basic implementation - in a real system you might use more device-specific identifiers
-    // but hashed for privacy
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
     
@@ -276,7 +274,6 @@ pub async fn update_telemetry_settings(
         device_id: state.telemetry_device_id.clone(),
     };
 
-    // Update the actual config (this is a simple implementation)
     let mut config = state.config.clone();
     config.telemetry_enabled = new_settings.enabled;
     config.telemetry_endpoint = new_settings.endpoint;
