@@ -43,3 +43,57 @@ table {
   font-family: sans-serif;
   font-size: 0.8rem;
 }
+
+/* Telemetry section styling */
+.telemetry-section {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.telemetry-status {
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.telemetry-controls .setting {
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+}
+
+.telemetry-controls label {
+  width: 200px;
+  display: inline-block;
+}
+
+.telemetry-controls input[type="text"],
+.telemetry-controls input[type="password"],
+.telemetry-controls input[type="number"] {
+  width: 300px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.device-id-info {
+  margin: 15px 0;
+  font-size: 0.9em;
+  color: #666;
+}
+
+#save-telemetry-settings {
+  margin-top: 15px;
+  padding: 8px 16px;
+  background-color: #4682B4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#save-telemetry-settings:hover {
+  background-color: #3A6D99;
+}
