@@ -79,3 +79,54 @@ Now you can root your device and install rayhunter by running `./tools/install-d
 **LEGAL DISCLAIMER:** Use this program at your own risk. We beilieve running this program does not currently violate any laws or regulations in the United States. However, we are not responsible for civil or criminal liability resulting from the use of this software. If you are located outside of the US please consult with an attorney in your country to help you assess the legal risks of running this program.
 
 *Good Hunting!*
+
+## Telemetry
+
+Rayhunter includes an optional telemetry system that can send anonymized usage data to help improve the software. This feature is **disabled by default** and requires explicit configuration to enable.
+
+### What Data is Collected
+
+When enabled, telemetry may include:
+
+1. **Device Information**:
+   - Anonymous device ID (a hash of system properties)
+   - Rayhunter version
+
+2. **System Statistics** (if configured):
+   - Disk usage
+   - Memory usage
+
+3. **Recording Information**:
+   - Number of recordings
+   - Recording duration and size
+   - Number of warnings detected
+
+4. **Warning Events** (if configured):
+   - Type and severity of warnings
+   - Timestamps of warning events
+
+No personally identifiable information or mobile network data is collected.
+
+### Configuring Telemetry
+
+Telemetry settings can be configured in two ways:
+
+1. **Configuration File**:
+   Edit the `/data/rayhunter/config.toml` file and set the following options:
+   
+   ```toml
+   # Enable/disable telemetry
+   telemetry_enabled = false
+   
+   # Endpoint URL where data is sent
+   telemetry_endpoint = "https://telemetry.example.com/api/v1/rayhunter"
+   
+   # Authentication key
+   telemetry_api_key = ""
+   
+   # Interval between data transmissions (seconds)
+   telemetry_send_interval_secs = 3600
+   
+   # What data to include
+   telemetry_include_warnings = true
+   telemetry_include_stats = true

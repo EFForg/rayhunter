@@ -236,7 +236,13 @@ async fn main() -> Result<(), RayhunterError> {
 
     // Telemetry setup
     let (telemetry_tx, telemetry_rx) = mpsc::channel::<telemetry::TelemetryMessage>(100);
-    let telemetry_manager = telemetry::TelemetryManager::new(config.clone());
+    let telemetry_manager = match telemetry::TelemetryManager::new(config.clone()) {
+        Ok(manager) => manager,
+        Err(e) => {
+            error!("Failed to initialize telemetry: {}", e);
+            return Err(e);
+        }
+    };
     let telemetry_device_id = telemetry_manager.get_device_id().clone();
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
