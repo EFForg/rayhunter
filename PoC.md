@@ -15,7 +15,7 @@ open 2 terminals
 adb shell in one terminal (prefix *adb*)
 terminal with path of extracted tar in another one (prefix *terminal*)
 
-*adb*: mkdir -p /data/rayhuntter
+*adb*: mkdir -p /data/rayhunter
 
 *terminal*: adb push config.toml.example /tmp/config.toml
 
