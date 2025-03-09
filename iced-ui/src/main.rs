@@ -23,7 +23,6 @@ pub fn main() -> Result<()> {
     // Load assets
     let icon_bytes = include_bytes!("../assets/rayhunter-icon.png");
     let icon = iced::window::icon::from_rgba(
-        // You'll need to update these dimensions based on your actual icon
         Vec::from(&icon_bytes[..]),
         32,
         32,
@@ -167,7 +166,6 @@ impl Application for RayhunterUI {
             
             Message::Splash(msg) => {
                 if let views::splash::Message::SplashComplete = msg {
-                    println!("Splash complete message received, transitioning to Dashboard");
                     self.current_page = Page::Dashboard;
                     Command::none()
                 } else {

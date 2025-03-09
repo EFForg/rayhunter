@@ -98,7 +98,7 @@ impl DashboardView {
         
         // Check for warnings in the current recording
         self.has_warnings = false; // Reset flag
-        // In a real implementation, you would check analysis results for warnings
+        // TODO: Implement warning detection
     }
 
     pub fn update_analysis_status(&mut self, status: &AnalysisStatus) {
@@ -162,7 +162,7 @@ impl DashboardView {
         .spacing(10)
         .padding(10);
 
-        // System Stats Section - simplified without logo
+        // System Stats Section
         let system_stats_section = self.create_card(
             "System Status",
             if let Some(stats) = &self.system_stats {
@@ -226,8 +226,6 @@ impl DashboardView {
             }
         );
 
-        // Rest of the sections with similar improvements...
-
         // Header without the SVG logo
         let header_section = row![
             column![
@@ -246,7 +244,6 @@ impl DashboardView {
             header_section,
             control_row,
             row![system_stats_section, current_recording].spacing(20),
-            // Rest of your UI layout...
         ]
         .spacing(20)
         .padding(20);
