@@ -1,8 +1,8 @@
 // src/views/settings.rs
-use crate::theme::{AppTheme, RayhunterTheme, Container, Button};
+use crate::theme::{AppTheme, RayhunterTheme};
 use iced::{
-    widget::{button, checkbox, column, container, row, text, text_input, Column, Container, Row, Text},
-    Command, Element, Length, Background,
+    widget::{button, checkbox, column, container, row, text, text_input, Column, Row},
+    Command, Element, Length, theme,
 };
 
 #[derive(Debug, Clone)]
@@ -178,7 +178,7 @@ impl SettingsView {
         let save_button = button(text("Save Settings").style(self.theme.text_color()))
             .on_press(Message::SaveSettings)
             .padding([8, 16])
-            .style(Button::Primary);
+            .style(theme::Button::Primary);
 
         let status_text = if self.is_saved {
             text("Settings saved!").style(self.theme.success_color())
@@ -194,10 +194,10 @@ impl SettingsView {
                 colorblind_mode_row,
                 dark_mode_row,
                 container(ui_level_section)
-                    .style(Container::Section),
+                    .style(theme::Container::Box),
                 row![save_button, status_text].spacing(20).padding(10),
             ].spacing(15))
-            .style(Container::Card)
+            .style(theme::Container::Box)
             .padding(20)
         ]
         .spacing(20)
@@ -226,7 +226,7 @@ impl SettingsView {
         .width(Length::Fill)
         .height(Length::Fill)
         .center_x()
-        .style(Container::Transparent)
+        .style(theme::Container::Box)
         .into()
     }
 }

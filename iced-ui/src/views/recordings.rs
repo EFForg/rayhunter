@@ -1,9 +1,9 @@
 // src/views/recordings.rs
 use crate::api::{AnalysisStatus, ApiClient, ManifestEntry, ManifestStats};
-use crate::theme::{RayhunterTheme, Container, Button};
+use crate::theme::{RayhunterTheme};
 use iced::{
-    widget::{button, column, container, row, scrollable, text, Column,},
-    Command, Element, Length, Color,
+    widget::{button, column, container, row, scrollable, text, Column},
+    Command, Element, Length, Color, theme,
 };
 use log;
 use std::collections::HashMap;
@@ -148,7 +148,7 @@ impl RecordingsView {
         let refresh_button = button(text("Refresh").style(self.theme.text_color()))
             .on_press(Message::RefreshList)
             .padding([5, 10])
-            .style(Button::Secondary);
+            .style(theme::Button::Secondary);
             
         // Create the list of recordings
         let mut recordings_list = Column::new().spacing(5);
@@ -165,7 +165,7 @@ impl RecordingsView {
         
         recordings_list = recordings_list.push(
             container(headers)
-                .style(Container::Section)
+                .style(theme::Container::Box)
         );
         
         // Add recording entries
@@ -185,19 +185,19 @@ impl RecordingsView {
                 })
             )
             .on_press(Message::AnalyzeRecording(entry.name.clone()))
-            .style(if is_being_analyzed { Button::Secondary } else { Button::Primary });
+            .style(if is_being_analyzed { theme::Button::Secondary } else { theme::Button::Primary });
                 
             let view_btn = button(text("View").style(self.theme.text_color()))
                 .on_press(Message::ViewAnalysisReport(entry.name.clone()))
-                .style(Button::Secondary);
+                .style(theme::Button::Secondary);
                 
             let download_pcap = button(text("PCAP").style(self.theme.text_color()))
                 .on_press(Message::DownloadPcap(entry.name.clone()))
-                .style(Button::Secondary);
+                .style(theme::Button::Secondary);
                 
             let download_qmdl = button(text("QMDL").style(self.theme.text_color()))
                 .on_press(Message::DownloadQmdl(entry.name.clone()))
-                .style(Button::Secondary);
+                .style(theme::Button::Secondary);
                 
             let buttons = row![analyze_btn, view_btn, download_pcap, download_qmdl].spacing(5);
             
@@ -224,7 +224,7 @@ impl RecordingsView {
             // Wrap in a container with styles
             let row_container = container(row_content)
                 .width(Length::Fill)
-                .style(if is_selected { Container::Card } else { Container::Section });
+                .style(if is_selected { theme::Container::Box } else { theme::Container::Box });
             
             recordings_list = recordings_list.push(row_container);
         }
@@ -233,7 +233,7 @@ impl RecordingsView {
             container(recordings_list)
                 .width(Length::Fill)
                 .padding(10)
-                .style(Container::Card)
+                .style(theme::Container::Box)
         )
         .height(Length::FillPortion(2));
         
@@ -245,7 +245,7 @@ impl RecordingsView {
                     container(text(report).size(14).style(self.theme.text_color()))
                         .width(Length::Fill)
                         .padding(10)
-                        .style(Container::Card)
+                        .style(theme::Container::Box)
                 )
                 .height(Length::FillPortion(2))
             ]
@@ -273,7 +273,7 @@ impl RecordingsView {
         )
         .width(Length::Fill)
         .height(Length::Fill)
-        .style(Container::Transparent)
+        .style(theme::Container::Box)
         .into()
     }
 }

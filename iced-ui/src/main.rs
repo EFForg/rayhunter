@@ -166,15 +166,16 @@ impl Application for RayhunterUI {
             }
             
             Message::Splash(msg) => {
-                match msg {
-                    views::splash::Message::SplashComplete => {
-                        self.current_page = Page::Dashboard;
-                        Command::none()
-                    }
-                    _ => self.splash.update(msg).map(Message::Splash),
+                if let views::splash::Message::SplashComplete = msg {
+                    println!("Splash complete message received, transitioning to Dashboard");
+                    self.current_page = Page::Dashboard;
+                    Command::none()
+                } else {
+                    // This handles the Tick message and anything else from the splash screen
+                    self.splash.update(msg).map(Message::Splash)
                 }
             }
-            
+        
             Message::Dashboard(msg) => {
                 self.dashboard.update(msg, &self.api_client).map(Message::Dashboard)
             }
