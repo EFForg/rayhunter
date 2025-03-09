@@ -1,3 +1,22 @@
+//! # Telemetry Module
+//!
+//! This module provides functionality for collecting and sending telemetry data from Rayhunter
+//! to a configured endpoint. It can be used to monitor the health of deployed Rayhunter instances,
+//! track warning events, and collect anonymized system information.
+//!
+//! ## Features
+//!
+//! - Anonymous device identification
+//! - Configurable data collection (warnings, system stats)
+//! - Periodic data transmission to a configured endpoint
+//! - API for manual telemetry triggers
+//! - Web UI configuration interface
+//!
+//! ## Privacy
+//!
+//! Telemetry is disabled by default and requires explicit configuration to enable.
+//! The device ID is generated as a hash of system properties to avoid direct identification.
+
 use std::sync::Arc;
 use std::time::Duration;
 use log::{info, error, warn, debug};
