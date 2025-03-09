@@ -1,8 +1,9 @@
+// src/views/recordings.rs
 use crate::api::{AnalysisStatus, ApiClient, ManifestEntry, ManifestStats};
-use crate::style;
+use crate::theme::{RayhunterTheme, Container, Button};
 use iced::{
-    widget::{button, column, container, row, scrollable, text, Button, Column, Container, Row, Scrollable, Text},
-    Command, Element, Length, Theme, Color,
+    widget::{button, column, container, row, scrollable, text, Column,},
+    Command, Element, Length, Color,
 };
 use log;
 use std::collections::HashMap;
@@ -47,6 +48,7 @@ pub enum Message {
 }
 
 pub struct RecordingsView {
+    theme: RayhunterTheme,
     recordings: Vec<ManifestEntry>,
     current_recording: Option<ManifestEntry>,
     selected_recording: Option<String>,
@@ -56,8 +58,9 @@ pub struct RecordingsView {
 }
 
 impl RecordingsView {
-    pub fn new(api_client: &ApiClient) -> (Self, Command<Message>) {
+    pub fn new(api_client: &ApiClient, theme: &RayhunterTheme) -> (Self, Command<Message>) {
         let recordings_view = Self {
+            theme: theme.clone(),
             recordings: Vec::new(),
             current_recording: None,
             selected_recording: None,
@@ -140,26 +143,30 @@ impl RecordingsView {
     pub fn view(&self) -> Element<Message> {
         let title = text("Recordings")
             .size(32)
-            .style(iced::Color::from_rgb(0.5, 0.5, 0.9));
+            .style(self.theme.accent_color());
             
-        let refresh_button = button(text("Refresh"))
+        let refresh_button = button(text("Refresh").style(self.theme.text_color()))
             .on_press(Message::RefreshList)
-            .padding([5, 10]);
+            .padding([5, 10])
+            .style(Button::Secondary);
             
         // Create the list of recordings
         let mut recordings_list = Column::new().spacing(5);
         
         // Add column headers
         let headers = row![
-            text("Name").width(Length::FillPortion(2)),
-            text("Date").width(Length::FillPortion(3)),
-            text("Size").width(Length::FillPortion(1)),
-            text("Actions").width(Length::FillPortion(3)),
+            text("Name").width(Length::FillPortion(2)).style(self.theme.text_color()),
+            text("Date").width(Length::FillPortion(3)).style(self.theme.text_color()),
+            text("Size").width(Length::FillPortion(1)).style(self.theme.text_color()),
+            text("Actions").width(Length::FillPortion(3)).style(self.theme.text_color()),
         ]
         .spacing(10)
         .padding(5);
         
-        recordings_list = recordings_list.push(container(headers).style(iced::theme::Container::Box));
+        recordings_list = recordings_list.push(
+            container(headers)
+                .style(Container::Section)
+        );
         
         // Add recording entries
         for entry in &self.recordings {
@@ -170,44 +177,54 @@ impl RecordingsView {
             let time_str = entry.start_time.format("%Y-%m-%d %H:%M:%S").to_string();
             let size_str = bytesize::to_string(entry.qmdl_size_bytes as u64, true);
             
-            let analyze_btn = button(text("Analyze"))
-                .style(if is_being_analyzed {
-                    iced::theme::Button::Secondary
+            let analyze_btn = button(
+                text("Analyze").style(if is_being_analyzed {
+                    self.theme.text_color()
                 } else {
-                    iced::theme::Button::Primary
+                    Color::WHITE
                 })
-                .on_press(Message::AnalyzeRecording(entry.name.clone()));
+            )
+            .on_press(Message::AnalyzeRecording(entry.name.clone()))
+            .style(if is_being_analyzed { Button::Secondary } else { Button::Primary });
                 
-            let view_btn = button(text("View"))
-                .on_press(Message::ViewAnalysisReport(entry.name.clone()));
+            let view_btn = button(text("View").style(self.theme.text_color()))
+                .on_press(Message::ViewAnalysisReport(entry.name.clone()))
+                .style(Button::Secondary);
                 
-            let download_pcap = button(text("PCAP"))
-                .on_press(Message::DownloadPcap(entry.name.clone()));
+            let download_pcap = button(text("PCAP").style(self.theme.text_color()))
+                .on_press(Message::DownloadPcap(entry.name.clone()))
+                .style(Button::Secondary);
                 
-            let download_qmdl = button(text("QMDL"))
-                .on_press(Message::DownloadQmdl(entry.name.clone()));
+            let download_qmdl = button(text("QMDL").style(self.theme.text_color()))
+                .on_press(Message::DownloadQmdl(entry.name.clone()))
+                .style(Button::Secondary);
                 
             let buttons = row![analyze_btn, view_btn, download_pcap, download_qmdl].spacing(5);
             
             // For selected recordings:
-            // 1. Name text changes color (via style::get_text_style)
+            // 1. Name text changes color (via theme)
             // 2. Left padding is increased to create an indentation effect
-            // This provides a visual indication without relying on custom theme variants
-            let name_text = text(&entry.name).style(style::get_text_style(is_selected));
+            let name_text = text(&entry.name).style(
+                if is_selected {
+                    self.theme.selected_text_color()
+                } else {
+                    self.theme.text_color()
+                }
+            );
             
             let row_content = row![
                 name_text.width(Length::FillPortion(2)),
-                text(time_str).width(Length::FillPortion(3)),
-                text(size_str).width(Length::FillPortion(1)),
+                text(time_str).width(Length::FillPortion(3)).style(self.theme.text_color()),
+                text(size_str).width(Length::FillPortion(1)).style(self.theme.text_color()),
                 buttons.width(Length::FillPortion(3)),
             ]
             .spacing(10)
             .padding(5);
             
-            // Wrap in a container
+            // Wrap in a container with styles
             let row_container = container(row_content)
                 .width(Length::Fill)
-                .style(iced::theme::Container::Box);
+                .style(if is_selected { Container::Card } else { Container::Section });
             
             recordings_list = recordings_list.push(row_container);
         }
@@ -216,30 +233,32 @@ impl RecordingsView {
             container(recordings_list)
                 .width(Length::Fill)
                 .padding(10)
+                .style(Container::Card)
         )
         .height(Length::FillPortion(2));
         
         // Analysis report section
         let analysis_section = if let Some(report) = &self.analysis_report {
             column![
-                text("Analysis Report").size(20),
+                text("Analysis Report").size(20).style(self.theme.accent_color()),
                 scrollable(
-                    container(text(report).size(14))
+                    container(text(report).size(14).style(self.theme.text_color()))
                         .width(Length::Fill)
                         .padding(10)
-                        .style(iced::theme::Container::Box)
+                        .style(Container::Card)
                 )
                 .height(Length::FillPortion(2))
             ]
         } else if let Some(selected) = &self.selected_recording {
             column![
-                text("Analysis Report").size(20),
+                text("Analysis Report").size(20).style(self.theme.accent_color()),
                 text(format!("Select 'View' on recording '{}' to see its analysis", selected))
+                    .style(self.theme.text_color())
             ]
         } else {
             column![
-                text("Analysis Report").size(20),
-                text("Select a recording to view its analysis")
+                text("Analysis Report").size(20).style(self.theme.accent_color()),
+                text("Select a recording to view its analysis").style(self.theme.text_color())
             ]
         };
         
@@ -254,7 +273,7 @@ impl RecordingsView {
         )
         .width(Length::Fill)
         .height(Length::Fill)
-        .center_x()
+        .style(Container::Transparent)
         .into()
     }
 }

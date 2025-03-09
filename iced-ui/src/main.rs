@@ -1,23 +1,33 @@
 mod api;
 mod config;
-mod style;
+mod theme;
 mod views;
 mod widgets;
 
 use anyhow::Result;
 use iced::{
     Application, Command, Element, Settings, Subscription, Theme, 
-    window, executor,
+    window, executor, Color, Renderer,
 };
 use log::{error, info};
 
 use crate::config::Config;
-use crate::views::{dashboard::DashboardView, recordings::RecordingsView, settings::SettingsView};
+use crate::theme::{AppTheme, RayhunterTheme};
+use crate::views::{dashboard::DashboardView, recordings::RecordingsView, settings::SettingsView, splash::SplashView};
 
 pub fn main() -> Result<()> {
     // Initialize logging
     env_logger::init();
     info!("Starting Rayhunter UI");
+
+    // Load assets
+    let icon_bytes = include_bytes!("../assets/rayhunter-icon.png");
+    let icon = iced::window::icon::from_rgba(
+        // You'll need to update these dimensions based on your actual icon
+        Vec::from(&icon_bytes[..]),
+        32,
+        32,
+    ).ok();
 
     // Start the Iced application
     RayhunterUI::run(Settings {
@@ -25,6 +35,7 @@ pub fn main() -> Result<()> {
             size: (1024, 768),
             resizable: true,
             decorations: true,
+            icon,
             ..Default::default()
         },
         ..Default::default()
@@ -35,6 +46,7 @@ pub fn main() -> Result<()> {
 
 #[derive(Debug, Clone)]
 pub enum Page {
+    Splash,
     Dashboard,
     Recordings,
     Settings,
@@ -44,6 +56,10 @@ pub enum Page {
 pub enum Message {
     NavigateTo(Page),
     ApiError(String),
+    ThemeChanged(AppTheme),
+    
+    // Splash screen messages
+    Splash(views::splash::Message),
     
     // Dashboard messages
     Dashboard(views::dashboard::Message),
@@ -65,24 +81,33 @@ pub enum Message {
 pub struct RayhunterUI {
     api_client: api::ApiClient,
     current_page: Page,
+    splash: views::splash::SplashView,
     dashboard: views::dashboard::DashboardView,
     recordings: views::recordings::RecordingsView,
     settings: views::settings::SettingsView,
     config: Config,
+    theme: RayhunterTheme,
 }
 
 impl Application for RayhunterUI {
     type Executor = executor::Default;
     type Message = Message;
     type Theme = Theme;
-    type Flags = Config;
+    type Flags = ();
 
-    fn new(flags: Config) -> (Self, Command<Message>) {
-        let api_client = api::ApiClient::new(&flags.server_address);
+    fn new(_flags: ()) -> (Self, Command<Message>) {
+        // Load config
+        let config = Config::load().unwrap_or_default();
         
-        let (dashboard, dashboard_cmd) = DashboardView::new(&api_client);
-        let (recordings, recordings_cmd) = RecordingsView::new(&api_client);
-        let (settings, settings_cmd) = SettingsView::new();
+        // Initialize theme
+        let theme = RayhunterTheme::new(AppTheme::Dark);
+        
+        let api_client = api::ApiClient::new(&config.server_address);
+        
+        let splash = SplashView::new(theme.clone());
+        let (dashboard, dashboard_cmd) = DashboardView::new(&api_client, &theme);
+        let (recordings, recordings_cmd) = RecordingsView::new(&api_client, &theme);
+        let (settings, settings_cmd) = SettingsView::new(&theme);
         
         // Combine commands
         let cmd = Command::batch(vec![
@@ -94,11 +119,13 @@ impl Application for RayhunterUI {
         (
             Self {
                 api_client,
-                current_page: Page::Dashboard,
+                current_page: Page::Splash,
+                splash,
                 dashboard,
                 recordings,
                 settings,
-                config: flags,
+                config,
+                theme,
             },
             cmd,
         )
@@ -106,11 +133,16 @@ impl Application for RayhunterUI {
 
     fn title(&self) -> String {
         match self.current_page {
+            Page::Splash => "Rayhunter",
             Page::Dashboard => "Rayhunter - Dashboard",
             Page::Recordings => "Rayhunter - Recordings",
             Page::Settings => "Rayhunter - Settings",
         }
         .to_string()
+    }
+
+    fn theme(&self) -> Theme {
+        self.theme.as_theme()
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
@@ -123,6 +155,24 @@ impl Application for RayhunterUI {
             Message::ApiError(error) => {
                 error!("API error: {}", error);
                 Command::none()
+            }
+            
+            Message::ThemeChanged(theme_type) => {
+                self.theme = RayhunterTheme::new(theme_type);
+                // Update config with new theme
+                self.config.dark_mode = matches!(theme_type, AppTheme::Dark);
+                let _ = self.config.save();
+                Command::none()
+            }
+            
+            Message::Splash(msg) => {
+                match msg {
+                    views::splash::Message::SplashComplete => {
+                        self.current_page = Page::Dashboard;
+                        Command::none()
+                    }
+                    _ => self.splash.update(msg).map(Message::Splash),
+                }
             }
             
             Message::Dashboard(msg) => {
@@ -214,6 +264,7 @@ impl Application for RayhunterUI {
 
     fn view(&self) -> Element<Message> {
         match self.current_page {
+            Page::Splash => self.splash.view().map(Message::Splash),
             Page::Dashboard => self.dashboard.view().map(Message::Dashboard),
             Page::Recordings => self.recordings.view().map(Message::Recordings),
             Page::Settings => self.settings.view().map(Message::Settings),
@@ -221,9 +272,9 @@ impl Application for RayhunterUI {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        // For periodic data refresh or other background tasks
-        // iced::time::every(std::time::Duration::from_secs(1))
-        //     .map(|_| Message::Tick)
-        Subscription::none()
+        match self.current_page {
+            Page::Splash => self.splash.subscription().map(Message::Splash),
+            _ => Subscription::none(),
+        }
     }
 }

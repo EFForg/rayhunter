@@ -1,3 +1,4 @@
+// src/config.rs
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -10,6 +11,7 @@ pub struct Config {
     pub debug_mode: bool,
     pub colorblind_mode: bool,
     pub ui_level: u8,
+    pub dark_mode: bool,
 }
 
 impl Default for Config {
@@ -19,6 +21,7 @@ impl Default for Config {
             debug_mode: false,
             colorblind_mode: false,
             ui_level: 1,
+            dark_mode: true, // Default to dark mode
         }
     }
 }
