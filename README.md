@@ -67,7 +67,7 @@ rustup target add armv7-unknown-linux-gnueabihf
 Now you can root your device and install Rayhunter by running `./tools/install-dev.sh`
 
 ### If you're on windows or can't run the install scripts
-* Root your device on windows using the instructions here: https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183
+* Root your device on windows using the instructions here: https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/page-3#post-89993011
 
 * Build for arm using `cargo build`
 
