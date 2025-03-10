@@ -39,8 +39,3 @@ terminal with path of extracted tar in another one (prefix *terminal*)
 rayhunter-daemon error message appears
 
 *adb*: /dev/shm/rayhunter-daemon /data/rayhunter/config.toml
-
-
-note for later, maybe:
-
-![4pda_AT_Commands](image.png)
