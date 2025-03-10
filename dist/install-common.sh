@@ -8,9 +8,17 @@ install() {
         echo "\$ADB not set, did you run this from install-linux.sh or install-mac.sh?"
         exit 1
     fi
-    force_debug_mode
-    setup_rootshell
-    setup_rayhunter
+
+
+	read -p "Execute Orbit specific root exploit? (May brick other devices) [y/N] " -n 1 -r
+	echo    # (optional) move to a new line
+	if [[ $REPLY =~ ^[Yy]$ ]]
+	then
+		force_debug_mode
+		setup_rootshell
+	fi
+    
+	setup_rayhunter
     test_rayhunter
 }
 
