@@ -171,6 +171,4 @@ Use this program at your own risk. We believe running this program does not curr
 
 The reason for that is, that this software uses Qualcomm DIAG kernel driver (`DIAG_CHAR`) to analyze **your own network traffic** that is processed by baseband chip on your device. So, there is **no interception of traffic** of other mobile subscribers and **no unauthorized firmware modifications** to the baseband chip which would normally require a new certification. Rayhunter just enables you to see and analyse all network traffic from the mobile network which is usually hidden from you.
 
-However, we are not responsible for civil or criminal liability resulting from the use of this software. Please consult with an attorney in your country to help you assess the legal risks of running this program.
-
 *Good Hunting!*
