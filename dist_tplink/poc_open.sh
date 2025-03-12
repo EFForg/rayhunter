@@ -23,19 +23,7 @@ expect <<EOF
 spawn nc 192.168.0.1 23
 
 expect "/ #"
-send "usb_composition\r"
-
-expect "Pid number :" 
-send "902B\r"
-
-expect "Choose core:" 
-send "n\r"
-
-expect "default composition ?" 
-send "y\r"
-
-expect "composition to change immediately" 
-send "y\r"
+send "usb_composition 902B n y y\r"
 
 expect "/ #"
 send "exit\r"
