@@ -89,6 +89,10 @@ setup_rayhunter() {
     _adb_shell "chmod 755 /etc/init.d/rayhunter_daemon"
     _adb_shell "chmod 755 /etc/init.d/misc-daemon"
 
+    _adb_shell "update-rc.d misc-daemon start 2 3 4 5 . stop 20 0 1 6 ."
+    _adb_shell "update-rc.d rayhunter_daemon start 2 3 4 5 . stop 20 0 1 6 ."
+
+
     echo -n "waiting for reboot..."
     _adb_shell "shutdown -r -t 1 now"
 
@@ -101,6 +105,8 @@ setup_rayhunter() {
     # now wait for boot to finish
     wait_for_adb_shell
 
+    sleep 20
+
     echo " done!"
 }
 
@@ -110,7 +116,7 @@ test_rayhunter() {
     echo -n "checking for rayhunter server..."
 
     SECONDS=0
-    while (( SECONDS < 30 )); do
+    while (( SECONDS < 60 )); do
         if curl -L --fail-with-body "$URL" -o /dev/null -s; then
             echo "success!"
             echo "you can access rayhunter at $URL"
