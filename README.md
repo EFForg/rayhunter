@@ -12,8 +12,8 @@ Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 
 Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. It may work on other orbics and other
 linux/qualcom devices, but this is the only one we have tested on.
-Buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y)
-Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
+Buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
+or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 ## Setup
 
@@ -94,6 +94,6 @@ If you're having issues installing or using Rayhunter, please open an issue in t
 ## Documentation
 * Build docs locally using `RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features  --open`
 
-**LEGAL DISCLAIMER:** Use this program at your own risk. We beilieve running this program does not currently violate any laws or regulations in the United States. However, we are not responsible for civil or criminal liability resulting from the use of this software. If you are located outside of the US please consult with an attorney in your country to help you assess the legal risks of running this program.
+**LEGAL DISCLAIMER:** Use this program at your own risk. We believe running this program does not currently violate any laws or regulations in the United States. However, we are not responsible for civil or criminal liability resulting from the use of this software. If you are located outside of the US please consult with an attorney in your country to help you assess the legal risks of running this program.
 
 *Good Hunting!*
