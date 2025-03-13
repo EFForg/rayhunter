@@ -5,7 +5,7 @@
 
 Rayhunter is an IMSI Catcher Catcher originally developed for the Orbic mobile hotspot (available in U. S. market) and now ported to TP-Link M7350 mobile hotspot (available in European market and worldwide).
 
-**THIS CODE IS PROOF OF CONCEPT AND SHOULD NOT BE RELIED UPON IN HIGH RISK SITUATIONS**
+**THIS CODE IS A PROOF OF CONCEPT AND SHOULD NOT BE RELIED UPON IN HIGH RISK SITUATIONS!**
 
 ## The Hardware
 
@@ -124,9 +124,9 @@ After reboot, Rayhunter should be autostarted automatically. You can visit Rayhu
 
 Once installed, Rayhunter will run automatically whenever your device is running. It serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, and view heuristic analyses of captures. You can access this UI in one of two ways:
 
-1. **Over WiFi**: Connect your phone/laptop to the TP-Link M7350 WiFi network and visit `http://192.168.0.1:8080` (click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet!)
+1. **Over WiFi**: Connect your phone/laptop to the device WiFi network and visit `http://192.168.0.1:8080` (click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet!)
 
-2. **Over USB**: Connect the Orbic device to your laptop via USB, then visit `http://192.168.0.1:8080`.
+2. **Over USB**: Connect the Orbic device to your laptop via USB, then visit `http://192.168.0.1:8080`. Maybe you need to run `adb forward tcp:8080 tcp:8080`, then visit `http://localhost:8080`. For this you will need to install the Android Debug Bridge (ADB) on your computer, you can copy the version that was downloaded inside the releases/platform-tools/` folder to somewhere else in your path or you can install it manually.  You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer), (don't worry about instructions for installing it on a phone/device yet).
 
 ## Frequently Asked Questions
 
