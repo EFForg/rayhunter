@@ -1,4 +1,4 @@
-haxxored#!/usr/bin/env bash
+#!/usr/bin/env bash
 install() {
     if [[ -z "${ADB}" ]]; then
         echo "\$ADB not set, did you run this from install-linux.sh or install-mac.sh?"
