@@ -51,7 +51,7 @@ EOF
 
     echo mount sd card
 
-    _adb_shell mount /dev/mmcblk0p1 /mnt/card
+    _adb_shell mount /dev/mmcblk0p1 /media/card
 
     echo finished prepare_tplink
 
@@ -82,7 +82,7 @@ _adb_shell() {
 setup_rayhunter() {
     _adb_shell "mkdir -p /data/rayhunter"
     _adb_push config.toml.example /data/rayhunter/config.toml
-    _adb_push rayhunter-daemon /mnt/card/rayhunter-daemon
+    _adb_push rayhunter-daemon /media/card/rayhunter-daemon
     _adb_push scripts/rayhunter_daemon /etc/init.d/rayhunter_daemon
     _adb_push scripts/misc-daemon /etc/init.d/misc-daemon
 
@@ -111,8 +111,8 @@ setup_rayhunter() {
 }
 
 test_rayhunter() {
-    URL="http://localhost:8080"
-    "$ADB" forward tcp:8080 tcp:8080 > /dev/null
+    URL="http://192.168.0.1:8080"
+    #"$ADB" forward tcp:8080 tcp:8080 > /dev/null
     echo -n "checking for rayhunter server..."
 
     SECONDS=0
