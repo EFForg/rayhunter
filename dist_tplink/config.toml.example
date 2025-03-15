@@ -1,0 +1,12 @@
+# cat config.toml
+qmdl_store_path = "/mnt/card/qmdl"
+port = 8080
+debug_mode = false
+enable_dummy_analyzer = false
+colorblind_mode = false
+# UI Levels:
+# 0 = invisible mode, no indicator that rayhunter is running
+# 1 = Subtle mode, display a green line at the top of the screen when rayhunter is running
+# 2 = Demo Mode, display a fun orca gif
+# 3 = display the EFF logo
+ui_level = 1
