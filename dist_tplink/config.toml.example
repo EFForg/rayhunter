@@ -1,5 +1,5 @@
 # cat config.toml
-qmdl_store_path = "/mnt/card/qmdl"
+qmdl_store_path = "/media/card/qmdl"
 port = 8080
 debug_mode = false
 enable_dummy_analyzer = false

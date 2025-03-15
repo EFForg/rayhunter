@@ -42,6 +42,9 @@ expect "/ #"
 send "usb_composition 902B n y y\r"
 
 expect "/ #"
+send "mount /dev/mmcblk0p1 /mnt/card\r"
+
+expect "/ #"
 send "exit\r"
 
 expect eof
@@ -49,9 +52,9 @@ EOF
 
     echo closed telnet session
 
-    echo mount sd card
+    #echo mount sd card
 
-    _adb_shell mount /dev/mmcblk0p1 /media/card
+    #_adb_shell mount /dev/mmcblk0p1 /mnt/card
 
     echo finished prepare_tplink
 
@@ -83,14 +86,22 @@ setup_rayhunter() {
     _adb_shell "mkdir -p /data/rayhunter"
     _adb_push config.toml.example /data/rayhunter/config.toml
     _adb_push rayhunter-daemon /media/card/rayhunter-daemon
-    _adb_push scripts/rayhunter_daemon /etc/init.d/rayhunter_daemon
+    _adb_shell "chmod ugo+x /media/card/rayhunter-daemon"
+    #_adb_push scripts/rayhunter_daemon /etc/init.d/rayhunter_daemon
     _adb_push scripts/misc-daemon /etc/init.d/misc-daemon
+    _adb_push lighttpd /etc/init.d/lighttpd
+    _adb_shell "chmod 755 /etc/init.d/lighttpd"
 
-    _adb_shell "chmod 755 /etc/init.d/rayhunter_daemon"
+    #_adb_shell "chmod 755 /etc/init.d/rayhunter_daemon"
     _adb_shell "chmod 755 /etc/init.d/misc-daemon"
 
-    _adb_shell "update-rc.d misc-daemon start 2 3 4 5 . stop 20 0 1 6 ."
-    _adb_shell "update-rc.d rayhunter_daemon start 2 3 4 5 . stop 20 0 1 6 ."
+    # works perfectly   "ln -sv ../init.d/dropbearserver /etc/rc0.d/K77dropbear" (shutdown) "ln -sv ../init.d/dropbearserver /etc/rcS.d/S77dropbear" (startup)
+
+    #_adb_shell "ln -sf /etc/init.d/misc-daemon /etc/rc0.d/K77misc-daemon"
+    #_adb_shell "ln -sf /etc/init.d/misc-daemon /etc/rc0.d/S77misc-daemon"
+
+    _adb_shell "update-rc.d misc-daemon defaults"
+    #_adb_shell "update-rc.d rayhunter_daemon start 2 3 4 5 . stop  0 1 6 ."
 
 
     echo -n "waiting for reboot..."
@@ -111,12 +122,11 @@ setup_rayhunter() {
 }
 
 test_rayhunter() {
-    URL="http://192.168.0.1:8080"
-    #"$ADB" forward tcp:8080 tcp:8080 > /dev/null
+    URL="http://127.0.0.1:8080"
+    "$ADB" forward tcp:8080 tcp:8080 > /dev/null
     echo -n "checking for rayhunter server..."
 
-    SECONDS=0
-    while (( SECONDS < 60 )); do
+    while (( SECONDS < 30 )); do
         if curl -L --fail-with-body "$URL" -o /dev/null -s; then
             echo "success!"
             echo "you can access rayhunter at $URL"
