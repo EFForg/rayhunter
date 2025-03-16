@@ -125,10 +125,13 @@ Once installed, Rayhunter will run automatically whenever your device is running
 ### Help, Rayhunter's line is red! What should I do?
 Unfortunately, the circumstances that might lead to a positive CSS signal are quite varied, so we don't have a universal recommendation for how to deal with the a positive signal. You might also want to turn off your phone until you are out of the area (or put it on airplane mode,) and tell your friends to do the same!
 
- Please feel free to contact an EFF technologist with more information & a copy of the QMDL in question at [info@eff.org](mailto:info@eff.org). Please note that this file may contain sensetive information such as your IMSI and the unique IDs of cell towers you were near which could be used to ascertain your location at the time.
- 
-### Does Rayhunter work outside of the US or Europe?
-**Yes**. TP-Link M7350 has been successfully tested in several European countries. The TP-Link M7350 is designed for European and Asian markets because it supports LTE bands used in those countries. However it will probably not work in North and Latin America, Australia and New Zealand, parts of Africa and on some networks in Japan.
+ Please feel free to contact an EFF technologist with more information & a copy of the QMDL in question at [info@eff.org](mailto:info@eff.org). Please note that this file may contain sensetive information such as your IMSI and the unique IDs of cell towers you were near which could be used to ascertain your location at the time. We encourage you to use PGP encryption when sending your message. You can find the [PGP public key for info@eff.org here](https://www.eff.org/about/contact#main-content).
+### Does Rayhunter work outside of the US?
+**Probably**. Some Rayhunter users have reported successfully using it in other countries with unlocked devices and SIM cards from local telcos. We can't guarantee whether or not it will work for you though.
+### Should I get a locked or unlocked orbic device? What is the difference?
+If you want to use a non verizon SIM card you will probably need an unlocked device. But it's not clear how locked the locked devices are nor how to unlock them, we welcome any experimentation and information regarding the use of unlocked devices.
+### Does Rayhunter work on any other devices besides the Orbic RC400L?
+**Maybe**. We have not tested Rayhunter on any other hardware but we would love to expand the supported platforms. We will consider giving official support to any hardware platform that can be bought for around $20-30USD. The Rayhunter daemon should theoretically work on any linux/android device that has a qualcomm chip with a /dev/diag interface and root access, though our installer script has only been tested with an Orbic. If you get it working on another device, please let us know!
 
 ## Development (compiling Rayhunter binary)
 
