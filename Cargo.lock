@@ -1717,6 +1717,7 @@ dependencies = [
  "include_dir",
  "log",
  "mime_guess",
+ "nix",
  "rayhunter",
  "serde",
  "serde_json",
