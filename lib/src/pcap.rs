@@ -7,11 +7,13 @@ use tokio::io::AsyncWrite;
 use std::borrow::Cow;
 use chrono::prelude::*;
 use deku::prelude::*;
+use nix::sys::utsname::uname;
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use pcap_file_tokio::pcapng::blocks::interface_description::InterfaceDescriptionBlock;
 use pcap_file_tokio::pcapng::blocks::section_header::{SectionHeaderBlock, SectionHeaderOption};
 use pcap_file_tokio::pcapng::PcapNgWriter;
 use pcap_file_tokio::{Endianness, PcapError};
+use std::env::consts::OS;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -61,17 +63,25 @@ struct UdpHeader {
 
 impl<T> GsmtapPcapWriter<T> where T: AsyncWrite + Unpin + Send {
     pub async fn new(writer: T) -> Result<Self, GsmtapPcapError> {
-        let package = concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION"));
+        let package = format!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
         let application = SectionHeaderOption::UserApplication(Cow::from(package));
+        let operating_system = match uname() {
+            Ok(utsname) => format!(
+                "{} {}",
+                utsname.sysname().to_string_lossy(),
+                utsname.release().to_string_lossy()
+            ),
+            Err(_) => OS.to_owned(),
+        };
+        let os = SectionHeaderOption::OS(Cow::from(operating_system));
         let section = SectionHeaderBlock {
             endianness: Endianness::Big,
             major_version: 1,
             minor_version: 0,
             section_length: -1,
-            options: vec![application],
+            options: vec![os, application],
         };
         let writer = PcapNgWriter::with_section_header(writer, section).await?;
-
         Ok(GsmtapPcapWriter { writer, ip_id: 0 })
     }
 
