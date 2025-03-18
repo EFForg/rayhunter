@@ -64,3 +64,19 @@ mkdir -p ~/.config/.ruby_gems
 bundle install
 ruby tp.rb -t 192.168.0.1 -p admin
 ```
+
+telnet into the device and activate adb
+
+```
+local $>nc 192.168.0.1 23
+#/> usb_composition
+902B
+n
+y
+y
+n
+#/> exit
+local $> adb shell
+#/>
+
+```
