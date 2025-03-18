@@ -80,3 +80,30 @@ local $> adb shell
 #/>
 
 ```
+
+install rayhunter:
+
+```
+*adb* mkdir /data/rayhunter
+
+*terminal*: `vi config.toml.example` -> change path for logs to `/media/card/qmdl`
+
+*terminal*: `adb config.toml.example /data/rayhunter/config.toml`
+
+*terminal*: `adb push rayhunter-daemon /media/card/rayhunter-daemon`
+
+*adb*: `/media/card/rayhunter-daemon /data/rayhunter/config.toml`
+
+
+
+```
+
+leads into error:
+
+```
+/ # /media/card/rayhunter-daemon /data/rayhunter/config.toml
+R A Y H U N T E R 🐳
+Error: DiagInitError(InitializationFailed("DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code -1"))
+```
+
+this is an error we discussed in #rayhunter on eff mattermost
