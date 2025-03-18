@@ -1,7 +1,6 @@
+use rayhunter::util::RayhunterMetadata;
 use chrono::{DateTime, Local};
-use nix::sys::utsname::uname;
 use serde::{Deserialize, Serialize};
-use std::env::consts::OS;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::{
@@ -52,22 +51,15 @@ pub struct ManifestEntry {
 impl ManifestEntry {
     fn new() -> Self {
         let now = Local::now();
-        let operating_system = match uname() {
-            Ok(utsname) => format!(
-                "{} {}",
-                utsname.sysname().to_string_lossy(),
-                utsname.release().to_string_lossy()
-            ),
-            Err(_) => OS.to_owned(),
-        };
+        let metadata = RayhunterMetadata::new();
         ManifestEntry {
             name: format!("{}", now.timestamp()),
             start_time: now,
             last_message_time: None,
             qmdl_size_bytes: 0,
             analysis_size_bytes: 0,
-            rayhunter_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
-            rayhunter_os: Some(operating_system),
+            rayhunter_version: Some(metadata.version),
+            rayhunter_os: Some(metadata.os),
         }
     }
 
