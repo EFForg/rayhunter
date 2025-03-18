@@ -1,0 +1,81 @@
+#!/bin/sh
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/sbin/lighttpd
+WEBSERVER_FOLDER_PERM="chmod -R 770 /WEBSERVER"
+WEBSERVER_OWNER_PERM="chown -R www-data:www-data /WEBSERVER "
+WWW_FOLDER_PERM="chmod -R 770 /www "
+WWW_OWNER_PERM="chown -R www-data:www-data /www "
+RM_RESOURCE_FILES="rm -rf /www/session_token.txt /www/login_attempt /www/qcmap_session /www/qcmap_cgi_webclient_file "
+NAME=lighttpd
+DESC="Lighttpd Web Server"
+OPTS="-f /etc/lighttpd.conf"
+
+case "$1" in
+  start)
+	echo -n "Starting $DESC: "
+	$RM_RESOURCE_FILES
+	echo -n "changing permissions for WEBSERVER: "
+	$WEBSERVER_FOLDER_PERM &
+	$WEBSERVER_OWNER_PERM &
+	echo -n "changing permissions for www: "
+	$WWW_FOLDER_PERM &
+	$WWW_OWNER_PERM &
+	start-stop-daemon --start -x "$DAEMON" -- $OPTS
+
+	echo -n "Starting miscellaneous daemons: "
+	search_dir="/sys/bus/msm_subsys/devices/"
+	for entry in `ls $search_dir`
+	do
+		subsys_temp=`cat $search_dir/$entry/name`
+		if [ "$subsys_temp" == "modem" ]
+		then
+			break
+		fi
+	done
+	counter=0
+	while [ ${counter} -le 10 ]
+	do
+		msstate=`cat $search_dir/$entry/state`
+		if [ "$msstate" == "ONLINE" ]
+		then
+			break
+		fi
+		counter=$(( $counter + 1 ))
+		sleep 1
+	done
+	
+	echo -n "Starting rayhunter: "
+	start-stop-daemon -S -b --make-pidfile --pidfile /tmp/rayhunter.pid \
+	--startas /bin/sh -- -c "RUST_LOG=info exec /media/card/rayhunter-daemon /data/rayhunter/config.toml > /media/card/rayhunter.log 2>&1"	
+	
+	echo "$NAME."
+	;;
+  stop)
+	echo -n "Stopping $DESC: "
+	start-stop-daemon --stop -x "$DAEMON"
+	start-stop-daemon -K -p /tmp/rayhunter.pid
+	echo "$NAME."
+	;;
+  restart|force-reload)
+	echo -n "Restarting $DESC: "
+	$RM_RESOURCE_FILES
+	echo -n "changing permissions for WEBSERVER: "
+	$WEBSERVER_FOLDER_PERM &
+	$WEBSERVER_OWNER_PERM &
+	echo -n "changing permissions for www: "
+	$WWW_FOLDER_PERM &
+	$WWW_OWNER_PERM &
+	start-stop-daemon --stop -x "$DAEMON"
+	sleep 1
+	start-stop-daemon --start -x "$DAEMON" -- $OPTS
+	echo "$NAME."
+	;;
+  *)
+	N=/etc/init.d/$NAME
+	echo "Usage: $N {start|stop|restart|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0
