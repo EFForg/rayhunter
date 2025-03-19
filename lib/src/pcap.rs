@@ -61,8 +61,8 @@ struct UdpHeader {
 
 impl<T> GsmtapPcapWriter<T> where T: AsyncWrite + Unpin + Send {
     pub async fn new(writer: T) -> Result<Self, GsmtapPcapError> {
-        let metadata = crate::util::RayhunterMetadata::new();
-        let package = format!("{} {}", metadata.name, metadata.version);
+        let metadata = crate::util::RuntimeMetadata::new();
+        let package = format!("{} {}", env!("CARGO_PKG_NAME").to_owned(), metadata.rayhunter_version);
         let section = SectionHeaderBlock {
             endianness: Endianness::Big,
             major_version: 1,
@@ -70,7 +70,7 @@ impl<T> GsmtapPcapWriter<T> where T: AsyncWrite + Unpin + Send {
             section_length: -1,
             options: vec![
                 SectionHeaderOption::Hardware(Cow::from(metadata.arch)),
-                SectionHeaderOption::OS(Cow::from(metadata.os)),
+                SectionHeaderOption::OS(Cow::from(metadata.system_os)),
                 SectionHeaderOption::UserApplication(Cow::from(package)),
             ],
         };

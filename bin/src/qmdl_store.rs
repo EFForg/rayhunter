@@ -1,4 +1,4 @@
-use rayhunter::util::RayhunterMetadata;
+use rayhunter::util::RuntimeMetadata;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -45,25 +45,23 @@ pub struct ManifestEntry {
     pub qmdl_size_bytes: usize,
     pub analysis_size_bytes: usize,
     pub rayhunter_version: Option<String>,
-    pub os: Option<String>,
+    pub system_os: Option<String>,
     pub arch: Option<String>,
-    pub hardware: Option<String>,
 }
 
 impl ManifestEntry {
     fn new() -> Self {
         let now = Local::now();
-        let metadata = RayhunterMetadata::new();
+        let metadata = RuntimeMetadata::new();
         ManifestEntry {
             name: format!("{}", now.timestamp()),
             start_time: now,
             last_message_time: None,
             qmdl_size_bytes: 0,
             analysis_size_bytes: 0,
-            rayhunter_version: Some(metadata.version),
-            os: Some(metadata.os),
+            rayhunter_version: Some(metadata.rayhunter_version),
+            system_os: Some(metadata.system_os),
             arch: Some(metadata.arch),
-            hardware: Some(metadata.hardware),
         }
     }
 
