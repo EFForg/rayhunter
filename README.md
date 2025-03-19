@@ -27,6 +27,17 @@ TP-Link M7350 needs to be rooted first, then Rayhunter can be installed on it.
 
 Rayhunter may work on other Linux/Qualcom devices, but has not been tested on them.
 
+1. Download the latest [Rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it.
+**If you are installing from the cloned github repository please see the development instructions below, running `install.sh` from the git tree will not work.**
+2. Turn on the Orbic device and plug it into your computer using a USB-C Cable.
+3. On MacOS or Linux run the install script `install.sh`. 
+4. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
+
+### Notes 
+  * The install script has only been tested for Linux on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
+  * The install script also won't work on older macs with intel chips, for those macs you will need to follow the instructions at https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices
+  * We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
+
 ## Installing Rayhunter
 
 TP-Link M7350 mobile hotspot needs to be rooted first. For rooting use one of the methods described in the table above. Also, you will need to install `ADB` first.
