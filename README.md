@@ -30,13 +30,13 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
     For Silicon Mac (M1/M2/etc):
 
     ```bash
-    install-mac.sh
+    ./install-mac.sh
     ```
 
     For Linux:
 
     ```bash
-    install-linux.sh
+    ./install-linux.sh
     ```
 
 4. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
