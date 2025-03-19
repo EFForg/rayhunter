@@ -3,6 +3,7 @@ use chrono::{DateTime, FixedOffset};
 use serde::Serialize;
 
 use crate::{diag::MessagesContainer, gsmtap_parser};
+use crate::util::RuntimeMetadata;
 
 use super::{
     imsi_requested::ImsiRequestedAnalyzer,
@@ -71,17 +72,9 @@ pub struct AnalyzerMetadata {
 }
 
 #[derive(Serialize, Debug)]
-pub struct RayhunterMetadata {
-    pub version: String,
-    pub os: String,
-    pub arch: String,
-    pub hardware: String,
-}
-
-#[derive(Serialize, Debug)]
 pub struct ReportMetadata {
     pub analyzers: Vec<AnalyzerMetadata>,
-    pub rayhunter: RayhunterMetadata,
+    pub rayhunter: RuntimeMetadata,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -214,14 +207,7 @@ impl Harness {
             });
         }
 
-        let metadata = crate::util::RayhunterMetadata::new();
-
-        let rayhunter = RayhunterMetadata {
-            version: metadata.version,
-            os: metadata.os,
-            arch: metadata.arch,
-            hardware: metadata.hardware,
-        };
+        let rayhunter = RuntimeMetadata::new();
 
         ReportMetadata {
             analyzers,
