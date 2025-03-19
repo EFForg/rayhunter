@@ -1,0 +1,76 @@
+serial:
+  stage: build
+  tags: [ docker ]
+  parallel:
+    matrix:
+      - DISTRO: [ "debian:bookworm", "debian:latest", "ubuntu:jammy", "ubuntu:noble", "ubuntu:latest" ]
+  image: $DISTRO
+  script:
+    - apt update && apt install -y cargo file
+    - cd serial && cargo build --bin serial && cargo build --bin serial --release && cd ..
+    - distro=$(echo "$DISTRO" | sed 's/:.*//')
+    - codename=$(echo "$DISTRO" | sed 's/.*://')
+    - mkdir -p debug/$distro/$codename && cp target/debug/serial debug/$distro/$codename
+    - ls -l target/release ; file target/release/serial
+    - mkdir -p serial-$distro-$codename && cp target/release/serial serial-$distro-$codename
+    - ls -l serial-$distro-$codename
+  artifacts:
+    paths:
+      - debug
+      - serial-*
+
+# Apple is a special little snowflake
+serial_macos:
+  stage: build
+  tags: [ docker ]
+  image: debian:bookworm
+  script:
+    - ./tools/cross_compile_osx.sh
+    - mkdir -p serial-macos-arm-latest && cp target/aarch64-apple-darwin/release/serial serial-macos-arm-latest
+    - mkdir -p serial-macos-x86_64-latest && cp target/x86_64-apple-darwin/release/serial serial-macos-x86_64-latest
+  artifacts:
+    paths:
+      - serial-macos-arm-latest
+      - serial-macos-x86_64-latest
+
+rootshell_rayhunter:
+  stage: build
+  tags: [ docker ]
+  image: ubuntu:latest
+  script:
+    - apt update && apt install -y rustup build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
+    - rustup default stable
+    - rustup target add armv7-unknown-linux-gnueabihf
+    - cargo install cross
+    - cargo build --bin rootshell --target armv7-unknown-linux-gnueabihf --release
+    - cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release
+    - mv target/armv7-unknown-linux-gnueabihf/release/rootshell ./rootshell/
+    - mv target/armv7-unknown-linux-gnueabihf/release/rayhunter-daemon .
+  artifacts:
+    paths:
+      - rootshell/rootshell
+      - rayhunter-daemon
+
+test:
+  stage: test
+  tags: [ docker ]
+  image: rust:latest
+  script:
+    - apt update && apt install -y build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
+    - cargo build --bin rayhunter-check --release
+  artifacts:
+    paths:
+      - target/release
+
+release:
+  stage: deploy
+  tags: [ docker ]
+  image: debian:bookworm
+  script:
+    - mv rootshell/rootshell rayhunter-daemon serial-* dist
+    - tar -cvf release.tar -C dist .
+    - sha256sum release.tar > release.tar.sha256
+  artifacts:
+    paths:
+      - release.tar
+      - release.tar.sha256
