@@ -17,13 +17,17 @@ Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
 
 ## Setup
 
-*NOTE: We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
 
 1. Download the latest [Rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it.
-**If you are installing from the cloned github repository please see the development instructions below, running `install-linux.sh` from the git tree will not work.**
+**If you are installing from the cloned github repository please see the development instructions below, running `install.sh` from the git tree will not work.**
 2. Turn on the Orbic device and plug it into your computer using a USB-C Cable.
-2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`). The Linux installer has only been tested on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
-3. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
+3. On MacOS or Linux run the install script `install.sh`. 
+4. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
+
+### Notes 
+  * The install script has only been tested for Linux on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
+  * The install script also won't work on older macs with intel chips, for those macs you will need to follow the instructions at https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices
+  * We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
 
 
 ## Usage

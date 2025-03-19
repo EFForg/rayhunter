@@ -99,14 +99,14 @@ test_rayhunter() {
 ##### ##### #####
 ##### Main  #####
 ##### ##### #####
-if [ `uname -s` = "Linux" ]; then
+if [[ `uname -s` == "Linux" ]]; then
     export SERIAL_PATH="./serial-ubuntu-latest/serial"
     export PLATFORM_TOOLS="platform-tools-latest-linux.zip"
-elif [ `uname -s` = "Darwin" ]; then
+elif [[ `uname -s` == "Darwin" && `uname -m` == "arm64" ]]; then
     export SERIAL_PATH="./serial-macos-latest/serial"
     export PLATFORM_TOOLS="platform-tools-latest-darwin.zip"
 else
-    echo "This script only supports Linux or macOS"
+    echo "This script only supports Linux or macOS with M1/M2 arm chips, for MacOS on Intel devices see the instructions here: https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices"
     exit 1
 fi
 
