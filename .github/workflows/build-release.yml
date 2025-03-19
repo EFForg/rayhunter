@@ -12,12 +12,12 @@ jobs:
     strategy:
       matrix:
         platform:
-          - os: ubuntu-latest
-            serial_build_name: serial
-            check_build_name: rayhunter-check
-          - os: macos-latest
-            serial_build_name: serial
-            check_build_name: rayhunter-check
+          - name: ubuntu-24
+            os: ubuntu-latest
+          - name: macos-arm
+            os: macos-latest
+          - name: macos-intel
+            os: macos-13
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
@@ -25,8 +25,8 @@ jobs:
         run: cargo build --bin serial --release
       - uses: actions/upload-artifact@v4
         with:
-          name: serial-${{ matrix.platform.os }}
-          path: ./target/release/${{ matrix.platform.serial_build_name }}
+          name: serial-${{ matrix.platform.name }}
+          path: ./target/release/serial
           if-no-files-found: error
       - uses: actions/checkout@v4
       - name: Build check
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-check-${{ matrix.platform.os }}
-          path: ./target/release/${{ matrix.platform.check_build_name }}
+          path: ./target/release/rayhunter-check
           if-no-files-found: error
   build_rootshell_and_rayhunter:
     runs-on: ubuntu-latest
