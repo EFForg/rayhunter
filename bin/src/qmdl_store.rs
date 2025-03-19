@@ -45,7 +45,9 @@ pub struct ManifestEntry {
     pub qmdl_size_bytes: usize,
     pub analysis_size_bytes: usize,
     pub rayhunter_version: Option<String>,
-    pub rayhunter_os: Option<String>,
+    pub os: Option<String>,
+    pub arch: Option<String>,
+    pub hardware: Option<String>,
 }
 
 impl ManifestEntry {
@@ -59,7 +61,9 @@ impl ManifestEntry {
             qmdl_size_bytes: 0,
             analysis_size_bytes: 0,
             rayhunter_version: Some(metadata.version),
-            rayhunter_os: Some(metadata.os),
+            os: Some(metadata.os),
+            arch: Some(metadata.arch),
+            hardware: Some(metadata.hardware),
         }
     }
 
