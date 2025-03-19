@@ -13,9 +13,9 @@ Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. It may work on other Orbics and other
 Linux/Qualcom devices, but this is the only one we have tested on.
 You can buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
-or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
+or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
-## Setup
+## Setup (Silicon Mac, Linux)
 
 1. Download the latest `release.tar` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
 2. Unzip the `release.tar`. Open the terminal and navigate to the folder
@@ -26,7 +26,8 @@ or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 2. Turn on the Orbic device by holding the power button for 3 seconds. Plug it into your computer using a USB-C Cable.
 3. Run the install script for your operating system:
-    For macOS (M1/M2/silicon):
+
+    For Silicon Mac (M1/M2/etc):
 
     ```bash
     install-mac.sh
@@ -42,10 +43,14 @@ or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 ### Installation Notes
 
-* Note: If you are installing from the cloned GitHub repository please see the development instructions below, running `install-mac.sh` or `install-linux.sh` from the git tree will not work.
-* The install script has only been tested for Linux on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
-* The install script also won't work on older Macs with Intel chips, for those Macs you will need to follow the instructions at <https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices>
-* We don't currently support automated installs on Windows, you will have to follow the manual install instructions below*
+* If you are installing from the cloned GitHub repository please see the development instructions below, running `install-mac.sh` or `install-linux.sh` from the git tree will not work.
+* The install script has only been tested for Linux on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in the **Development** section below.
+
+## Setup (Intel Mac, Windows)
+
+* **Intel Mac:** The install script also won't work on older Macs with Intel chips, for those Macs you will need to follow the [instructions for installing Rayhunter on Intel Macs](https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices)
+
+* **Windows:** We don't currently support automated installs on Windows, you will have to follow the instructions in the **Development** section below.
 
 ## Usage
 
