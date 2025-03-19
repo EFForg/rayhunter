@@ -105,6 +105,7 @@ if [[ `uname -s` == "Linux" ]]; then
 elif [[ `uname -s` == "Darwin" && `uname -m` == "arm64" ]]; then
     export SERIAL_PATH="./serial-macos-latest/serial"
     export PLATFORM_TOOLS="platform-tools-latest-darwin.zip"
+    xattr -d com.apple.quarantine "$SERIAL_PATH"
 else
     echo "This script only supports Linux or macOS with M1/M2 arm chips, for MacOS on Intel devices see the instructions here: https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices"
     exit 1
