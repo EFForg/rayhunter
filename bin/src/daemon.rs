@@ -22,6 +22,7 @@ use analysis::{get_analysis_status, run_analysis_thread, start_analysis, Analysi
 use axum::response::Redirect;
 use diag::{get_analysis_report, start_recording, stop_recording, DiagDeviceCtrlMessage};
 use log::{info, error};
+use qmdl_store::RecordingStoreError;
 use rayhunter::diag_device::DiagDevice;
 use axum::routing::{get, post};
 use axum::Router;
@@ -90,13 +91,31 @@ async fn server_shutdown_signal(server_shutdown_rx: oneshot::Receiver<()>) {
     info!("Server received shutdown signal, exiting...");
 }
 
-// Loads a QmdlStore if one exists, and if not, only create one if we're not in
-// debug mode.
+// Loads a RecordingStore if one exists, and if not, only create one if we're
+// not in debug mode. If we fail to parse the manifest AND we're not in debug
+// mode, try to recover by making a new (empty) manifest in the same directory.
 async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, RayhunterError> {
-    match (RecordingStore::exists(&config.qmdl_store_path).await?, config.debug_mode) {
-        (true, _) => Ok(RecordingStore::load(&config.qmdl_store_path).await?),
-        (false, false) => Ok(RecordingStore::create(&config.qmdl_store_path).await?),
-        (false, true) => Err(RayhunterError::NoStoreDebugMode(config.qmdl_store_path.clone())),
+    let store_exists = RecordingStore::exists(&config.qmdl_store_path).await?;
+    if config.debug_mode {
+        if store_exists {
+            Ok(RecordingStore::load(&config.qmdl_store_path).await?)
+        } else {
+            Err(RayhunterError::NoStoreDebugMode(config.qmdl_store_path.clone()))
+        }
+    } else {
+        if store_exists {
+            match RecordingStore::load(&config.qmdl_store_path).await {
+                Ok(store) => Ok(store),
+                Err(RecordingStoreError::ParseManifestError(err)) => {
+                    error!("failed to parse QMDL manifest: {}", err);
+                    info!("creating new empty manifest...");
+                    Ok(RecordingStore::create(&config.qmdl_store_path).await?)
+                },
+                Err(err) => Err(err.into()),
+            }
+        } else {
+            Ok(RecordingStore::create(&config.qmdl_store_path).await?)
+        }
     }
 }
 
