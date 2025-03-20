@@ -330,6 +330,20 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_create_on_existing_store() {
+        let dir = make_temp_dir();
+        let mut store = RecordingStore::create(dir.path()).await.unwrap();
+        let _ = store.new_entry().await.unwrap();
+        let entry_index = store.current_entry.unwrap();
+        store
+            .update_entry_qmdl_size(entry_index, 1000)
+            .await
+            .unwrap();
+        let store = RecordingStore::create(dir.path()).await.unwrap();
+        assert_eq!(store.manifest.entries.len(), 0);
+    }
+
+    #[tokio::test]
     async fn test_repeated_new_entries() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
