@@ -10,11 +10,11 @@
 use std::str;
 use std::time::Duration;
 
-use futures_lite::future::block_on;
 use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
 use nusb::{Device, Interface};
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() != 2 {
@@ -26,7 +26,7 @@ fn main() {
         enable_command_mode();
     } else {
         match open_orbic() {
-            Some(interface) => send_command(interface, &args[1]),
+            Some(interface) => send_command(interface, &args[1]).await,
             None => panic!("No Orbic device found"),
         }
     }
@@ -34,7 +34,7 @@ fn main() {
 /// Sends an AT command to the usb device over the serial port
 ///
 /// First establish a USB handle and context by calling `open_orbic(<T>)
-fn send_command(interface: Interface, command: &str) {
+async fn send_command(interface: Interface, command: &str) {
     let mut data = String::new();
     data.push_str("\r\n");
     data.push_str(command);
@@ -56,17 +56,23 @@ fn send_command(interface: Interface, command: &str) {
         .expect("Failed to send control request");
 
     // Send the command
-    block_on(interface.bulk_out(0x2, data.as_bytes().to_vec()))
+    tokio::time::timeout(timeout, interface.bulk_out(0x2, data.as_bytes().to_vec()))
+        .await
+        .expect("Timed out writing command")
         .into_result()
         .expect("Failed to write command");
 
     // Consume the echoed command
-    block_on(interface.bulk_in(0x82, RequestBuffer::new(256)))
+    tokio::time::timeout(timeout, interface.bulk_in(0x82, RequestBuffer::new(256)))
+        .await
+        .expect("Timed out reading submitted command")
         .into_result()
         .expect("Failed to read submitted command");
 
     // Read the actual response
-    let response = block_on(interface.bulk_in(0x82, RequestBuffer::new(256)))
+    let response = tokio::time::timeout(timeout, interface.bulk_in(0x82, RequestBuffer::new(256)))
+        .await
+        .expect("Timed out reading response")
         .into_result()
         .expect("Failed to read response");
 
