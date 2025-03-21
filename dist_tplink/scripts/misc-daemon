@@ -1,0 +1,102 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+  start)
+        echo -n "Starting miscellaneous daemons: "
+        search_dir="/sys/bus/msm_subsys/devices/"
+        for entry in `ls $search_dir`
+        do
+            subsys_temp=`cat $search_dir/$entry/name`
+            if [ "$subsys_temp" == "modem" ]
+            then
+                break
+            fi
+        done
+        counter=0
+        while [ ${counter} -le 10 ]
+        do
+           msstate=`cat $search_dir/$entry/state`
+           if [ "$msstate" == "ONLINE" ]
+           then
+              break
+           fi
+           counter=$(( $counter + 1 ))
+           sleep 1
+        done
+
+        if [ -f /etc/init.d/init_qcom_audio ]
+        then
+           /etc/init.d/init_qcom_audio start
+        fi
+
+        if [ -f /sbin/reboot-daemon ]
+        then
+           /sbin/reboot-daemon &
+        fi
+
+        if [ -f /etc/init.d/start_atfwd_daemon ]
+        then
+           /etc/init.d/start_atfwd_daemon start
+        fi
+
+        if [ -f /etc/init.d/rayhunter_daemon ]
+        then
+           /etc/init.d/rayhunter_daemon start
+        fi
+
+        if [ -f /etc/init.d/start_stop_qti_ppp_le ]
+        then
+           /etc/init.d/start_stop_qti_ppp_le start
+        fi
+
+        if [ -f /etc/init.d/start_loc_launcher ]
+        then
+           /etc/init.d/start_loc_launcher start
+        fi
+
+        echo -n "Completed starting miscellaneous daemons"
+        ;;
+  stop)
+        echo -n "Stopping miscellaneous daemons: "
+
+
+        if [ -f /etc/init.d/start_atfwd_daemon ]
+        then
+           /etc/init.d/start_atfwd_daemon stop
+        fi
+
+        if [ -f /etc/init.d/start_loc_launcher ]
+        then
+           /etc/init.d/start_loc_launcher stop
+        fi
+
+        if [ -f /etc/init.d/rayhunter_daemon ]
+        then
+           /etc/init.d/rayhunter_daemon stop
+        fi
+
+        if [ -f /etc/init.d/init_qcom_audio ]
+        then
+            /etc/init.d/init_qcom_audio stop
+        fi
+
+        if [ -f /etc/init.d/start_stop_qti_ppp_le ]
+        then
+           /etc/init.d/start_stop_qti_ppp_le stop
+        fi
+
+        echo -n "Completed stopping miscellaneous daemons"
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  *)
+        echo "Usage misc-daemon { start | stop | restart}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
