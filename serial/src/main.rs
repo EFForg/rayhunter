@@ -7,24 +7,14 @@
 //!
 //! No device found - make sure your device is plugged in and turned on. If it is, it's possible you have a device with a different
 //! usb id, file a bug with the output of `lsusb` attached.
-//!
-//! # Examples
-//! ```
-//! match rusb::Context::new() {
-//!	    Ok(mut context) => match open_orbic(&mut context) {
-//!	    Some(mut handle) => {
-//!		send_command(&mut handle, &args[1])
-//!	    },
-//!	    None => panic!("No Orbic device found"),
-//!	},
-//!	Err(e) => panic!("Failed to initialize libusb: {0}", e),
-//! ````
 use std::str;
 use std::time::Duration;
 
-use rusb::{Context, DeviceHandle, UsbContext};
+use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
+use nusb::{Device, Interface};
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() != 2 {
@@ -32,50 +22,58 @@ fn main() {
         return;
     }
 
-    match Context::new() {
-        Ok(mut context) => {
-            if args[1] == "--root" {
-                enable_command_mode(&mut context);
-            } else {
-                match open_orbic(&mut context) {
-                    Some(mut handle) => send_command(&mut handle, &args[1]),
-                    None => panic!("No Orbic device found"),
-                }
-            }
-        },
-        Err(e) => panic!("Failed to initialize libusb: {0}", e),
+    if args[1] == "--root" {
+        enable_command_mode();
+    } else {
+        match open_orbic() {
+            Some(interface) => send_command(interface, &args[1]).await,
+            None => panic!("No Orbic device found"),
+        }
     }
 }
 /// Sends an AT command to the usb device over the serial port
 ///
 /// First establish a USB handle and context by calling `open_orbic(<T>)
-fn send_command<T: UsbContext>(handle: &mut DeviceHandle<T>, command: &str) {
+async fn send_command(interface: Interface, command: &str) {
     let mut data = String::new();
     data.push_str("\r\n");
     data.push_str(command);
     data.push_str("\r\n");
 
     let timeout = Duration::from_secs(1);
-    let mut response = [0; 256];
+
+    let enable_serial_port = Control {
+        control_type: ControlType::Class,
+        recipient: Recipient::Interface,
+        request: 0x22,
+        value: 3,
+        index: 1,
+    };
 
     // Set up the serial port appropriately
-    handle
-        .write_control(0x21, 0x22, 3, 1, &[], timeout)
+    interface
+        .control_out_blocking(enable_serial_port, &[], timeout)
         .expect("Failed to send control request");
 
     // Send the command
-    handle
-        .write_bulk(0x2, data.as_bytes(), timeout)
+    tokio::time::timeout(timeout, interface.bulk_out(0x2, data.as_bytes().to_vec()))
+        .await
+        .expect("Timed out writing command")
+        .into_result()
         .expect("Failed to write command");
 
     // Consume the echoed command
-    handle
-        .read_bulk(0x82, &mut response, timeout)
+    tokio::time::timeout(timeout, interface.bulk_in(0x82, RequestBuffer::new(256)))
+        .await
+        .expect("Timed out reading submitted command")
+        .into_result()
         .expect("Failed to read submitted command");
 
     // Read the actual response
-    handle
-        .read_bulk(0x82, &mut response, timeout)
+    let response = tokio::time::timeout(timeout, interface.bulk_in(0x82, RequestBuffer::new(256)))
+        .await
+        .expect("Timed out reading response")
+        .into_result()
         .expect("Failed to read response");
 
     // For some reason, on macOS the response buffer gets filled with garbage data that's
@@ -91,18 +89,26 @@ fn send_command<T: UsbContext>(handle: &mut DeviceHandle<T>, command: &str) {
 /// Send a command to switch the device into generic mode, exposing serial
 ///
 /// If the device reboots while the command is still executing you may get a pipe error here, not sure what to do about this race condition.
-fn enable_command_mode<T: UsbContext>(context: &mut T) {
-    if open_orbic(context).is_some() {
+fn enable_command_mode() {
+    if open_orbic().is_some() {
         println!("Device already in command mode. Doing nothing...");
         return;
     }
 
     let timeout = Duration::from_secs(1);
-    if let Some(handle) = open_device(context, 0x05c6, 0xf626) {
-        if let Err(e) = handle.write_control(0x40, 0xa0, 0, 0, &[], timeout) {
+
+    if let Some(interface) = open_device(0x05c6, 0xf626) {
+        let enable_command_mode = Control {
+            control_type: ControlType::Vendor,
+            recipient: Recipient::Device,
+            request: 0xa0,
+            value: 0,
+            index: 0,
+        };
+        if let Err(e) = interface.control_out_blocking(enable_command_mode, &[], timeout) {
             // If the device reboots while the command is still executing we
             // may get a pipe error here
-            if e == rusb::Error::Pipe {
+            if e == nusb::transfer::TransferError::Stall {
                 return;
             }
             panic!("Failed to send device switch control request: {0}", e)
@@ -113,41 +119,38 @@ fn enable_command_mode<T: UsbContext>(context: &mut T) {
     panic!("No Orbic device found");
 }
 
-/// Get a handle and contet for the orbic device
-fn open_orbic<T: UsbContext>(context: &mut T) -> Option<DeviceHandle<T>> {
+/// Get an Interface for the orbic device
+fn open_orbic() -> Option<Interface> {
     // Device after initial mode switch
-    if let Some(mut handle) = open_device(context, 0x05c6, 0xf601) {
-        handle.set_auto_detach_kernel_driver(true).expect("set_auto_detach_kernel_driver failed");
-        handle.claim_interface(1).expect("claim_interface(1) failed");
-        return Some(handle);
+    if let Some(device) = open_device(0x05c6, 0xf601) {
+        let interface = device
+            .detach_and_claim_interface(1) // will reattach drivers on release
+            .expect("detach_and_claim_interface(1) failed");
+        return Some(interface);
     }
 
     // Device with rndis enabled as well
-    if let Some(mut handle) = open_device(context, 0x05c6, 0xf622) {
-        handle.set_auto_detach_kernel_driver(true).expect("set_auto_detach_kernel_driver failed");
-        handle.claim_interface(1).expect("claim_interface(1) failed");
-        return Some(handle);
+    if let Some(device) = open_device(0x05c6, 0xf622) {
+        let interface = device
+            .detach_and_claim_interface(1) // will reattach drivers on release
+            .expect("detach_and_claim_interface(1) failed");
+        return Some(interface);
     }
 
     None
 }
 
-/// Generic function to open a USB device
-fn open_device<T: UsbContext>(context: &mut T, vid: u16, pid: u16) -> Option<DeviceHandle<T>> {
-    let devices = match context.devices() {
+/// General function to open a USB device
+fn open_device(vid: u16, pid: u16) -> Option<Device> {
+    let devices = match nusb::list_devices() {
         Ok(d) => d,
         Err(_) => return None,
     };
 
-    for device in devices.iter() {
-        let device_desc = match device.device_descriptor() {
-            Ok(d) => d,
-            Err(_) => continue,
-        };
-
-        if device_desc.vendor_id() == vid && device_desc.product_id() == pid {
+    for device in devices {
+        if device.vendor_id() == vid && device.product_id() == pid {
             match device.open() {
-                Ok(handle) => return Some(handle),
+                Ok(d) => return Some(d),
                 Err(e) => panic!("device found but failed to open: {}", e),
             }
         }
