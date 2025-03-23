@@ -104,7 +104,7 @@ pub fn run_diag_read_thread(
                                 }
                                 let mut qmdl_store = qmdl_store_lock.write().await;
                                 let index = qmdl_store.current_entry.expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
-                                qmdl_store.update_entry_analysis_size(index, analysis_file_len as usize).await
+                                qmdl_store.update_entry_analysis_size(index, analysis_file_len).await
                                     .expect("failed to update analysis file size");
                             }
                         },
@@ -130,12 +130,11 @@ pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(S
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StartRecording((qmdl_writer, analysis_file))).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
 
-    let display_state: framebuffer::DisplayState;
-    if state.colorblind_mode { 
-        display_state = framebuffer::DisplayState::RecordingCBM;
+    let display_state = if state.colorblind_mode { 
+        framebuffer::DisplayState::RecordingCBM
     } else {
-        display_state = framebuffer::DisplayState::Recording;
-    }
+        framebuffer::DisplayState::Recording
+    };
     state.ui_update_sender.send(display_state).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
 

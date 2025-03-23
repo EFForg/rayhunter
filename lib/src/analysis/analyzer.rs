@@ -97,11 +97,9 @@ impl AnalysisRow {
 
     pub fn contains_warnings(&self) -> bool {
         for analysis in &self.analysis {
-            for maybe_event in &analysis.events {
-                if let Some(event) = maybe_event {
-                    if matches!(event.event_type, EventType::QualitativeWarning { .. }) {
-                        return true;
-                    }
+            for event in analysis.events.iter().flatten() {
+                if matches!(event.event_type, EventType::QualitativeWarning { .. }) {
+                    return true;
                 }
             }
         }

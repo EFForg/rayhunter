@@ -31,7 +31,7 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
         match carrier_info {
             RedirectedCarrierInfo::Geran(_carrier_freqs_geran) => Some(Event {
                 event_type: EventType::QualitativeWarning { severity: Severity::High },
-                message: format!("Detected 2G downgrade"),
+                message: "Detected 2G downgrade".to_owned(),
             }),
             _ => Some(Event {
                 event_type: EventType::Informational,

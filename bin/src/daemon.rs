@@ -195,7 +195,8 @@ fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdo
                     fb.draw_line(framebuffer::Color565::Pink, 50);
                     fb.draw_line(framebuffer::Color565::Cyan, 25);
                 },
-                1 | _ => {
+                _ => { // this branch id for ui_level 1, which is also the default if an
+                       // unknown value is used
                     fb.draw_line(display_color, 2);
                 },
             };

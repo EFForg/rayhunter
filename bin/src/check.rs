@@ -88,11 +88,9 @@ async fn pcapify(qmdl_path: &PathBuf) {
     let mut pcap_writer = GsmtapPcapWriter::new(pcap_file).await.unwrap();
     pcap_writer.write_iface_header().await.unwrap();
     while let Some(container) = qmdl_reader.get_next_messages_container().await.expect("failed to get container") {
-        for maybe_msg in container.into_messages() {
-            if let Ok(msg) = maybe_msg {
-                if let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg) {
-                    pcap_writer.write_gsmtap_message(parsed, timestamp).await.expect("failed to write");
-                }
+        for msg in container.into_messages().into_iter().flatten() {
+            if let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg) {
+                pcap_writer.write_gsmtap_message(parsed, timestamp).await.expect("failed to write");
             }
         }
     }
