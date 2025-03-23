@@ -2,17 +2,9 @@ use crate::error::RayhunterError;
 
 use serde::Deserialize;
 
-#[derive(Deserialize)]
-struct ConfigFile {
-    qmdl_store_path: Option<String>,
-    port: Option<u16>,
-    debug_mode: Option<bool>,
-    ui_level: Option<u8>,
-    enable_dummy_analyzer: Option<bool>,
-    colorblind_mode: Option<bool>,
-}
-
 #[derive(Debug)]
+#[derive(Deserialize)]
+#[serde(default)]
 pub struct Config {
     pub qmdl_store_path: String,
     pub port: u16,
@@ -36,18 +28,11 @@ impl Default for Config {
 }
 
 pub fn parse_config<P>(path: P) -> Result<Config, RayhunterError> where P: AsRef<std::path::Path> {
-    let mut config = Config::default();
     if let Ok(config_file) = std::fs::read_to_string(&path) {
-        let parsed_config: ConfigFile = toml::from_str(&config_file)
-            .map_err(RayhunterError::ConfigFileParsingError)?;
-        parsed_config.qmdl_store_path.map(|v| config.qmdl_store_path = v);
-        parsed_config.port.map(|v| config.port = v);
-        parsed_config.debug_mode.map(|v| config.debug_mode = v);
-        parsed_config.ui_level.map(|v| config.ui_level = v);
-        parsed_config.enable_dummy_analyzer.map(|v| config.enable_dummy_analyzer = v);
-        parsed_config.colorblind_mode.map(|v| config.colorblind_mode = v);
+        Ok(toml::from_str(&config_file).map_err(RayhunterError::ConfigFileParsingError)?)
+    } else {
+        Ok(Config::default())
     }
-    Ok(config)
 }
 
 pub struct Args {
