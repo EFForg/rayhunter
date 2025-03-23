@@ -29,7 +29,7 @@ pub struct ServerState {
 pub async fn get_qmdl(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
     let qmdl_idx = qmdl_name.trim_end_matches(".qmdl");
     let qmdl_store = state.qmdl_store_lock.read().await;
-    let (entry_index, entry) = qmdl_store.entry_for_name(&qmdl_idx)
+    let (entry_index, entry) = qmdl_store.entry_for_name(qmdl_idx)
         .ok_or((StatusCode::NOT_FOUND, format!("couldn't find qmdl file with name {}", qmdl_idx)))?;
     let qmdl_file = qmdl_store.open_entry_qmdl(entry_index).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("error opening QMDL file: {}", e)))?;
