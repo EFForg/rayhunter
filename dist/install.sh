@@ -1,18 +1,5 @@
 #!/usr/bin/env bash
-install() {
-    if [[ -z "${SERIAL_PATH}" ]]; then
-        echo "\$SERIAL_PATH not set, did you run this from install-linux.sh or install-mac.sh?"
-        exit 1
-    fi
-    if [[ -z "${ADB}" ]]; then
-        echo "\$ADB not set, did you run this from install-linux.sh or install-mac.sh?"
-        exit 1
-    fi
-    force_debug_mode
-    setup_rootshell
-    setup_rayhunter
-    test_rayhunter
-}
+set -e
 
 force_debug_mode() {
     echo "Using adb at $ADB"
@@ -108,3 +95,39 @@ test_rayhunter() {
     done
     echo "timeout reached! failed to reach rayhunter url $URL, something went wrong :("
 }
+
+##### ##### #####
+##### Main  #####
+##### ##### #####
+if [[ `uname -s` == "Linux" ]]; then
+    export SERIAL_PATH="./serial-ubuntu-latest/serial"
+    export PLATFORM_TOOLS="platform-tools-latest-linux.zip"
+elif [[ `uname -s` == "Darwin" && `uname -m` == "arm64" ]]; then
+    export SERIAL_PATH="./serial-macos-latest/serial"
+    export PLATFORM_TOOLS="platform-tools-latest-darwin.zip"
+    xattr -d com.apple.quarantine "$SERIAL_PATH"
+else
+    echo "This script only supports Linux or macOS with M1/M2 arm chips, for MacOS on Intel devices see the instructions here: https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices"
+    exit 1
+fi
+
+if [ ! -x "$SERIAL_PATH" ]; then
+    echo "The serial binary cannot be found at $SERIAL_PATH. If you are running this from the git tree please instead run it from the latest release bundle https://github.com/EFForg/rayhunter/releases"
+  exit 1
+fi
+
+if ! command -v adb &> /dev/null; then
+    if [ ! -d ./platform-tools ] ; then
+        echo "adb not found, downloading local copy"
+        curl -O "https://dl.google.com/android/repository/${PLATFORM_TOOLS}"
+        unzip $PLATFORM_TOOLS
+    fi
+    export ADB="./platform-tools/adb"
+else
+    export ADB=`which adb`
+fi
+
+force_debug_mode
+setup_rootshell
+setup_rayhunter
+test_rayhunter

@@ -5,32 +5,36 @@
 
 Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 
-**THIS CODE IS PROOF OF CONCEPT AND SHOULD NOT BE RELIED UPON IN HIGH RISK SITUATIONS**
+**THIS CODE IS A PROOF OF CONCEPT AND SHOULD NOT BE RELIED UPON IN HIGH RISK SITUATIONS!**
 
 
 ## The Hardware
 
 Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. It may work on other orbics and other
 linux/qualcom devices, but this is the only one we have tested on.
-Buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y)
-Or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l)
+Buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
+or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 ## Setup
 
-*NOTE: We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
 
 1. Download the latest [Rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it.
-**If you are installing from the cloned github repository please see the development instructions below, running `install-linux.sh` from the git tree will not work.**
+**If you are installing from the cloned github repository please see the development instructions below, running `install.sh` from the git tree will not work.**
 2. Turn on the Orbic device and plug it into your computer using a USB-C Cable.
-2. Run the install script inside the bundle corresponding to your platform (`install-linux.sh`, `install-mac.sh`). The Linux installer has only been tested on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
-3. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
+3. On MacOS or Linux run the install script `install.sh`. 
+4. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
+
+### Notes 
+  * The install script has only been tested for Linux on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
+  * The install script also won't work on older macs with intel chips, for those macs you will need to follow the instructions at https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices
+  * We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
 
 
 ## Usage
 
 Once installed, Rayhunter will run automatically whenever your Orbic device is running. It serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, and view heuristic analyses of captures. You can access this UI in one of two ways:
 
-1. Over wifi: Connect your phone/laptop to the Orbic's wifi network and visit `http://192.168.1.1:8080` (click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet!)
+1. Over wifi: Connect your phone/laptop to the Orbic's wifi network and visit `http://192.168.1.1:8080` (click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet!).
     * Note that you'll need the Orbic's wifi password for this, which can be retrieved by pressing the "MENU" button on the device and opening the 2.4 GHz menu.
 2. Over usb: Connect the Orbic device to your laptop via usb. Run `adb forward tcp:8080 tcp:8080`, then visit `http://localhost:8080`. For this you will need to install the Android Debug Bridge (ADB) on your computer, you can copy the version that was downloaded inside the releases/platform-tools/` folder to somewhere else in your path or you can install it manually.  You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer), (don't worry about instructions for installing it on a phone/device yet).
 
@@ -41,7 +45,7 @@ Once installed, Rayhunter will run automatically whenever your Orbic device is r
 ### Help, Rayhunter's line is red! What should I do?
  Unfortunately, the circumstances that might lead to a positive CSS signal are quite varied, so we don't have a universal recommendation for how to deal with the a positive signal. You might also want to turn off your phone until you are out of the area (or put it on airplane mode,) and tell your friends to do the same!
 
- Please feel free to contact an EFF technologist with more information & a copy of the QMDL in question at [info@eff.org](mailto:info@eff.org). Please note that this file may contain sensetive information such as your IMSI and the unique IDs of cell towers you were near which could be used to ascertain your location at the time.
+ Please feel free to contact an EFF technologist with more information & a copy of the QMDL in question at [info@eff.org](mailto:info@eff.org). Please note that this file may contain sensetive information such as your IMSI and the unique IDs of cell towers you were near which could be used to ascertain your location at the time. We encourage you to use PGP encryption when sending your message. You can find the [PGP public key for info@eff.org here](https://www.eff.org/about/contact#main-content).
 ### Does Rayhunter work outside of the US?
 **Probably**. Some Rayhunter users have reported successfully using it in other countries with unlocked devices and SIM cards from local telcos. We can't guarantee whether or not it will work for you though.
 ### Should I get a locked or unlocked orbic device? What is the difference?
@@ -87,9 +91,13 @@ Now you can root your device and install Rayhunter by running `./tools/install-d
 
 * push to the device with `./make.sh`
 
-## Documentation
-* Build docs locallly using `RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features  --open`
+## Support and Discussion
 
-**LEGAL DISCLAIMER:** Use this program at your own risk. We beilieve running this program does not currently violate any laws or regulations in the United States. However, we are not responsible for civil or criminal liability resulting from the use of this software. If you are located outside of the US please consult with an attorney in your country to help you assess the legal risks of running this program.
+If you're having issues installing or using Rayhunter, please open an issue in this repo. Join us in the `#rayhunter` channel of [EFF's Mattermost](https://opensource.eff.org/signup_user_complete/?id=6iqur37ucfrctfswrs14iscobw&md=link&sbr=su) instance to chat!
+
+## Documentation
+* Build docs locally using `RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features  --open`
+
+**LEGAL DISCLAIMER:** Use this program at your own risk. We believe running this program does not currently violate any laws or regulations in the United States. However, we are not responsible for civil or criminal liability resulting from the use of this software. If you are located outside of the US please consult with an attorney in your country to help you assess the legal risks of running this program.
 
 *Good Hunting!*
