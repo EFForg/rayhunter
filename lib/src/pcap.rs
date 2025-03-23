@@ -9,8 +9,9 @@ use chrono::prelude::*;
 use deku::prelude::*;
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use pcap_file_tokio::pcapng::blocks::interface_description::InterfaceDescriptionBlock;
+use pcap_file_tokio::pcapng::blocks::section_header::{SectionHeaderBlock, SectionHeaderOption};
 use pcap_file_tokio::pcapng::PcapNgWriter;
-use pcap_file_tokio::PcapError;
+use pcap_file_tokio::{Endianness, PcapError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -60,7 +61,20 @@ struct UdpHeader {
 
 impl<T> GsmtapPcapWriter<T> where T: AsyncWrite + Unpin + Send {
     pub async fn new(writer: T) -> Result<Self, GsmtapPcapError> {
-        let writer = PcapNgWriter::new(writer).await?;
+        let metadata = crate::util::RuntimeMetadata::new();
+        let package = format!("{} {}", env!("CARGO_PKG_NAME").to_owned(), metadata.rayhunter_version);
+        let section = SectionHeaderBlock {
+            endianness: Endianness::Big,
+            major_version: 1,
+            minor_version: 0,
+            section_length: -1,
+            options: vec![
+                SectionHeaderOption::Hardware(Cow::from(metadata.arch)),
+                SectionHeaderOption::OS(Cow::from(metadata.system_os)),
+                SectionHeaderOption::UserApplication(Cow::from(package)),
+            ],
+        };
+        let writer = PcapNgWriter::with_section_header(writer, section).await?;
         Ok(GsmtapPcapWriter { writer, ip_id: 0 })
     }
 

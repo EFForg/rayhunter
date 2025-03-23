@@ -118,6 +118,7 @@ elif [[ `uname -s` == "Darwin" ]]; then
     else
         export SERIAL_PATH="./serial-macos-x86_64-latest/serial"
     fi
+    xattr -d com.apple.quarantine "$SERIAL_PATH"
 else
     echo "This script only supports Linux or macOS"
     exit 1
