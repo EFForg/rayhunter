@@ -25,9 +25,12 @@ fn main() {
 
    // discard argv[0]
    let _ = args.next();
-   Command::new("/bin/bash")
+   // This call will only return if there is an error
+   let error = Command::new("/bin/bash")
 	.args(args)
 	.uid(0)
 	.gid(0)
 	.exec();
+   eprintln!("Error running command: {error}");
+   std::process::exit(1);
 }
