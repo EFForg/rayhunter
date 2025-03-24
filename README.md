@@ -132,19 +132,42 @@ Unfortunately, the circumstances that might lead to a positive CSS signal are qu
 
 ## Development (compiling Rayhunter binary)
 
-** Under development - work in progress.**
+**Under development - work in progress.**
 
 Install `Rust` and cross compiling dependences:
 ```
-sudo apt install curl build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
+sudo apt install curl build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf rustup cargo
+rustup default stable
 rustup target add x86_64-unknown-linux-gnu
 rustup target add armv7-unknown-linux-gnueabihf
 ```
 
-## Documentation
-* Build docs locallly using `RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features  --open`
+Clone the repository:
+```
+git clone https://github.com/NAME_OF_REPOSITORY
+cd NAME_OF_REPOSITORY
+```
 
-**LEGAL DISCLAIMER:** Use this program at your own risk. We believe running this program does not currently violate any laws or regulations in the United States or in Europe.
+Compile binary:
+```
+cargo build --target armv7-unknown-linux-gnueabihf --release
+```
+Compiled binaries are then in `target/armv7-unknown-linux-gnueabihf/release/`:
+```
+cd target/armv7-unknown-linux-gnueabihf/release/
+file rayhunter-daemon
+
+rayhunter-daemon: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), statically linked, BuildID[sha1]=be93b0df122db6d577a2dd2da231d01ddb351ba9, for GNU/Linux 3.2.0, stripped
+```
+
+Building documentation locally:
+`RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features  --open`
+
+Documentation is then in `target/doc/rayhunter/index.html`.
+
+
+## LEGAL DISCLAIMER
+Use this program at your own risk. We believe running this program does not currently violate any laws or regulations in the United States or in Europe.
 
 The reason for that is, that this software uses Qualcomm DIAG kernel driver (`DIAG_CHAR`) to analyze **your own network traffic** that is processed by baseband chip on your device. So, there is **no interception of traffic** of other mobile subscribers and **no unauthorized firmware modifications** to the baseband chip which would normally require a new certification. Rayhunter just enables you to see and analyse all network traffic from the mobile network which is usually hidden from you.
 
