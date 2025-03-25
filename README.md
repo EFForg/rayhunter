@@ -29,6 +29,9 @@ or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
   * The install script also won't work on older macs with intel chips, for those macs you will need to follow the instructions at https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices
   * We don't currently support automated installs on windows, you will have to follow the manual install instructions below*
 
+## Updating
+Great news: if you've successfully installed rayhunter, you already know how to update it! Our update process is identical to the setup process: simply download the latest release and follow the steps in the [setup section](#Setup).
+
 
 ## Usage
 
