@@ -80,10 +80,12 @@ async function updateEntryAnalysisResult(entry) {
         entry.analysis_result = `0 warnings!`;
     } else {
         entry.analysis_result = `!!! ${entry.analysis.warnings.length} warnings !!!`;
-        for(warning of entry.analysis.warnings){
-            msg = `${warning.timestamp}: ${warning.warning.events[1].message}`
-            console.log(msg)
-            entry.analysis_result += `<br>${msg}`
+        for (const warning of entry.analysis.warnings) {
+            for (const event of warning.events) {
+                if (event === null) continue;
+                msg = `${warning.timestamp}: ${event.message}`
+                entry.analysis_result += `<br>${msg}`
+            }
         }
     }
 }
