@@ -81,7 +81,7 @@ async function updateEntryAnalysisResult(entry) {
     } else {
         entry.analysis_result = `!!! ${entry.analysis.warnings.length} warnings !!!`;
         for (const warning of entry.analysis.warnings) {
-            for (const event of warning.events) {
+            for (const event of warning.warning.events) {
                 if (event === null) continue;
                 msg = `${warning.timestamp}: ${event.message}`
                 entry.analysis_result += `<br>${msg}`
