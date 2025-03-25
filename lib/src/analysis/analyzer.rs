@@ -121,7 +121,11 @@ impl Harness {
         harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new()));
         harness.add_analyzer(Box::new(ConnectionRedirect2GDowngradeAnalyzer{}));
         harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer{}));
-        harness.add_analyzer(Box::new(NullCipherAnalyzer{}));
+
+        // FIXME: our RRC parser is reporting false positives for this due to an
+        // upstream hampi bug (https://github.com/ystero-dev/hampi/issues/133).
+        // once that's fixed, we should regenerate our parser and re-enable this
+        // harness.add_analyzer(Box::new(NullCipherAnalyzer{}));
 
         harness
     }
