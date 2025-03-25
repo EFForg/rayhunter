@@ -93,8 +93,12 @@ impl Analyzer for NullCipherAnalyzer {
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
-        let InformationElement::LTE(LteInformationElement::DlDcch(dcch_msg)) = ie else {
-            return None;
+        let dcch_msg = match ie {
+            InformationElement::LTE(lte_ie) => match &** lte_ie {
+                LteInformationElement::DlDcch(dcch_msg) => dcch_msg,
+                _ => return None,
+            }
+            _ => return None,
         };
         let DL_DCCH_MessageType::C1(c1) = &dcch_msg.message else {
             return None;

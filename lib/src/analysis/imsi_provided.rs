@@ -18,8 +18,12 @@ impl Analyzer for ImsiProvidedAnalyzer {
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
-        let InformationElement::LTE(LteInformationElement::PCCH(pcch_msg)) = ie else {
-            return None;
+        let pcch_msg = match ie {
+            InformationElement::LTE(lte_ie) => match &** lte_ie {
+                LteInformationElement::PCCH(pcch_msg) => pcch_msg,
+                _ => return None,
+            }
+            _ => return None,
         };
         let PCCH_MessageType::C1(PCCH_MessageType_c1::Paging(paging)) = &pcch_msg.message else {
             return None;
