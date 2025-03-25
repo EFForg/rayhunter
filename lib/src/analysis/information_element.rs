@@ -19,14 +19,18 @@ pub enum InformationElementError {
 pub enum InformationElement {
     GSM,
     UMTS,
-    LTE(LteInformationElement),
+    // This element of the enum is substantially larger than the others,
+    // so we box it to prevent the size of the enum (any variant) from blowing up.
+    LTE(Box<LteInformationElement>),
     FiveG,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LteInformationElement {
     DlCcch(lte_rrc::DL_CCCH_Message),
-    DlDcch(lte_rrc::DL_DCCH_Message),
+    // This element of the enum is substantially larger than the others,
+    // so we box it to prevent the size of the enum (any variant) from blowing up.
+    DlDcch(Box<lte_rrc::DL_DCCH_Message>),
     UlCcch(lte_rrc::UL_CCCH_Message),
     UlDcch(lte_rrc::UL_DCCH_Message),
     BcchBch(lte_rrc::BCCH_BCH_Message),
@@ -65,7 +69,7 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
                 use LteInformationElement as R;
                 let lte = match lte_rrc_subtype {
                     L::DlCcch => R::DlCcch(decode(&gsmtap_msg.payload)?),
-                    L::DlDcch => R::DlDcch(decode(&gsmtap_msg.payload)?),
+                    L::DlDcch => R::DlDcch(Box::new(decode(&gsmtap_msg.payload)?)),
                     L::UlCcch => R::UlCcch(decode(&gsmtap_msg.payload)?),
                     L::UlDcch => R::UlDcch(decode(&gsmtap_msg.payload)?),
                     L::BcchBch => R::BcchBch(decode(&gsmtap_msg.payload)?),
@@ -80,10 +84,10 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
                     L::SbcchSlBchV2x => R::SbcchSlBchV2x(decode(&gsmtap_msg.payload)?),
                     _ => return Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
                 };
-                Ok(InformationElement::LTE(lte))
+                Ok(InformationElement::LTE(Box::new(lte)))
             },
             GsmtapType::LteNas(LteNasSubtype::Plain) => {
-                Ok(InformationElement::LTE(LteInformationElement::NAS(gsmtap_msg.payload.clone())))
+                Ok(InformationElement::LTE(Box::new(LteInformationElement::NAS(gsmtap_msg.payload.clone()))))
             },
             _ => Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
         }

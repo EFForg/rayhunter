@@ -10,10 +10,12 @@ pub struct LteSib6And7DowngradeAnalyzer {
 
 impl LteSib6And7DowngradeAnalyzer {
     fn unpack_system_information<'a>(&self, ie: &'a InformationElement) -> Option<&'a SystemInformation_r8_IEsSib_TypeAndInfo> {
-        if let InformationElement::LTE(LteInformationElement::BcchDlSch(bcch_dl_sch_message)) = ie {
-            if let BCCH_DL_SCH_MessageType::C1(BCCH_DL_SCH_MessageType_c1::SystemInformation(system_information)) = &bcch_dl_sch_message.message {
-                if let SystemInformationCriticalExtensions::SystemInformation_r8(sib) = &system_information.critical_extensions {
-                    return Some(&sib.sib_type_and_info);
+        if let InformationElement::LTE(lte_ie) = ie {
+            if let LteInformationElement::BcchDlSch(bcch_dl_sch_message) = &**lte_ie {
+                if let BCCH_DL_SCH_MessageType::C1(BCCH_DL_SCH_MessageType_c1::SystemInformation(system_information)) = &bcch_dl_sch_message.message {
+                    if let SystemInformationCriticalExtensions::SystemInformation_r8(sib) = &system_information.critical_extensions {
+                        return Some(&sib.sib_type_and_info);
+                    }
                 }
             }
         }

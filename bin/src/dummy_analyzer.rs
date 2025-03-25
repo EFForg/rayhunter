@@ -26,8 +26,12 @@ impl Analyzer for TestAnalyzer{
                 message: "multiple of 100 events processed".to_string(),
             })
         }
-        let InformationElement::LTE(LteInformationElement::PCCH(pcch_msg)) = ie else {
-            return None;
+        let pcch_msg = match ie {
+            InformationElement::LTE(lte_ie) => match &** lte_ie {
+                LteInformationElement::PCCH(pcch_msg) => pcch_msg,
+                _ => return None,
+            }
+            _ => return None,
         };
         let PCCH_MessageType::C1(PCCH_MessageType_c1::Paging(paging)) = &pcch_msg.message else {
             return None;
