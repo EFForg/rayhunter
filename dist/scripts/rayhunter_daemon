@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/sh
 
 set -e
 
@@ -6,7 +6,7 @@ case "$1" in
 start)
     echo -n "Starting rayhunter: "
     start-stop-daemon -S -b --make-pidfile --pidfile /tmp/rayhunter.pid \
-    --startas /bin/bash -- -c "RUST_LOG=info exec /data/rayhunter/rayhunter-daemon /data/rayhunter/config.toml > /data/rayhunter/rayhunter.log 2>&1"
+    --startas /bin/sh -- -c "RUST_LOG=info exec /data/rayhunter/rayhunter-daemon /data/rayhunter/config.toml > /data/rayhunter/rayhunter.log 2>&1"
     echo "done"
     ;;
   stop)
