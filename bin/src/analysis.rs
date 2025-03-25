@@ -114,7 +114,7 @@ async fn perform_analysis(
     let (analysis_file, qmdl_file, entry_index) = {
         let mut qmdl_store = qmdl_store_lock.write().await;
         let (entry_index, _) = qmdl_store
-            .entry_for_name(&name)
+            .entry_for_name(name)
             .ok_or(format!("failed to find QMDL store entry for {}", name))?;
         let analysis_file = qmdl_store
             .clear_and_open_entry_analysis(entry_index)

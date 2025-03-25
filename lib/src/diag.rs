@@ -427,7 +427,7 @@ mod test {
         let bitsize = 513;
         let req = build_log_mask_request(log_type, bitsize, &crate::diag_device::LOG_CODES_FOR_RAW_PACKET_LOGGING);
         assert_eq!(req, Request::LogConfig(LogConfigRequest::SetMask {
-            log_type: log_type,
+            log_type,
             log_mask_bitsize: bitsize,
             log_mask: vec![
                 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
