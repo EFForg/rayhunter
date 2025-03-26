@@ -9,6 +9,12 @@ pub struct ImsiRequestedAnalyzer {
     packet_num: usize,
 }
 
+impl Default for ImsiRequestedAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ImsiRequestedAnalyzer {
     pub fn new() -> Self {
         Self { packet_num: 0 }

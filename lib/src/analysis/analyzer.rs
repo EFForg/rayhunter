@@ -110,6 +110,12 @@ pub struct Harness {
     analyzers: Vec<Box<dyn Analyzer + Send>>,
 }
 
+impl Default for Harness {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Harness {
     pub fn new() -> Self {
         Self { analyzers: Vec::new() }
