@@ -222,7 +222,7 @@ fn enable_frame_readwrite(fd: i32, mode: i32) -> DiagResult<()> {
             let ret = libc::ioctl(
                 fd,
                 DIAG_IOCTL_SWITCH_LOGGING,
-                &mut [mode, -1, 0] as *mut _, // diag_logging_mode_param_t
+                &mut [mode, 0, 1] as *mut _, // diag_logging_mode_param_t
                 std::mem::size_of::<[i32; 3]>(), 0, 0, 0, 0
             );
             if ret < 0 {
