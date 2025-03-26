@@ -108,16 +108,17 @@ impl DiagDevice {
 
     async fn get_next_messages_container(&mut self) -> Result<MessagesContainer, DiagDeviceError> {
         let mut bytes_read = 0;
-        while bytes_read == 0 {
+        while bytes_read <= 8 {
             bytes_read = self.file.read(&mut self.read_buf).await
                 .map_err(DiagDeviceError::DeviceReadFailed)?;
         }
-        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))
-            .map_err(DiagDeviceError::ParseMessagesContainerError)?;
-        if !leftover_bytes.is_empty() {
-            warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+
+        info!("Parsing messages container size = {:?} [{:?}]", bytes_read, &self.read_buf[0..bytes_read]);
+
+        match MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0)) {
+            Ok(((leftover_bytes, _), container)) => return Ok(container),
+            Err(err) => return Err(DiagDeviceError::ParseMessagesContainerError(err)),
         }
-        Ok(container)
     }
 
     async fn write_request(&mut self, req: &Request) -> DiagResult<()> {
