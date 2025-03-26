@@ -6,21 +6,21 @@ use axum::extract::{Path, State};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use futures::{StreamExt, TryStreamExt};
-use log::{debug, error, info};
 use rayhunter::diag::DataType;
 use rayhunter::diag_device::DiagDevice;
-use rayhunter::qmdl::QmdlWriter;
-use tokio::fs::File;
-use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::{Receiver, Sender};
+use rayhunter::qmdl::QmdlWriter;
+use log::{debug, error, info};
+use tokio::fs::File;
 use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
+use futures::{StreamExt, TryStreamExt};
 
-use crate::analysis::AnalysisWriter;
 use crate::framebuffer;
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
+use crate::analysis::AnalysisWriter;
 
 pub enum DiagDeviceCtrlMessage {
     StopRecording,
@@ -109,8 +109,8 @@ pub fn run_diag_read_thread(
                             }
                         },
                         Err(err) => {
-                           error!("error reading diag device: {}", err);
-                           return Err(err);
+                            error!("error reading diag device: {}", err);
+                            return Err(err);
                         }
                     }
                 }
@@ -119,109 +119,57 @@ pub fn run_diag_read_thread(
     });
 }
 
-pub async fn start_recording(
-    State(state): State<Arc<ServerState>>,
-) -> Result<(StatusCode, String), (StatusCode, String)> {
+pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(StatusCode, String), (StatusCode, String)> {
     if state.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
-    let (qmdl_file, analysis_file) = qmdl_store.new_entry().await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("couldn't create new qmdl entry: {}", e),
-        )
-    })?;
+    let (qmdl_file, analysis_file) = qmdl_store.new_entry().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't create new qmdl entry: {}", e)))?;
     let qmdl_writer = QmdlWriter::new(qmdl_file);
-    state
-        .diag_device_ctrl_sender
-        .send(DiagDeviceCtrlMessage::StartRecording((
-            qmdl_writer,
-            analysis_file,
-        )))
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send stop recording message: {}", e),
-            )
-        })?;
+    state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StartRecording((qmdl_writer, analysis_file))).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
 
     let display_state: framebuffer::DisplayState;
-    if state.colorblind_mode {
+    if state.colorblind_mode { 
         display_state = framebuffer::DisplayState::RecordingCBM;
     } else {
         display_state = framebuffer::DisplayState::Recording;
     }
-    state
-        .ui_update_sender
-        .send(display_state)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send ui update message: {}", e),
-            )
-        })?;
+    state.ui_update_sender.send(display_state).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
 
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
-pub async fn stop_recording(
-    State(state): State<Arc<ServerState>>,
-) -> Result<(StatusCode, String), (StatusCode, String)> {
+pub async fn stop_recording(State(state): State<Arc<ServerState>>) -> Result<(StatusCode, String), (StatusCode, String)> {
     if state.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
-    qmdl_store.close_current_entry().await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("couldn't close current qmdl entry: {}", e),
-        )
-    })?;
-    state
-        .diag_device_ctrl_sender
-        .send(DiagDeviceCtrlMessage::StopRecording)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send stop recording message: {}", e),
-            )
-        })?;
-    state
-        .ui_update_sender
-        .send(framebuffer::DisplayState::Paused)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send ui update message: {}", e),
-            )
-        })?;
+    qmdl_store.close_current_entry().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't close current qmdl entry: {}", e)))?;
+    state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
+    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
-pub async fn get_analysis_report(
-    State(state): State<Arc<ServerState>>,
-    Path(qmdl_name): Path<String>,
-) -> Result<Response, (StatusCode, String)> {
+pub async fn get_analysis_report(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
     let (entry_index, _) = if qmdl_name == "live" {
         qmdl_store.get_current_entry().ok_or((
             StatusCode::SERVICE_UNAVAILABLE,
-            "No QMDL data's being recorded to analyze, try starting a new recording!".to_string(),
+            "No QMDL data's being recorded to analyze, try starting a new recording!".to_string()
         ))?
     } else {
         qmdl_store.entry_for_name(&qmdl_name).ok_or((
             StatusCode::NOT_FOUND,
-            format!("Couldn't find QMDL entry with name \"{}\"", qmdl_name),
+            format!("Couldn't find QMDL entry with name \"{}\"", qmdl_name)
         ))?
     };
-    let analysis_file = qmdl_store
-        .open_entry_analysis(entry_index)
-        .await
+    let analysis_file = qmdl_store.open_entry_analysis(entry_index).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)))?;
     let analysis_stream = ReaderStream::new(analysis_file);
 
