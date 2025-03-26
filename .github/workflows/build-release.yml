@@ -37,9 +37,9 @@ jobs:
       - name: Fix executable permissions on binaries
         run: chmod +x rayhunter-daemon/rayhunter-daemon
       - name: Setup release directory
-        run: mv rayhunter-daemon/rayhunter-daemon dist
+        run: mv rayhunter-daemon/rayhunter-daemon dist_tplink
       - name: Archive release directory
-        run: tar -cvf release.tar -C dist .
+        run: tar -cvf release.tar -C dist_tplink .
       # TODO: have this create a release directly
       - name: Upload release
         uses: actions/upload-artifact@v4
