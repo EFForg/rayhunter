@@ -45,24 +45,10 @@ use include_dir::{include_dir, Dir};
 async fn run_server(
     task_tracker: &TaskTracker,
     config: &config::Config,
-    qmdl_store_lock: Arc<RwLock<RecordingStore>>,
+    state: Arc<ServerState>,
     server_shutdown_rx: oneshot::Receiver<()>,
-    ui_update_tx: Sender<framebuffer::DisplayState>,
-    diag_device_sender: Sender<DiagDeviceCtrlMessage>,
-    analysis_sender: Sender<AnalysisCtrlMessage>,
-    analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
 ) -> JoinHandle<()> {
     info!("spinning up server");
-    let state = Arc::new(ServerState {
-        qmdl_store_lock,
-        diag_device_ctrl_sender: diag_device_sender,
-        ui_update_sender: ui_update_tx,
-        debug_mode: config.debug_mode,
-        analysis_status_lock,
-        analysis_sender,
-        colorblind_mode: config.colorblind_mode,
-    });
-
     let app = Router::new()
         .route("/api/pcap/*name", get(get_pcap))
         .route("/api/qmdl/*name", get(get_qmdl))
@@ -257,7 +243,16 @@ async fn main() -> Result<(), RayhunterError> {
     let analysis_status_lock = Arc::new(RwLock::new(AnalysisStatus::default()));
     run_analysis_thread(&task_tracker, analysis_rx, qmdl_store_lock.clone(), analysis_status_lock.clone(), config.enable_dummy_analyzer);
     run_ctrl_c_thread(&task_tracker, tx.clone(), server_shutdown_tx, maybe_ui_shutdown_tx, qmdl_store_lock.clone(), analysis_tx.clone());
-    run_server(&task_tracker, &config, qmdl_store_lock.clone(), server_shutdown_rx, ui_update_tx, tx, analysis_tx, analysis_status_lock).await;
+    let state = Arc::new(ServerState {
+        qmdl_store_lock: qmdl_store_lock.clone(),
+        diag_device_ctrl_sender: tx,
+        ui_update_sender: ui_update_tx,
+        debug_mode: config.debug_mode,
+        analysis_status_lock,
+        analysis_sender: analysis_tx,
+        colorblind_mode: config.colorblind_mode,
+    });
+    run_server(&task_tracker, &config, state, server_shutdown_rx).await;
 
     task_tracker.close();
     task_tracker.wait().await;
