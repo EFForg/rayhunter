@@ -10,6 +10,9 @@ Rayhunter is an IMSI Catcher Catcher originally developed for the Orbic mobile h
 ## The Hardware
 
 Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. Currently is being ported to TP-Link M7350 mobile hotspot and already works on the several hardware revisions.
+It may work on other orbics and other linux/qualcom devices, but this is the only one we have tested on.
+Buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
+or on [Ebay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 TP-Link M7350 needs to be rooted first, then Rayhunter can be installed on it.
 
@@ -25,7 +28,6 @@ TP-Link M7350 needs to be rooted first, then Rayhunter can be installed on it.
 | v7 | no info               | no info |
 | v8 | yes | yes ([with modifications](https://github.com/ping2A/rayhunter)) |
 
-Rayhunter may work on other Linux/Qualcom devices, but has not been tested on them.
 
 1. Download the latest [Rayhunter release bundle](https://github.com/EFForg/rayhunter/releases) and extract it.
 **If you are installing from the cloned github repository please see the development instructions below, running `install.sh` from the git tree will not work.**
@@ -124,9 +126,15 @@ After reboot, Rayhunter should be autostarted automatically. You can visit Rayhu
 
 Once installed, Rayhunter will run automatically whenever your device is running. It serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, and view heuristic analyses of captures. You can access this UI in one of two ways:
 
+<<<<<<< HEAD
 1. **Over WiFi**: Connect your phone/laptop to the device WiFi network and visit `http://192.168.0.1:8080` (click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet!)
 
 2. **Over USB**: Connect the Orbic device to your laptop via USB, then visit `http://192.168.0.1:8080`. Maybe you need to run `adb forward tcp:8080 tcp:8080`, then visit `http://localhost:8080`. For this you will need to install the Android Debug Bridge (ADB) on your computer, you can copy the version that was downloaded inside the releases/platform-tools/` folder to somewhere else in your path or you can install it manually.  You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer), (don't worry about instructions for installing it on a phone/device yet).
+=======
+1. Over wifi: Connect your phone/laptop to the Orbic's wifi network and visit `http://192.168.1.1:8080` (click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet!).
+    * Note that you'll need the Orbic's wifi password for this, which can be retrieved by pressing the "MENU" button on the device and opening the 2.4 GHz menu.
+2. Over usb: Connect the Orbic device to your laptop via usb. Run `adb forward tcp:8080 tcp:8080`, then visit `http://localhost:8080`. For this you will need to install the Android Debug Bridge (ADB) on your computer, you can copy the version that was downloaded inside the releases/platform-tools/` folder to somewhere else in your path or you can install it manually.  You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer), (don't worry about instructions for installing it on a phone/device yet).
+>>>>>>> 3b80df76a5bcec4ebeed29d1c3e6d2fc40040aee
 
 ## Frequently Asked Questions
 
