@@ -12,6 +12,12 @@ pub struct RuntimeMetadata {
     pub arch: String,
 }
 
+impl Default for RuntimeMetadata {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RuntimeMetadata {
     /// Return the binary and system information, attempting to retrieve
     /// attributes from `uname(2)` and falling back to values from
