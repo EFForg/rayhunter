@@ -10,7 +10,6 @@ use super::{
     information_element::InformationElement,
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
-    null_cipher::NullCipherAnalyzer,
 };
 
 /// Qualitative measure of how severe a Warning event type is.
