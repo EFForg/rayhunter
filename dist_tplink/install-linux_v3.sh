@@ -11,5 +11,5 @@ else
     export ADB=`which adb`
 fi
 
-. "$(dirname "$0")"/install-common.sh
+. "$(dirname "$0")"/install-common_v3.sh
 install
