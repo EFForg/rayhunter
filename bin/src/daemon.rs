@@ -102,20 +102,18 @@ async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, Rayh
         } else {
             Err(RayhunterError::NoStoreDebugMode(config.qmdl_store_path.clone()))
         }
-    } else {
-        if store_exists {
-            match RecordingStore::load(&config.qmdl_store_path).await {
-                Ok(store) => Ok(store),
-                Err(RecordingStoreError::ParseManifestError(err)) => {
-                    error!("failed to parse QMDL manifest: {}", err);
-                    info!("creating new empty manifest...");
-                    Ok(RecordingStore::create(&config.qmdl_store_path).await?)
-                },
-                Err(err) => Err(err.into()),
-            }
-        } else {
-            Ok(RecordingStore::create(&config.qmdl_store_path).await?)
+    } else if store_exists {
+        match RecordingStore::load(&config.qmdl_store_path).await {
+            Ok(store) => Ok(store),
+            Err(RecordingStoreError::ParseManifestError(err)) => {
+                error!("failed to parse QMDL manifest: {}", err);
+                info!("creating new empty manifest...");
+                Ok(RecordingStore::create(&config.qmdl_store_path).await?)
+            },
+            Err(err) => Err(err.into()),
         }
+    } else {
+        Ok(RecordingStore::create(&config.qmdl_store_path).await?)
     }
 }
 
