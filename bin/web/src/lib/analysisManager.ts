@@ -13,10 +13,10 @@ type AnalysisStatusJson = {
     finished: string[];
 };
 
-export type AnalysisResult {
+export type AnalysisResult = {
     name: string,
     status: AnalysisStatus,
-}
+};
 
 export class AnalysisManager {
     public analysis_status: Map<string, AnalysisStatus> = new Map();

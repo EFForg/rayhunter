@@ -1,3 +1,4 @@
+use log::info;
 use chrono::{DateTime, Local};
 use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
@@ -112,6 +113,37 @@ impl RecordingStore {
             manifest,
             current_entry: None,
         })
+    }
+
+    // Given a path to a directory of QMDL files, attempt to create a new
+    // manifest (and analysis files) from scratch. Useful if the existing
+    // manifest is corrupt or out of date. This will always re-run all
+    // analyzers over all of the given QMDLs.
+    pub async fn restore_from_dir<P>(path: P) -> Result<Self, RecordingStoreError>
+    where
+        P: AsRef<Path>,
+    {
+        info!("restoring RecordingStore from dir {:?}", path.as_ref());
+        let mut dir = fs::read_dir(path).await
+            .map_err(RecordingStoreError::OpenDirError)?;
+        loop {
+            let dir_entry = match dir.next_entry().await  {
+                Ok(Some(entry)) => entry,
+                Ok(None) => break,
+                Err(err) => return Err(RecordingStoreError::OpenDirError(err)),
+            };
+            let qmdl_path = dir_entry.path();
+            if qmdl_path.ends_with("qmdl") {
+                info!("ignoring non-QMDL file {:?}", qmdl_path);
+                continue;
+            }
+            let mut manifest_entry = ManifestEntry::new();
+            manifest_entry.name = qmdl_path.file_stem()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+        }
+        todo!();
     }
 
     // Creates a new RecordingStore at the given path. This involves creating a dir
