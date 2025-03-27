@@ -160,13 +160,17 @@ fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdo
 
     task_tracker.spawn_blocking(move || {
         let mut fb: Framebuffer = Framebuffer::new();
-        // this feels wrong, is there a more rusty way to do this?
-        let mut img: Option<&[u8]> = None;
-        if display_level == 2 {
-            img = Some(IMAGE_DIR.get_file("orca.gif").expect("failed to read orca.gif").contents());
-        } else if display_level == 3 {
-            img = Some(IMAGE_DIR.get_file("eff.png").expect("failed to read eff.png").contents());
+        let img = match display_level {
+            2 => Some("orca.gif"),
+            3 => Some("eff.png"),
+            _ => None,
         }
+        .map(|n| {
+            IMAGE_DIR
+                .get_file(n)
+                .expect(&format!("failed to read {n}"))
+                .contents()
+        });
         loop {
             match ui_shutdown_rx.try_recv() {
                 Ok(_) => {
