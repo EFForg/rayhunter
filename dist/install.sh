@@ -109,7 +109,8 @@ elif [[ `uname -s` == "Darwin" ]]; then
         export SERIAL_PATH="./serial-macos-intel/serial"
     fi
     export PLATFORM_TOOLS="platform-tools-latest-darwin.zip"
-    xattr -d com.apple.quarantine "$SERIAL_PATH"
+    # if we've already deleted this attribute, xattr errors out
+    xattr -d com.apple.quarantine "$SERIAL_PATH" || echo
 else
     echo "This script only supports Linux or macOS"
     exit 1
