@@ -45,7 +45,7 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 ## Updating
 
-Great news: if you've successfully installed rayhunter, you already know how to update it! Our update process is identical to the setup process: simply download the latest release and follow the steps in the [setup section](#setup).
+Great news: if you've successfully installed rayhunter, you already know how to update it! Our update process is identical to the setup process: simply download the latest release and follow the steps in the [setup section](#setup-silicon-mac-linux).
 
 ## Usage (viewing the web UI)
 
