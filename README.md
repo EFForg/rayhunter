@@ -47,13 +47,11 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 * **Windows:** We don't currently support automated installs on Windows, you will have to follow the instructions in the **Development** section below.
 
-## Usage (viewing the web UI)
-
 ## Updating
 
 Great news: if you've successfully installed rayhunter, you already know how to update it! Our update process is identical to the setup process: simply download the latest release and follow the steps in the [setup section](#setup).
 
-## Usage
+## Usage (viewing the web UI)
 
 Once installed, Rayhunter will run automatically whenever your Orbic device is running. It serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, and view heuristic analyses of captures. You can access this UI in one of two ways:
 
