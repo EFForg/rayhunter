@@ -28,7 +28,7 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 3. Run the install script for your operating system:
 
     ```bash
-    install.sh
+    ./install.sh
     ```
 
 4. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
