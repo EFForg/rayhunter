@@ -24,19 +24,24 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
     cd ~/Downloads/release
     ```
 
-2. Turn on the Orbic device by holding the power button for 3 seconds. Plug it into your computer using a USB-C Cable.
-3. Run the install script for your operating system:
+3. Turn on the Orbic device by holding the power button for 3 seconds. Plug it into your computer using a USB-C Cable.
+4. Run the install script for your operating system:
 
     ```bash
     ./install.sh
     ```
 
-4. Once finished, Rayhunter should be running! You can verify this by visiting the web UI as described below.
+    The device will restart multiple times over the next few minutes.
+
+    You will know it is done when you see terminal output that says `checking for rayhunter server...success!`
+
+5. Rayhunter should now be running! You can verify this by following the instructions below to [view the web UI](#usage-viewing-the-web-ui). You should also see a green line flash along the top of top the display on the device.
 
 ### Installation Notes
 
 * Note: If you are installing from the cloned GitHub repository please see the development instructions below, running `install.sh` from the git tree will not work.
 * The install script has only been tested for Linux on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
+* On macOS if you encounter an error that says "No Orbic device found," it may because you the "Allow accessories to connect" security setting set to "Ask for approval." You may need to temporarily change it to "Always" for the script to run. Make sure to change it back to a more secure setting when you're done.
 
 ## Setup (Intel Mac, Windows)
 
