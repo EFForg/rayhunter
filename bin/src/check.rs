@@ -1,9 +1,15 @@
-use std::{collections::HashMap, future, path::PathBuf, pin::pin};
-use log::{info, warn};
-use rayhunter::{analysis::analyzer::{EventType, Harness}, diag::DataType, gsmtap_parser, pcap::GsmtapPcapWriter, qmdl::QmdlReader};
-use tokio::fs::{metadata, read_dir, File};
 use clap::Parser;
 use futures::TryStreamExt;
+use log::{info, warn};
+use rayhunter::{
+    analysis::analyzer::{EventType, Harness},
+    diag::DataType,
+    gsmtap_parser,
+    pcap::GsmtapPcapWriter,
+    qmdl::QmdlReader,
+};
+use std::{collections::HashMap, future, path::PathBuf, pin::pin};
+use tokio::fs::{metadata, read_dir, File};
 
 mod dummy_analyzer;
 
@@ -28,15 +34,24 @@ struct Args {
 
 async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool) {
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
-    let file_size = qmdl_file.metadata().await.expect("failed to get QMDL file metadata").len();
+    let file_size = qmdl_file
+        .metadata()
+        .await
+        .expect("failed to get QMDL file metadata")
+        .len();
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(file_size as usize));
-    let mut qmdl_stream = pin!(qmdl_reader.as_stream()
+    let mut qmdl_stream = pin!(qmdl_reader
+        .as_stream()
         .try_filter(|container| future::ready(container.data_type == DataType::UserSpace)));
     let mut skipped_reasons: HashMap<String, i32> = HashMap::new();
     let mut total_messages = 0;
     let mut warnings = 0;
     let mut skipped = 0;
-    while let Some(container) = qmdl_stream.try_next().await.expect("failed getting QMDL container") {
+    while let Some(container) = qmdl_stream
+        .try_next()
+        .await
+        .expect("failed getting QMDL container")
+    {
         let row = harness.analyze_qmdl_messages(container);
         total_messages += 1;
         for reason in row.skipped_message_reasons {
@@ -50,18 +65,13 @@ async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool
                     EventType::Informational => {
                         info!(
                             "{}: INFO - {} {}",
-                            qmdl_path,
-                            analysis.timestamp,
-                            event.message,
+                            qmdl_path, analysis.timestamp, event.message,
                         );
                     }
                     EventType::QualitativeWarning { severity } => {
                         warn!(
                             "{}: WARNING (Severity: {:?}) - {} {}",
-                            qmdl_path,
-                            severity,
-                            analysis.timestamp,
-                            event.message,
+                            qmdl_path, severity, analysis.timestamp, event.message,
                         );
                         warnings += 1;
                     }
@@ -75,22 +85,36 @@ async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool
             info!("    - {}: \"{}\"", count, reason);
         }
     }
-    info!("{}: {} messages analyzed, {} warnings, {} messages skipped", qmdl_path, total_messages, warnings, skipped);
+    info!(
+        "{}: {} messages analyzed, {} warnings, {} messages skipped",
+        qmdl_path, total_messages, warnings, skipped
+    );
 }
 
 async fn pcapify(qmdl_path: &PathBuf) {
-    let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open qmdl file");
+    let qmdl_file = &mut File::open(&qmdl_path)
+        .await
+        .expect("failed to open qmdl file");
     let qmdl_file_size = qmdl_file.metadata().await.unwrap().len();
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_file_size as usize));
     let mut pcap_path = qmdl_path.clone();
     pcap_path.set_extension("pcap");
-    let pcap_file = &mut File::create(&pcap_path).await.expect("failed to open pcap file");
+    let pcap_file = &mut File::create(&pcap_path)
+        .await
+        .expect("failed to open pcap file");
     let mut pcap_writer = GsmtapPcapWriter::new(pcap_file).await.unwrap();
     pcap_writer.write_iface_header().await.unwrap();
-    while let Some(container) = qmdl_reader.get_next_messages_container().await.expect("failed to get container") {
+    while let Some(container) = qmdl_reader
+        .get_next_messages_container()
+        .await
+        .expect("failed to get container")
+    {
         for msg in container.into_messages().into_iter().flatten() {
             if let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg) {
-                pcap_writer.write_gsmtap_message(parsed, timestamp).await.expect("failed to write");
+                pcap_writer
+                    .write_gsmtap_message(parsed, timestamp)
+                    .await
+                    .expect("failed to write");
             }
         }
     }
@@ -109,7 +133,8 @@ async fn main() {
         .with_colors(true)
         .without_timestamps()
         .with_level(level)
-        .init().unwrap();
+        .init()
+        .unwrap();
 
     let mut harness = Harness::new_with_all_analyzers();
     if args.enable_dummy_analyzer {
@@ -120,7 +145,9 @@ async fn main() {
         info!("    - {}: {}", analyzer.name, analyzer.description);
     }
 
-    let metadata = metadata(&args.qmdl_path).await.expect("failed to get metadata");
+    let metadata = metadata(&args.qmdl_path)
+        .await
+        .expect("failed to get metadata");
     if metadata.is_dir() {
         let mut dir = read_dir(&args.qmdl_path).await.expect("failed to read dir");
         while let Some(entry) = dir.next_entry().await.expect("failed to get entry") {

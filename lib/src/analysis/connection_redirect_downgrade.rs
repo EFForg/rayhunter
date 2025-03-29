@@ -2,13 +2,15 @@ use std::borrow::Cow;
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
-use telcom_parser::lte_rrc::{DL_DCCH_MessageType, DL_DCCH_MessageType_c1, RRCConnectionReleaseCriticalExtensions, RRCConnectionReleaseCriticalExtensions_c1, RedirectedCarrierInfo};
 use super::util::unpack;
+use telcom_parser::lte_rrc::{
+    DL_DCCH_MessageType, DL_DCCH_MessageType_c1, RRCConnectionReleaseCriticalExtensions,
+    RRCConnectionReleaseCriticalExtensions_c1, RedirectedCarrierInfo,
+};
 
 // Based on HITBSecConf presentation "Forcing a targeted LTE cellphone into an
 // eavesdropping network" by Lin Huang
-pub struct ConnectionRedirect2GDowngradeAnalyzer {
-}
+pub struct ConnectionRedirect2GDowngradeAnalyzer {}
 
 // TODO: keep track of SIB state to compare LTE reselection blocks w/ 2g/3g ones
 impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
@@ -33,7 +35,9 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
         unpack!(Some(carrier_info) = &r8_ies.redirected_carrier_info);
         match carrier_info {
             RedirectedCarrierInfo::Geran(_carrier_freqs_geran) => Some(Event {
-                event_type: EventType::QualitativeWarning { severity: Severity::High },
+                event_type: EventType::QualitativeWarning {
+                    severity: Severity::High,
+                },
                 message: "Detected 2G downgrade".to_owned(),
             }),
             _ => Some(Event {

@@ -1,5 +1,5 @@
-use rayhunter::util::RuntimeMetadata;
 use chrono::{DateTime, Local};
+use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -170,10 +170,7 @@ impl RecordingStore {
     }
 
     // Returns the corresponding QMDL file for a given entry
-    pub async fn open_entry_qmdl(
-        &self,
-        entry_index: usize,
-    ) -> Result<File, RecordingStoreError> {
+    pub async fn open_entry_qmdl(&self, entry_index: usize) -> Result<File, RecordingStoreError> {
         let entry = &self.manifest.entries[entry_index];
         File::open(entry.get_qmdl_filepath(&self.path))
             .await
@@ -202,8 +199,7 @@ impl RecordingStore {
             .open(entry.get_analysis_filepath(&self.path))
             .await
             .map_err(RecordingStoreError::ReadFileError)?;
-        self.update_entry_analysis_size(entry_index, 0)
-            .await?;
+        self.update_entry_analysis_size(entry_index, 0).await?;
         Ok(file)
     }
 
@@ -256,7 +252,8 @@ impl RecordingStore {
 
     // Finds an entry by filename
     pub fn entry_for_name(&self, name: &str) -> Option<(usize, &ManifestEntry)> {
-        let entry_index = self.manifest
+        let entry_index = self
+            .manifest
             .entries
             .iter()
             .position(|entry| entry.name == name)?;
