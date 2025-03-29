@@ -21,7 +21,7 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 2. Unzip the `release.tar`. Open the terminal and navigate to the folder
 
     ```bash
-    cd ~/Downloads/rayhunter-[VERSION] # change to the version number you downloaded
+    cd ~/Downloads/release
     ```
 
 2. Turn on the Orbic device by holding the power button for 3 seconds. Plug it into your computer using a USB-C Cable.
