@@ -9,6 +9,11 @@ description = "Realtime cellular data decoding and analysis for IMSI catcher det
 name = "rayhunter"
 path = "src/lib.rs"
 
+[features]
+default = []
+device-orbic-rc400l = []
+device-tplink-m7350 = []
+
 [dependencies]
 bytes = "1.5.0"
 chrono = "0.4.31"

@@ -3,6 +3,13 @@ name = "rayhunter-daemon"
 version = "0.2.6"
 edition = "2021"
 
+[features]
+# These feature flags are mutually exclusive, and exactly one must be enabled.
+device-orbic-rc400l = ["rayhunter/device-orbic-rc400l"]
+device-tplink-m7350 = ["rayhunter/device-tplink-m7350"]
+
+default = ["device-orbic-rc400l"]
+
 [[bin]]
 name = "rayhunter-daemon"
 path = "src/daemon.rs"

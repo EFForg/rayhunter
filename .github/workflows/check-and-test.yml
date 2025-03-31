@@ -16,5 +16,9 @@ jobs:
     - uses: actions/checkout@v3
     - name: Check
       run: cargo check --verbose
+    - name: Check (no features)
+      run: cargo check --verbose --no-default-features
+    - name: Check (device-tplink-m7350)
+      run: cargo check --verbose --no-default-features --features=device-tplink-m7350
     - name: Run tests
       run: cargo test --verbose

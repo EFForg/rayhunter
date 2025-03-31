@@ -1,6 +1,8 @@
 use image::{codecs::gif::GifDecoder, imageops::FilterType, AnimationDecoder, DynamicImage};
 use std::{io::Cursor, time::Duration};
 
+use crate::display::DisplayState;
+
 const FB_PATH:&str = "/dev/fb0";
 
 #[derive(Copy, Clone)]
@@ -21,13 +23,6 @@ pub enum Color565 {
     Cyan   = 0b0000011111111111,
     Yellow = 0b1111111111100000,
     Pink =   0b1111010010011111,
-}
-
-pub enum DisplayState {
-    Recording,
-    Paused,
-    WarningDetected,
-    RecordingCBM,
 }
 
 impl From<DisplayState> for Color565 {
