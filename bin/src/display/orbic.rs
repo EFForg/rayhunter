@@ -5,7 +5,6 @@ use crate::display::DisplayState;
 use log::{error, info};
 use tokio::sync::oneshot;
 use tokio::sync::mpsc::Receiver;
-use tokio::task::JoinHandle;
 use tokio_util::task::TaskTracker;
 use tokio::sync::oneshot::error::TryRecvError;
 
@@ -14,7 +13,7 @@ use std::time::Duration;
 
 use include_dir::{include_dir, Dir};
 
-pub fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<DisplayState>) -> JoinHandle<()> {
+pub fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<DisplayState>) {
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
     let mut display_color: framebuffer::Color565;
     let display_level = config.ui_level;
@@ -75,5 +74,5 @@ pub fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_sh
             };
             sleep(Duration::from_millis(1000));
         }
-    })
+    });
 }
