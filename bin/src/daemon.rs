@@ -6,7 +6,7 @@ mod server;
 mod stats;
 mod qmdl_store;
 mod diag;
-mod framebuffer;
+mod display;
 mod dummy_analyzer;
 
 use crate::config::{parse_config, parse_args};
@@ -16,7 +16,6 @@ use crate::server::{ServerState, get_qmdl, serve_static};
 use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
-use crate::framebuffer::Framebuffer;
 
 use analysis::{get_analysis_status, run_analysis_thread, start_analysis, AnalysisCtrlMessage, AnalysisStatus};
 use axum::response::Redirect;
@@ -27,17 +26,13 @@ use rayhunter::diag_device::DiagDevice;
 use axum::routing::{get, post};
 use axum::Router;
 use stats::get_qmdl_manifest;
-use tokio::sync::mpsc::{self, Sender, Receiver};
-use tokio::sync::oneshot::error::TryRecvError;
+use tokio::sync::mpsc::{self, Sender};
 use tokio::task::JoinHandle;
 use tokio_util::task::TaskTracker;
 use std::net::SocketAddr;
-use std::thread::sleep;
-use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::sync::{RwLock, oneshot};
 use std::sync::Arc;
-use include_dir::{include_dir, Dir};
 
 // Runs the axum server, taking all the elements needed to build up our
 // ServerState and a oneshot Receiver that'll fire when it's time to shutdown
@@ -146,69 +141,6 @@ fn run_ctrl_c_thread(
     })
 }
 
-fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<framebuffer::DisplayState>) -> JoinHandle<()> {
-    static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
-    let mut display_color: framebuffer::Color565;
-    let display_level = config.ui_level;
-    if display_level == 0 {
-        info!("Invisible mode, not spawning UI.");
-    }
-
-    if config.colorblind_mode {
-        display_color = framebuffer::Color565::Blue;
-    } else {
-        display_color = framebuffer::Color565::Green;
-    }
-
-    task_tracker.spawn_blocking(move || {
-        let mut fb: Framebuffer = Framebuffer::new();
-        // this feels wrong, is there a more rusty way to do this?
-        let mut img: Option<&[u8]> = None;
-        if display_level == 2 {
-            img = Some(IMAGE_DIR.get_file("orca.gif").expect("failed to read orca.gif").contents());
-        } else if display_level == 3 {
-            img = Some(IMAGE_DIR.get_file("eff.png").expect("failed to read eff.png").contents());
-        }
-        loop {
-            match ui_shutdown_rx.try_recv() {
-                Ok(_) => {
-                    info!("received UI shutdown");
-                    break;
-                },
-                Err(TryRecvError::Empty) => {},
-                Err(e) => panic!("error receiving shutdown message: {e}")
-            }
-            match ui_update_rx.try_recv() {
-                    Ok(state) => {
-                        display_color = state.into();
-                    },
-                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
-                    Err(e) => error!("error receiving framebuffer update message: {e}")
-            }
-
-            match display_level  {
-                2 => {
-                    fb.draw_gif(img.unwrap());
-                },
-                3 => {
-                    fb.draw_img(img.unwrap())
-                },
-                128 => {
-                    fb.draw_line(framebuffer::Color565::Cyan, 128);
-                    fb.draw_line(framebuffer::Color565::Pink, 102);
-                    fb.draw_line(framebuffer::Color565::White, 76);
-                    fb.draw_line(framebuffer::Color565::Pink, 50);
-                    fb.draw_line(framebuffer::Color565::Cyan, 25);
-                },
-                _ => { // this branch id for ui_level 1, which is also the default if an
-                       // unknown value is used
-                    fb.draw_line(display_color, 2);
-                },
-            };
-            sleep(Duration::from_millis(1000));
-        }
-    })
-}
 
 #[tokio::main]
 async fn main() -> Result<(), RayhunterError> {
@@ -224,7 +156,7 @@ async fn main() -> Result<(), RayhunterError> {
 
     let qmdl_store_lock = Arc::new(RwLock::new(init_qmdl_store(&config).await?));
     let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
-    let (ui_update_tx, ui_update_rx) = mpsc::channel::<framebuffer::DisplayState>(1);
+    let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
     let mut maybe_ui_shutdown_tx = None;
     if !config.debug_mode {
@@ -238,7 +170,7 @@ async fn main() -> Result<(), RayhunterError> {
         info!("Starting Diag Thread");
         run_diag_read_thread(&task_tracker, dev, rx, ui_update_tx.clone(), qmdl_store_lock.clone(), config.enable_dummy_analyzer);
         info!("Starting UI");
-        update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
+        display::update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
     }
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     info!("create shutdown thread");

@@ -17,7 +17,7 @@ use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 use futures::{StreamExt, TryStreamExt};
 
-use crate::framebuffer;
+use crate::display;
 use crate::qmdl_store::{RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
 use crate::analysis::AnalysisWriter;
@@ -32,7 +32,7 @@ pub fn run_diag_read_thread(
     task_tracker: &TaskTracker,
     mut dev: DiagDevice,
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
-    ui_update_sender: Sender<framebuffer::DisplayState>,
+    ui_update_sender: Sender<display::DisplayState>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     enable_dummy_analyzer: bool,
 ) {
@@ -99,7 +99,7 @@ pub fn run_diag_read_thread(
                                 let (analysis_file_len, heuristic_warning) = analysis_output;
                                 if heuristic_warning {
                                     info!("a heuristic triggered on this run!");
-                                    ui_update_sender.send(framebuffer::DisplayState::WarningDetected).await
+                                    ui_update_sender.send(display::DisplayState::WarningDetected).await
                                         .expect("couldn't send ui update message: {}");
                                 }
                                 let mut qmdl_store = qmdl_store_lock.write().await;
@@ -131,9 +131,9 @@ pub async fn start_recording(State(state): State<Arc<ServerState>>) -> Result<(S
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
 
     let display_state = if state.colorblind_mode { 
-        framebuffer::DisplayState::RecordingCBM
+        display::DisplayState::RecordingCBM
     } else {
-        framebuffer::DisplayState::Recording
+        display::DisplayState::Recording
     };
     state.ui_update_sender.send(display_state).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
@@ -150,7 +150,7 @@ pub async fn stop_recording(State(state): State<Arc<ServerState>>) -> Result<(St
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't close current qmdl entry: {}", e)))?;
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
+    state.ui_update_sender.send(display::DisplayState::Paused).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
@@ -170,7 +170,7 @@ pub async fn delete_recording(
     }
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
+    state.ui_update_sender.send(display::DisplayState::Paused).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
@@ -184,7 +184,7 @@ pub async fn delete_all_recordings(State(state): State<Arc<ServerState>>) -> Res
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't delete all recordings: {}", e)))?;
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
+    state.ui_update_sender.send(display::DisplayState::Paused).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
