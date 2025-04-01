@@ -6,7 +6,7 @@ edition = "2021"
 [features]
 # These feature flags are mutually exclusive, and exactly one must be enabled.
 device-orbic-rc400l = ["rayhunter/device-orbic-rc400l"]
-device-tplink-m7350 = ["rayhunter/device-tplink-m7350"]
+device-tplink-m7350 = ["rayhunter/device-tplink-m7350", "image"]
 
 default = ["device-orbic-rc400l"]
 
@@ -37,6 +37,6 @@ tokio-stream = "0.1.14"
 futures = "0.3.30"
 clap = { version = "4.5.2", features = ["derive"] }
 serde_json = "1.0.114"
-image = "0.25.1"
+image = { version = "0.25.1", optional = true }
 tempfile = "3.10.1"
 simple_logger = "5.0.0"
