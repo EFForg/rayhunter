@@ -69,8 +69,8 @@ The capture files are located at */data/rayhunter/qmdl* but you will need root a
     * [macOS](https://www.repeato.app/setting-up-adb-on-macos-a-step-by-step-guide/)
     * [Windows](https://medium.com/@yadav-ajay/a-step-by-step-guide-to-setting-up-adb-path-on-windows-0b833faebf18)
 
-### If you're on x86 linux
-Install rust the usual way and then install cross compiling dependences:
+### If you're on an x86 debian-based linux
+Install rust the usual way and then install cross compiling dependencies:
 ```
 sudo apt install curl build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
 rustup target add x86_64-unknown-linux-gnu
@@ -78,6 +78,44 @@ rustup target add armv7-unknown-linux-gnueabihf
 ```
 
 Now you can root your device and install Rayhunter by running `./tools/install-dev.sh`
+
+#### If you're not on x86 debian-based linux:
+You have two options. If you want to install the prebuilt cross compiling toolchain from debian and are on a supported architecture, use [debootstrap](https://wiki.debian.org/Debootstrap) from your package manager to install debian:
+```
+sudo debootstrap stable ./debianchroot https://deb.debian.org/debian/
+# ... setup mounts and enter chroot ...
+sudo apt install rustup
+```
+and follow the instructions above to install cross compiling dependencies.
+
+If you are not on a supported system or want to build your toolchain from source, use [nix](https://nixos.org/download/#download-nix) to run `nix-shell` in your rayhunter checkout with `shell.nix` containing:
+```nix
+with import <nixpkgs>
+{
+  crossSystem = {
+    config = "armv7l-unknown-linux-gnueabihf";
+    arch = "arm";
+    bigEndian = false;
+    libc = "glibc";
+  };
+};
+  mkShell {
+    buildInputs = [glibc.static gcc stdenv];
+    inputsFrom = [glibc cargo];
+  }
+```
+and edit `.cargo/cargo.toml` to read:
+```diff
+diff --git a/.cargo/config.toml b/.cargo/config.toml
+index 318eb3d..d74c1ef 100644
+--- a/.cargo/config.toml
++++ b/.cargo/config.toml
+@@ -1,5 +1,5 @@
+ [target.armv7-unknown-linux-gnueabihf]
+-linker = "arm-linux-gnueabihf-gcc"
++linker = "armv7l-unknown-linux-gnueabihf-gcc"
+ rustflags = ["-C", "target-feature=+crt-static"]
+ ```
 
 ### If you're on windows or can't run the install scripts
 * Root your device on windows using the instructions here: https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183
