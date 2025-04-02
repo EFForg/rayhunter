@@ -1,3 +1,4 @@
+// reference to how the display works on TP-Link M7350: https://github.com/m0veax/tplink_m7350/tree/main/oled
 use crate::config;
 use crate::display::DisplayState;
 
