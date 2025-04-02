@@ -11,6 +11,16 @@ use std::fs;
 use std::thread::sleep;
 use std::time::Duration;
 
+// those coordinates were mainly chosen for a spot that doesn't get regularly updated by the main
+// oledd service. otherwise we'd have to write to the display more than once per second to prevent
+// the icon from flickering.
+const STATUS_X: u8 = 104;
+const STATUS_Y: u8 = 40;
+const STATUS_W: u8 = 16;
+const STATUS_H: u8 = 16;
+
+const STATUS_HEADER: [u8; 4] = [STATUS_X, STATUS_Y, STATUS_W, STATUS_H];
+
 macro_rules! pixel {
     (x) => { 0 };
     (_) => { 1 };
@@ -18,6 +28,8 @@ macro_rules! pixel {
 
 macro_rules! pixelart {
     ($($tt:tt)*) => {{
+        // could be improved to be const expr or at least to compile to something that doesn't
+        // allocate. but the macro is easier to write this way.
         let mut bytes = Vec::new();
         let mut i = 0;
         let mut byte = 0;
@@ -42,12 +54,7 @@ macro_rules! pixelart {
 }
 
 fn paused() -> Vec<u8> {
-    let mut command = vec![
-        104, // x (from left)
-        56,  // y (from top)
-        16,  // width
-        16,  // height
-    ];
+    let mut command = STATUS_HEADER.to_vec();
 
     command.extend(pixelart! {
         _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
@@ -71,12 +78,7 @@ fn paused() -> Vec<u8> {
 }
 
 fn smiling() -> Vec<u8> {
-    let mut command = vec![
-        104, // x (from left)
-        56,  // y (from top)
-        16,  // width
-        16,  // height
-    ];
+    let mut command = STATUS_HEADER.to_vec();
 
     command.extend(pixelart! {
         _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
@@ -100,12 +102,8 @@ fn smiling() -> Vec<u8> {
 }
 
 fn frowning() -> Vec<u8> {
-    let mut command = vec![
-        104, // x (from left)
-        56,  // y (from top)
-        16,  // width
-        16,  // height
-    ];
+    let mut command = STATUS_HEADER.to_vec();
+
     command.extend(
         pixelart! {
             _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
@@ -162,9 +160,6 @@ pub fn update_ui(
                 },
                 Err(e) => {
                     error!("error receiving framebuffer update message: {e}");
-                    continue
-                }
-                _ => {
                     continue
                 }
             };
