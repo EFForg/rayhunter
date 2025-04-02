@@ -138,7 +138,10 @@ pub fn update_ui(
         info!("Invisible mode, not spawning UI.");
     }
 
+
     task_tracker.spawn_blocking(move || {
+        let mut pixels = Vec::new();
+
         loop {
             match ui_shutdown_rx.try_recv() {
                 Ok(_) => {
@@ -149,27 +152,27 @@ pub fn update_ui(
                 Err(e) => panic!("error receiving shutdown message: {e}")
             }
 
-            let pixels = match ui_update_rx.try_recv() {
-                Ok(DisplayState::Paused) => paused(),
-                Ok(DisplayState::Recording) => smiling(),
-                Ok(DisplayState::RecordingCBM) => smiling(),
-                Ok(DisplayState::WarningDetected) => frowning(),
-                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {
-                    sleep(Duration::from_millis(1000));
-                    continue
-                },
+            match ui_update_rx.try_recv() {
+                Ok(DisplayState::Paused) => pixels = paused(),
+                Ok(DisplayState::Recording) => pixels = smiling(),
+                Ok(DisplayState::RecordingCBM) => pixels = smiling(),
+                Ok(DisplayState::WarningDetected) => pixels = frowning(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                 Err(e) => {
                     error!("error receiving framebuffer update message: {e}");
-                    continue
                 }
             };
 
+            // we write the status every second because it may have been overwritten through menu
+            // navigation.
             if display_level != 0 {
                 info!("writing to display");
-                if let Err(e) = fs::write("/sys/class/display/oled/oled_buffer", pixels) {
+                if let Err(e) = fs::write("/sys/class/display/oled/oled_buffer", &pixels) {
                     error!("failed to write to display: {e}");
                 }
             }
+
+            sleep(Duration::from_millis(1000));
         }
     });
 }
