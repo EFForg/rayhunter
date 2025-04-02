@@ -79,7 +79,7 @@ jobs:
         run: cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release --no-default-features --features ${{ matrix.device.name }}
       - uses: actions/upload-artifact@v4
         with:
-          name: rayhunter-daemon-${{ matrix.device.artifact_name }}
+          name: rayhunter-daemon-${{ matrix.device.name }}
           path: target/armv7-unknown-linux-gnueabihf/release/rayhunter-daemon
           if-no-files-found: error
   build_release_zip:
