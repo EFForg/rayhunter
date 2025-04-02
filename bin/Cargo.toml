@@ -5,10 +5,10 @@ edition = "2021"
 
 [features]
 # These feature flags are mutually exclusive, and exactly one must be enabled.
-device-orbic-rc400l = ["rayhunter/device-orbic-rc400l", "image"]
-device-tplink-m7350 = ["rayhunter/device-tplink-m7350"]
+orbic = ["rayhunter/orbic", "image"]
+tplink = ["rayhunter/tplink"]
 
-default = ["device-orbic-rc400l"]
+default = ["orbic"]
 
 [[bin]]
 name = "rayhunter-daemon"

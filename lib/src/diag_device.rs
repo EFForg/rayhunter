@@ -223,7 +223,7 @@ fn enable_frame_readwrite(fd: i32, mode: i32) -> DiagResult<()> {
                 fd,
                 DIAG_IOCTL_SWITCH_LOGGING,
                 // diag_logging_mode_param_t
-                if cfg!(feature = "device-tplink-m7350") {
+                if cfg!(feature = "tplink") {
                     &mut [mode, 0, 1] as *mut _
                 } else {
                     &mut [mode, -1, 0] as *mut _

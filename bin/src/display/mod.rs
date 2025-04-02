@@ -1,14 +1,14 @@
-#[cfg(feature = "device-orbic-rc400l")]
+#[cfg(feature = "orbic")]
 mod framebuffer;
 
-#[cfg(feature = "device-tplink-m7350")]
+#[cfg(feature = "tplink")]
 mod tplink;
-#[cfg(feature = "device-tplink-m7350")]
+#[cfg(feature = "tplink")]
 pub use tplink::update_ui;
 
-#[cfg(feature = "device-orbic-rc400l")]
+#[cfg(feature = "orbic")]
 mod orbic;
-#[cfg(feature = "device-orbic-rc400l")]
+#[cfg(feature = "orbic")]
 pub use orbic::update_ui;
 
 pub enum DisplayState {
@@ -18,8 +18,8 @@ pub enum DisplayState {
     RecordingCBM,
 }
 
-#[cfg(all(feature = "device-orbic-rc400l", feature = "device-tplink-m7350"))]
+#[cfg(all(feature = "orbic", feature = "tplink"))]
 compile_error!("cannot compile for many devices at once");
 
-#[cfg(not(any(feature = "device-orbic-rc400l", feature = "device-tplink-m7350")))]
+#[cfg(not(any(feature = "orbic", feature = "tplink")))]
 compile_error!("cannot compile for no device at all");
