@@ -5,17 +5,21 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::{
     fs::{self, try_exists, File, OpenOptions},
-    io::AsyncWriteExt,
+    io::AsyncWriteExt
 };
 
 #[derive(Debug, Error)]
 pub enum RecordingStoreError {
     #[error("Can't close an entry when there's no current entry")]
     NoCurrentEntry,
+    #[error("An entry with that name doesn't exist")]
+    NoSuchEntryError,
     #[error("Couldn't create file: {0}")]
     CreateFileError(tokio::io::Error),
     #[error("Couldn't read file: {0}")]
     ReadFileError(tokio::io::Error),
+    #[error("Couldn't delete file: {0}")]
+    DeleteFileError(tokio::io::Error),
     #[error("Couldn't open directory at path: {0}")]
     OpenDirError(tokio::io::Error),
     #[error("Couldn't read manifest file: {0}")]
@@ -267,6 +271,32 @@ impl RecordingStore {
     pub fn get_current_entry(&self) -> Option<(usize, &ManifestEntry)> {
         let entry_index = self.current_entry?;
         Some((entry_index, &self.manifest.entries[entry_index]))
+    }
+
+    pub async fn delete_entry(&mut self, name: &str) -> Result<ManifestEntry, RecordingStoreError> {
+        let entry_to_delete_idx = self.manifest
+            .entries
+            .iter()
+            .position(|entry| entry.name == name)
+            .ok_or(RecordingStoreError::NoSuchEntryError)?;
+        if let Some(current_entry) = self.current_entry {
+            if current_entry == entry_to_delete_idx {
+                self.close_current_entry().await?;
+            } else {
+                self.current_entry = Some(current_entry - 1);
+            }
+        }
+        let entry_to_delete = self.manifest.entries.remove(entry_to_delete_idx);
+        self.write_manifest().await?;
+        let qmdl_filepath = entry_to_delete.get_qmdl_filepath(&self.path);
+        let analysis_filepath = entry_to_delete.get_analysis_filepath(&self.path);
+        tokio::fs::remove_file(qmdl_filepath)
+            .await
+            .map_err(RecordingStoreError::DeleteFileError)?;
+        tokio::fs::remove_file(analysis_filepath)
+            .await
+            .map_err(RecordingStoreError::DeleteFileError)?;
+        Ok(entry_to_delete)
     }
 }
 
