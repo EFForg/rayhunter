@@ -20,7 +20,7 @@ use crate::framebuffer::Framebuffer;
 
 use analysis::{get_analysis_status, run_analysis_thread, start_analysis, AnalysisCtrlMessage, AnalysisStatus};
 use axum::response::Redirect;
-use diag::{delete_recording, get_analysis_report, start_recording, stop_recording, DiagDeviceCtrlMessage};
+use diag::{delete_all_recordings, delete_recording, get_analysis_report, start_recording, stop_recording, DiagDeviceCtrlMessage};
 use log::{info, error};
 use qmdl_store::RecordingStoreError;
 use rayhunter::diag_device::DiagDevice;
@@ -57,6 +57,7 @@ async fn run_server(
         .route("/api/start-recording", post(start_recording))
         .route("/api/stop-recording", post(stop_recording))
         .route("/api/delete-recording/*name", post(delete_recording))
+        .route("/api/delete-all-recordings", post(delete_all_recordings))
         .route("/api/analysis-report/*name", get(get_analysis_report))
         .route("/api/analysis", get(get_analysis_status))
         .route("/api/analysis/*name", post(start_analysis))

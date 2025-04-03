@@ -215,6 +215,13 @@ async function stopRecording() {
     populateDivs();
 }
 
+async function deleteAllRecodings() {
+    if (window.confirm("Are you sure you want to permanently delete all of your recordings?")) {
+        await req('POST', '/api/delete-all-recordings');
+        populateDivs();
+    }
+}
+
 async function req(method, url) {
     const response = await fetch(url, {
         method: method,

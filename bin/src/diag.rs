@@ -175,6 +175,20 @@ pub async fn delete_recording(
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
+pub async fn delete_all_recordings(State(state): State<Arc<ServerState>>) -> Result<(StatusCode, String), (StatusCode, String)> {
+    if state.debug_mode {
+        return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
+    }
+    let mut qmdl_store = state.qmdl_store_lock.write().await;
+    qmdl_store.delete_all_entries().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't delete all recordings: {}", e)))?;
+    state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
+    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
+    Ok((StatusCode::ACCEPTED, "ok".to_string()))
+}
+
 pub async fn get_analysis_report(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
     let (entry_index, _) = if qmdl_name == "live" {

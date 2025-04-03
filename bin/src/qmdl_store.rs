@@ -298,6 +298,23 @@ impl RecordingStore {
             .map_err(RecordingStoreError::DeleteFileError)?;
         Ok(entry_to_delete)
     }
+
+    pub async fn delete_all_entries(&mut self) -> Result<(), RecordingStoreError> {
+        self.close_current_entry().await?;
+        for entry in &self.manifest.entries {
+            let qmdl_filepath = entry.get_qmdl_filepath(&self.path);
+            let analysis_filepath = entry.get_analysis_filepath(&self.path);
+            tokio::fs::remove_file(qmdl_filepath)
+                .await
+                .map_err(RecordingStoreError::DeleteFileError)?;
+            tokio::fs::remove_file(analysis_filepath)
+                .await
+                .map_err(RecordingStoreError::DeleteFileError)?;
+        }
+        self.manifest.entries.drain(..);
+        self.write_manifest().await?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
