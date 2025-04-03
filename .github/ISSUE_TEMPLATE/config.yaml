@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Rayhunter Mattermost
+    url: https://opensource.eff.org/signup_user_complete/?id=6iqur37ucfrctfswrs14iscobw&md=link&sbr=su
+    about: If you're having trouble using Rayhunter and aren't sure you've found a bug or request for a new feature, please first try asking for help here. There is a much larger community there of people familiar with the project who will be able to more quickly answer your questions.
+  - name: Rayhunter Security Policy
+    url: https://github.com/EFForg/rayhunter/security/advisories/new
+    about: Please report security vulnerabilities here.
