@@ -116,13 +116,12 @@ impl RecordingStore {
     where
         P: AsRef<Path>,
     {
-        let manifest_path = path.as_ref().join("manifest.toml");
         fs::create_dir_all(&path)
             .await
             .map_err(RecordingStoreError::OpenDirError)?;
 
         let mut store = RecordingStore {
-            path: manifest_path,
+            path: path.as_ref().to_owned(),
             manifest: Manifest {
                 entries: Vec::new()
             },
