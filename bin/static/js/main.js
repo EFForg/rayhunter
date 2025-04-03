@@ -125,6 +125,16 @@ function createLink(uri, text) {
     return link;
 }
 
+function createButton(uri, text) {
+    const link = document.createElement('button');
+    link.innerText = text;
+    link.onclick = async () => {
+        await req('POST', uri);
+        populateDivs();
+    };
+    return link;
+}
+
 function createEntryRow(entry, isCurrent) {
     const row = document.createElement('tr');
     const name = document.createElement('th');
@@ -152,6 +162,10 @@ function createEntryRow(entry, isCurrent) {
         row.classList.add("warning");
     }
     row.appendChild(analysisResult);
+
+    const actionsButtons = document.createElement('td');
+    actionsButtons.appendChild(createButton(`/api/delete-recording/${entry.name}`, 'Delete'));
+    row.appendChild(actionsButtons);
 
     return row;
 }
