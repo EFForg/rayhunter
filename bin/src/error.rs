@@ -1,10 +1,10 @@
-use thiserror::Error;
 use rayhunter::diag_device::DiagDeviceError;
+use thiserror::Error;
 
 use crate::qmdl_store::RecordingStoreError;
 
 #[derive(Error, Debug)]
-pub enum RayhunterError{
+pub enum RayhunterError {
     #[error("Config file parsing error: {0}")]
     ConfigFileParsingError(#[from] toml::de::Error),
     #[error("Diag intialization error: {0}")]

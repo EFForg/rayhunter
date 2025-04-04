@@ -5,7 +5,7 @@ use crc::{Algorithm, Crc};
 use deku::prelude::*;
 
 use crate::hdlc::{self, hdlc_decapsulate};
-use log::{warn, error};
+use log::{error, warn};
 use thiserror::Error;
 
 pub const MESSAGE_TERMINATOR: u8 = 0x7e;
@@ -42,7 +42,7 @@ pub enum LogConfigRequest {
         log_type: u32,
         log_mask_bitsize: u32,
         log_mask: Vec<u8>,
-    }
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -93,13 +93,19 @@ impl MessagesContainer {
                     Ok(data) => match Message::from_bytes((&data, 0)) {
                         Ok(((leftover_bytes, _), res)) => {
                             if !leftover_bytes.is_empty() {
-                                warn!("warning: {} leftover bytes when parsing Message", leftover_bytes.len());
+                                warn!(
+                                    "warning: {} leftover bytes when parsing Message",
+                                    leftover_bytes.len()
+                                );
                             }
                             result.push(Ok(res));
-                        },
+                        }
                         Err(e) => result.push(Err(DiagParsingError::MessageParsingError(e, data))),
                     },
-                    Err(err) => result.push(Err(DiagParsingError::HdlcDecapsulationError(err, sub_msg.to_vec()))),
+                    Err(err) => result.push(Err(DiagParsingError::HdlcDecapsulationError(
+                        err,
+                        sub_msg.to_vec(),
+                    ))),
                 }
             }
         }
@@ -171,7 +177,7 @@ pub enum LogBody {
         msg: Vec<u8>,
     },
     #[deku(id = "0xb0c0")]
-    LteRrcOtaMessage{
+    LteRrcOtaMessage {
         ext_header_version: u8,
         #[deku(ctx = "*ext_header_version")]
         packet: LteRrcOtaPacket,
@@ -210,7 +216,7 @@ pub enum LogBody {
     NrRrcOtaMessage {
         #[deku(count = "hdr_len")]
         msg: Vec<u8>,
-    }
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -364,15 +370,17 @@ pub enum ResponsePayload {
 #[deku(ctx = "subopcode: u32", id = "subopcode")]
 pub enum LogConfigResponse {
     #[deku(id = "1")]
-    RetrieveIdRanges {
-        log_mask_sizes: [u32; 16],
-    },
+    RetrieveIdRanges { log_mask_sizes: [u32; 16] },
 
     #[deku(id = "3")]
     SetMask,
 }
 
-pub fn build_log_mask_request(log_type: u32, log_mask_bitsize: u32, accepted_log_codes: &[u32]) -> Request {
+pub fn build_log_mask_request(
+    log_type: u32,
+    log_mask_bitsize: u32,
+    accepted_log_codes: &[u32],
+) -> Request {
     let mut current_byte: u8 = 0;
     let mut num_bits_written: u8 = 0;
     let mut log_mask: Vec<u8> = vec![];
@@ -413,31 +421,35 @@ mod test {
             log_mask_bitsize: 0,
             log_mask: vec![],
         });
-        assert_eq!(req.to_bytes().unwrap(), vec![
-            115, 0, 0, 0,
-            3, 0, 0, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 0,
-        ]);
+        assert_eq!(
+            req.to_bytes().unwrap(),
+            vec![115, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,]
+        );
     }
 
     #[test]
     fn test_build_log_mask_request() {
         let log_type = 11;
         let bitsize = 513;
-        let req = build_log_mask_request(log_type, bitsize, &crate::diag_device::LOG_CODES_FOR_RAW_PACKET_LOGGING);
-        assert_eq!(req, Request::LogConfig(LogConfigRequest::SetMask {
+        let req = build_log_mask_request(
             log_type,
-            log_mask_bitsize: bitsize,
-            log_mask: vec![
-                0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0,
-                0x0, 0x0, 0xc, 0x30, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                0x0,
-            ],
-        }));
+            bitsize,
+            &crate::diag_device::LOG_CODES_FOR_RAW_PACKET_LOGGING,
+        );
+        assert_eq!(
+            req,
+            Request::LogConfig(LogConfigRequest::SetMask {
+                log_type,
+                log_mask_bitsize: bitsize,
+                log_mask: vec![
+                    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0xc, 0x30, 0x0,
+                    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0,
+                ],
+            })
+        );
     }
 
     #[test]
@@ -448,53 +460,53 @@ mod test {
             mdm_field: -1,
             hdlc_encapsulated_request: vec![1, 2, 3, 4],
         };
-        assert_eq!(req.to_bytes().unwrap(), vec![
-            32, 0, 0, 0,
-            1, 2, 3, 4,
-        ]);
+        assert_eq!(req.to_bytes().unwrap(), vec![32, 0, 0, 0, 1, 2, 3, 4,]);
         let req = RequestContainer {
             data_type: DataType::UserSpace,
             use_mdm: true,
             mdm_field: -1,
             hdlc_encapsulated_request: vec![1, 2, 3, 4],
         };
-        assert_eq!(req.to_bytes().unwrap(), vec![
-            32, 0, 0, 0,
-            255, 255, 255, 255,
-            1, 2, 3, 4,
-        ]);
+        assert_eq!(
+            req.to_bytes().unwrap(),
+            vec![32, 0, 0, 0, 255, 255, 255, 255, 1, 2, 3, 4,]
+        );
     }
 
     #[test]
     fn test_logs() {
         let data = vec![
-            16, 0, 38, 0, 38, 0, 192, 176, 26, 165, 245, 135, 118, 35, 2, 1, 20,
-            14, 48, 0, 160, 0, 2, 8, 0, 0, 217, 15, 5, 0, 0, 0, 0, 7, 0, 64, 1,
-            238, 173, 213, 77, 208
+            16, 0, 38, 0, 38, 0, 192, 176, 26, 165, 245, 135, 118, 35, 2, 1, 20, 14, 48, 0, 160, 0,
+            2, 8, 0, 0, 217, 15, 5, 0, 0, 0, 0, 7, 0, 64, 1, 238, 173, 213, 77, 208,
         ];
         let msg = Message::from_bytes((&data, 0)).unwrap().1;
-        assert_eq!(msg, Message::Log {
-            pending_msgs: 0,
-            outer_length: 38,
-            inner_length: 38,
-            log_type: 0xb0c0,
-            timestamp: Timestamp { ts: 72659535985485082 },
-            body: LogBody::LteRrcOtaMessage {
-                ext_header_version: 20,
-                packet: LteRrcOtaPacket::V8 {
-                    rrc_rel_maj: 14,
-                    rrc_rel_min: 48,
-                    bearer_id: 0,
-                    phy_cell_id: 160,
-                    earfcn: 2050,
-                    sfn_subfn: 4057,
-                    pdu_num: 5,
-                    sib_mask: 0,
-                    len: 7,
-                    packet: vec![0x40, 0x1, 0xee, 0xad, 0xd5, 0x4d, 0xd0],
+        assert_eq!(
+            msg,
+            Message::Log {
+                pending_msgs: 0,
+                outer_length: 38,
+                inner_length: 38,
+                log_type: 0xb0c0,
+                timestamp: Timestamp {
+                    ts: 72659535985485082
                 },
-            },
-        });
+                body: LogBody::LteRrcOtaMessage {
+                    ext_header_version: 20,
+                    packet: LteRrcOtaPacket::V8 {
+                        rrc_rel_maj: 14,
+                        rrc_rel_min: 48,
+                        bearer_id: 0,
+                        phy_cell_id: 160,
+                        earfcn: 2050,
+                        sfn_subfn: 4057,
+                        pdu_num: 5,
+                        sib_mask: 0,
+                        len: 7,
+                        packet: vec![0x40, 0x1, 0xee, 0xad, 0xd5, 0x4d, 0xd0],
+                    },
+                },
+            }
+        );
     }
 
     fn make_container(data_type: DataType, message: HdlcEncapsulatedMessage) -> MessagesContainer {
@@ -515,7 +527,9 @@ mod test {
             outer_length: length_with_payload,
             inner_length: length_with_payload,
             log_type: 0xb0c0,
-            timestamp: Timestamp { ts: 72659535985485082 },
+            timestamp: Timestamp {
+                ts: 72659535985485082,
+            },
             body: LogBody::LteRrcOtaMessage {
                 ext_header_version: 20,
                 packet: LteRrcOtaPacket::V8 {
@@ -532,7 +546,9 @@ mod test {
                 },
             },
         };
-        let serialized = message.to_bytes().expect("failed to serialize test message");
+        let serialized = message
+            .to_bytes()
+            .expect("failed to serialize test message");
         let encapsulated_data = hdlc::hdlc_encapsulate(&serialized, &CRC_CCITT);
         let encapsulated = HdlcEncapsulatedMessage {
             len: encapsulated_data.len() as u32,
@@ -574,7 +590,10 @@ mod test {
         container.num_messages += 1;
         let result = container.into_messages();
         assert_eq!(result[0], Ok(message1));
-        assert!(matches!(result[1], Err(DiagParsingError::MessageParsingError(_, _))));
+        assert!(matches!(
+            result[1],
+            Err(DiagParsingError::MessageParsingError(_, _))
+        ));
     }
 
     #[test]
@@ -589,6 +608,9 @@ mod test {
         container.num_messages += 1;
         let result = container.into_messages();
         assert_eq!(result[0], Ok(message1));
-        assert!(matches!(result[1], Err(DiagParsingError::HdlcDecapsulationError(_, _))));
+        assert!(matches!(
+            result[1],
+            Err(DiagParsingError::HdlcDecapsulationError(_, _))
+        ));
     }
 }
