@@ -141,7 +141,7 @@ pub fn update_ui(
 
 
     task_tracker.spawn_blocking(move || {
-        let mut pixels = Vec::new();
+        let mut pixels = smiling();
 
         loop {
             match ui_shutdown_rx.try_recv() {
