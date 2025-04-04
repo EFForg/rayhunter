@@ -23,7 +23,6 @@ pub struct ServerState {
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub debug_mode: bool,
-    pub colorblind_mode: bool,
 }
 
 pub async fn get_qmdl(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
