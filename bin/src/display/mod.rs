@@ -1,5 +1,6 @@
-#[cfg(feature = "orbic")]
 mod framebuffer;
+#[cfg(feature = "tplink")]
+mod tplink_onebit;
 
 #[cfg(feature = "tplink")]
 mod tplink;

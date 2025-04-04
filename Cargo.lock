@@ -1741,6 +1741,7 @@ dependencies = [
  "futures-macro",
  "image",
  "include_dir",
+ "libc",
  "log",
  "mime_guess",
  "rayhunter",

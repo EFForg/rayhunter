@@ -57,7 +57,7 @@ pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
 ];
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
-const MEMORY_DEVICE_MODE: i32 = 2;
+const MEMORY_DEVICE_MODE: u32 = 2;
 
 #[cfg(target_arch = "arm")]
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
@@ -215,20 +215,38 @@ impl DiagDevice {
     }
 }
 
+// from TPLINK M7350 v5
+// https://www.tp-link.com/de/support/gpl-code/?app=omada
+#[repr(C)]
+struct diag_logging_mode_param_t {
+    req_mode: u32,
+    peripheral_mask: u32,
+    mode_param: u8
+}
+
 // Triggers the diag device's debug logging mode
-fn enable_frame_readwrite(fd: i32, mode: i32) -> DiagResult<()> {
+fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
     unsafe {
         if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
+            let mut params = if cfg!(feature = "tplink") {
+                diag_logging_mode_param_t {
+                    req_mode: mode as u32,
+                    peripheral_mask: 0,
+                    mode_param: 1,
+                }
+            } else {
+                diag_logging_mode_param_t {
+                    req_mode: mode as u32,
+                    peripheral_mask: u32::MAX,
+                    mode_param: 0,
+                }
+            };
+
             let ret = libc::ioctl(
                 fd,
                 DIAG_IOCTL_SWITCH_LOGGING,
-                // diag_logging_mode_param_t
-                if cfg!(feature = "tplink") {
-                    &mut [mode, 0, 1] as *mut _
-                } else {
-                    &mut [mode, -1, 0] as *mut _
-                },
-                std::mem::size_of::<[i32; 3]>(), 0, 0, 0, 0
+                &mut params as *mut _,
+                std::mem::size_of::<diag_logging_mode_param_t>(), 0, 0, 0, 0
             );
             if ret < 0 {
                 let msg = format!("DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {}", ret);
