@@ -16,7 +16,7 @@ use crate::server::{ServerState, get_qmdl, serve_static};
 use crate::pcap::get_pcap;
 use crate::stats::get_system_stats;
 use crate::error::RayhunterError;
-use crate::framebuffer::Framebuffer;
+use crate::framebuffer::{Color565, Framebuffer};
 
 use analysis::{get_analysis_status, run_analysis_thread, start_analysis, AnalysisCtrlMessage, AnalysisStatus};
 use axum::response::Redirect;
@@ -146,7 +146,7 @@ fn run_ctrl_c_thread(
     })
 }
 
-fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<framebuffer::DisplayState>) -> JoinHandle<()> {
+fn update_ui(task_tracker: &TaskTracker, config: &config::Config, mut ui_shutdown_rx: oneshot::Receiver<()>, mut ui_update_rx: Receiver<framebuffer::DisplayState>) -> JoinHandle<()> {
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
     let mut display_color: framebuffer::Color565;
     let display_level = config.ui_level;
@@ -154,7 +154,9 @@ fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdo
         info!("Invisible mode, not spawning UI.");
     }
 
-    if config.colorblind_mode {
+    let colorblind_mode = config.colorblind_mode;
+
+    if colorblind_mode {
         display_color = framebuffer::Color565::Blue;
     } else {
         display_color = framebuffer::Color565::Green;
@@ -184,7 +186,7 @@ fn update_ui(task_tracker: &TaskTracker,  config: &config::Config, mut ui_shutdo
             }
             match ui_update_rx.try_recv() {
                     Ok(state) => {
-                        display_color = state.into();
+                        display_color = Color565::from_display_state(state, colorblind_mode);
                     },
                     Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                     Err(e) => error!("error receiving framebuffer update message: {e}")
@@ -256,7 +258,6 @@ async fn main() -> Result<(), RayhunterError> {
         debug_mode: config.debug_mode,
         analysis_status_lock,
         analysis_sender: analysis_tx,
-        colorblind_mode: config.colorblind_mode,
     });
     run_server(&task_tracker, &config, state, server_shutdown_rx).await;
 

@@ -27,15 +27,17 @@ pub enum DisplayState {
     Recording,
     Paused,
     WarningDetected,
-    RecordingCBM,
 }
 
-impl From<DisplayState> for Color565 {
-    fn from(state: DisplayState) -> Self {
+impl Color565 {
+    pub fn from_display_state(state: DisplayState, colorblind: bool) -> Self {
         match state {
             DisplayState::Paused => Color565::White,
-            DisplayState::Recording => Color565::Green, 
-            DisplayState::RecordingCBM => Color565::Blue, 
+            DisplayState::Recording => if colorblind {
+                Color565::Green
+            } else {
+                Color565::Blue
+            },
             DisplayState::WarningDetected => Color565::Red,
         }
     }
