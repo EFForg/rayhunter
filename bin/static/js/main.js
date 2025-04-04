@@ -125,6 +125,16 @@ function createLink(uri, text) {
     return link;
 }
 
+function createButton(uri, text) {
+    const link = document.createElement('button');
+    link.innerText = text;
+    link.onclick = async () => {
+        await req('POST', uri);
+        populateDivs();
+    };
+    return link;
+}
+
 function createEntryRow(entry, isCurrent) {
     const row = document.createElement('tr');
     const name = document.createElement('th');
@@ -152,6 +162,10 @@ function createEntryRow(entry, isCurrent) {
         row.classList.add("warning");
     }
     row.appendChild(analysisResult);
+
+    const actionsButtons = document.createElement('td');
+    actionsButtons.appendChild(createButton(`/api/delete-recording/${entry.name}`, 'Delete'));
+    row.appendChild(actionsButtons);
 
     return row;
 }
@@ -199,6 +213,13 @@ async function startRecording() {
 async function stopRecording() {
     await req('POST', '/api/stop-recording');
     populateDivs();
+}
+
+async function deleteAllRecodings() {
+    if (window.confirm("Are you sure you want to permanently delete all of your recordings?")) {
+        await req('POST', '/api/delete-all-recordings');
+        populateDivs();
+    }
 }
 
 async function req(method, url) {
