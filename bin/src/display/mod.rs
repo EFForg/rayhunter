@@ -1,9 +1,10 @@
-mod framebuffer;
+#[cfg(feature = "tplink")]
+mod tplink;
+#[cfg(feature = "tplink")]
+mod tplink_framebuffer;
 #[cfg(feature = "tplink")]
 mod tplink_onebit;
 
-#[cfg(feature = "tplink")]
-mod tplink;
 #[cfg(feature = "tplink")]
 pub use tplink::update_ui;
 

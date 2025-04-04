@@ -116,7 +116,7 @@ impl DiagDevice {
         info!("Parsing messages container size = {:?} [{:?}]", bytes_read, &self.read_buf[0..bytes_read]);
 
         match MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0)) {
-            Ok(((leftover_bytes, _), container)) => return Ok(container),
+            Ok((_, container)) => return Ok(container),
             Err(err) => return Err(DiagDeviceError::ParseMessagesContainerError(err)),
         }
     }
