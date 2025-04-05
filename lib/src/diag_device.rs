@@ -216,8 +216,14 @@ impl DiagDevice {
     }
 }
 
-// from TPLINK M7350 v5
-// https://www.tp-link.com/de/support/gpl-code/?app=omada
+// also found in: https://android.googlesource.com/kernel/msm.git/+/android-7.1.0_r0.3/drivers/char/diag/diagchar.h#399
+//
+// the code on
+// https://github.com/P1sec/QCSuper/blob/master/docs/The%20Diag%20protocol.md#the-diag-protocol-over-devdiag
+// is misleading, mode_param is only 8 bits. sending the larger [u32; 3] payload will cause the
+// IOCTL to be rejected by TPLINK M7350 HW rev 5
+//
+// TPLINK M7350 v5 source code can be downloaded at https://www.tp-link.com/de/support/gpl-code/?app=omada
 #[repr(C)]
 struct diag_logging_mode_param_t {
     req_mode: u32,
