@@ -37,7 +37,8 @@ impl GenericFramebuffer for Framebuffer {
         &mut self,
         buffer: &[(u8, u8, u8)],
     ) {
-        let width = self.dimensions().width;
+        let dimensions = self.dimensions();
+        let width = dimensions.width;
         let height = buffer.len() as u32 / width;
         let mut f = File::options().write(true).open(FB_PATH).unwrap();
         let mut arg = fb_fillrect {
@@ -48,6 +49,17 @@ impl GenericFramebuffer for Framebuffer {
             color: 0xffff, // not sure what this is
             rop: 0,
         };
+
+        let mut raw_buffer = Vec::new();
+        for (r, g, b) in buffer {
+            // note: RGB -> BRG
+            let mut brg565: u16 = (*b as u16 & 0b11111000) << 8;
+            brg565 |= (*r as u16 & 0b11111100) << 3;
+            brg565 |= (*g as u16) >> 3;
+            raw_buffer.extend(brg565.to_le_bytes());
+        }
+
+        f.write_all(&raw_buffer).unwrap();
 
         unsafe {
             let res = libc::ioctl(
@@ -61,18 +73,6 @@ impl GenericFramebuffer for Framebuffer {
                 panic!("failed to send FBIORECT_DISPLAY ioctl, {}", res);
             }
         }
-
-        let mut raw_buffer = Vec::new();
-        for (r, g, b) in buffer {
-            // note: RGB -> BRG
-            let mut brg565: u16 = (*b as u16 & 0b11111000) << 8;
-            brg565 |= (*r as u16 & 0b11111100) << 3;
-            brg565 |= (*g as u16) >> 3;
-            raw_buffer.extend(brg565.to_le_bytes());
-        }
-
-        f.write_all(&raw_buffer).unwrap();
-
     }
 }
 
