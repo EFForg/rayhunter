@@ -237,13 +237,13 @@ fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
         if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
             let mut params = if cfg!(feature = "tplink") {
                 diag_logging_mode_param_t {
-                    req_mode: mode as u32,
+                    req_mode: mode,
                     peripheral_mask: 0,
                     mode_param: 1,
                 }
             } else {
                 diag_logging_mode_param_t {
-                    req_mode: mode as u32,
+                    req_mode: mode,
                     peripheral_mask: u32::MAX,
                     mode_param: 0,
                 }
