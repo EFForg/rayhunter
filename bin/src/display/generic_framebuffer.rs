@@ -67,8 +67,6 @@ pub trait GenericFramebuffer: Send + 'static {
     fn write_buffer(
         &mut self,
         buffer: &[(u8, u8, u8)], // rgb, row-wise, left-to-right, top-to-bottom
-        width: u32,
-        height: u32
     );
 
     fn write_dynamic_image(&mut self, img: DynamicImage) {
@@ -95,8 +93,6 @@ pub trait GenericFramebuffer: Send + 'static {
 
         self.write_buffer(
             &buf,
-            width,
-            height,
         );
     }
 
@@ -126,7 +122,7 @@ pub trait GenericFramebuffer: Send + 'static {
             buffer.push(color.rgb());
         }
 
-        self.write_buffer(&buffer, width, height);
+        self.write_buffer(&buffer);
     }
 }
 

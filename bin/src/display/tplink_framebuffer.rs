@@ -36,9 +36,9 @@ impl GenericFramebuffer for Framebuffer {
     fn write_buffer(
         &mut self,
         buffer: &[(u8, u8, u8)],
-        width: u32,
-        height: u32
     ) {
+        let width = self.dimensions().width;
+        let height = buffer.len() / width;
         let mut f = File::options().write(true).open(FB_PATH).unwrap();
         let mut arg = fb_fillrect {
             dx: 0,
