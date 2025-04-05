@@ -1,3 +1,5 @@
+mod generic_framebuffer;
+
 #[cfg(feature = "tplink")]
 mod tplink;
 #[cfg(feature = "tplink")]
