@@ -17,6 +17,6 @@ jobs:
     - name: Check
       run: cargo check --verbose
     - name: Check (device-tplink-m7350)
-      run: cargo check --verbose --no-default-features --features=device-tplink-m7350
+      run: cargo check --verbose --no-default-features --features=tplink
     - name: Run tests
       run: cargo test --verbose
