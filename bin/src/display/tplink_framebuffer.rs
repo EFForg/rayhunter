@@ -38,7 +38,7 @@ impl GenericFramebuffer for Framebuffer {
         buffer: &[(u8, u8, u8)],
     ) {
         let width = self.dimensions().width;
-        let height = buffer.len() / width;
+        let height = buffer.len() as u32 / width;
         let mut f = File::options().write(true).open(FB_PATH).unwrap();
         let mut arg = fb_fillrect {
             dx: 0,
