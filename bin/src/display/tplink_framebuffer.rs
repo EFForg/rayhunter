@@ -65,10 +65,10 @@ impl GenericFramebuffer for Framebuffer {
         let mut raw_buffer = Vec::new();
         for (r, g, b) in buffer {
             // note: RGB -> BRG
-            let mut rbg565: u16 = (*b as u16 & 0b11111000) << 8;
-            rbg565 |= (*r as u16 & 0b11111100) << 3;
-            rbg565 |= (*g as u16) >> 3;
-            raw_buffer.extend(rbg565.to_le_bytes());
+            let mut brg565: u16 = (*b as u16 & 0b11111000) << 8;
+            brg565 |= (*r as u16 & 0b11111100) << 3;
+            brg565 |= (*g as u16) >> 3;
+            raw_buffer.extend(brg565.to_le_bytes());
         }
 
         f.write_all(&raw_buffer).unwrap();
