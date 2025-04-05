@@ -88,8 +88,7 @@ impl Framebuffer<'_>{
             }
         }
 
-        let mut f = File::options().write(true).open(self.path).unwrap();
-        f.write_all(&buf).unwrap();
+        std::fs::write(self.path, &buf).unwrap();
     }
 
     pub fn draw_gif(&mut self, img_buffer: &[u8]) {
@@ -118,8 +117,7 @@ impl Framebuffer<'_>{
             buffer.extend(color.to_le_bytes());
         }
 
-        let mut f = File::options().write(true).open(self.path).unwrap();
-        f.write_all(&buffer).unwrap();
+        std::fs::write(self.path, &buffer).unwrap();
     }
 }
 
