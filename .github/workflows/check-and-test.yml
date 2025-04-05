@@ -11,10 +11,16 @@ env:
 
 jobs:
   check_and_test:
+    strategy:
+      matrix:
+        device:
+          - name: tplink
+          - name: orbic
+
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - name: Check
-      run: cargo check --verbose
+      run: cargo check --verbose --no-default-features --features=${{ matrix.device.name }}
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --no-default-features --features=${{ matrix.device.name }}
