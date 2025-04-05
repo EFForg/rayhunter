@@ -170,7 +170,7 @@ pub async fn delete_recording(
     }
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
+    state.ui_update_sender.send(display::DisplayState::Paused).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
@@ -184,7 +184,7 @@ pub async fn delete_all_recordings(State(state): State<Arc<ServerState>>) -> Res
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't delete all recordings: {}", e)))?;
     state.diag_device_ctrl_sender.send(DiagDeviceCtrlMessage::StopRecording).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send stop recording message: {}", e)))?;
-    state.ui_update_sender.send(framebuffer::DisplayState::Paused).await
+    state.ui_update_sender.send(display::DisplayState::Paused).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send ui update message: {}", e)))?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }

@@ -1,8 +1,6 @@
 use image::{codecs::gif::GifDecoder, imageops::FilterType, AnimationDecoder, DynamicImage};
 use std::time::Duration;
-use std::fs::File;
-use std::io::{Write, Cursor};
-use std::os::fd::AsRawFd;
+use std::io::Cursor;
 
 use crate::config;
 use crate::display::DisplayState;

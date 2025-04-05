@@ -6,7 +6,7 @@ use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
 use futures_core::TryStream;
 use thiserror::Error;
-use log::{info, warn, error};
+use log::{info, error};
 use deku::prelude::*;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
