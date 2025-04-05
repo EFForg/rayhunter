@@ -37,6 +37,7 @@ impl GenericFramebuffer for Framebuffer {
         &mut self,
         buffer: &[(u8, u8, u8)],
     ) {
+        // for how to write to the buffer, consult M7350v5_en_gpl/bootable/recovery/recovery_color_oled.c
         let dimensions = self.dimensions();
         let width = dimensions.width;
         let height = buffer.len() as u32 / width;
