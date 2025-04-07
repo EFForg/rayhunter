@@ -100,7 +100,11 @@ test_rayhunter() {
 ##### Main  #####
 ##### ##### #####
 if [[ `uname -s` == "Linux" ]]; then
-    export SERIAL_PATH="./serial-ubuntu-24/serial"
+    if [[ `uname -m` == "arm64" ]]; then
+        export SERIAL_PATH="./serial-ubuntu-24-aarch64/serial"
+    elif [[ `uname -m` == "x86_64" ]]; then
+        export SERIAL_PATH="./serial-ubuntu-24/serial"
+    fi
     export PLATFORM_TOOLS="platform-tools-latest-linux.zip"
 elif [[ `uname -s` == "Darwin" ]]; then
     if [[ `uname -m` == "arm64" ]]; then
