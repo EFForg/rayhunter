@@ -1,5 +1,5 @@
 use axum::body::Body;
-use axum::http::header::{CONTENT_TYPE, self};
+use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
 use axum::extract::State;
 use axum::http::{StatusCode, HeaderValue};
 use axum::response::{Response, IntoResponse};
@@ -36,7 +36,10 @@ pub async fn get_qmdl(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
     let limited_qmdl_file = qmdl_file.take(entry.qmdl_size_bytes as u64);
     let qmdl_stream = ReaderStream::new(limited_qmdl_file);
 
-    let headers = [(CONTENT_TYPE, "application/octet-stream")];
+    let headers = [
+        (CONTENT_TYPE, "application/octet-stream"),
+        (CONTENT_LENGTH, &entry.qmdl_size_bytes.to_string()),
+    ];
     let body = Body::from_stream(qmdl_stream);
     Ok((headers, body).into_response())
 }
