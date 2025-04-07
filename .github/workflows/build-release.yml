@@ -20,6 +20,8 @@ jobs:
             os: macos-latest
           - name: macos-intel
             os: macos-13
+          - name: windows-x86_64
+            os: windows-latest
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +30,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: serial-${{ matrix.platform.name }}
-          path: ./target/release/serial
+          path: target/release/serial${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
       - uses: actions/checkout@v4
       - name: Build check
@@ -36,7 +38,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-check-${{ matrix.platform.os }}
-          path: ./target/release/rayhunter-check
+          path: target/release/rayhunter-check${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
   build_rootshell_and_rayhunter:
     runs-on: ubuntu-latest
