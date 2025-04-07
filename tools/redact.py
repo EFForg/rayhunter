@@ -4,18 +4,18 @@ import yara_x as yara
 from scapy.utils import rdpcap
 from scapy.error import Scapy_Exception
 from pycrate_mobile.TS24008_IE import encode_bcd
-from pycrate_mobile.TS24301_IE import IDTYPE_IMSI, IDTYPE_IMEISV
+from pycrate_mobile.TS24301_IE import IDTYPE_IMSI, IDTYPE_IMEISV, IDTYPE_GUTI
 
 from extract import main as extract_identities
 
 
-def identity_octets(idtype: IDTYPE_IMSI | IDTYPE_IMEISV, ident: str) -> str:
+def identity_octets(idtype: IDTYPE_IMSI | IDTYPE_IMEISV | IDTYPE_GUTI, ident: str) -> str:
     """
     idtype: the EPS identity type:
      1 = IMSI
      3 = IMEISV
-     6 = GUTI (unsupported)
-    ident: a string of digits representing the IMSI or IMEISV
+     6 = GUTI
+    ident: a string of digits representing the identity.
 
     Returns hex octets representing the mobile identity, as an int.
     """
@@ -42,11 +42,11 @@ xx
         description = "The NAS PDU may not be aligned within the entire frame."
     strings:
         $ident{typ} = xx {ident_octets:x} yy
-        $shift1 = xx {shift1} yy
-        $shift2 = xx {shift2} yy
-        $shift3 = xx {shift3} yy
+        $shift{typ}_1 = xx {shift1} yy
+        $shift{typ}_2 = xx {shift2} yy
+        $shift{typ}_3 = xx {shift3} yy
     condition:
-        $ident{typ} or $shift1 or $shift2 or $shift3
+        $ident{typ} or $shift{typ}_1 or $shift{typ}_2 or $shift{typ}_3
 yy""".replace("xx", "{").replace("yy", "}")
 
 
@@ -65,14 +65,14 @@ def matches_from(results) -> list:
     return sorted(matches, key=lambda m: m.offset)
 
 
-def overwrite_file(filename: list, matches: str, with_bytes: bytes):
+def overwrite_file(filename: list, matches: str, overwrite_with: bytes):
     with open(filename, "r+b") as f:
         for m in matches:
             f.seek(m.offset)
             print(
-                f"{filename}: overwriting 0x{m.length:x} bytes at 0x{m.offset:x} with {with_bytes}"
+                f"{filename}: overwriting 0x{m.length:x} bytes at 0x{m.offset:x} with {overwrite_with}"
             )
-            f.write(m.length * with_bytes)
+            f.write(m.length * overwrite_with)
 
 
 def main(haystacks: list[str]):
