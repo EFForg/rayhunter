@@ -1,5 +1,5 @@
 [target.armv7-unknown-linux-gnueabihf]
-linker = "arm-linux-gnueabihf-gcc"
+linker = "armv7l-unknown-linux-gnueabihf-gcc"
 rustflags = ["-C", "target-feature=+crt-static"]
 
 # optimizations to reduce the binary size
