@@ -14,6 +14,8 @@ jobs:
         platform:
           - name: ubuntu-24
             os: ubuntu-latest
+          - name: ubuntu-24-aarch64
+            os: ubuntu-24.04-arm
           - name: macos-arm
             os: macos-latest
           - name: macos-intel
