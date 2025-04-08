@@ -1,6 +1,7 @@
 <script lang="ts">
     import { ManifestEntry } from "$lib/manifest";
     import DownloadLink from '$lib/components/DownloadLink.svelte';
+	import AnalysisStatus from "./AnalysisStatus.svelte";
     let { entry, current }: {
         entry: ManifestEntry;
         current: boolean;
@@ -16,7 +17,7 @@
     <td>{entry.qmdl_size_bytes}</td>
     <td><DownloadLink url={entry.getPcapUrl()} text="pcap" /></td>
     <td><DownloadLink url={entry.getQmdlUrl()} text="qmdl" /></td>
-    <td>N/A</td>
+    <td><AnalysisStatus entry={entry} /></td>
 </tr>
 
 <style>

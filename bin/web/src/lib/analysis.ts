@@ -1,13 +1,7 @@
 import { parse_ndjson, type NewlineDeliminatedJson } from "./ndjson";
 import { req } from "./utils";
 
-export type AnalysisReport =
-    | LoadingReport
-    | FinishedReport;
-
-export type LoadingReport = {};
-
-export type FinishedReport = {
+export type AnalysisReport = {
     metadata: ReportMetadata;
     rows: AnalysisRow[];
 };
@@ -54,7 +48,7 @@ export type InformationalEvent = {
     message: string;
 };
 
-export function parse_finished_report(report_json: NewlineDeliminatedJson): FinishedReport {
+export function parse_finished_report(report_json: NewlineDeliminatedJson): AnalysisReport {
     const metadata: ReportMetadata = report_json[0]; // this can be cast directly
     const rows: AnalysisRow[] = report_json.slice(1).map((row_json: any) => {
         const analysis: PacketAnalysis[] = row_json.analysis.map((analysis_json: any) => {
@@ -93,7 +87,7 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Fini
     };
 }
 
-export async function get_report(name: string): Promise<FinishedReport> {
+export async function get_report(name: string): Promise<AnalysisReport> {
     const report_json = parse_ndjson(await req('GET', `/api/analysis-report/${name}`));
     return parse_finished_report(report_json);
 }

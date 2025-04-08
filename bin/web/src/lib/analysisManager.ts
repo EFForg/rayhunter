@@ -1,9 +1,14 @@
+import { get_report, type AnalysisReport } from "./analysis";
 import type { Manifest, ManifestEntry } from "./manifest";
 import { req } from "./utils";
 
 export enum AnalysisStatus {
+    // rayhunter is currently analyzing this entry (note that this is distinct
+    // from the currently-recording entry)
     Running,
+    // this entry is queued to be analyzed
     Queued,
+    // analysis is finished, and the new report can be accessed
     Finished,
 }
 
@@ -19,27 +24,40 @@ export type AnalysisResult = {
 };
 
 export class AnalysisManager {
-    public analysis_status: Map<string, AnalysisStatus> = new Map();
+    public status: Map<string, AnalysisStatus> = new Map();
+    public reports: Map<string, AnalysisReport | string> = new Map();
 
     public async run_analysis(name: string) {
         await req('POST', `/api/analysis/${name}`);
-        this.analysis_status.set(name, AnalysisStatus.Queued);
+        this.status.set(name, AnalysisStatus.Queued);
+        this.reports.delete(name);
     }
 
     public async update() {
-        this.analysis_status.clear();
-
         const status: AnalysisStatusJson = JSON.parse(await req('GET', '/api/analysis'));
         if (status.running) {
-            this.analysis_status.set(status.running, AnalysisStatus.Running);
+            this.status.set(status.running, AnalysisStatus.Running);
         }
 
         for (const entry of status.queued) {
-            this.analysis_status.set(entry, AnalysisStatus.Queued);
+            this.status.set(entry, AnalysisStatus.Queued);
         }
 
         for (const entry of status.finished) {
-            this.analysis_status.set(entry, AnalysisStatus.Finished);
+            // if entry was already finished, nothing to do
+            if (this.status.get(entry) === AnalysisStatus.Finished) {
+                continue;
+            }
+
+            this.status.set(entry, AnalysisStatus.Finished);
+
+            // fetch the analysis report
+            this.reports.delete(entry);
+            get_report(entry).then(report => {
+                this.reports.set(entry, report);
+            }).catch(err => {
+                this.reports.set(entry, `Failed to get analysis: ${err}`);
+            });
         }
     }
 }

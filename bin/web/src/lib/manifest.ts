@@ -1,3 +1,6 @@
+	import { get_report, type AnalysisReport } from "./analysis";
+import { AnalysisStatus, type AnalysisManager } from "./analysisManager";
+
 interface JsonManifest {
     entries: JsonManifestEntry[];
     current_entry: JsonManifestEntry | null;
@@ -26,14 +29,35 @@ export class Manifest {
         // sort entries in reverse chronological order
         this.entries.reverse();
     }
+
+    async set_analysis_status(manager: AnalysisManager) {
+        for (let entry of this.entries) {
+            entry.analysis_status = manager.status.get(entry.name);
+            entry.analysis_report = manager.reports.get(entry.name);
+        }
+
+        if (this.current_entry) {
+            try {
+                this.current_entry.analysis_report = await get_report(this.current_entry.name);
+            } catch(err) {
+                this.current_entry.analysis_report = `Err: failed to get analysis report: ${err}`;
+            }
+
+            // the current entry should always be considered "finished", as its
+            // analysis report is always available
+            this.current_entry.analysis_status = AnalysisStatus.Finished;
+        }
+	}
 }
 
 export class ManifestEntry {
     public name: string;
     public start_time: Date;
-    public last_message_time: Date | undefined;
+    public last_message_time: Date | undefined = undefined;
     public qmdl_size_bytes: number;
     public analysis_size_bytes: number;
+    public analysis_status: AnalysisStatus | undefined = undefined;
+    public analysis_report: AnalysisReport | string | undefined = undefined;
 
     constructor(json: JsonManifestEntry) {
         this.name = json.name;

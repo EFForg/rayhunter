@@ -1,27 +1,30 @@
 <script lang="ts">
     import { Manifest, ManifestEntry } from "$lib/manifest";
     import { get_manifest, get_system_stats } from "$lib/utils";
-	import ManifestTable from "$lib/components/ManifestTable.svelte";
-	import { onMount } from "svelte";
-	import type { SystemStats } from "$lib/systemStats";
-	import { AnalysisManager } from "$lib/analysisManager";
+    import ManifestTable from "$lib/components/ManifestTable.svelte";
+    import { onMount } from "svelte";
+    import type { SystemStats } from "$lib/systemStats";
+    import { AnalysisManager } from "$lib/analysisManager";
 
-	let manifest: Manifest | undefined = $state(undefined);
-	let system_stats: SystemStats | undefined = $state(undefined);
-	let manager: AnalysisManager = new AnalysisManager();
-	let analysis_status = $state([]);
-	async function update(): Promise<void> {
-    	manifest = await get_manifest();
-	    system_stats = await get_system_stats();
-	}
+    let manifest: Manifest | undefined = $state(undefined);
+    let system_stats: SystemStats | undefined = $state(undefined);
+    let manager: AnalysisManager = new AnalysisManager();
+    let analysis_status = $state([]);
 
-	onMount(() => {
-	   const interval = setInterval(() => {
-			update();
-		}, 1000);
+    async function update(): Promise<void> {
+        await manager.update();
+        manifest = await get_manifest();
+        manifest.set_analysis_status(manager);
+        system_stats = await get_system_stats();
+    }
 
-		return () => clearInterval(interval);
-	});
+    onMount(() => {
+       const interval = setInterval(() => {
+            update();
+        }, 1000);
+
+        return () => clearInterval(interval);
+    });
 </script>
 
 <div class="p-8">
