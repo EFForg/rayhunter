@@ -1,15 +1,15 @@
 use image::{codecs::gif::GifDecoder, imageops::FilterType, AnimationDecoder, DynamicImage};
-use std::time::Duration;
 use std::io::Cursor;
+use std::time::Duration;
 
 use crate::config;
 use crate::display::DisplayState;
 
 use log::{error, info};
-use tokio::sync::oneshot;
 use tokio::sync::mpsc::Receiver;
-use tokio_util::task::TaskTracker;
+use tokio::sync::oneshot;
 use tokio::sync::oneshot::error::TryRecvError;
+use tokio_util::task::TaskTracker;
 
 use std::thread::sleep;
 
@@ -21,17 +21,16 @@ pub struct Dimensions {
     pub width: u32,
 }
 
-
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum Color {
-    Red    ,
-    Green  ,
-    Blue   ,
-    White  ,
-    Black  ,
-    Cyan   ,
-    Yellow ,
+    Red,
+    Green,
+    Blue,
+    White,
+    Black,
+    Cyan,
+    Yellow,
     Pink,
 }
 
@@ -50,12 +49,17 @@ impl Color {
     }
 }
 
-impl From<DisplayState> for Color{
-    fn from(state: DisplayState) -> Self {
+impl Color {
+    fn from_state(state: DisplayState, colorblind_mode: bool) -> Self {
         match state {
             DisplayState::Paused => Color::White,
-            DisplayState::Recording => Color::Green, 
-            DisplayState::RecordingCBM => Color::Blue, 
+            DisplayState::Recording => {
+                if colorblind_mode {
+                    Color::Blue
+                } else {
+                    Color::Green
+                }
+            }
             DisplayState::WarningDetected => Color::Red,
         }
     }
@@ -74,9 +78,8 @@ pub trait GenericFramebuffer: Send + 'static {
         let mut width = img.width();
         let mut height = img.height();
         let resized_img: DynamicImage;
-        if height > dimensions.height ||
-        width > dimensions.width {
-            resized_img = img.resize( dimensions.width, dimensions.height, FilterType::CatmullRom);
+        if height > dimensions.height || width > dimensions.width {
+            resized_img = img.resize(dimensions.width, dimensions.height, FilterType::CatmullRom);
             width = dimensions.width.min(resized_img.width());
             height = dimensions.height.min(resized_img.height());
         } else {
@@ -91,9 +94,7 @@ pub trait GenericFramebuffer: Send + 'static {
             }
         }
 
-        self.write_buffer(
-            &buf,
-        );
+        self.write_buffer(&buf);
     }
 
     fn draw_gif(&mut self, img_buffer: &[u8]) {
@@ -131,64 +132,69 @@ pub fn update_ui(
     config: &config::Config,
     mut fb: impl GenericFramebuffer,
     mut ui_shutdown_rx: oneshot::Receiver<()>,
-    mut ui_update_rx: Receiver<DisplayState>
+    mut ui_update_rx: Receiver<DisplayState>,
 ) {
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
-    let mut display_color: Color;
     let display_level = config.ui_level;
     if display_level == 0 {
         info!("Invisible mode, not spawning UI.");
     }
 
-    if config.colorblind_mode {
-        display_color = Color::Blue;
-    } else {
-        display_color = Color::Green;
-    }
+    let colorblind_mode = config.colorblind_mode;
+    let mut display_color = Color::from_state(DisplayState::Recording, colorblind_mode);
 
     task_tracker.spawn_blocking(move || {
         // this feels wrong, is there a more rusty way to do this?
         let mut img: Option<&[u8]> = None;
         if display_level == 2 {
-            img = Some(IMAGE_DIR.get_file("orca.gif").expect("failed to read orca.gif").contents());
+            img = Some(
+                IMAGE_DIR
+                    .get_file("orca.gif")
+                    .expect("failed to read orca.gif")
+                    .contents(),
+            );
         } else if display_level == 3 {
-            img = Some(IMAGE_DIR.get_file("eff.png").expect("failed to read eff.png").contents());
+            img = Some(
+                IMAGE_DIR
+                    .get_file("eff.png")
+                    .expect("failed to read eff.png")
+                    .contents(),
+            );
         }
         loop {
             match ui_shutdown_rx.try_recv() {
                 Ok(_) => {
                     info!("received UI shutdown");
                     break;
-                },
-                Err(TryRecvError::Empty) => {},
-                Err(e) => panic!("error receiving shutdown message: {e}")
+                }
+                Err(TryRecvError::Empty) => {}
+                Err(e) => panic!("error receiving shutdown message: {e}"),
             }
             match ui_update_rx.try_recv() {
-                    Ok(state) => {
-                        display_color = state.into();
-                    },
-                    Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
-                    Err(e) => error!("error receiving framebuffer update message: {e}")
+                Ok(state) => {
+                    display_color = Color::from_state(state, colorblind_mode);
+                }
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
+                Err(e) => error!("error receiving framebuffer update message: {e}"),
             }
 
-            match display_level  {
+            match display_level {
                 2 => {
                     fb.draw_gif(img.unwrap());
-                },
-                3 => {
-                    fb.draw_img(img.unwrap())
-                },
+                }
+                3 => fb.draw_img(img.unwrap()),
                 128 => {
                     fb.draw_line(Color::Cyan, 128);
                     fb.draw_line(Color::Pink, 102);
                     fb.draw_line(Color::White, 76);
                     fb.draw_line(Color::Pink, 50);
                     fb.draw_line(Color::Cyan, 25);
-                },
-                _ => { // this branch id for ui_level 1, which is also the default if an
-                       // unknown value is used
+                }
+                _ => {
+                    // this branch id for ui_level 1, which is also the default if an
+                    // unknown value is used
                     fb.draw_line(display_color, 2);
-                },
+                }
             };
             sleep(Duration::from_millis(1000));
         }

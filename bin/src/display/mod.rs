@@ -19,7 +19,6 @@ pub enum DisplayState {
     Recording,
     Paused,
     WarningDetected,
-    RecordingCBM,
 }
 
 #[cfg(all(feature = "orbic", feature = "tplink"))]

@@ -184,7 +184,6 @@ async fn main() -> Result<(), RayhunterError> {
         debug_mode: config.debug_mode,
         analysis_status_lock,
         analysis_sender: analysis_tx,
-        colorblind_mode: config.colorblind_mode,
     });
     run_server(&task_tracker, &config, state, server_shutdown_rx).await;
 

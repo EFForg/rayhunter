@@ -160,7 +160,6 @@ pub fn update_ui(
             match ui_update_rx.try_recv() {
                 Ok(DisplayState::Paused) => pixels = paused(),
                 Ok(DisplayState::Recording) => pixels = smiling(),
-                Ok(DisplayState::RecordingCBM) => pixels = smiling(),
                 Ok(DisplayState::WarningDetected) => pixels = frowning(),
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                 Err(e) => {

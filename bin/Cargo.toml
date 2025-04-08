@@ -22,7 +22,7 @@ path = "src/check.rs"
 rayhunter = { path = "../lib" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
-tokio = { version = "1.35.1", features = ["full"] }
+tokio = { version = "1.44.2", features = ["full"] }
 axum = "0.7.3"
 futures-core = "0.3.30"
 thiserror = "1.0.52"
