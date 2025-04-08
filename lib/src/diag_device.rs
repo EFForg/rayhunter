@@ -108,6 +108,7 @@ impl DiagDevice {
 
     async fn get_next_messages_container(&mut self) -> Result<MessagesContainer, DiagDeviceError> {
         let mut bytes_read = 0;
+        // TP-Link M7350 sometimes sends too small messages, we need to be able to deal with short reads.
         while bytes_read <= 8 {
             bytes_read = self.file.read(&mut self.read_buf).await
                 .map_err(DiagDeviceError::DeviceReadFailed)?;
