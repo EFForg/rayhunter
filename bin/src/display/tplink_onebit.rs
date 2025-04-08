@@ -106,7 +106,7 @@ fn smiling() -> Vec<u8> {
     command
 }
 
-fn frowning() -> Vec<u8> {
+fn warning() -> Vec<u8> {
     let mut command = STATUS_HEADER.to_vec();
 
     command.extend(
@@ -160,7 +160,7 @@ pub fn update_ui(
             match ui_update_rx.try_recv() {
                 Ok(DisplayState::Paused) => pixels = paused(),
                 Ok(DisplayState::Recording) => pixels = smiling(),
-                Ok(DisplayState::WarningDetected) => pixels = frowning(),
+                Ok(DisplayState::WarningDetected) => pixels = warning(),
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                 Err(e) => {
                     error!("error receiving framebuffer update message: {e}");
@@ -182,6 +182,6 @@ pub fn update_ui(
 
 #[test]
 fn test_pixels() {
-    let pixels = frowning();
-    assert_eq!(pixels, [104, 40, 16, 16, 255, 255, 224, 7, 159, 249, 191, 253, 191, 253, 187, 221, 191, 253, 191, 253, 184, 29, 187, 221, 187, 221, 191, 253, 191, 253, 159, 249, 224, 7, 255, 255]);
+    let pixels = warning();
+    assert_eq!(pixels, [104, 40, 16, 16, 255, 255, 224, 7, 159, 249, 191, 253, 190, 125, 190, 125, 190, 125, 190, 125, 190, 125, 191, 253, 190, 125, 190, 125, 191, 253, 159, 249, 224, 7, 255, 255]);
 }
