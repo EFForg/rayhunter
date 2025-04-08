@@ -51,7 +51,7 @@ macro_rules! pixelart {
         )*
 
         // last byte is bogus, discard it to silence warnings
-        let _byte = byte;
+        let _ = byte;
 
         assert_eq!(i % 8, 0);
         bytes
