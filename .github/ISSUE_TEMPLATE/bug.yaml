@@ -1,7 +1,6 @@
 name: Bug Report
 description: File a bug report.
 title: "[Bug]: "
-type: Bug
 body:
   - type: markdown
     attributes:
@@ -12,13 +11,13 @@ body:
       label: Rayhunter Version
       description: |
         Which version did you install?
-      placeholder:  v0.2.6
+      placeholder:  "v0.2.6"
   - type: input
     attributes:
       label: Capture Date
       description: |
         YYYY-MM-DD
-      placeholder: 2025-05-01
+      placeholder: "2025-05-01"
     validations:
       required: true
   - type: input
@@ -27,8 +26,6 @@ body:
       description: |
         (If comfortable disclosing) What region or country were you in? 
       placeholder: Washington State
-    validations:
-      required: false
   - type: input
     attributes:
       label: Device and Model
@@ -43,7 +40,7 @@ body:
       label: What happened?
       description: |
         What steps did you take to get to your issue?
-      placeholder: Tell us what you see!
+      placeholder: "Tell us what you see!"
     validations:
       required: true
   - type: textarea
