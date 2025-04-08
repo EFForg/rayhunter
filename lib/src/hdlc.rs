@@ -3,11 +3,14 @@
 //! here:
 //! https://github.com/P1sec/QCSuper/blob/master/docs/The%20Diag%20protocol.md#the-diag-protocol-over-usb
 
-use crc::Crc;
 use bytes::Buf;
+use crc::Crc;
 use thiserror::Error;
 
-use crate::diag::{MESSAGE_ESCAPE_CHAR, MESSAGE_TERMINATOR, ESCAPED_MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR};
+use crate::diag::{
+    ESCAPED_MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR, MESSAGE_ESCAPE_CHAR,
+    MESSAGE_TERMINATOR,
+};
 
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum HdlcError {
@@ -29,7 +32,9 @@ pub fn hdlc_encapsulate(data: &[u8], crc: &Crc<u16>) -> Vec<u8> {
     for &b in data {
         match b {
             MESSAGE_TERMINATOR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR]),
-            MESSAGE_ESCAPE_CHAR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_ESCAPE_CHAR]),
+            MESSAGE_ESCAPE_CHAR => {
+                result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_ESCAPE_CHAR])
+            }
             _ => result.push(b),
         }
     }
@@ -37,7 +42,9 @@ pub fn hdlc_encapsulate(data: &[u8], crc: &Crc<u16>) -> Vec<u8> {
     for b in crc.checksum(data).to_le_bytes() {
         match b {
             MESSAGE_TERMINATOR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_TERMINATOR]),
-            MESSAGE_ESCAPE_CHAR => result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_ESCAPE_CHAR]),
+            MESSAGE_ESCAPE_CHAR => {
+                result.extend([MESSAGE_ESCAPE_CHAR, ESCAPED_MESSAGE_ESCAPE_CHAR])
+            }
             _ => result.push(b),
         }
     }
@@ -77,7 +84,10 @@ pub fn hdlc_decapsulate(data: &[u8], crc: &Crc<u16>) -> Result<Vec<u8>, HdlcErro
     let checksum_lo = unescaped.pop().ok_or(HdlcError::MissingChecksum)?;
     let checksum = [checksum_lo, checksum_hi].as_slice().get_u16_le();
     if checksum != crc.checksum(&unescaped) {
-        return Err(HdlcError::InvalidChecksum(checksum, crc.checksum(&unescaped)));
+        return Err(HdlcError::InvalidChecksum(
+            checksum,
+            crc.checksum(&unescaped),
+        ));
     }
 
     Ok(unescaped)

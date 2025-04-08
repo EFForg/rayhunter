@@ -2,8 +2,7 @@ use crate::error::RayhunterError;
 
 use serde::Deserialize;
 
-#[derive(Debug)]
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub qmdl_store_path: String,
@@ -27,7 +26,10 @@ impl Default for Config {
     }
 }
 
-pub fn parse_config<P>(path: P) -> Result<Config, RayhunterError> where P: AsRef<std::path::Path> {
+pub fn parse_config<P>(path: P) -> Result<Config, RayhunterError>
+where
+    P: AsRef<std::path::Path>,
+{
     if let Ok(config_file) = std::fs::read_to_string(&path) {
         Ok(toml::from_str(&config_file).map_err(RayhunterError::ConfigFileParsingError)?)
     } else {

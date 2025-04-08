@@ -1,10 +1,8 @@
-//! Parse QMDL files and create a pcap file. 
-//! Creates a plausible IP header and [GSMtap](https://osmocom.org/projects/baseband/wiki/GSMTAP) header and then puts the rest of the data under that for wireshark to parse. 
-use crate::gsmtap::GsmtapMessage;
+//! Parse QMDL files and create a pcap file.
+//! Creates a plausible IP header and [GSMtap](https://osmocom.org/projects/baseband/wiki/GSMTAP) header and then puts the rest of the data under that for wireshark to parse.
 use crate::diag::Timestamp;
+use crate::gsmtap::GsmtapMessage;
 
-use tokio::io::AsyncWrite;
-use std::borrow::Cow;
 use chrono::prelude::*;
 use deku::prelude::*;
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
@@ -12,7 +10,9 @@ use pcap_file_tokio::pcapng::blocks::interface_description::InterfaceDescription
 use pcap_file_tokio::pcapng::blocks::section_header::{SectionHeaderBlock, SectionHeaderOption};
 use pcap_file_tokio::pcapng::PcapNgWriter;
 use pcap_file_tokio::{Endianness, PcapError};
+use std::borrow::Cow;
 use thiserror::Error;
+use tokio::io::AsyncWrite;
 
 #[derive(Error, Debug)]
 pub enum GsmtapPcapError {
@@ -26,7 +26,10 @@ pub enum GsmtapPcapError {
     Deku(#[from] DekuError),
 }
 
-pub struct GsmtapPcapWriter<T> where T: AsyncWrite {
+pub struct GsmtapPcapWriter<T>
+where
+    T: AsyncWrite,
+{
     writer: PcapNgWriter<T>,
     ip_id: u16,
 }
@@ -59,10 +62,17 @@ struct UdpHeader {
     checksum: u16,
 }
 
-impl<T> GsmtapPcapWriter<T> where T: AsyncWrite + Unpin + Send {
+impl<T> GsmtapPcapWriter<T>
+where
+    T: AsyncWrite + Unpin + Send,
+{
     pub async fn new(writer: T) -> Result<Self, GsmtapPcapError> {
         let metadata = crate::util::RuntimeMetadata::new();
-        let package = format!("{} {}", env!("CARGO_PKG_NAME").to_owned(), metadata.rayhunter_version);
+        let package = format!(
+            "{} {}",
+            env!("CARGO_PKG_NAME").to_owned(),
+            metadata.rayhunter_version
+        );
         let section = SectionHeaderBlock {
             endianness: Endianness::Big,
             major_version: 1,
@@ -88,8 +98,13 @@ impl<T> GsmtapPcapWriter<T> where T: AsyncWrite + Unpin + Send {
         Ok(())
     }
 
-    pub async fn write_gsmtap_message(&mut self, msg: GsmtapMessage, timestamp: Timestamp) -> Result<(), GsmtapPcapError> {
-        let duration = timestamp.to_datetime()
+    pub async fn write_gsmtap_message(
+        &mut self,
+        msg: GsmtapMessage,
+        timestamp: Timestamp,
+    ) -> Result<(), GsmtapPcapError> {
+        let duration = timestamp
+            .to_datetime()
             .signed_duration_since(DateTime::UNIX_EPOCH)
             .to_std()?;
 
