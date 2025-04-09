@@ -24,113 +24,88 @@ const STATUS_Y: u8 = 40;
 const STATUS_W: u8 = 16;
 const STATUS_H: u8 = 16;
 
-const STATUS_HEADER: [u8; 4] = [STATUS_X, STATUS_Y, STATUS_W, STATUS_H];
-
 macro_rules! pixel {
     (x) => { 0 };
     (_) => { 1 };
 }
 
 macro_rules! pixelart {
-    ($($tt:tt)*) => {{
-        // could be improved to be const expr or at least to compile to something that doesn't
-        // allocate. but the macro is easier to write this way.
-        let mut bytes = Vec::new();
-        let mut i = 0;
-        let mut byte = 0;
-        $(
-            byte |= pixel!($tt);
-            if i == 7 {
-                bytes.push(byte);
-                i = 0;
-                byte = 0;
-            } else {
-                i += 1;
-                byte <<= 1;
-            }
-        )*
+    (x=$x:expr, y=$y:expr, width=$width:expr, height=$height:expr; $($a:tt $b:tt $c:tt $d:tt $e:tt $f:tt $g:tt $h:tt)*) => {{
+        // one bit per pixel + 4 bytes for header
+        const BUF_SIZE: usize = ($width as usize * $height as usize) / 8 + 4;
+        const BUF_BYTES: [u8; BUF_SIZE] = [
+            $x,
+            $y,
+            $width,
+            $height,
+            $(
+                (pixel!($a) << 7 | pixel!($b) << 6 | pixel!($c) << 5 | pixel!($d) << 4 | pixel!($e) << 3 | pixel!($f) << 2 | pixel!($g) << 1 | pixel!($h)),
+            )*
+        ];
 
-        // last byte is bogus, discard it to silence warnings
-        let _ = byte;
-
-        assert_eq!(i % 8, 0);
-        bytes
+        &BUF_BYTES
     }}
 }
 
-fn paused() -> Vec<u8> {
-    let mut command = STATUS_HEADER.to_vec();
+const STATUS_PAUSED: &[u8] = pixelart! {
+    x=STATUS_X, y=STATUS_Y, width=STATUS_W, height=STATUS_H;
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    _ _ _ x x x x x x x x x x _ _ _
+    _ x x _ _ _ _ _ _ _ _ _ _ x x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ x _ _ _ _ x _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x x _ _ _ _ _ _ _ _ _ _ x x _
+    _ _ _ x x x x x x x x x x _ _ _
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+};
 
-    command.extend(pixelart! {
-        _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-        _ _ _ x x x x x x x x x x _ _ _ 
-        _ x x _ _ _ _ _ _ _ _ _ _ x x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ x _ _ _ _ x _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x x _ _ _ _ _ _ _ _ _ _ x x _ 
-        _ _ _ x x x x x x x x x x _ _ _ 
-        _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-    });
-    command
-}
+const STATUS_SMILING: &[u8] = pixelart! {
+    x=STATUS_X, y=STATUS_Y, width=STATUS_W, height=STATUS_H;
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    _ _ _ x x x x x x x x x x _ _ _
+    _ x x _ _ _ _ _ _ _ _ _ _ x x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ x _ _ _ _ x _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ x _ _ _ _ x _ _ _ x _
+    _ x _ _ _ x _ _ _ _ x _ _ _ x _
+    _ x _ _ _ x x x x x x _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x x _ _ _ _ _ _ _ _ _ _ x x _
+    _ _ _ x x x x x x x x x x _ _ _
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+};
 
-fn smiling() -> Vec<u8> {
-    let mut command = STATUS_HEADER.to_vec();
-
-    command.extend(pixelart! {
-        _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-        _ _ _ x x x x x x x x x x _ _ _ 
-        _ x x _ _ _ _ _ _ _ _ _ _ x x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ x _ _ _ _ x _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ x _ _ _ _ x _ _ _ x _ 
-        _ x _ _ _ x _ _ _ _ x _ _ _ x _ 
-        _ x _ _ _ x x x x x x _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x _ _ _ _ _ _ _ _ _ _ _ _ x _ 
-        _ x x _ _ _ _ _ _ _ _ _ _ x x _ 
-        _ _ _ x x x x x x x x x x _ _ _ 
-        _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-    });
-    command
-}
-
-fn warning() -> Vec<u8> {
-    let mut command = STATUS_HEADER.to_vec();
-
-    command.extend(
-        pixelart! {
-            _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-            _ _ _ x x x x x x x x x x _ _ _
-            _ x x _ _ _ _ _ _ _ _ _ _ x x _
-            _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
-            _ x _ _ _ _ _ x x _ _ _ _ _ x _
-            _ x _ _ _ _ _ x x _ _ _ _ _ x _
-            _ x _ _ _ _ _ x x _ _ _ _ _ x _
-            _ x _ _ _ _ _ x x _ _ _ _ _ x _
-            _ x _ _ _ _ _ x x _ _ _ _ _ x _
-            _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
-            _ x _ _ _ _ _ x x _ _ _ _ _ x _
-            _ x _ _ _ _ _ x x _ _ _ _ _ x _
-            _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
-            _ x x _ _ _ _ _ _ _ _ _ _ x x _
-            _ _ _ x x x x x x x x x x _ _ _ 
-            _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-        }
-    );
-    command
-}
+const STATUS_WARNING: &[u8] = pixelart! {
+    x=STATUS_X, y=STATUS_Y, width=STATUS_W, height=STATUS_H;
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    _ _ _ x x x x x x x x x x _ _ _
+    _ x x _ _ _ _ _ _ _ _ _ _ x x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ x x _ _ _ _ _ x _
+    _ x _ _ _ _ _ x x _ _ _ _ _ x _
+    _ x _ _ _ _ _ x x _ _ _ _ _ x _
+    _ x _ _ _ _ _ x x _ _ _ _ _ x _
+    _ x _ _ _ _ _ x x _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x _ _ _ _ _ x x _ _ _ _ _ x _
+    _ x _ _ _ _ _ x x _ _ _ _ _ x _
+    _ x _ _ _ _ _ _ _ _ _ _ _ _ x _
+    _ x x _ _ _ _ _ _ _ _ _ _ x x _
+    _ _ _ x x x x x x x x x x _ _ _
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+};
 
 pub fn update_ui(
     task_tracker: &TaskTracker,
@@ -145,7 +120,7 @@ pub fn update_ui(
 
 
     task_tracker.spawn_blocking(move || {
-        let mut pixels = smiling();
+        let mut pixels = STATUS_SMILING;
 
         loop {
             match ui_shutdown_rx.try_recv() {
@@ -158,9 +133,9 @@ pub fn update_ui(
             }
 
             match ui_update_rx.try_recv() {
-                Ok(DisplayState::Paused) => pixels = paused(),
-                Ok(DisplayState::Recording) => pixels = smiling(),
-                Ok(DisplayState::WarningDetected) => pixels = warning(),
+                Ok(DisplayState::Paused) => pixels = STATUS_PAUSED,
+                Ok(DisplayState::Recording) => pixels = STATUS_SMILING,
+                Ok(DisplayState::WarningDetected) => pixels = STATUS_WARNING,
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
                 Err(e) => {
                     error!("error receiving framebuffer update message: {e}");
@@ -181,7 +156,6 @@ pub fn update_ui(
 }
 
 #[test]
-fn test_pixels() {
-    let pixels = warning();
-    assert_eq!(pixels, [104, 40, 16, 16, 255, 255, 224, 7, 159, 249, 191, 253, 190, 125, 190, 125, 190, 125, 190, 125, 190, 125, 191, 253, 190, 125, 190, 125, 191, 253, 159, 249, 224, 7, 255, 255]);
+fn test_pixelart_macro() {
+    assert_eq!(STATUS_WARNING, [104, 40, 16, 16, 255, 255, 224, 7, 159, 249, 191, 253, 190, 125, 190, 125, 190, 125, 190, 125, 190, 125, 191, 253, 190, 125, 190, 125, 191, 253, 159, 249, 224, 7, 255, 255]);
 }
