@@ -1,11 +1,11 @@
-use rayhunter::util::RuntimeMetadata;
 use chrono::{DateTime, Local};
+use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::{
     fs::{self, try_exists, File, OpenOptions},
-    io::AsyncWriteExt
+    io::AsyncWriteExt,
 };
 
 #[derive(Debug, Error)]
@@ -127,7 +127,7 @@ impl RecordingStore {
         let mut store = RecordingStore {
             path: path.as_ref().to_owned(),
             manifest: Manifest {
-                entries: Vec::new()
+                entries: Vec::new(),
             },
             current_entry: None,
         };
@@ -171,10 +171,7 @@ impl RecordingStore {
     }
 
     // Returns the corresponding QMDL file for a given entry
-    pub async fn open_entry_qmdl(
-        &self,
-        entry_index: usize,
-    ) -> Result<File, RecordingStoreError> {
+    pub async fn open_entry_qmdl(&self, entry_index: usize) -> Result<File, RecordingStoreError> {
         let entry = &self.manifest.entries[entry_index];
         File::open(entry.get_qmdl_filepath(&self.path))
             .await
@@ -203,8 +200,7 @@ impl RecordingStore {
             .open(entry.get_analysis_filepath(&self.path))
             .await
             .map_err(RecordingStoreError::ReadFileError)?;
-        self.update_entry_analysis_size(entry_index, 0)
-            .await?;
+        self.update_entry_analysis_size(entry_index, 0).await?;
         Ok(file)
     }
 
@@ -253,7 +249,8 @@ impl RecordingStore {
             .await
             .map_err(RecordingStoreError::WriteManifestError)?;
 
-        fs::rename(tmp_path, self.path.join("manifest.toml")).await
+        fs::rename(tmp_path, self.path.join("manifest.toml"))
+            .await
             .map_err(RecordingStoreError::WriteManifestError)?;
 
         Ok(())
@@ -261,7 +258,8 @@ impl RecordingStore {
 
     // Finds an entry by filename
     pub fn entry_for_name(&self, name: &str) -> Option<(usize, &ManifestEntry)> {
-        let entry_index = self.manifest
+        let entry_index = self
+            .manifest
             .entries
             .iter()
             .position(|entry| entry.name == name)?;
@@ -274,7 +272,8 @@ impl RecordingStore {
     }
 
     pub async fn delete_entry(&mut self, name: &str) -> Result<ManifestEntry, RecordingStoreError> {
-        let entry_to_delete_idx = self.manifest
+        let entry_to_delete_idx = self
+            .manifest
             .entries
             .iter()
             .position(|entry| entry.name == name)

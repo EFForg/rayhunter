@@ -1,7 +1,7 @@
 use image::{codecs::gif::GifDecoder, imageops::FilterType, AnimationDecoder, DynamicImage};
 use std::{io::Cursor, time::Duration};
 
-const FB_PATH:&str = "/dev/fb0";
+const FB_PATH: &str = "/dev/fb0";
 
 #[derive(Copy, Clone)]
 // TODO actually poll for this, maybe w/ fbset?
@@ -13,14 +13,14 @@ struct Dimensions {
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum Color565 {
-    Red    = 0b1111100000000000,
-    Green  = 0b0000011111100000,
-    Blue   = 0b0000000000011111,
-    White  = 0b1111111111111111,
-    Black  = 0b0000000000000000,
-    Cyan   = 0b0000011111111111,
+    Red = 0b1111100000000000,
+    Green = 0b0000011111100000,
+    Blue = 0b0000000000011111,
+    White = 0b1111111111111111,
+    Black = 0b0000000000000000,
+    Cyan = 0b0000011111111111,
     Yellow = 0b1111111111100000,
-    Pink =   0b1111010010011111,
+    Pink = 0b1111010010011111,
 }
 
 pub enum DisplayState {
@@ -33,11 +33,13 @@ impl Color565 {
     pub fn from_display_state(state: DisplayState, colorblind: bool) -> Self {
         match state {
             DisplayState::Paused => Color565::White,
-            DisplayState::Recording => if colorblind {
-                Color565::Green
-            } else {
-                Color565::Blue
-            },
+            DisplayState::Recording => {
+                if colorblind {
+                    Color565::Green
+                } else {
+                    Color565::Blue
+                }
+            }
             DisplayState::WarningDetected => Color565::Red,
         }
     }
@@ -49,10 +51,13 @@ pub struct Framebuffer<'a> {
     path: &'a str,
 }
 
-impl Framebuffer<'_>{
+impl Framebuffer<'_> {
     pub const fn new() -> Self {
-        Framebuffer{
-            dimensions: Dimensions{height: 128, width: 128},
+        Framebuffer {
+            dimensions: Dimensions {
+                height: 128,
+                width: 128,
+            },
             path: FB_PATH,
         }
     }
@@ -61,9 +66,12 @@ impl Framebuffer<'_>{
         let mut width = img.width();
         let mut height = img.height();
         let resized_img: DynamicImage;
-        if height > self.dimensions.height ||
-        width > self.dimensions.width {
-            resized_img = img.resize( self.dimensions.width, self.dimensions.height, FilterType::CatmullRom);
+        if height > self.dimensions.height || width > self.dimensions.width {
+            resized_img = img.resize(
+                self.dimensions.width,
+                self.dimensions.height,
+                FilterType::CatmullRom,
+            );
             width = self.dimensions.width.min(resized_img.width());
             height = self.dimensions.height.min(resized_img.height());
         } else {
@@ -101,8 +109,8 @@ impl Framebuffer<'_>{
         self.write(img);
     }
 
-    pub fn draw_line(&mut self, color: Color565, height: u32){
-        let px_num= height * self.dimensions.width;
+    pub fn draw_line(&mut self, color: Color565, height: u32) {
+        let px_num = height * self.dimensions.width;
         let color: u16 = color as u16;
         let mut buffer: Vec<u8> = Vec::new();
         for _ in 0..px_num {

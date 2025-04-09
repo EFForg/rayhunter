@@ -1,6 +1,5 @@
 //! Enumerates some relevant diag log codes. Copied from QCSuper
 
-
 // These are 2G-related log types.
 
 pub const LOG_GSM_RR_SIGNALING_MESSAGE_C: u32 = 0x512f;
@@ -95,11 +94,9 @@ pub const RRCLOG_SIG_DL_MSCH: u32 = 8;
 pub const RRCLOG_EXTENSION_SIB: u32 = 9;
 pub const RRCLOG_SIB_CONTAINER: u32 = 10;
 
-
 // 3G layer 3 packets:
 
 pub const WCDMA_SIGNALLING_MESSAGE: u32 = 0x412f;
-
 
 // Upper layers
 
