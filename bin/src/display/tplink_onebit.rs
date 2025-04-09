@@ -4,11 +4,11 @@
 use crate::config;
 use crate::display::DisplayState;
 
-use log::{info, error};
+use log::{error, info};
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::oneshot;
-use tokio_util::task::TaskTracker;
 use tokio::sync::oneshot::error::TryRecvError;
+use tokio_util::task::TaskTracker;
 
 use std::fs;
 use std::thread::sleep;
@@ -25,8 +25,12 @@ const STATUS_W: u8 = 16;
 const STATUS_H: u8 = 16;
 
 macro_rules! pixel {
-    (x) => { 0 };
-    (_) => { 1 };
+    (x) => {
+        0
+    };
+    (_) => {
+        1
+    };
 }
 
 macro_rules! pixelart {
@@ -118,7 +122,6 @@ pub fn update_ui(
         info!("Invisible mode, not spawning UI.");
     }
 
-
     task_tracker.spawn_blocking(move || {
         let mut pixels = STATUS_SMILING;
 
@@ -127,16 +130,16 @@ pub fn update_ui(
                 Ok(_) => {
                     info!("received UI shutdown");
                     break;
-                },
-                Err(TryRecvError::Empty) => {},
-                Err(e) => panic!("error receiving shutdown message: {e}")
+                }
+                Err(TryRecvError::Empty) => {}
+                Err(e) => panic!("error receiving shutdown message: {e}"),
             }
 
             match ui_update_rx.try_recv() {
                 Ok(DisplayState::Paused) => pixels = STATUS_PAUSED,
                 Ok(DisplayState::Recording) => pixels = STATUS_SMILING,
                 Ok(DisplayState::WarningDetected) => pixels = STATUS_WARNING,
-                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {},
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
                 Err(e) => {
                     error!("error receiving framebuffer update message: {e}");
                 }
@@ -157,5 +160,11 @@ pub fn update_ui(
 
 #[test]
 fn test_pixelart_macro() {
-    assert_eq!(STATUS_WARNING, [104, 40, 16, 16, 255, 255, 224, 7, 159, 249, 191, 253, 190, 125, 190, 125, 190, 125, 190, 125, 190, 125, 191, 253, 190, 125, 190, 125, 191, 253, 159, 249, 224, 7, 255, 255]);
+    assert_eq!(
+        STATUS_WARNING,
+        [
+            104, 40, 16, 16, 255, 255, 224, 7, 159, 249, 191, 253, 190, 125, 190, 125, 190, 125,
+            190, 125, 190, 125, 191, 253, 190, 125, 190, 125, 191, 253, 159, 249, 224, 7, 255, 255
+        ]
+    );
 }
