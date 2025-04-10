@@ -1,5 +1,7 @@
-use nix::sys::utsname::uname;
 use serde::Serialize;
+
+#[cfg(target_family = "unix")]
+use nix::sys::utsname::uname;
 
 /// Expose binary and system information.
 #[derive(Serialize, Debug)]
@@ -23,6 +25,16 @@ impl RuntimeMetadata {
     /// attributes from `uname(2)` and falling back to values from
     /// `std::env::consts`.
     pub fn new() -> Self {
+        let build_target = RuntimeMetadata {
+            rayhunter_version: env!("CARGO_PKG_VERSION").to_owned(),
+            arch: std::env::consts::ARCH.to_string(),
+            system_os: std::env::consts::OS.to_string(),
+        };
+
+        #[cfg(target_family = "windows")]
+        return build_target;
+
+        #[cfg(target_family = "unix")]
         match uname() {
             Ok(utsname) => RuntimeMetadata {
                 rayhunter_version: env!("CARGO_PKG_VERSION").to_owned(),
@@ -33,11 +45,7 @@ impl RuntimeMetadata {
                     utsname.release().to_string_lossy(),
                 ),
             },
-            Err(_) => RuntimeMetadata {
-                rayhunter_version: env!("CARGO_PKG_VERSION").to_owned(),
-                arch: std::env::consts::ARCH.to_string(),
-                system_os: std::env::consts::OS.to_string(),
-            },
+            Err(_) => build_target,
         }
     }
 }

@@ -18,3 +18,18 @@ jobs:
       run: cargo check --verbose
     - name: Run tests
       run: cargo test --verbose
+
+  windows_serial_check_and_test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: cargo check
+        shell: bash
+        run: |
+          cd serial
+          cargo check --verbose
+      - name: cargo test
+        shell: bash
+        run: |
+          cd serial
+          cargo test --verbose
