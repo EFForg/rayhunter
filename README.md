@@ -54,7 +54,11 @@ Great news: if you've successfully installed rayhunter, you already know how to 
 
 ## Usage (viewing the web UI)
 
-Once installed, Rayhunter will run automatically whenever your Orbic device is running. It serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, and view heuristic analyses of captures. You can access this UI in one of two ways:
+Once installed, Rayhunter will run automatically whenever your Orbic device is running. You'll see a green line on top of the device's display to indicate that it's running and recording to the SD-card. [The line will turn red](#red) once a potential IMSI catcher has been found, until the device is rebooted or a new recording is started through the web UI.
+
+It also serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, and view heuristic analyses of captures.
+
+You can access this UI in one of two ways:
 
 1. **Connect over wifi:** Connect your phone/laptop to the Orbic's 2.4GHz wifi network and visit [http://192.168.1.1:8080](http://192.168.1.1:8080). (Click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet).
     * You can find the wifi network password by going to the Orbic's menu > 2.4 GHz WIFI Info > Enter > find the 8-character password next to the lock 🔒 icon.
@@ -68,6 +72,8 @@ Once installed, Rayhunter will run automatically whenever your Orbic device is r
 ### Do I need an active SIM card to use Rayhunter?
 
 **It Depends**. Operation of Rayhunter does require the insertion of a SIM card into the device, but whether that SIM card has to be currently active for our tests to work is still under investigation. If you want to use the device as a hotspot in addition to a research device an active plan would of course be necessary, however we have not done enough testing yet to know whether an active subscription is required for detection. If you want to test the device with an inactive SIM card, we would certainly be interested in seeing any data you collect, and especially any runs that trigger an alert!
+
+<a name="red"></a>
 
 ### Help, Rayhunter's line is red! What should I do?
 

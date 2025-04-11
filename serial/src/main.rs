@@ -107,7 +107,7 @@ fn enable_command_mode() -> Result<()> {
 
     let timeout = Duration::from_secs(1);
 
-    if let Some(interface) = open_device(0x05c6, 0xf626)? {
+    if let Some(device) = open_device(0x05c6, 0xf626)? {
         let enable_command_mode = Control {
             control_type: ControlType::Vendor,
             recipient: Recipient::Device,
@@ -115,6 +115,9 @@ fn enable_command_mode() -> Result<()> {
             value: 0,
             index: 0,
         };
+        let interface = device
+            .detach_and_claim_interface(1)
+            .context("detach_and_claim_interface(1) failed")?;
         if let Err(e) = interface.control_out_blocking(enable_command_mode, &[], timeout) {
             // If the device reboots while the command is still executing we
             // may get a pipe error here
