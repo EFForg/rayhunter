@@ -28,7 +28,7 @@ jobs:
             target: x86_64-apple-darwin
           - name: windows-x86_64
             os: windows-latest
-            target: x86_64-pc-windows-gnullvm
+            target: x86_64-pc-windows-gnu
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
