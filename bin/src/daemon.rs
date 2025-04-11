@@ -34,6 +34,25 @@ use tokio::net::TcpListener;
 use tokio::sync::{RwLock, oneshot};
 use std::sync::Arc;
 
+type AppRouter = Router<Arc<ServerState>>;
+
+fn get_router() -> AppRouter {
+    Router::new()
+        .route("/api/pcap/{name}", get(get_pcap))
+        .route("/api/qmdl/{name}", get(get_qmdl))
+        .route("/api/system-stats", get(get_system_stats))
+        .route("/api/qmdl-manifest", get(get_qmdl_manifest))
+        .route("/api/start-recording", post(start_recording))
+        .route("/api/stop-recording", post(stop_recording))
+        .route("/api/delete-recording/{name}", post(delete_recording))
+        .route("/api/delete-all-recordings", post(delete_all_recordings))
+        .route("/api/analysis-report/{name}", get(get_analysis_report))
+        .route("/api/analysis", get(get_analysis_status))
+        .route("/api/analysis/{name}", post(start_analysis))
+        .route("/", get(|| async { Redirect::permanent("/index.html") }))
+        .route("/{*path}", get(serve_static))
+}
+
 // Runs the axum server, taking all the elements needed to build up our
 // ServerState and a oneshot Receiver that'll fire when it's time to shutdown
 // (i.e. user hit ctrl+c)
@@ -44,21 +63,7 @@ async fn run_server(
     server_shutdown_rx: oneshot::Receiver<()>,
 ) -> JoinHandle<()> {
     info!("spinning up server");
-    let app = Router::new()
-        .route("/api/pcap/*name", get(get_pcap))
-        .route("/api/qmdl/*name", get(get_qmdl))
-        .route("/api/system-stats", get(get_system_stats))
-        .route("/api/qmdl-manifest", get(get_qmdl_manifest))
-        .route("/api/start-recording", post(start_recording))
-        .route("/api/stop-recording", post(stop_recording))
-        .route("/api/delete-recording/*name", post(delete_recording))
-        .route("/api/delete-all-recordings", post(delete_all_recordings))
-        .route("/api/analysis-report/*name", get(get_analysis_report))
-        .route("/api/analysis", get(get_analysis_status))
-        .route("/api/analysis/*name", post(start_analysis))
-        .route("/", get(|| async { Redirect::permanent("/index.html") }))
-        .route("/*path", get(serve_static))
-        .with_state(state);
+    let app = get_router().with_state(state);
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     let listener = TcpListener::bind(&addr).await.unwrap();
     task_tracker.spawn(async move {
@@ -192,4 +197,15 @@ async fn main() -> Result<(), RayhunterError> {
 
     info!("see you space cowboy...");
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_get_router() {
+        // assert that creating the router does not panic from invalid route patterns.
+        let _ = get_router();
+    }
 }
