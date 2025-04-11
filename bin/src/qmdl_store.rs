@@ -300,7 +300,10 @@ impl RecordingStore {
     }
 
     pub async fn delete_all_entries(&mut self) -> Result<(), RecordingStoreError> {
-        self.close_current_entry().await?;
+        if self.current_entry.is_some() {
+            self.close_current_entry().await?;
+        }
+
         for entry in &self.manifest.entries {
             let qmdl_filepath = entry.get_qmdl_filepath(&self.path);
             let analysis_filepath = entry.get_analysis_filepath(&self.path);
@@ -395,5 +398,21 @@ mod tests {
         let new_entry_index = store.current_entry.unwrap();
         assert_ne!(entry_index, new_entry_index);
         assert_eq!(store.manifest.entries.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_delete_all_entries() {
+        let dir = make_temp_dir();
+        let mut store = RecordingStore::create(dir.path()).await.unwrap();
+        let _ = store.new_entry().await.unwrap();
+        assert!(store.current_entry.is_some());
+
+        store.delete_all_entries().await.unwrap();
+        assert!(store.current_entry.is_none());
+
+        // regression test: deleting all entries should also work when there's no current
+        // recording.
+        store.delete_all_entries().await.unwrap();
+        assert!(store.current_entry.is_none());
     }
 }
