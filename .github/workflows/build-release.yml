@@ -14,29 +14,36 @@ jobs:
         platform:
           - name: ubuntu-24
             os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
           - name: ubuntu-24-aarch64
             os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
           - name: macos-arm
             os: macos-latest
+            target: aarch64-apple-darwin
           - name: macos-intel
             os: macos-13
+            target: x86_64-apple-darwin
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
       - name: Build serial
-        run: cargo build --bin serial --release
+        run: cargo build --bin serial --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: serial-${{ matrix.platform.name }}
-          path: ./target/release/serial
+          path: target/${{ matrix.platform.target }}/release/serial
           if-no-files-found: error
       - uses: actions/checkout@v4
       - name: Build check
         run: cargo build --bin rayhunter-check --release
       - uses: actions/upload-artifact@v4
         with:
-          name: rayhunter-check-${{ matrix.platform.os }}
-          path: ./target/release/rayhunter-check
+          name: rayhunter-check-${{ matrix.platform.name }}
+          path: target/release/rayhunter-check
           if-no-files-found: error
   build_rootshell_and_rayhunter:
     runs-on: ubuntu-latest
