@@ -50,7 +50,7 @@ jobs:
           name: rayhunter-check-${{ matrix.platform.name }}
           path: target/release/rayhunter-check${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
-  build_rootshell_and_rayhunter:
+  build_rootshell:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,25 +69,44 @@ jobs:
           name: rootshell
           path: target/armv7-unknown-linux-gnueabihf/release/rootshell
           if-no-files-found: error
+  build_rayhunter:
+    strategy:
+      matrix:
+        device:
+          - name: tplink
+          - name: orbic
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-unknown-linux-gnueabihf
+      - name: Install cross-compilation dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
+          version: 1.0
       - name: Build rayhunter-daemon (arm32)
-        run: cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release
+        run: cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release --no-default-features --features ${{ matrix.device.name }}
       - uses: actions/upload-artifact@v4
         with:
-          name: rayhunter-daemon
+          name: rayhunter-daemon-${{ matrix.device.name }}
           path: target/armv7-unknown-linux-gnueabihf/release/rayhunter-daemon
           if-no-files-found: error
   build_release_zip:
     needs:
       - build_serial_and_check
-      - build_rootshell_and_rayhunter
+      - build_rootshell
+      - build_rayhunter
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
-        run: chmod +x serial-*/serial rayhunter-check-*/rayhunter-check rayhunter-daemon/rayhunter-daemon
+        run: chmod +x serial-*/serial rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
       - name: Setup release directory
-        run: mv rayhunter-daemon/rayhunter-daemon rootshell/rootshell serial-* dist
+        run: mv rayhunter-daemon-* rootshell/rootshell serial-* dist
       - name: Archive release directory
         run: tar -cvf release.tar -C dist .
       # TODO: have this create a release directly

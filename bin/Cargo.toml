@@ -3,6 +3,13 @@ name = "rayhunter-daemon"
 version = "0.2.6"
 edition = "2021"
 
+[features]
+# These feature flags are mutually exclusive, and exactly one must be enabled.
+orbic = ["rayhunter/orbic"]
+tplink = ["rayhunter/tplink"]
+
+default = ["orbic"]
+
 [[bin]]
 name = "rayhunter-daemon"
 path = "src/daemon.rs"
@@ -19,6 +26,7 @@ tokio = { version = "1.44.2", features = ["full"] }
 axum = "0.8"
 futures-core = "0.3.30"
 thiserror = "1.0.52"
+libc = "0.2.150"
 log = "0.4.20"
 env_logger = "0.10.1"
 tokio-util = { version = "0.7.10", features = ["rt", "io"] }

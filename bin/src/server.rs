@@ -12,14 +12,14 @@ use tokio::sync::RwLock;
 use tokio_util::io::ReaderStream;
 use include_dir::{include_dir, Dir};
 
-use crate::{framebuffer, DiagDeviceCtrlMessage};
+use crate::{display, DiagDeviceCtrlMessage};
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::qmdl_store::RecordingStore;
 
 pub struct ServerState {
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
-    pub ui_update_sender: Sender<framebuffer::DisplayState>,
+    pub ui_update_sender: Sender<display::DisplayState>,
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub debug_mode: bool,

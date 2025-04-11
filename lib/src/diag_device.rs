@@ -6,7 +6,7 @@ use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
 use futures_core::TryStream;
 use thiserror::Error;
-use log::{info, warn, error};
+use log::{info, error};
 use deku::prelude::*;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -57,7 +57,7 @@ pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
 ];
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
-const MEMORY_DEVICE_MODE: i32 = 2;
+const MEMORY_DEVICE_MODE: u32 = 2;
 
 #[cfg(target_arch = "arm")]
 const DIAG_IOCTL_REMOTE_DEV: u32 = 32;
@@ -108,16 +108,18 @@ impl DiagDevice {
 
     async fn get_next_messages_container(&mut self) -> Result<MessagesContainer, DiagDeviceError> {
         let mut bytes_read = 0;
-        while bytes_read == 0 {
+        // TP-Link M7350 sometimes sends too small messages, we need to be able to deal with short reads.
+        while bytes_read <= 8 {
             bytes_read = self.file.read(&mut self.read_buf).await
                 .map_err(DiagDeviceError::DeviceReadFailed)?;
         }
-        let ((leftover_bytes, _), container) = MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0))
-            .map_err(DiagDeviceError::ParseMessagesContainerError)?;
-        if !leftover_bytes.is_empty() {
-            warn!("warning: {} leftover bytes when parsing MessagesContainer", leftover_bytes.len());
+
+        info!("Parsing messages container size = {:?} [{:?}]", bytes_read, &self.read_buf[0..bytes_read]);
+
+        match MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0)) {
+            Ok((_, container)) => return Ok(container),
+            Err(err) => return Err(DiagDeviceError::ParseMessagesContainerError(err)),
         }
-        Ok(container)
     }
 
     async fn write_request(&mut self, req: &Request) -> DiagResult<()> {
@@ -215,15 +217,44 @@ impl DiagDevice {
     }
 }
 
+// also found in: https://android.googlesource.com/kernel/msm.git/+/android-7.1.0_r0.3/drivers/char/diag/diagchar.h#399
+//
+// the code on
+// https://github.com/P1sec/QCSuper/blob/master/docs/The%20Diag%20protocol.md#the-diag-protocol-over-devdiag
+// is misleading, mode_param is only 8 bits. sending the larger [u32; 3] payload will cause the
+// IOCTL to be rejected by TPLINK M7350 HW rev 5
+//
+// TPLINK M7350 v5 source code can be downloaded at https://www.tp-link.com/de/support/gpl-code/?app=omada
+#[repr(C)]
+struct diag_logging_mode_param_t {
+    req_mode: u32,
+    peripheral_mask: u32,
+    mode_param: u8
+}
+
 // Triggers the diag device's debug logging mode
-fn enable_frame_readwrite(fd: i32, mode: i32) -> DiagResult<()> {
+fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
     unsafe {
         if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
+            let mut params = if cfg!(feature = "tplink") {
+                diag_logging_mode_param_t {
+                    req_mode: mode,
+                    peripheral_mask: 0,
+                    mode_param: 1,
+                }
+            } else {
+                diag_logging_mode_param_t {
+                    req_mode: mode,
+                    peripheral_mask: u32::MAX,
+                    mode_param: 0,
+                }
+            };
+
             let ret = libc::ioctl(
                 fd,
                 DIAG_IOCTL_SWITCH_LOGGING,
-                &mut [mode, -1, 0] as *mut _, // diag_logging_mode_param_t
-                std::mem::size_of::<[i32; 3]>(), 0, 0, 0, 0
+                &mut params as *mut _,
+                std::mem::size_of::<diag_logging_mode_param_t>(), 0, 0, 0, 0
             );
             if ret < 0 {
                 let msg = format!("DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {}", ret);
