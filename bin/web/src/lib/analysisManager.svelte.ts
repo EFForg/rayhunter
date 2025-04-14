@@ -1,6 +1,6 @@
-import { get_report, type AnalysisReport } from "./analysis";
-import type { Manifest, ManifestEntry } from "./manifest";
-import { req } from "./utils";
+import { get_report, type AnalysisReport } from "./analysis.svelte";
+import type { Manifest, ManifestEntry } from "./manifest.svelte";
+import { req } from "./utils.svelte";
 
 export enum AnalysisStatus {
     // rayhunter is currently analyzing this entry (note that this is distinct

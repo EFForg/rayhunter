@@ -1,5 +1,5 @@
 import { parse_ndjson, type NewlineDeliminatedJson } from "./ndjson";
-import { req } from "./utils";
+import { req } from "./utils.svelte";
 
 export type AnalysisReport = {
     metadata: ReportMetadata;

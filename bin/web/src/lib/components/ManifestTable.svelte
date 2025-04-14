@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { Manifest, ManifestEntry } from "$lib/manifest";
+    import { Manifest, ManifestEntry } from "$lib/manifest.svelte";
     import TableRow from "./ManifestTableRow.svelte";
     interface Props {
-        manifest: Manifest;
+        entries: ManifestEntry[];
+        current_entry: ManifestEntry | undefined;
     }
-    let { manifest }: Props = $props();
+    let { entries, current_entry }: Props = $props();
 </script>
 
 <table>
@@ -20,10 +21,10 @@
         </tr>
     </thead>
     <tbody>
-        {#if manifest.current_entry !== undefined}
-            <TableRow entry={manifest.current_entry} current={true} />
+        {#if current_entry !== undefined}
+            <TableRow entry={current_entry} current={true} />
         {/if}
-        {#each manifest.entries as entry}
+        {#each entries as entry}
             <TableRow entry={entry} current={false} />
         {/each}
     </tbody>

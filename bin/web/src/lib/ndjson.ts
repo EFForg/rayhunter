@@ -1,7 +1,6 @@
 export type NewlineDeliminatedJson = any[];
 
 export function parse_ndjson(input: string): NewlineDeliminatedJson {
-    console.log(input)
     const lines = input.split('\n');
     const result = [];
     let current_line = '';

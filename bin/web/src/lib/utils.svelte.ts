@@ -1,4 +1,4 @@
-import { Manifest } from "./manifest";
+import { Manifest } from "./manifest.svelte";
 import type { SystemStats } from "./systemStats";
 
 export async function req(method: string, url: string): Promise<string> {

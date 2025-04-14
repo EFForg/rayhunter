@@ -1,5 +1,5 @@
-	import { get_report, type AnalysisReport } from "./analysis";
-import { AnalysisStatus, type AnalysisManager } from "./analysisManager";
+import { get_report, type AnalysisReport } from "./analysis.svelte";
+import { AnalysisStatus, type AnalysisManager } from "./analysisManager.svelte";
 
 interface JsonManifest {
     entries: JsonManifestEntry[];
@@ -51,13 +51,13 @@ export class Manifest {
 }
 
 export class ManifestEntry {
-    public name: string;
+    public name = $state("");
     public start_time: Date;
-    public last_message_time: Date | undefined = undefined;
-    public qmdl_size_bytes: number;
-    public analysis_size_bytes: number;
-    public analysis_status: AnalysisStatus | undefined = undefined;
-    public analysis_report: AnalysisReport | string | undefined = undefined;
+    public last_message_time: Date | undefined = $state(undefined);
+    public qmdl_size_bytes = $state(0);
+    public analysis_size_bytes = $state(0);
+    public analysis_status: AnalysisStatus | undefined = $state(undefined);
+    public analysis_report: AnalysisReport | string | undefined = $state(undefined);
 
     constructor(json: JsonManifestEntry) {
         this.name = json.name;
