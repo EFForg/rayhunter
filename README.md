@@ -54,7 +54,7 @@ Great news: if you've successfully installed rayhunter, you already know how to 
 
 ## Usage (viewing the web UI)
 
-Once installed, Rayhunter will run automatically whenever your Orbic device is running. You'll see a green line on top of the device's display to indicate that it's running and recording to the SD-card. [The line will turn red](#red) once a potential IMSI catcher has been found, until the device is rebooted or a new recording is started through the web UI.
+Once installed, Rayhunter will run automatically whenever your Orbic device is running. You'll see a green line on top of the device's display to indicate that it's running and recording. [The line will turn red](#red) once a potential IMSI catcher has been found, until the device is rebooted or a new recording is started through the web UI.
 
 It also serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, and view heuristic analyses of captures.
 
