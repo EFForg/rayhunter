@@ -3,9 +3,9 @@
 //! the term to refer to a structured, fully parsed message in any telcom
 //! standard.
 
+use crate::gsmtap::{GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
 use telcom_parser::{decode, lte_rrc};
 use thiserror::Error;
-use crate::gsmtap::{GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
 
 #[derive(Error, Debug)]
 pub enum InformationElementError {
@@ -46,7 +46,6 @@ pub enum LteInformationElement {
 
     // FIXME: actually parse NAS messages
     NAS(Vec<u8>),
-
     // FIXME: unclear which message these "NB" types map to
     //DlCcchNb(),
     //DlDcchNb(),
@@ -65,8 +64,8 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
     fn try_from(gsmtap_msg: &GsmtapMessage) -> Result<Self, Self::Error> {
         match gsmtap_msg.header.gsmtap_type {
             GsmtapType::LteRrc(lte_rrc_subtype) => {
-                use LteRrcSubtype as L;
                 use LteInformationElement as R;
+                use LteRrcSubtype as L;
                 let lte = match lte_rrc_subtype {
                     L::DlCcch => R::DlCcch(decode(&gsmtap_msg.payload)?),
                     L::DlDcch => R::DlDcch(Box::new(decode(&gsmtap_msg.payload)?)),
@@ -82,14 +81,20 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
                     L::BcchDlSchMbms => R::BcchDlSchMbms(decode(&gsmtap_msg.payload)?),
                     L::SbcchSlBch => R::SbcchSlBch(decode(&gsmtap_msg.payload)?),
                     L::SbcchSlBchV2x => R::SbcchSlBchV2x(decode(&gsmtap_msg.payload)?),
-                    _ => return Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
+                    _ => {
+                        return Err(InformationElementError::UnsupportedGsmtapType(
+                            gsmtap_msg.header.gsmtap_type,
+                        ))
+                    }
                 };
                 Ok(InformationElement::LTE(Box::new(lte)))
-            },
-            GsmtapType::LteNas(LteNasSubtype::Plain) => {
-                Ok(InformationElement::LTE(Box::new(LteInformationElement::NAS(gsmtap_msg.payload.clone()))))
-            },
-            _ => Err(InformationElementError::UnsupportedGsmtapType(gsmtap_msg.header.gsmtap_type)),
+            }
+            GsmtapType::LteNas(LteNasSubtype::Plain) => Ok(InformationElement::LTE(Box::new(
+                LteInformationElement::NAS(gsmtap_msg.payload.clone()),
+            ))),
+            _ => Err(InformationElementError::UnsupportedGsmtapType(
+                gsmtap_msg.header.gsmtap_type,
+            )),
         }
     }
 }

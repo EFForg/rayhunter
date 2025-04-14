@@ -6,24 +6,24 @@ use deku::prelude::*;
 pub enum GsmtapType {
     Um(UmSubtype),
     Abis,
-    UmBurst, /* raw burst bits */
-    SIM, /* ISO 7816 smart card interface */
-    TetraI1, /* tetra air interface */
+    UmBurst,      /* raw burst bits */
+    SIM,          /* ISO 7816 smart card interface */
+    TetraI1,      /* tetra air interface */
     TetraI1Burst, /* tetra air interface */
-    WmxBurst,   /* WiMAX burst */
-    GbLlc, /* GPRS Gb interface: LLC */
-    GbSndcp, /* GPRS Gb interface: SNDCP */
-    Gmr1Um, /* GMR-1 L2 packets */
+    WmxBurst,     /* WiMAX burst */
+    GbLlc,        /* GPRS Gb interface: LLC */
+    GbSndcp,      /* GPRS Gb interface: SNDCP */
+    Gmr1Um,       /* GMR-1 L2 packets */
     UmtsRlcMac,
     UmtsRrc(UmtsRrcSubtype),
     LteRrc(LteRrcSubtype), /* LTE interface */
-    LteMac, /* LTE MAC interface */
-    LteMacFramed, /* LTE MAC with context hdr */
-    OsmocoreLog, /* libosmocore logging */
-    QcDiag, /* Qualcomm DIAG frame */
+    LteMac,                /* LTE MAC interface */
+    LteMacFramed,          /* LTE MAC with context hdr */
+    OsmocoreLog,           /* libosmocore logging */
+    QcDiag,                /* Qualcomm DIAG frame */
     LteNas(LteNasSubtype), /* LTE Non-Access Stratum */
-    E1T1, /* E1/T1 Lines */
-    GsmRlp, /* GSM RLP frames as per 3GPP TS 24.022 */
+    E1T1,                  /* E1/T1 Lines */
+    GsmRlp,                /* GSM RLP frames as per 3GPP TS 24.022 */
 }
 
 // based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/src/scat/parsers/qualcomm/diagltelogparser.py#L1337
@@ -119,7 +119,7 @@ pub enum UmtsRrcSubtype {
     SysInfoTypeSB1 = 58,
     SysInfoTypeSB2 = 59,
     ToTargetRNCContainer = 60,
-    TargetRNCToSourceRNCContainer = 61
+    TargetRNCToSourceRNCContainer = 61,
 }
 
 #[repr(u8)]
@@ -218,9 +218,7 @@ pub struct GsmtapHeader {
 }
 
 impl GsmtapHeader {
-    pub fn new(
-        gsmtap_type: GsmtapType,
-    ) -> Self {
+    pub fn new(gsmtap_type: GsmtapType) -> Self {
         GsmtapHeader {
             gsmtap_type,
             version: 2,

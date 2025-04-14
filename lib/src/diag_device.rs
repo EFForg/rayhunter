@@ -1,13 +1,16 @@
+use crate::diag::{
+    build_log_mask_request, DataType, DiagParsingError, LogConfigRequest, LogConfigResponse,
+    Message, MessagesContainer, Request, RequestContainer, ResponsePayload, CRC_CCITT,
+};
 use crate::hdlc::hdlc_encapsulate;
-use crate::diag::{build_log_mask_request, DataType, DiagParsingError, LogConfigRequest, LogConfigResponse, Message, MessagesContainer, Request, RequestContainer, ResponsePayload, CRC_CCITT};
 use crate::log_codes;
 
+use deku::prelude::*;
+use futures_core::TryStream;
+use log::{error, info};
 use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
-use futures_core::TryStream;
 use thiserror::Error;
-use log::{info, error};
-use deku::prelude::*;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -38,22 +41,19 @@ pub enum DiagDeviceError {
 pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     // Layer 2:
     log_codes::LOG_GPRS_MAC_SIGNALLING_MESSAGE_C, // 0x5226
-
     // Layer 3:
     log_codes::LOG_GSM_RR_SIGNALING_MESSAGE_C, // 0x512f
-    log_codes::WCDMA_SIGNALLING_MESSAGE, // 0x412f
-    log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C, // 0xb0c0
-    log_codes::LOG_NR_RRC_OTA_MSG_LOG_C, // 0xb821
-
+    log_codes::WCDMA_SIGNALLING_MESSAGE,       // 0x412f
+    log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C,      // 0xb0c0
+    log_codes::LOG_NR_RRC_OTA_MSG_LOG_C,       // 0xb821
     // NAS:
     log_codes::LOG_UMTS_NAS_OTA_MESSAGE_LOG_PACKET_C, // 0x713a
-    log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C, // 0xb0e2
-    log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C, // 0xb0e3
-    log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C, // 0xb0ec
-    log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C, // 0xb0ed
-
+    log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C,      // 0xb0e2
+    log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C,     // 0xb0e3
+    log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C,      // 0xb0ec
+    log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C,     // 0xb0ed
     // User IP traffic:
-    log_codes::LOG_DATA_PROTOCOL_LOGGING_C // 0x11eb
+    log_codes::LOG_DATA_PROTOCOL_LOGGING_C, // 0x11eb
 ];
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
@@ -68,9 +68,9 @@ const DIAG_IOCTL_REMOTE_DEV: u64 = 32;
 
 #[cfg(target_arch = "arm")]
 const DIAG_IOCTL_SWITCH_LOGGING: u32 = 7;
-#[cfg(target_arch = "x86_64")] 
+#[cfg(target_arch = "x86_64")]
 const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
-#[cfg(target_arch = "aarch64")] 
+#[cfg(target_arch = "aarch64")]
 const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 
 pub struct DiagDevice {
@@ -99,7 +99,9 @@ impl DiagDevice {
         })
     }
 
-    pub fn as_stream(&mut self) -> impl TryStream<Ok = MessagesContainer, Error = DiagDeviceError> + '_ {
+    pub fn as_stream(
+        &mut self,
+    ) -> impl TryStream<Ok = MessagesContainer, Error = DiagDeviceError> + '_ {
         futures::stream::try_unfold(self, |dev| async {
             let container = dev.get_next_messages_container().await?;
             Ok(Some((container, dev)))
@@ -110,11 +112,18 @@ impl DiagDevice {
         let mut bytes_read = 0;
         // TP-Link M7350 sometimes sends too small messages, we need to be able to deal with short reads.
         while bytes_read <= 8 {
-            bytes_read = self.file.read(&mut self.read_buf).await
+            bytes_read = self
+                .file
+                .read(&mut self.read_buf)
+                .await
                 .map_err(DiagDeviceError::DeviceReadFailed)?;
         }
 
-        info!("Parsing messages container size = {:?} [{:?}]", bytes_read, &self.read_buf[0..bytes_read]);
+        info!(
+            "Parsing messages container size = {:?} [{:?}]",
+            bytes_read,
+            &self.read_buf[0..bytes_read]
+        );
 
         match MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0)) {
             Ok((_, container)) => return Ok(container),
@@ -129,7 +138,9 @@ impl DiagDevice {
             use_mdm: self.use_mdm > 0,
             mdm_field: -1,
             hdlc_encapsulated_request: hdlc_encapsulate(req_bytes, &CRC_CCITT),
-        }.to_bytes().expect("Failed to serialize RequestContainer");
+        }
+        .to_bytes()
+        .expect("Failed to serialize RequestContainer");
         if let Err(err) = self.file.write(&buf).await {
             // For reasons I don't entirely understand, calls to write(2) on
             // /dev/diag always return 0 bytes written, though the written
@@ -164,13 +175,17 @@ impl DiagDevice {
         for msg in self.read_response().await? {
             match msg {
                 Ok(Message::Log { .. }) => info!("skipping log response..."),
-                Ok(Message::Response { payload, status, .. }) => match payload {
-                    ResponsePayload::LogConfig(LogConfigResponse::RetrieveIdRanges { log_mask_sizes }) => {
+                Ok(Message::Response {
+                    payload, status, ..
+                }) => match payload {
+                    ResponsePayload::LogConfig(LogConfigResponse::RetrieveIdRanges {
+                        log_mask_sizes,
+                    }) => {
                         if status != 0 {
                             return Err(DiagDeviceError::RequestFailed(status, req));
                         }
                         return Ok(log_mask_sizes);
-                    },
+                    }
                     _ => info!("skipping non-LogConfigResponse response..."),
                 },
                 Err(e) => error!("error parsing message: {:?}", e),
@@ -181,20 +196,26 @@ impl DiagDevice {
     }
 
     async fn set_log_mask(&mut self, log_type: u32, log_mask_bitsize: u32) -> DiagResult<()> {
-        let req = build_log_mask_request(log_type, log_mask_bitsize, &LOG_CODES_FOR_RAW_PACKET_LOGGING);
+        let req = build_log_mask_request(
+            log_type,
+            log_mask_bitsize,
+            &LOG_CODES_FOR_RAW_PACKET_LOGGING,
+        );
         self.write_request(&req).await?;
 
         for msg in self.read_response().await? {
             match msg {
                 Ok(Message::Log { .. }) => info!("skipping log response..."),
-                Ok(Message::Response { payload, status, .. }) => {
+                Ok(Message::Response {
+                    payload, status, ..
+                }) => {
                     if let ResponsePayload::LogConfig(LogConfigResponse::SetMask) = payload {
                         if status != 0 {
                             return Err(DiagDeviceError::RequestFailed(status, req));
                         }
                         return Ok(());
                     }
-                },
+                }
                 Err(e) => error!("error parsing message: {:?}", e),
             }
         }
@@ -229,7 +250,7 @@ impl DiagDevice {
 struct diag_logging_mode_param_t {
     req_mode: u32,
     peripheral_mask: u32,
-    mode_param: u8
+    mode_param: u8,
 }
 
 // Triggers the diag device's debug logging mode
@@ -254,11 +275,18 @@ fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
                 fd,
                 DIAG_IOCTL_SWITCH_LOGGING,
                 &mut params as *mut _,
-                std::mem::size_of::<diag_logging_mode_param_t>(), 0, 0, 0, 0
+                std::mem::size_of::<diag_logging_mode_param_t>(),
+                0,
+                0,
+                0,
+                0,
             );
             if ret < 0 {
-                let msg = format!("DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {}", ret);
-                return Err(DiagDeviceError::InitializationFailed(msg))
+                let msg = format!(
+                    "DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {}",
+                    ret
+                );
+                return Err(DiagDeviceError::InitializationFailed(msg));
             }
         }
     }
@@ -272,7 +300,7 @@ fn determine_use_mdm(fd: i32) -> DiagResult<i32> {
     unsafe {
         if libc::ioctl(fd, DIAG_IOCTL_REMOTE_DEV, &use_mdm as *const i32) < 0 {
             let msg = format!("DIAG_IOCTL_REMOTE_DEV ioctl failed with error code {}", 0);
-            return Err(DiagDeviceError::InitializationFailed(msg))
+            return Err(DiagDeviceError::InitializationFailed(msg));
         }
     }
     Ok(use_mdm)

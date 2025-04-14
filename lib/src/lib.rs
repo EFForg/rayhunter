@@ -1,11 +1,11 @@
-pub mod hdlc;
+pub mod analysis;
 pub mod diag;
-pub mod qmdl;
-pub mod log_codes;
 pub mod gsmtap;
 pub mod gsmtap_parser;
+pub mod hdlc;
+pub mod log_codes;
 pub mod pcap;
-pub mod analysis;
+pub mod qmdl;
 pub mod util;
 
 // bin/check.rs may target windows and does not use this mod

@@ -18,9 +18,9 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio_util::task::TaskTracker;
 
+use crate::dummy_analyzer::TestAnalyzer;
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
-use crate::dummy_analyzer::TestAnalyzer;
 
 pub struct AnalysisWriter {
     writer: BufWriter<File>,
@@ -53,7 +53,10 @@ impl AnalysisWriter {
 
     // Runs the analysis harness on the given container, serializing the results
     // to the analysis file and returning the file's new length.
-    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<(usize, bool), std::io::Error> {
+    pub async fn analyze(
+        &mut self,
+        container: MessagesContainer,
+    ) -> Result<(usize, bool), std::io::Error> {
         let row = self.harness.analyze_qmdl_messages(container);
         if !row.is_empty() {
             self.write(&row).await?;
@@ -182,7 +185,10 @@ pub fn run_analysis_thread(
                     let count = queued_len(analysis_status_lock.clone()).await;
                     for _ in 0..count {
                         let name = dequeue_to_running(analysis_status_lock.clone()).await;
-                        if let Err(err) = perform_analysis(&name, qmdl_store_lock.clone(), enable_dummy_analyzer).await {
+                        if let Err(err) =
+                            perform_analysis(&name, qmdl_store_lock.clone(), enable_dummy_analyzer)
+                                .await
+                        {
                             error!("failed to analyze {}: {}", name, err);
                         }
                         clear_running(analysis_status_lock.clone()).await;

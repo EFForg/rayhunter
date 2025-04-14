@@ -1,4 +1,3 @@
-
 // Unpacks a pattern, or returns None.
 //
 // # Examples
@@ -24,7 +23,9 @@
 //
 macro_rules! unpack {
     ($pat:pat = $val:expr) => {
-        let $pat = $val else { return None; };
+        let $pat = $val else {
+            return None;
+        };
     };
 }
 

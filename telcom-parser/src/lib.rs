@@ -10,9 +10,9 @@ pub enum ParsingError {
 }
 
 pub fn decode<T>(data: &[u8]) -> Result<T, ParsingError>
-    where T: UperCodec<Output = T>
+where
+    T: UperCodec<Output = T>,
 {
     let mut asn_data = PerCodecData::from_slice_uper(data);
-    T::uper_decode(&mut asn_data)
-        .map_err(ParsingError::UperDecodeError)
+    T::uper_decode(&mut asn_data).map_err(ParsingError::UperDecodeError)
 }
