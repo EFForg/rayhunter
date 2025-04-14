@@ -8,9 +8,9 @@
     let { entries, current_entry }: Props = $props();
 </script>
 
-<table>
-    <thead>
-        <tr>
+<table class="table-auto border">
+    <thead class="p-2">
+        <tr class="bg-gray-300 p-2 m-2">
             <th scope="col">Name</th>
             <th scope="col">Date Started</th>
             <th scope="col">Date of Last Message</th>
@@ -29,13 +29,3 @@
         {/each}
     </tbody>
 </table>
-
-<style>
-    table {
-        @apply table-auto border;
-    }
-
-    th {
-        @apply bg-gray-300 p-2;
-    }
-</style>

@@ -7,29 +7,17 @@
         current: boolean;
     } = $props();
 
-    let row_class = current ? "current" : "";
+    // bg-gray-100
+    // bg-green-300
+    let row_color = current ? "bg-green-300" : "even:bg-gray-100";
 </script>
 
-<tr>
-    <th scope='row'>{entry.name}</th>
-    <td>{entry.start_time}</td>
-    <td>{entry.last_message_time}</td>
-    <td>{entry.qmdl_size_bytes}</td>
-    <td><DownloadLink url={entry.getPcapUrl()} text="pcap" /></td>
-    <td><DownloadLink url={entry.getQmdlUrl()} text="qmdl" /></td>
-    <td><AnalysisStatus analysis_status={entry.analysis_status} entry={entry} /></td>
+<tr class="{row_color} border-b">
+    <th class="font-bold p-2 border-b bg-blue-100" scope='row'>{entry.name}</th>
+    <td class="p-2">{entry.start_time}</td>
+    <td class="p-2">{entry.last_message_time}</td>
+    <td class="p-2">{entry.qmdl_size_bytes}</td>
+    <td class="p-2"><DownloadLink url={entry.getPcapUrl()} text="pcap" /></td>
+    <td class="p-2"><DownloadLink url={entry.getQmdlUrl()} text="qmdl" /></td>
+    <td class="p-2"><AnalysisStatus analysis_status={entry.analysis_status} entry={entry} /></td>
 </tr>
-
-<style>
-    th {
-        @apply font-bold p-2 border-b bg-blue-100;
-    }
-
-    td {
-        @apply p-2 border-b;
-    }
-
-    tr {
-        @apply even:bg-gray-100;
-    }
-</style>

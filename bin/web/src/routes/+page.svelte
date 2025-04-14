@@ -33,7 +33,7 @@
 
 <div class="p-8">
 {#if loaded}
-    <RecordingControls currently_recording={recording} />
+    <RecordingControls server_is_recording={recording} />
     <ManifestTable entries={entries} current_entry={current_entry} />
 {:else}
     <p>Loading...</p>
