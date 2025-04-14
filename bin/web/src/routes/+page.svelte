@@ -25,7 +25,7 @@
             recording = current_entry !== undefined;
 
             system_stats = await get_system_stats();
-        }, 1000);
+        }, 3000);
 
         return () => clearInterval(interval);
     })
