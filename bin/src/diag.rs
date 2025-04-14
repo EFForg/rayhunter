@@ -17,7 +17,7 @@ use tokio::sync::RwLock;
 use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 
-use crate::analysis::AnalysisWriter;
+use crate::analysis::{AnalysisCtrlMessage, AnalysisWriter};
 use crate::display;
 use crate::qmdl_store::{RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
@@ -169,6 +169,13 @@ pub async fn stop_recording(
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
+    match qmdl_store.get_current_entry() {
+        Some((_, entry)) => {
+            state.analysis_sender.send(AnalysisCtrlMessage::RecordingFinished(entry.name.to_string())).await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send AnalysisCtrlMessage: {}", e)))?;
+        }
+        None => todo!(),
+    }
     qmdl_store.close_current_entry().await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,

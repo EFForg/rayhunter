@@ -102,6 +102,7 @@ impl AnalysisStatus {
 
 pub enum AnalysisCtrlMessage {
     NewFilesQueued,
+    RecordingFinished(String),
     Exit,
 }
 
@@ -208,6 +209,10 @@ pub fn run_analysis_thread(
                         }
                         finish_running_analysis(analysis_status_lock.clone()).await;
                     }
+                }
+                Some(AnalysisCtrlMessage::RecordingFinished(name)) => {
+                    let mut status = analysis_status_lock.write().await;
+                    status.finished.push(name);
                 }
                 Some(AnalysisCtrlMessage::Exit) | None => return,
             }
