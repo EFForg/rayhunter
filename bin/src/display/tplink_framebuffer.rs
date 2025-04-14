@@ -3,11 +3,11 @@ use std::io::Write;
 use std::os::fd::AsRawFd;
 
 use crate::config;
+use crate::display::generic_framebuffer::{self, Dimensions, GenericFramebuffer};
 use crate::display::DisplayState;
-use crate::display::generic_framebuffer::{self, GenericFramebuffer, Dimensions};
 
-use tokio::sync::oneshot;
 use tokio::sync::mpsc::Receiver;
+use tokio::sync::oneshot;
 use tokio_util::task::TaskTracker;
 
 const FB_PATH: &str = "/dev/fb0";
@@ -33,10 +33,7 @@ impl GenericFramebuffer for Framebuffer {
         }
     }
 
-    fn write_buffer(
-        &mut self,
-        buffer: &[(u8, u8, u8)],
-    ) {
+    fn write_buffer(&mut self, buffer: &[(u8, u8, u8)]) {
         // for how to write to the buffer, consult M7350v5_en_gpl/bootable/recovery/recovery_color_oled.c
         let dimensions = self.dimensions();
         let width = dimensions.width;
@@ -65,7 +62,7 @@ impl GenericFramebuffer for Framebuffer {
         unsafe {
             let res = libc::ioctl(
                 f.as_raw_fd(),
-                0x4619,  // FBIORECT_DISPLAY
+                0x4619, // FBIORECT_DISPLAY
                 &mut arg as *mut _,
                 std::mem::size_of::<fb_fillrect>(),
             );
@@ -81,7 +78,7 @@ pub fn update_ui(
     task_tracker: &TaskTracker,
     config: &config::Config,
     ui_shutdown_rx: oneshot::Receiver<()>,
-    ui_update_rx: Receiver<DisplayState>
+    ui_update_rx: Receiver<DisplayState>,
 ) {
     generic_framebuffer::update_ui(
         task_tracker,

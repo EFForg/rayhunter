@@ -4,7 +4,7 @@ use tokio::sync::oneshot;
 use tokio_util::task::TaskTracker;
 
 use crate::config;
-use crate::display::{DisplayState, tplink_onebit, tplink_framebuffer};
+use crate::display::{tplink_framebuffer, tplink_onebit, DisplayState};
 
 use std::fs;
 
@@ -21,19 +21,9 @@ pub fn update_ui(
 
     if fs::exists(tplink_onebit::OLED_PATH).unwrap_or_default() {
         info!("detected one-bit display");
-        tplink_onebit::update_ui(
-            task_tracker,
-            config,
-            ui_shutdown_rx,
-            ui_update_rx
-        )
+        tplink_onebit::update_ui(task_tracker, config, ui_shutdown_rx, ui_update_rx)
     } else {
         info!("fallback to framebuffer");
-        tplink_framebuffer::update_ui(
-            task_tracker,
-            config,
-            ui_shutdown_rx,
-            ui_update_rx
-        )
+        tplink_framebuffer::update_ui(task_tracker, config, ui_shutdown_rx, ui_update_rx)
     }
 }

@@ -13,7 +13,10 @@ pub enum GsmtapParserError {
 }
 
 pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapParserError> {
-    if let Message::Log { timestamp, body, .. } = msg {
+    if let Message::Log {
+        timestamp, body, ..
+    } = msg
+    {
         match log_to_gsmtap(body)? {
             Some(msg) => Ok(Some((timestamp, msg))),
             None => Ok(None),
@@ -25,9 +28,13 @@ pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapP
 
 fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserError> {
     match value {
-        LogBody::LteRrcOtaMessage { ext_header_version, packet } => {
+        LogBody::LteRrcOtaMessage {
+            ext_header_version,
+            packet,
+        } => {
             let gsmtap_type = match ext_header_version {
-                0x02 | 0x03 | 0x04 | 0x06 | 0x07 | 0x08 | 0x0d | 0x16 => match packet.get_pdu_num() {
+                0x02 | 0x03 | 0x04 | 0x06 | 0x07 | 0x08 | 0x0d | 0x16 => match packet.get_pdu_num()
+                {
                     1 => GsmtapType::LteRrc(LteRrcSubtype::BcchBch),
                     2 => GsmtapType::LteRrc(LteRrcSubtype::BcchDlSch),
                     3 => GsmtapType::LteRrc(LteRrcSubtype::MCCH),
@@ -36,7 +43,12 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                     6 => GsmtapType::LteRrc(LteRrcSubtype::DlDcch),
                     7 => GsmtapType::LteRrc(LteRrcSubtype::UlCcch),
                     8 => GsmtapType::LteRrc(LteRrcSubtype::UlDcch),
-                    pdu => return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(ext_header_version, pdu)),
+                    pdu => {
+                        return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
+                            ext_header_version,
+                            pdu,
+                        ))
+                    }
                 },
                 0x09 | 0x0c => match packet.get_pdu_num() {
                     8 => GsmtapType::LteRrc(LteRrcSubtype::BcchBch),
@@ -47,7 +59,12 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                     13 => GsmtapType::LteRrc(LteRrcSubtype::DlDcch),
                     14 => GsmtapType::LteRrc(LteRrcSubtype::UlCcch),
                     15 => GsmtapType::LteRrc(LteRrcSubtype::UlDcch),
-                    pdu => return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(ext_header_version, pdu)),
+                    pdu => {
+                        return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
+                            ext_header_version,
+                            pdu,
+                        ))
+                    }
                 },
                 0x0e..=0x10 => match packet.get_pdu_num() {
                     1 => GsmtapType::LteRrc(LteRrcSubtype::BcchBch),
@@ -58,7 +75,12 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                     7 => GsmtapType::LteRrc(LteRrcSubtype::DlDcch),
                     8 => GsmtapType::LteRrc(LteRrcSubtype::UlCcch),
                     9 => GsmtapType::LteRrc(LteRrcSubtype::UlDcch),
-                    pdu => return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(ext_header_version, pdu)),
+                    pdu => {
+                        return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
+                            ext_header_version,
+                            pdu,
+                        ))
+                    }
                 },
                 0x13 | 0x1a | 0x1b => match packet.get_pdu_num() {
                     1 => GsmtapType::LteRrc(LteRrcSubtype::BcchBch),
@@ -76,8 +98,13 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                     49 => GsmtapType::LteRrc(LteRrcSubtype::DlDcchNb),
                     50 => GsmtapType::LteRrc(LteRrcSubtype::UlCcchNb),
                     52 => GsmtapType::LteRrc(LteRrcSubtype::UlDcchNb),
-                    pdu => return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(ext_header_version, pdu)),
-                }
+                    pdu => {
+                        return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
+                            ext_header_version,
+                            pdu,
+                        ))
+                    }
+                },
                 0x14 | 0x18 | 0x19 => match packet.get_pdu_num() {
                     1 => GsmtapType::LteRrc(LteRrcSubtype::BcchBch),
                     2 => GsmtapType::LteRrc(LteRrcSubtype::BcchDlSch),
@@ -94,9 +121,18 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                     58 => GsmtapType::LteRrc(LteRrcSubtype::DlDcchNb),
                     59 => GsmtapType::LteRrc(LteRrcSubtype::UlCcchNb),
                     61 => GsmtapType::LteRrc(LteRrcSubtype::UlDcchNb),
-                    pdu => return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(ext_header_version, pdu)),
+                    pdu => {
+                        return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
+                            ext_header_version,
+                            pdu,
+                        ))
+                    }
                 },
-                _ => return Err(GsmtapParserError::InvalidLteRrcOtaExtHeaderVersion(ext_header_version)),
+                _ => {
+                    return Err(GsmtapParserError::InvalidLteRrcOtaExtHeaderVersion(
+                        ext_header_version,
+                    ))
+                }
             };
             let mut header = GsmtapHeader::new(gsmtap_type);
             header.arfcn = packet.get_earfcn().try_into().unwrap_or(0);
@@ -106,19 +142,19 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 header,
                 payload: packet.take_payload(),
             }))
-        },
+        }
         LogBody::Nas4GMessage { msg, direction, .. } => {
             // currently we only handle "plain" (i.e. non-secure) NAS messages
             let mut header = GsmtapHeader::new(GsmtapType::LteNas(LteNasSubtype::Plain));
-            header.uplink = matches!(direction,  Nas4GMessageDirection::Uplink);
+            header.uplink = matches!(direction, Nas4GMessageDirection::Uplink);
             Ok(Some(GsmtapMessage {
                 header,
                 payload: msg,
             }))
-        },
+        }
         _ => {
             error!("gsmtap_sink: ignoring unhandled log type: {:?}", value);
             Ok(None)
-        },
+        }
     }
 }

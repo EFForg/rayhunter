@@ -36,7 +36,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
             InformationElement::LTE(inner) => match &**inner {
                 LteInformationElement::NAS(payload) => payload,
                 _ => return None,
-            }
+            },
             _ => return None,
         };
 
@@ -45,7 +45,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
             if self.packet_num < PACKET_THRESHHOLD {
                 return Some(Event {
                     event_type: EventType::QualitativeWarning {
-                        severity: Severity::Medium
+                        severity: Severity::Medium,
                     },
                     message: format!(
                         "NAS IMSI identity request detected, however it was within \
@@ -53,15 +53,15 @@ impl Analyzer for ImsiRequestedAnalyzer {
                         turned your device on, this is likely a \
                         false-positive.",
                         PACKET_THRESHHOLD
-                    )
-                })
+                    ),
+                });
             } else {
                 return Some(Event {
                     event_type: EventType::QualitativeWarning {
-                        severity: Severity::High
+                        severity: Severity::High,
                     },
                     message: "NAS IMSI identity request detected".to_owned(),
-                })
+                });
             }
         }
         None

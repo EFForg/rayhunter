@@ -1,20 +1,20 @@
 use axum::body::Body;
-use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
-use axum::extract::State;
-use axum::http::{StatusCode, HeaderValue};
-use axum::response::{Response, IntoResponse};
 use axum::extract::Path;
+use axum::extract::State;
+use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
+use axum::http::{HeaderValue, StatusCode};
+use axum::response::{IntoResponse, Response};
+use include_dir::{include_dir, Dir};
+use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::Sender;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_util::io::ReaderStream;
-use include_dir::{include_dir, Dir};
 
-use crate::{display, DiagDeviceCtrlMessage};
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::qmdl_store::RecordingStore;
+use crate::{display, DiagDeviceCtrlMessage};
 
 pub struct ServerState {
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
@@ -25,13 +25,22 @@ pub struct ServerState {
     pub debug_mode: bool,
 }
 
-pub async fn get_qmdl(State(state): State<Arc<ServerState>>, Path(qmdl_name): Path<String>) -> Result<Response, (StatusCode, String)> {
+pub async fn get_qmdl(
+    State(state): State<Arc<ServerState>>,
+    Path(qmdl_name): Path<String>,
+) -> Result<Response, (StatusCode, String)> {
     let qmdl_idx = qmdl_name.trim_end_matches(".qmdl");
     let qmdl_store = state.qmdl_store_lock.read().await;
-    let (entry_index, entry) = qmdl_store.entry_for_name(qmdl_idx)
-        .ok_or((StatusCode::NOT_FOUND, format!("couldn't find qmdl file with name {}", qmdl_idx)))?;
-    let qmdl_file = qmdl_store.open_entry_qmdl(entry_index).await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("error opening QMDL file: {}", e)))?;
+    let (entry_index, entry) = qmdl_store.entry_for_name(qmdl_idx).ok_or((
+        StatusCode::NOT_FOUND,
+        format!("couldn't find qmdl file with name {}", qmdl_idx),
+    ))?;
+    let qmdl_file = qmdl_store.open_entry_qmdl(entry_index).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("error opening QMDL file: {}", e),
+        )
+    })?;
     let limited_qmdl_file = qmdl_file.take(entry.qmdl_size_bytes as u64);
     let qmdl_stream = ReaderStream::new(limited_qmdl_file);
 
@@ -46,7 +55,10 @@ pub async fn get_qmdl(State(state): State<Arc<ServerState>>, Path(qmdl_name): Pa
 // Bundles the server's static files (html/css/js) into the binary for easy distribution
 static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static");
 
-pub async fn serve_static(State(state): State<Arc<ServerState>>, Path(path): Path<String>) -> impl IntoResponse {
+pub async fn serve_static(
+    State(state): State<Arc<ServerState>>,
+    Path(path): Path<String>,
+) -> impl IntoResponse {
     let path = path.trim_start_matches('/');
     let mime_type = mime_guess::from_path(path).first_or_text_plain();
 
@@ -62,7 +74,9 @@ pub async fn serve_static(State(state): State<Arc<ServerState>>, Path(path): Pat
         return match File::open(build_path).await {
             Ok(mut file) => {
                 let mut body = String::new();
-                file.read_to_string(&mut body).await.expect("failed to read file");
+                file.read_to_string(&mut body)
+                    .await
+                    .expect("failed to read file");
                 Response::builder()
                     .status(StatusCode::OK)
                     .header(
@@ -71,11 +85,11 @@ pub async fn serve_static(State(state): State<Arc<ServerState>>, Path(path): Pat
                     )
                     .body(Body::from(body))
                     .unwrap()
-            },
+            }
             Err(_) => Response::builder()
                 .status(StatusCode::NOT_FOUND)
                 .body(Body::empty())
-                .unwrap()
+                .unwrap(),
         };
     }
 

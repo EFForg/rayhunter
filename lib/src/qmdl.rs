@@ -3,18 +3,24 @@
 //! QmdlReader and QmdlWriter can read and write MessagesContainers to and from
 //! QMDL files.
 
-use crate::diag::{MessagesContainer, MESSAGE_TERMINATOR, HdlcEncapsulatedMessage, DataType};
+use crate::diag::{DataType, HdlcEncapsulatedMessage, MessagesContainer, MESSAGE_TERMINATOR};
 
 use futures::TryStream;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, AsyncBufReadExt};
 use log::error;
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 
-pub struct QmdlWriter<T> where T: AsyncWrite + Unpin {
+pub struct QmdlWriter<T>
+where
+    T: AsyncWrite + Unpin,
+{
     writer: T,
     pub total_written: usize,
 }
 
-impl<T> QmdlWriter<T> where T: AsyncWrite + Unpin {
+impl<T> QmdlWriter<T>
+where
+    T: AsyncWrite + Unpin,
+{
     pub fn new(writer: T) -> Self {
         QmdlWriter::new_with_existing_size(writer, 0)
     }
@@ -35,13 +41,19 @@ impl<T> QmdlWriter<T> where T: AsyncWrite + Unpin {
     }
 }
 
-pub struct QmdlReader<T> where T: AsyncRead {
+pub struct QmdlReader<T>
+where
+    T: AsyncRead,
+{
     reader: BufReader<T>,
     bytes_read: usize,
     max_bytes: Option<usize>,
 }
 
-impl<T> QmdlReader<T> where T: AsyncRead + Unpin {
+impl<T> QmdlReader<T>
+where
+    T: AsyncRead + Unpin,
+{
     pub fn new(reader: T, max_bytes: Option<usize>) -> Self {
         QmdlReader {
             reader: BufReader::new(reader),
@@ -50,21 +62,28 @@ impl<T> QmdlReader<T> where T: AsyncRead + Unpin {
         }
     }
 
-    pub fn as_stream(&mut self) -> impl TryStream<Ok = MessagesContainer, Error = std::io::Error> + '_ {
+    pub fn as_stream(
+        &mut self,
+    ) -> impl TryStream<Ok = MessagesContainer, Error = std::io::Error> + '_ {
         futures::stream::try_unfold(self, |reader| async {
             let maybe_container = reader.get_next_messages_container().await?;
             match maybe_container {
                 Some(container) => Ok(Some((container, reader))),
-                None => Ok(None)
+                None => Ok(None),
             }
         })
     }
 
-    pub async fn get_next_messages_container(&mut self) -> Result<Option<MessagesContainer>, std::io::Error> {
+    pub async fn get_next_messages_container(
+        &mut self,
+    ) -> Result<Option<MessagesContainer>, std::io::Error> {
         if let Some(max_bytes) = self.max_bytes {
             if self.bytes_read >= max_bytes {
                 if self.bytes_read > max_bytes {
-                    error!("warning: {} bytes read, but max_bytes was {}", self.bytes_read, max_bytes);
+                    error!(
+                        "warning: {} bytes read, but max_bytes was {}",
+                        self.bytes_read, max_bytes
+                    );
                 }
                 return Ok(None);
             }
@@ -82,12 +101,10 @@ impl<T> QmdlReader<T> where T: AsyncRead + Unpin {
         Ok(Some(MessagesContainer {
             data_type: DataType::UserSpace,
             num_messages: 1,
-            messages: vec![
-                HdlcEncapsulatedMessage {
-                    len: bytes_read as u32,
-                    data: buf,
-                },
-            ]
+            messages: vec![HdlcEncapsulatedMessage {
+                len: bytes_read as u32,
+                data: buf,
+            }],
         }))
     }
 }
@@ -96,26 +113,29 @@ impl<T> QmdlReader<T> where T: AsyncRead + Unpin {
 mod test {
     use std::io::Cursor;
 
-    use crate::hdlc::hdlc_encapsulate;
     use crate::diag::CRC_CCITT;
+    use crate::hdlc::hdlc_encapsulate;
 
     use super::*;
 
     fn get_test_messages() -> Vec<HdlcEncapsulatedMessage> {
-        let messages: Vec<HdlcEncapsulatedMessage> = (10..20).map(|i| {
-            let data = hdlc_encapsulate(&vec![i as u8; i], &CRC_CCITT);
-            HdlcEncapsulatedMessage {
-                len: data.len() as u32,
-                data,
-            }
-        }).collect();
+        let messages: Vec<HdlcEncapsulatedMessage> = (10..20)
+            .map(|i| {
+                let data = hdlc_encapsulate(&vec![i as u8; i], &CRC_CCITT);
+                HdlcEncapsulatedMessage {
+                    len: data.len() as u32,
+                    data,
+                }
+            })
+            .collect();
         messages
     }
 
     // returns a byte array consisting of concatenated HDLC encapsulated
     // test messages
     fn get_test_message_bytes() -> Vec<u8> {
-        get_test_messages().iter()
+        get_test_messages()
+            .iter()
             .flat_map(|msg| msg.data.clone())
             .collect()
     }
@@ -132,7 +152,7 @@ mod test {
             MessagesContainer {
                 data_type: DataType::UserSpace,
                 num_messages: messages2.len() as u32,
-                messages: messages2.to_vec()
+                messages: messages2.to_vec(),
             },
         ]
     }
@@ -148,7 +168,10 @@ mod test {
                 num_messages: 1,
                 messages: vec![message],
             };
-            assert_eq!(expected_container, reader.get_next_messages_container().await.unwrap().unwrap());
+            assert_eq!(
+                expected_container,
+                reader.get_next_messages_container().await.unwrap().unwrap()
+            );
         }
     }
 
@@ -167,9 +190,15 @@ mod test {
                 num_messages: 1,
                 messages: vec![message],
             };
-            assert_eq!(expected_container, reader.get_next_messages_container().await.unwrap().unwrap());
+            assert_eq!(
+                expected_container,
+                reader.get_next_messages_container().await.unwrap().unwrap()
+            );
         }
-        assert!(matches!(reader.get_next_messages_container().await, Ok(None)));
+        assert!(matches!(
+            reader.get_next_messages_container().await,
+            Ok(None)
+        ));
     }
 
     #[tokio::test]
@@ -202,8 +231,14 @@ mod test {
                 num_messages: 1,
                 messages: vec![message],
             };
-            assert_eq!(expected_container, reader.get_next_messages_container().await.unwrap().unwrap());
+            assert_eq!(
+                expected_container,
+                reader.get_next_messages_container().await.unwrap().unwrap()
+            );
         }
-        assert!(matches!(reader.get_next_messages_container().await, Ok(None)));
+        assert!(matches!(
+            reader.get_next_messages_container().await,
+            Ok(None)
+        ));
     }
 }

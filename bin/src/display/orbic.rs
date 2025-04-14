@@ -1,9 +1,9 @@
 use crate::config;
+use crate::display::generic_framebuffer::{self, Dimensions, GenericFramebuffer};
 use crate::display::DisplayState;
-use crate::display::generic_framebuffer::{self, GenericFramebuffer, Dimensions};
 
-use tokio::sync::oneshot;
 use tokio::sync::mpsc::Receiver;
+use tokio::sync::oneshot;
 use tokio_util::task::TaskTracker;
 
 const FB_PATH: &str = "/dev/fb0";
@@ -20,10 +20,7 @@ impl GenericFramebuffer for Framebuffer {
         }
     }
 
-    fn write_buffer(
-        &mut self,
-        buffer: &[(u8, u8, u8)],
-    ) {
+    fn write_buffer(&mut self, buffer: &[(u8, u8, u8)]) {
         let mut raw_buffer = Vec::new();
         for (r, g, b) in buffer {
             let mut rgb565: u16 = (*r as u16 & 0b11111000) << 8;
@@ -40,7 +37,7 @@ pub fn update_ui(
     task_tracker: &TaskTracker,
     config: &config::Config,
     ui_shutdown_rx: oneshot::Receiver<()>,
-    ui_update_rx: Receiver<DisplayState>
+    ui_update_rx: Receiver<DisplayState>,
 ) {
     generic_framebuffer::update_ui(
         task_tracker,

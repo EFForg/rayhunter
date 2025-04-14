@@ -3,9 +3,9 @@ use std::sync::Arc;
 use crate::qmdl_store::ManifestEntry;
 use crate::server::ServerState;
 
-use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::Json;
 use log::error;
 use serde::Serialize;
 use tokio::process::Command;
@@ -65,10 +65,16 @@ pub struct MemoryStats {
 // runs the given command and returns its stdout as a string
 async fn get_cmd_output(mut cmd: Command) -> Result<String, String> {
     let cmd_str = format!("{:?}", &cmd);
-    let output = cmd.output().await
+    let output = cmd
+        .output()
+        .await
         .map_err(|e| format!("error running command {}: {}", &cmd_str, e))?;
     if !output.status.success() {
-        return Err(format!("command {} failed with exit code {}", &cmd_str, output.status.code().unwrap()));
+        return Err(format!(
+            "command {} failed with exit code {}",
+            &cmd_str,
+            output.status.code().unwrap()
+        ));
     }
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
@@ -79,7 +85,8 @@ impl MemoryStats {
         let mut free_cmd = Command::new("free");
         free_cmd.arg("-k");
         let stdout = get_cmd_output(free_cmd).await?;
-        let mut numbers = stdout.split_whitespace()
+        let mut numbers = stdout
+            .split_whitespace()
             .flat_map(|part| part.parse::<usize>());
         Ok(Self {
             total: humanize_kb(numbers.next().ok_or("error parsing free output")?),
@@ -91,13 +98,15 @@ impl MemoryStats {
 
 // turns a number of kilobytes (like 28293) into a human-readable string (like "28.3M")
 fn humanize_kb(kb: usize) -> String {
-    if kb < 1000{
+    if kb < 1000 {
         return format!("{}K", kb);
     }
     format!("{:.1}M", kb as f64 / 1024.0)
 }
 
-pub async fn get_system_stats(State(state): State<Arc<ServerState>>) -> Result<Json<SystemStats>, (StatusCode, String)> {
+pub async fn get_system_stats(
+    State(state): State<Arc<ServerState>>,
+) -> Result<Json<SystemStats>, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
     match SystemStats::new(qmdl_store.path.to_str().unwrap()).await {
         Ok(stats) => Ok(Json(stats)),
@@ -105,9 +114,9 @@ pub async fn get_system_stats(State(state): State<Arc<ServerState>>) -> Result<J
             error!("error getting system stats: {}", err);
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "error getting system stats".to_string()
+                "error getting system stats".to_string(),
             ))
-        },
+        }
     }
 }
 
@@ -117,7 +126,9 @@ pub struct ManifestStats {
     pub current_entry: Option<ManifestEntry>,
 }
 
-pub async fn get_qmdl_manifest(State(state): State<Arc<ServerState>>) -> Result<Json<ManifestStats>, (StatusCode, String)> {
+pub async fn get_qmdl_manifest(
+    State(state): State<Arc<ServerState>>,
+) -> Result<Json<ManifestStats>, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
     let mut entries = qmdl_store.manifest.entries.clone();
     let current_entry = qmdl_store.current_entry.map(|index| entries.remove(index));
