@@ -2,13 +2,12 @@
 	import { AnalysisStatus } from "$lib/analysisManager.svelte";
 	import { EventType } from "$lib/analysis.svelte";
 	import type { ManifestEntry } from "$lib/manifest.svelte";
-    let { entry, analysis_status }: {
+    let { entry }: {
         entry: ManifestEntry,
-        analysis_status: AnalysisStatus | undefined,
     } = $props();
 
     let summary = $derived.by(() => {
-        if (analysis_status === AnalysisStatus.Queued) {
+        if (entry.analysis_status === AnalysisStatus.Queued) {
             return 'Queued...';
         } else if (entry.analysis_status === AnalysisStatus.Running) {
             return 'Running...';

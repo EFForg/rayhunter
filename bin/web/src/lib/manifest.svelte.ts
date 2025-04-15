@@ -80,4 +80,8 @@ export class ManifestEntry {
     getAnalysisReportUrl(): string {
         return `/api/analysis-report/${this.name}`;
     }
+
+    getDeleteUrl(): string {
+        return `/api/delete-recording/${this.name}`;
+	}
 }

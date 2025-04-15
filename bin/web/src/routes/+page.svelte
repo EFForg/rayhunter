@@ -2,11 +2,10 @@
     import { Manifest, ManifestEntry } from "$lib/manifest.svelte";
     import { get_manifest, get_system_stats } from "$lib/utils.svelte";
     import ManifestTable from "$lib/components/ManifestTable.svelte";
-    import { onMount } from "svelte";
     import type { SystemStats } from "$lib/systemStats";
     import { AnalysisManager } from "$lib/analysisManager.svelte";
-    import { writable, readable, type Readable, type Writable } from "svelte/store";
-	import RecordingControls from "$lib/components/RecordingControls.svelte";
+	import SystemStatsTable from "$lib/components/SystemStatsTable.svelte";
+	import ControlBar from "$lib/components/ControlBar.svelte";
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -16,7 +15,6 @@
     let system_stats: SystemStats | undefined = $state(undefined);
     $effect(() => {
         const interval = setInterval(async () => {
-            loaded = true;
             await manager.update();
             let new_manifest = await get_manifest();
             await new_manifest.set_analysis_status(manager);
@@ -25,16 +23,18 @@
             recording = current_entry !== undefined;
 
             system_stats = await get_system_stats();
+            loaded = true;
         }, 3000);
 
         return () => clearInterval(interval);
     })
 </script>
 
-<div class="p-8">
+<div class="p-8 flex flex-col gap-2">
 {#if loaded}
-    <RecordingControls server_is_recording={recording} />
+    <ControlBar server_is_recording={recording} />
     <ManifestTable entries={entries} current_entry={current_entry} />
+    <SystemStatsTable stats={system_stats!} />
 {:else}
     <p>Loading...</p>
 {/if}
