@@ -60,7 +60,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     event_type: EventType::QualitativeWarning {
                         severity: Severity::High,
                     },
-                    message: "NAS IMSI identity request detected".to_owned(),
+                    message: format!("NAS IMSI identity request detected (packet {})", self.packet_num),
                 });
             }
         }

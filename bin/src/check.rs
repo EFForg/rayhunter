@@ -32,7 +32,11 @@ struct Args {
     verbose: bool,
 }
 
-async fn analyze_file(harness: &mut Harness, qmdl_path: &str, show_skipped: bool) {
+async fn analyze_file(enable_dummy_analyzer: bool, qmdl_path: &str, show_skipped: bool) {
+    let mut harness = Harness::new_with_all_analyzers();
+    if enable_dummy_analyzer {
+        harness.add_analyzer(Box::new(dummy_analyzer::TestAnalyzer { count: 0 }));
+    }
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
     let file_size = qmdl_file
         .metadata()
@@ -135,12 +139,12 @@ async fn main() {
         .with_level(level)
         .init()
         .unwrap();
+    info!("Analyzers:");
 
     let mut harness = Harness::new_with_all_analyzers();
     if args.enable_dummy_analyzer {
         harness.add_analyzer(Box::new(dummy_analyzer::TestAnalyzer { count: 0 }));
     }
-    info!("Analyzers:");
     for analyzer in harness.get_metadata().analyzers {
         info!("    - {}: {}", analyzer.name, analyzer.description);
     }
@@ -156,7 +160,7 @@ async fn main() {
             if name_str.ends_with(".qmdl") {
                 let path = entry.path();
                 let path_str = path.to_str().unwrap();
-                analyze_file(&mut harness, path_str, args.show_skipped).await;
+                analyze_file(args.enable_dummy_analyzer, path_str, args.show_skipped).await;
                 if args.pcapify {
                     pcapify(&path).await;
                 }
@@ -164,7 +168,7 @@ async fn main() {
         }
     } else {
         let path = args.qmdl_path.to_str().unwrap();
-        analyze_file(&mut harness, path, args.show_skipped).await;
+        analyze_file(args.enable_dummy_analyzer, path, args.show_skipped).await;
         if args.pcapify {
             pcapify(&args.qmdl_path).await;
         }
