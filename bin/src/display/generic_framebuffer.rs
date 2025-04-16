@@ -134,7 +134,7 @@ pub fn update_ui(
     mut ui_shutdown_rx: oneshot::Receiver<()>,
     mut ui_update_rx: Receiver<DisplayState>,
 ) {
-    static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static/images/");
+    static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/images/");
     let display_level = config.ui_level;
     if display_level == 0 {
         info!("Invisible mode, not spawning UI.");
