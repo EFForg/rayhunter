@@ -15,7 +15,7 @@ Linux/Qualcom devices, but this is the only one we have tested on.
 You can buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
 or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
-## Setup (Silicon Mac, Linux)
+## Setup (macOS, Linux)
 
 1. Download the latest `release.tar` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
 2. Unzip the `release.tar`. Open the terminal and navigate to the folder
@@ -43,16 +43,15 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 * The install script has only been tested for Linux on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
 * On macOS if you encounter an error that says "No Orbic device found," it may because you the "Allow accessories to connect" security setting set to "Ask for approval." You may need to temporarily change it to "Always" for the script to run. Make sure to change it back to a more secure setting when you're done.
 
-## Setup (Intel Mac, Windows)
+## Setup (Windows)
 
-* **Intel Mac:** The install script also won't work on older Macs with Intel chips, for those Macs you will need to follow the [instructions for installing Rayhunter on Intel Macs](https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices)
 * **Windows:** We don't currently support automated installs on Windows, you will have to follow the instructions in the **Development** section below.
 
-## Updating
+## Updating Rayhunter
 
-Great news: if you've successfully installed rayhunter, you already know how to update it! Our update process is identical to the setup process: simply download the latest release and follow the steps in the [setup section](#setup-silicon-mac-linux).
+Great news: if you've successfully installed rayhunter, you already know how to update it! Our update process is identical to the setup process: simply download the latest release and follow the steps in the [setup section](#setup-macos-linux).
 
-## Usage (viewing the web UI)
+## Using Rayhunter
 
 Once installed, Rayhunter will run automatically whenever your Orbic device is running. You'll see a green line on top of the device's display to indicate that it's running and recording to the SD-card. [The line will turn red](#red) once a potential IMSI catcher has been found, until the device is rebooted or a new recording is started through the web UI.
 
@@ -100,10 +99,12 @@ If you want to use a non-Verizon SIM card you will probably need an unlocked dev
 You can get a shell on the device by inputting `adb shell` to a terminal with the device connected, you can check if it is detected with `adb devices`.
 The capture files are located at */data/rayhunter/qmdl* but you will need root access to modify or delete them. From the adb shell run `/bin/rootshell` and you can now use commands like 'rm' as root to modify and delete entries in the */data/rayhunter/qmdl* directory. **Be careful not to delete important files in other directories as you may seriously damage the device**
 
-## Development
+## Building Rayhunter from source
 
-Follow these instructions if you need to build Rayhunter from source rather than using our [compiled builds](https://github.com/EFForg/rayhunter/releases).
+Building Rayhunter from source, either for development or because the install script doesn't work on your system, involves a number of external dependencies. Unless you need to do this, we recommend you use our [compiled builds](https://github.com/EFForg/rayhunter/releases).
 
+* Install [nodejs/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm), which is required to build Rayhunter's web UI
+  * Make sure to build the site with `cd bin/web && npm run build` before building Rayhunter. If you're working directly on the frontend, `npm run dev` will allow you to test a local frontend with hot-reloading (use `http://localhost:5173` instead of `http://localhost:8080`).
 * Install ADB on your computer using the instructions above, and make sure it's in your terminal's PATH
   * You can verify if ADB is in your PATH by running `which adb` in a terminal. If it prints the filepath to where ADB is installed, you're set! Otherwise, try following one of these guides:
     * [linux](https://askubuntu.com/questions/652936/adding-android-sdk-platform-tools-to-path-downloaded-from-umake)
@@ -126,23 +127,15 @@ Now you can root your device and install Rayhunter by running `./tools/install-d
 
 * Root your device on Windows using the instructions here: <https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183>
 
-* Build for arm using `cargo build`
+### Building and install Rayhunter from source
 
-* Run tests using `cargo test_pc`
+* Build the web UI using `cd bin/web && npm run build`
 
 * Push the scripts in `scripts/` to `/etc/init.d` on device and make a directory called `/data/rayhunter` using `adb shell` (and sshell for your root shell if you followed the steps above)
 
-* you also need to copy `config.toml.example` to `/data/rayhunter/config.toml`
+* You also need to copy `config.toml.example` to `/data/rayhunter/config.toml`
 
-* Then run `./make.sh` this will build the binary and push it over adb. Restart your device or run `/etc/init.d/rayhunter_daemon start` on the device and you are good to go.
-
-* Write your code and write tests
-
-* Build for arm using `cargo build`
-
-* Run tests using `cargo test_pc`
-
-* push to the device with `./make.sh`
+* Then run `./make.sh`, which will build the binary, push it over adb, and restart the device. Once it's restarted, Rayhunter should be running!
 
 ## Support and Discussion
 
