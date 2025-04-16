@@ -53,7 +53,7 @@ pub async fn get_qmdl(
 }
 
 // Bundles the server's static files (html/css/js) into the binary for easy distribution
-static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static");
+static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/web/build");
 
 pub async fn serve_static(
     State(state): State<Arc<ServerState>>,
@@ -67,7 +67,8 @@ pub async fn serve_static(
     if state.debug_mode {
         let mut build_path = std::path::PathBuf::new();
         build_path.push("bin");
-        build_path.push("static");
+        build_path.push("web");
+        build_path.push("build");
         for part in path.split("/") {
             build_path.push(part);
         }
