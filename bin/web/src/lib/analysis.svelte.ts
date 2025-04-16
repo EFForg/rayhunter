@@ -8,6 +8,13 @@ export type AnalysisReport = {
 
 export type ReportMetadata = {
     analyzers: AnalyzerMetadata[];
+    rayhunter: RayhunterMetadata;
+};
+
+export type RayhunterMetadata = {
+    rayhunter_version: string;
+    system_os: string;
+    arch: string;
 };
 
 export type AnalyzerMetadata = {

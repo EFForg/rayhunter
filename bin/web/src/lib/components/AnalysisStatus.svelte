@@ -2,8 +2,9 @@
 	import { AnalysisStatus } from "$lib/analysisManager.svelte";
 	import { EventType } from "$lib/analysis.svelte";
 	import type { ManifestEntry } from "$lib/manifest.svelte";
-    let { entry }: {
+    let { entry, onclick }: {
         entry: ManifestEntry,
+        onclick: () => void,
     } = $props();
 
     let summary = $derived.by(() => {
@@ -32,12 +33,20 @@
         } else {
             return 'Loading...';
         }
+    });
+
+    let ready = $derived.by(() => {
+        let finished = entry.analysis_status === AnalysisStatus.Finished;
+        let report_available = entry.analysis_report !== undefined;
+        return finished && report_available;
     })
+
+    let button_class = $derived(ready ? "text-blue-400 underline" : '');
 </script>
 
-<p>
+<button class={button_class} disabled={!ready} {onclick}>
     {summary}
-</p>
+</button>
 
 <style>
 </style>

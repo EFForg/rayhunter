@@ -33,8 +33,8 @@
 <div class="p-8 flex flex-col gap-2">
 {#if loaded}
     <ControlBar server_is_recording={recording} />
-    <ManifestTable entries={entries} current_entry={current_entry} />
     <SystemStatsTable stats={system_stats!} />
+    <ManifestTable entries={entries} current_entry={current_entry} />
 {:else}
     <p>Loading...</p>
 {/if}
