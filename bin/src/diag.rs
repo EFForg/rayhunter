@@ -257,13 +257,6 @@ pub async fn delete_all_recordings(
     if state.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
-    let mut qmdl_store = state.qmdl_store_lock.write().await;
-    qmdl_store.delete_all_entries().await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("couldn't delete all recordings: {}", e),
-        )
-    })?;
     state
         .diag_device_ctrl_sender
         .send(DiagDeviceCtrlMessage::StopRecording)
@@ -274,6 +267,13 @@ pub async fn delete_all_recordings(
                 format!("couldn't send stop recording message: {}", e),
             )
         })?;
+    let mut qmdl_store = state.qmdl_store_lock.write().await;
+    qmdl_store.delete_all_entries().await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("couldn't delete all recordings: {}", e),
+        )
+    })?;
     state
         .ui_update_sender
         .send(display::DisplayState::Paused)
