@@ -122,28 +122,6 @@ rustup target add armv7-unknown-linux-gnueabihf
 
 Now you can root your device and install Rayhunter by running `./tools/install-dev.sh`
 
-### If you're on Windows or can't run the install scripts
-
-* Root your device on Windows using the instructions here: <https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183>
-
-* Build for arm using `cargo build`
-
-* Run tests using `cargo test_pc`
-
-* Push the scripts in `scripts/` to `/etc/init.d` on device and make a directory called `/data/rayhunter` using `adb shell` (and sshell for your root shell if you followed the steps above)
-
-* you also need to copy `config.toml.example` to `/data/rayhunter/config.toml`
-
-* Then run `./make.sh` this will build the binary and push it over adb. Restart your device or run `/etc/init.d/rayhunter_daemon start` on the device and you are good to go.
-
-* Write your code and write tests
-
-* Build for arm using `cargo build`
-
-* Run tests using `cargo test_pc`
-
-* push to the device with `./make.sh`
-
 ## Support and Discussion
 
 If you're having issues installing or using Rayhunter, please open an issue in this repo. Join us in the `#rayhunter` channel of [EFF's Mattermost](https://opensource.eff.org/signup_user_complete/?id=6iqur37ucfrctfswrs14iscobw&md=link&sbr=su) instance to chat!
