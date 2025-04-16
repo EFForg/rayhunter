@@ -1,4 +1,3 @@
-use log::info;
 use chrono::{DateTime, Local};
 use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
