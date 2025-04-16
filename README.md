@@ -43,10 +43,9 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 * The install script has only been tested for Linux on the latest version of Ubuntu. If it fails you will need to follow the install steps outlined in **Development** below.
 * On macOS if you encounter an error that says "No Orbic device found," it may because you the "Allow accessories to connect" security setting set to "Ask for approval." You may need to temporarily change it to "Always" for the script to run. Make sure to change it back to a more secure setting when you're done.
 
-## Setup (Intel Mac, Windows)
+## Setup (Windows)
 
-* **Intel Mac:** The install script also won't work on older Macs with Intel chips, for those Macs you will need to follow the [instructions for installing Rayhunter on Intel Macs](https://github.com/EFForg/rayhunter/wiki/Install-Rayhunter-on-Mac-Intel-devices)
-* **Windows:** We don't currently support automated installs on Windows, you will have to follow the instructions in the **Development** section below.
+We don't currently support automated installs on Windows.
 
 ## Updating
 
