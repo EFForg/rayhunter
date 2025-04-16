@@ -10,32 +10,75 @@
         timeStyle: "long",
         dateStyle: "short",
     });
+
+    const skipped_messages: Map<string, number> = $derived.by(() => {
+        let map = new Map();
+        for (const row of report.rows) {
+            for (const message of row.skipped_message_reasons) {
+                let count = map.get(message);
+                if (count === undefined) {
+                    count = 0;
+                }
+                map.set(message, count + 1);
+            }
+        }
+        return map;
+    });
 </script>
 
-<p class="text-lg underline">Warnings</p>
-<table class="table-auto text-left border">
-    <thead class="p-2">
-        <tr class="bg-gray-300">
-            <th scope="col">Timestamp</th>
-            <th scope="col">Warning</th>
-            <th scope="col">Severity</th>
-        </tr>
-    </thead>
-    <tbody>
-        {#each report.rows as row, row_idx}
-            {#each row.analysis as analysis}
-                {@const parsed_date = new Date(analysis.timestamp)}
-                {@const warnings = analysis.events.filter(e => e.type === EventType.Warning)}
-                {#each warnings as warning}
-                    {@const severity = ['Low', 'Medium', 'High'][warning.severity]}
-                    {@const severity_class = ['bg-red-200', 'bg-red-400', 'bg-red-600'][warning.severity]}
-                    <tr class="even:bg-gray-400 border-b">
-                        <th class="p-2">{date_formatter.format(parsed_date)}</th>
-                        <td class="p-2">{warning.message}</td>
-                        <td class="p-2 {severity_class}">{severity}</td>
-                    </tr>
+<p class="text-lg underline">Warnings and Informational Logs</p>
+{#if report.statistics.num_warnings === 0 && report.statistics.num_informational_logs === 0}
+    <p>Nothing to show!</p>
+{:else}
+    <table class="table-auto text-left border">
+        <thead class="p-2">
+            <tr class="bg-gray-300">
+                <th scope="col">Timestamp</th>
+                <th scope="col">Warning</th>
+                <th scope="col">Severity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each report.rows as row, row_idx}
+                {#each row.analysis as analysis}
+                    {@const parsed_date = new Date(analysis.timestamp)}
+                    {#each analysis.events.filter(e => e !== null) as event}
+                        <tr class="even:bg-gray-200 border-b">
+                        {#if event.type === EventType.Warning}
+                            {@const severity = ['Low', 'Medium', 'High'][event.severity]}
+                            {@const severity_class = ['bg-red-200', 'bg-red-400', 'bg-red-600'][event.severity]}
+                            <th class="p-2">{date_formatter.format(parsed_date)}</th>
+                            <td class="p-2">{event.message}</td>
+                            <td class="p-2 {severity_class}">{severity}</td>
+                        {:else if event.type === EventType.Informational}
+                            <th class="p-2">{date_formatter.format(parsed_date)}</th>
+                            <td class="p-2">{event.message}</td>
+                            <td class="p-2">Info</td>
+                        {/if}
+                        </tr>
+                    {/each}
                 {/each}
             {/each}
-        {/each}
-    </tbody>
-</table>
+        </tbody>
+    </table>
+{/if}
+{#if report.statistics.num_skipped_packets > 0}
+    <p class="text-lg underline">Unparsed Messages</p>
+    <p>These are due to a limitation or bug in Rayhunter's parser, and aren't ususally a problem.</p>
+    <table class="table-auto text-left border">
+        <thead class="p-2">
+            <tr class="bg-gray-300">
+                <th scope="col"># of messages affected</th>
+                <th scope="col">Reason/Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each skipped_messages.entries() as [message, count]}
+                <tr class="even:bg-gray-200 border-b">
+                    <td>{count}</td>
+                    <td>{message}</td>
+                </tr>
+            {/each}
+        </tbody>
+    </table>
+{/if}

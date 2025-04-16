@@ -4,7 +4,14 @@ import { req } from "./utils.svelte";
 export type AnalysisReport = {
     metadata: ReportMetadata;
     rows: AnalysisRow[];
+    statistics: ReportStatistics;
 };
+
+export type ReportStatistics = {
+    num_warnings: number;
+    num_informational_logs: number;
+    num_skipped_packets: number;
+}
 
 export type ReportMetadata = {
     analyzers: AnalyzerMetadata[];
@@ -57,17 +64,22 @@ export type InformationalEvent = {
 
 export function parse_finished_report(report_json: NewlineDeliminatedJson): AnalysisReport {
     const metadata: ReportMetadata = report_json[0]; // this can be cast directly
+    let num_warnings = 0;
+    let num_informational_logs = 0;
+    let num_skipped_packets = 0;
     const rows: AnalysisRow[] = report_json.slice(1).map((row_json: any) => {
         const analysis: PacketAnalysis[] = row_json.analysis.map((analysis_json: any) => {
             const events: Event[] = analysis_json.events.map((event_json: any): Event | null => {
                     if (event_json === null) {
                         return null;
                     } else if (event_json.event_type === "Informational") {
+                        num_informational_logs += 1;
                         return {
                             type: EventType.Informational,
                             message: event_json.message,
                         };
                     } else {
+                        num_warnings += 1;
                         return {
                             type: EventType.Warning,
                             severity: event_json.severity === "High" ? Severity.High :
@@ -82,6 +94,7 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Anal
                 events,
             };
         });
+        num_skipped_packets += row_json.skipped_message_reasons.length;
         return {
             timestamp: new Date(row_json.timestamp),
             skipped_message_reasons: row_json.skipped_message_reasons,
@@ -89,6 +102,11 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Anal
         };
     });
     return {
+        statistics: {
+            num_informational_logs,
+            num_warnings,
+            num_skipped_packets,
+        },
         metadata,
         rows,
     };

@@ -20,7 +20,7 @@
         <p>Error getting analysis report: {entry.analysis_report}</p>
     {:else}
         {@const metadata: ReportMetadata = entry.analysis_report.metadata}
-        <div class="flex flex-col p-2 w-3/4">
+        <div class="flex flex-col pl-2 pr-10 w-full">
             {#if entry.analysis_report.rows.length > 0}
                 <AnalysisTable report={entry.analysis_report} />
             {:else}
@@ -28,7 +28,7 @@
             {/if}
             <div>
                 <p class="text-lg underline">Metadata</p>
-                <p><b>Rayhunter version:</b> {metadata.rayhunter.rayhunter_version}</p>
+                <p>Analysis by Rayhunter version {metadata.rayhunter.rayhunter_version}</p>
                 <p><b>Device system OS:</b> {metadata.rayhunter.system_os}</p>
                 <p class="text-lg underline">Analyzers</p>
                 {#each metadata.analyzers as analyzer}

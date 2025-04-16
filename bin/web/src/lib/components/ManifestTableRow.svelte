@@ -39,7 +39,7 @@
         </td>
     {/if}
 </tr>
-<tr class="{row_color} border-b {analysis_visible ? '' : 'collapse'}">
+<tr class="{normal_row_color} border-b {analysis_visible ? '' : 'collapse'}">
     <td class="font-bold p-2 bg-blue-100"></td>
     <td class="border-t border-dashed p-2" colspan="7">
         <AnalysisView {entry} />
