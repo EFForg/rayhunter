@@ -21,6 +21,8 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 2. Unzip the `release.tar`. Open the terminal and navigate to the folder
 
     ```bash
+    mkdir ~/Downloads/release
+    tar -xvf ~/Downloads/release.tar -C ~/Downloads/release
     cd ~/Downloads/release
     ```
 
