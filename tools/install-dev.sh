@@ -12,7 +12,7 @@ if ! sha256sum -c --quiet release.tar.sha256; then
 fi
 
 tar -xf release.tar
-./install-linux.sh
+./install.sh
 
 cd ..
 rm -rf build
