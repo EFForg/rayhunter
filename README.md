@@ -108,15 +108,27 @@ Follow these instructions if you need to build Rayhunter from source rather than
     * [linux](https://askubuntu.com/questions/652936/adding-android-sdk-platform-tools-to-path-downloaded-from-umake)
     * [macOS](https://www.repeato.app/setting-up-adb-on-macos-a-step-by-step-guide/)
     * [Windows](https://medium.com/@yadav-ajay/a-step-by-step-guide-to-setting-up-adb-path-on-windows-0b833faebf18)
+* Install `curl` on your computer to run the install scripts. It is not needed to build binaries.
 
-### If you're on x86 linux
+### Install Rust targets
 
-Install Rust the usual way and then install cross compiling dependences:
+[Install Rust the usual way](https://www.rust-lang.org/tools/install). Then,
 
-```bash
-sudo apt install curl build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
-rustup target add x86_64-unknown-linux-gnu
-rustup target add armv7-unknown-linux-gnueabihf
+- install the cross-compilation target for the device rayhunter will run on:
+```sh
+rustup target add armv7-unknown-linux-musleabihf
+```
+
+- install the statically compiled target for your host machine to build the binary installer [`serial`](./serial).
+```sh
+# check which toolchain you have installed by default with
+rustup show
+# now install the correct variant for your host platform, one of:
+rustup target add x86_64-unknown-linux-musl
+rustup target add aarch64-unknown-linux-musl
+rustup target add aarch64-apple-darwin
+rustup target add x86_64-apple-darwin
+rustup target add x86_64-pc-windows-gnu
 ```
 
 Now you can root your device and install Rayhunter by running `./tools/install-dev.sh`

@@ -56,18 +56,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: armv7-unknown-linux-gnueabihf
-      - name: Install cross-compilation dependencies
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
-          version: 1.0
+          targets: armv7-unknown-linux-musleabihf
       - name: Build rootshell (arm32)
-        run: cargo build --bin rootshell --target armv7-unknown-linux-gnueabihf --release
+        run: cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --release
       - uses: actions/upload-artifact@v4
         with:
           name: rootshell
-          path: target/armv7-unknown-linux-gnueabihf/release/rootshell
+          path: target/armv7-unknown-linux-musleabihf/release/rootshell
           if-no-files-found: error
   build_rayhunter:
     strategy:
@@ -81,18 +76,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: armv7-unknown-linux-gnueabihf
-      - name: Install cross-compilation dependencies
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
-          version: 1.0
+          targets: armv7-unknown-linux-musleabihf
       - name: Build rayhunter-daemon (arm32)
-        run: cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release --no-default-features --features ${{ matrix.device.name }}
+        run: cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --release --no-default-features --features ${{ matrix.device.name }}
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-daemon-${{ matrix.device.name }}
-          path: target/armv7-unknown-linux-gnueabihf/release/rayhunter-daemon
+          path: target/armv7-unknown-linux-musleabihf/release/rayhunter-daemon
           if-no-files-found: error
   build_release_zip:
     needs:
