@@ -45,7 +45,16 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 ## Setup (Windows)
 
-We don't currently support automated installs on Windows.
+1. Install the [Zadig WinUSB driver](https://zadig.akeo.ie/).
+2. Download the latest `release.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases).
+3. Unzip `release.zip`.
+4. Run the install script by double clicking on `install.ps1`. A powershell window will launch.
+
+    The device will restart multiple times over the next few minutes.
+
+    You will know it is done when you see terminal output that says `checking for rayhunter server...success!`
+
+5. Rayhunter should now be running! You can verify this by following the instructions below to [view the web UI](#usage-viewing-the-web-ui). You should also see a green line flash along the top of top the display on the device.
 
 ## Updating
 
