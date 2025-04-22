@@ -1,6 +1,6 @@
 [package]
 name = "rayhunter-daemon"
-version = "0.2.6"
+version = "0.2.8"
 edition = "2021"
 
 [features]
