@@ -15,7 +15,11 @@ Linux/Qualcom devices, but this is the only one we have tested on.
 You can buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
 or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
+<<<<<<< HEAD
 ## Setup (macOS, Linux)
+=======
+## Setup (Mac, Linux)
+>>>>>>> main
 
 1. Download the latest `release.tar` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
 2. Unzip the `release.tar`. Open the terminal and navigate to the folder
@@ -45,7 +49,11 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 ## Setup (Windows)
 
+<<<<<<< HEAD
 * **Windows:** We don't currently support automated installs on Windows, you will have to follow the instructions in the **Development** section below.
+=======
+We don't currently support automated installs on Windows.
+>>>>>>> main
 
 ## Updating Rayhunter
 
@@ -53,7 +61,7 @@ Great news: if you've successfully installed rayhunter, you already know how to 
 
 ## Using Rayhunter
 
-Once installed, Rayhunter will run automatically whenever your Orbic device is running. You'll see a green line on top of the device's display to indicate that it's running and recording to the SD-card. [The line will turn red](#red) once a potential IMSI catcher has been found, until the device is rebooted or a new recording is started through the web UI.
+Once installed, Rayhunter will run automatically whenever your Orbic device is running. You'll see a green line on top of the device's display to indicate that it's running and recording. [The line will turn red](#red) once a potential IMSI catcher has been found, until the device is rebooted or a new recording is started through the web UI.
 
 It also serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, and view heuristic analyses of captures.
 
@@ -127,8 +135,6 @@ Now you can root your device and install Rayhunter by running `./tools/install-d
 
 * Root your device on Windows using the instructions here: <https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183>
 
-### Building and install Rayhunter from source
-
 * Build the web UI using `cd bin/web && npm run build`
 
 * Push the scripts in `scripts/` to `/etc/init.d` on device and make a directory called `/data/rayhunter` using `adb shell` (and sshell for your root shell if you followed the steps above)
@@ -139,11 +145,7 @@ Now you can root your device and install Rayhunter by running `./tools/install-d
 
 ## Support and Discussion
 
-If you're having issues installing or using Rayhunter, please open an issue in this repo. Join us in the `#rayhunter` channel of [EFF's Mattermost](https://opensource.eff.org/signup_user_complete/?id=6iqur37ucfrctfswrs14iscobw&md=link&sbr=su) instance to chat!
-
-## Documentation
-
-* Build docs locally using `RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features  --open`
+If you're having issues installing or using Rayhunter, please open an issue in this repo. Join us in the `#rayhunter` channel of [EFF's Mattermost](https://opensource.eff.org/signup_user_complete/?id=r1b6cnta9bysxk6im3kuabiu1y&md=link&sbr=su) instance to chat!
 
 **LEGAL DISCLAIMER:** Use this program at your own risk. We believe running this program does not currently violate any laws or regulations in the United States. However, we are not responsible for civil or criminal liability resulting from the use of this software. If you are located outside of the US please consult with an attorney in your country to help you assess the legal risks of running this program.
 
