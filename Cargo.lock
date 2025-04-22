@@ -1239,7 +1239,7 @@ checksum = "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09"
 
 [[package]]
 name = "rayhunter"
-version = "0.2.6"
+version = "0.2.8"
 dependencies = [
  "bytes",
  "chrono",
@@ -1260,7 +1260,7 @@ dependencies = [
 
 [[package]]
 name = "rayhunter-daemon"
-version = "0.2.6"
+version = "0.2.8"
 dependencies = [
  "axum",
  "chrono",
