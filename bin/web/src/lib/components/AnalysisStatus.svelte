@@ -41,7 +41,7 @@
         return finished && report_available;
     })
 
-    let button_class = $derived(ready ? "text-blue-400 underline" : '');
+    let button_class = $derived(ready ? "text-blue-600 underline" : '');
 </script>
 
 <button class={button_class} disabled={!ready} {onclick}>
