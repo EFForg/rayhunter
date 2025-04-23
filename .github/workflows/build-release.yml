@@ -88,6 +88,42 @@ jobs:
           name: rayhunter-daemon-${{ matrix.device.name }}
           path: target/armv7-unknown-linux-musleabihf/release/rayhunter-daemon
           if-no-files-found: error
+  build_rust_installer:
+    needs:
+      - build_rayhunter
+    strategy:
+      matrix:
+        platform:
+          - name: ubuntu-24
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - name: ubuntu-24-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+          - name: macos-arm
+            os: macos-latest
+            target: aarch64-apple-darwin
+          - name: macos-intel
+            os: macos-13
+            target: x86_64-apple-darwin
+          - name: windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-gnu
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - run: cargo build --bin installer --release --target ${{ matrix.platform.target }} --features vendor
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tplink-installer-${{ matrix.platform.name }}
+          path: target/${{ matrix.platform.target }}/release/installer${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
+          if-no-files-found: error
+
   build_release_zip:
     needs:
       - build_serial_and_check
