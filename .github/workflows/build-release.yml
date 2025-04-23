@@ -75,7 +75,6 @@ jobs:
         device:
           - name: tplink
           - name: orbic
-
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +87,12 @@ jobs:
           packages: build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
           version: 1.0
       - name: Build rayhunter-daemon (arm32)
-        run: cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release --no-default-features --features ${{ matrix.device.name }}
+        run: |
+          pushd bin/web
+          npm install
+          npm run build
+          popd
+          cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release --no-default-features --features ${{ matrix.device.name }}
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-daemon-${{ matrix.device.name }}
