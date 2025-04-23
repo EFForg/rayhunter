@@ -10,7 +10,7 @@ vendor = []
 anyhow = "1.0.98"
 clap = { version = "4.5.37", features = ["derive"] }
 md5 = "0.7.0"
-reqwest = { version = "0.12.15", features = ["json"] }
+reqwest = { version = "0.12.15", features = ["json"], default-features = false }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 tokio = { version = "1.44.2", features = ["full"] }
