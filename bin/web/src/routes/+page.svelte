@@ -30,6 +30,7 @@
     })
 </script>
 
+<h1 class="ml-8 mt-8 text-4xl font-extrabold">Rayhunter Dashboard</h1>
 <div class="p-8 flex flex-col gap-2">
 {#if loaded}
     <ControlBar server_is_recording={recording} />

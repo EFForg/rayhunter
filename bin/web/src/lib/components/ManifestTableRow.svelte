@@ -16,7 +16,7 @@
         dateStyle: "short",
     });
     let normal_row_color = i % 2 == 0 ? "bg-white" : "bg-gray-100";
-    let row_color = current ? "bg-green-300" : normal_row_color;
+    let row_color = current ? "bg-green-100" : normal_row_color;
     let analysis_visible = $state(false);
 </script>
 
