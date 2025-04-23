@@ -144,7 +144,7 @@ async fn main_tplink(args: InstallTpLink) -> Result<(), Error> {
 
     #[cfg(feature = "vendor")]
     let rayhunter_daemon_bin =
-        include_bytes!("../../rayhunter-daemon-tplink/rayhunter-daemon-tplink");
+        include_bytes!("../../rayhunter-daemon-tplink/rayhunter-daemon");
 
     #[cfg(not(feature = "vendor"))]
     let rayhunter_daemon_bin =
