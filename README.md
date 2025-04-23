@@ -15,11 +15,7 @@ Linux/Qualcom devices, but this is the only one we have tested on.
 You can buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
 or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
-<<<<<<< HEAD
 ## Setup (macOS, Linux)
-=======
-## Setup (Mac, Linux)
->>>>>>> main
 
 1. Download the latest `release.tar` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
 2. Unzip the `release.tar`. Open the terminal and navigate to the folder
@@ -51,11 +47,7 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 
 ## Setup (Windows)
 
-<<<<<<< HEAD
 * **Windows:** We don't currently support automated installs on Windows, you will have to follow the instructions in the **Development** section below.
-=======
-We don't currently support automated installs on Windows.
->>>>>>> main
 
 ## Updating Rayhunter
 
