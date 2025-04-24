@@ -1,6 +1,13 @@
 export interface SystemStats {
     disk_stats: DiskStats;
     memory_stats: MemoryStats;
+    runtime_metadata: RuntimeMetadata;
+}
+
+export interface RuntimeMetadata {
+    rayhunter_version: string,
+    system_os: string,
+    arch: string,
 }
 
 export interface DiskStats {

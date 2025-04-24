@@ -15,31 +15,40 @@
         timeStyle: "long",
         dateStyle: "short",
     });
-    let normal_row_color = i % 2 == 0 ? "bg-white" : "bg-gray-100";
-    let row_color = current ? "bg-green-100" : normal_row_color;
+    let alternating_row_color = $derived(i % 2 == 0 ? "bg-white" : "bg-gray-100");
+    let status_row_color = $derived.by(() => {
+        const num_warnings = entry.get_num_warnings();
+        if (num_warnings !== undefined && num_warnings > 0) {
+            return "bg-red-100";
+        }
+        return current ? "bg-green-100" : alternating_row_color
+    });
     let analysis_visible = $state(false);
+    function toggle_analysis_visibility() {
+        analysis_visible = !analysis_visible;
+    }
 </script>
 
-<tr class="{row_color}">
+<tr class="{status_row_color}">
     <th class="font-bold p-2 bg-blue-100" scope='row'>{entry.name}</th>
     <td class="p-2">{date_formatter.format(entry.start_time)}</td>
     <td class="p-2">{date_formatter.format(entry.last_message_time)}</td>
     <td class="p-2">{entry.qmdl_size_bytes}</td>
-    <td class="p-2"><DownloadLink url={entry.getPcapUrl()} text="pcap" /></td>
-    <td class="p-2"><DownloadLink url={entry.getQmdlUrl()} text="qmdl" /></td>
-    <td class="p-2"><AnalysisStatus onclick={() => { analysis_visible = !analysis_visible; }} entry={entry} /></td>
+    <td class="p-2"><DownloadLink url={entry.get_pcap_url()} text="pcap" /></td>
+    <td class="p-2"><DownloadLink url={entry.get_qmdl_url()} text="qmdl" /></td>
+    <td class="p-2"><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} /></td>
     {#if current}
         <td class="p-2"></td>
     {:else}
         <td class="p-2">
             <DeleteButton
                 prompt={`Are you sure you want to delete entry ${entry.name}?`}
-                url={entry.getDeleteUrl()}
+                url={entry.get_delete_url()}
             />
         </td>
     {/if}
 </tr>
-<tr class="{normal_row_color} border-b {analysis_visible ? '' : 'collapse'}">
+<tr class="{alternating_row_color} border-b {analysis_visible ? '' : 'collapse'}">
     <td class="font-bold p-2 bg-blue-100"></td>
     <td class="border-t border-dashed p-2" colspan="7">
         <AnalysisView {entry} />

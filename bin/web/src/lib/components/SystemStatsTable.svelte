@@ -12,6 +12,12 @@
         <tbody>
             <tr class="border">
                 <th class="border">
+                    Rayhunter version
+                </th>
+                <td class="border">{stats.runtime_metadata.rayhunter_version}</td>
+            </tr>
+            <tr class="border">
+                <th class="border">
                     Storage
                 </th>
                 <td class="border">

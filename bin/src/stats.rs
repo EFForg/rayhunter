@@ -7,6 +7,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use log::error;
+use rayhunter::util::RuntimeMetadata;
 use serde::Serialize;
 use tokio::process::Command;
 
@@ -14,6 +15,7 @@ use tokio::process::Command;
 pub struct SystemStats {
     pub disk_stats: DiskStats,
     pub memory_stats: MemoryStats,
+    pub runtime_metadata: RuntimeMetadata,
 }
 
 impl SystemStats {
@@ -21,6 +23,7 @@ impl SystemStats {
         Ok(Self {
             disk_stats: DiskStats::new(qmdl_path).await?,
             memory_stats: MemoryStats::new().await?,
+            runtime_metadata: RuntimeMetadata::new(),
         })
     }
 }

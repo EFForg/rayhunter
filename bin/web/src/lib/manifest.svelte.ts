@@ -69,19 +69,26 @@ export class ManifestEntry {
         }
     }
 
-    getPcapUrl(): string {
+    get_num_warnings(): number | undefined {
+        if (this.analysis_report === undefined || typeof(this.analysis_report) === 'string') {
+            return undefined;
+        }
+        return this.analysis_report.statistics.num_warnings;
+    }
+
+    get_pcap_url(): string {
         return `/api/pcap/${this.name}`;
     }
 
-    getQmdlUrl(): string {
+    get_qmdl_url(): string {
         return `/api/qmdl/${this.name}`;
     }
 
-    getAnalysisReportUrl(): string {
+    get_analysis_report_url(): string {
         return `/api/analysis-report/${this.name}`;
     }
 
-    getDeleteUrl(): string {
+    get_delete_url(): string {
         return `/api/delete-recording/${this.name}`;
 	}
 }
