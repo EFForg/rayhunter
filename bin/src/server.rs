@@ -6,7 +6,6 @@ use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use include_dir::{include_dir, Dir};
 use std::sync::Arc;
-use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
@@ -56,43 +55,11 @@ pub async fn get_qmdl(
 static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/web/build");
 
 pub async fn serve_static(
-    State(state): State<Arc<ServerState>>,
+    State(_): State<Arc<ServerState>>,
     Path(path): Path<String>,
 ) -> impl IntoResponse {
     let path = path.trim_start_matches('/');
     let mime_type = mime_guess::from_path(path).first_or_text_plain();
-
-    // if we're in debug mode, return the files from the build directory so we
-    // don't have to rebuild every time the JS/HTML change
-    if state.debug_mode {
-        let mut build_path = std::path::PathBuf::new();
-        build_path.push("bin");
-        build_path.push("web");
-        build_path.push("build");
-        for part in path.split("/") {
-            build_path.push(part);
-        }
-        return match File::open(build_path).await {
-            Ok(mut file) => {
-                let mut body = String::new();
-                file.read_to_string(&mut body)
-                    .await
-                    .expect("failed to read file");
-                Response::builder()
-                    .status(StatusCode::OK)
-                    .header(
-                        header::CONTENT_TYPE,
-                        HeaderValue::from_str(mime_type.as_ref()).unwrap(),
-                    )
-                    .body(Body::from(body))
-                    .unwrap()
-            }
-            Err(_) => Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::empty())
-                .unwrap(),
-        };
-    }
 
     match STATIC_DIR.get_file(path) {
         None => Response::builder()
