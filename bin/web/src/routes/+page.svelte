@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Manifest, ManifestEntry } from "$lib/manifest.svelte";
+    import { ManifestEntry } from "$lib/manifest.svelte";
     import { get_manifest, get_system_stats } from "$lib/utils.svelte";
     import ManifestTable from "$lib/components/ManifestTable.svelte";
     import type { SystemStats } from "$lib/systemStats";

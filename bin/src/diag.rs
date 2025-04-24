@@ -171,8 +171,18 @@ pub async fn stop_recording(
     let mut qmdl_store = state.qmdl_store_lock.write().await;
     match qmdl_store.get_current_entry() {
         Some((_, entry)) => {
-            state.analysis_sender.send(AnalysisCtrlMessage::RecordingFinished(entry.name.to_string())).await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("couldn't send AnalysisCtrlMessage: {}", e)))?;
+            state
+                .analysis_sender
+                .send(AnalysisCtrlMessage::RecordingFinished(
+                    entry.name.to_string(),
+                ))
+                .await
+                .map_err(|e| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("couldn't send AnalysisCtrlMessage: {}", e),
+                    )
+                })?;
         }
         None => todo!(),
     }

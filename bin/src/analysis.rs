@@ -89,9 +89,12 @@ pub struct AnalysisStatus {
 
 impl AnalysisStatus {
     pub fn new(store: &RecordingStore) -> Self {
-        let existing_recordings: Vec<String> = store.manifest.entries.iter()
-                .map(|entry| entry.name.clone())
-                .collect();
+        let existing_recordings: Vec<String> = store
+            .manifest
+            .entries
+            .iter()
+            .map(|entry| entry.name.clone())
+            .collect();
         AnalysisStatus {
             queued: Vec::new(),
             running: None,
