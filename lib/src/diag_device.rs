@@ -130,8 +130,8 @@ impl DiagDevice {
         );
 
         match MessagesContainer::from_bytes((&self.read_buf[0..bytes_read], 0)) {
-            Ok((_, container)) => return Ok(container),
-            Err(err) => return Err(DiagDeviceError::ParseMessagesContainerError(err)),
+            Ok((_, container)) => Ok(container),
+            Err(err) => Err(DiagDeviceError::ParseMessagesContainerError(err)),
         }
     }
 

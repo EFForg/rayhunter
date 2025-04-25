@@ -18,7 +18,7 @@ tplink = []
 bytes = "1.5.0"
 chrono = "0.4.31"
 crc = "3.0.1"
-deku = { version = "0.16.0", features = ["logging"] }
+deku = { version = "0.18.0", features = ["logging"] }
 env_logger = "0.10.1"
 libc = "0.2.150"
 log = "0.4.20"
