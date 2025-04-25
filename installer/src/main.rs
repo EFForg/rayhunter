@@ -29,14 +29,6 @@ struct InstallTpLink {
     #[arg(long)]
     skip_sdcard: bool,
 
-    /// Username for TP-Link admin interface, if custom.
-    #[arg(long, default_value = "admin")]
-    username: String,
-
-    /// Password for TP-Link admin interface, if custom.
-    #[arg(long, default_value = "admin")]
-    password: String,
-
     /// IP address for TP-Link admin interface, if custom.
     #[arg(long, default_value = "192.168.0.1")]
     admin_ip: String,
