@@ -7,8 +7,6 @@ edition = "2024"
 vendor = []
 
 [dependencies]
-adb_client = { git = "https://github.com/gaykitty/adb_client.git", branch = "nusb" }
-# adb_client = { path = "../../adb_client/adb_client" }
 anyhow = "1.0.98"
 clap = { version = "4.5.37", features = ["derive"] }
 md5 = "0.7.0"
@@ -19,3 +17,10 @@ sha2 = "0.10.8"
 tokio = { version = "1.44.2", features = ["full"] }
 tokio-retry2 = "0.5.7"
 tokio-stream = "0.1.17"
+
+[dependencies.adb_client]
+# path = "../../adb_client/adb_client"
+git = "https://github.com/gaykitty/adb_client.git"
+branch = "nusb"
+default-features = false
+features = ["usb"]
