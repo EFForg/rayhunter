@@ -24,6 +24,8 @@ jobs:
       run: cargo check --verbose --no-default-features --features=${{ matrix.device.name }}
     - name: Run tests
       run: cargo test --verbose --no-default-features --features=${{ matrix.device.name }}
+    - name: Run clippy
+      run: cargo clippy --verbose --no-default-features --features=${{ matrix.device.name }}
 
   windows_serial_check_and_test:
     runs-on: windows-latest
