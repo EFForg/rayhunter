@@ -144,9 +144,11 @@ async fn telnet_send_command(
     let (mut reader, mut writer) = stream.into_split();
 
     loop {
-        let mut buf = [0];
-        reader.read(&mut buf).await?;
-        if buf[0] == b'#' {
+        let mut next_byte = 0;
+        reader
+            .read_exact(std::slice::from_mut(&mut next_byte))
+            .await?;
+        if next_byte == b'#' {
             break;
         }
     }
