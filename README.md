@@ -18,7 +18,7 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 ## Setup (Mac, Linux)
 
 1. Download the latest `release.tar` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
-2. Unzip the `release.tar`. Open the terminal and navigate to the folder
+2. Decompress the `release.tar` archive. Open the terminal and navigate to the folder
 
     ```bash
     mkdir ~/Downloads/release
