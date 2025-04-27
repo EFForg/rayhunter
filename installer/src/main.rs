@@ -1,4 +1,4 @@
-use anyhow::{Context, Error};
+use anyhow::{Context, Error, bail};
 use clap::{Parser, Subcommand};
 
 mod orbic;
@@ -20,6 +20,8 @@ enum Command {
     Orbic(InstallOrbic),
     /// Install rayhunter on the TP-Link M7350.
     Tplink(InstallTpLink),
+    /// Developer utilities.
+    Util(Util),
 }
 
 #[derive(Parser, Debug)]
@@ -37,12 +39,51 @@ struct InstallTpLink {
 #[derive(Parser, Debug)]
 struct InstallOrbic {}
 
+#[derive(Parser, Debug)]
+struct Util {
+    #[command(subcommand)]
+    command: UntilSubCommand,
+}
+
+#[derive(Subcommand, Debug)]
+enum UntilSubCommand {
+    /// Send a serial command to the Orbic.
+    Serial(Serial),
+}
+
+#[derive(Parser, Debug)]
+struct Serial {
+    #[arg(long)]
+    root: bool,
+    command: Vec<String>,
+}
+
 async fn run_function() -> Result<(), Error> {
     let Args { command } = Args::parse();
 
     match command {
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi. Currently only Hardware Revision v3 is supported.")?,
         Command::Orbic(_) => orbic::install().await.context("Failed to install rayhunter on the Orbic RC400L")?,
+        Command::Util(subcommand) => match subcommand.command {
+            UntilSubCommand::Serial(serial_cmd) => {
+                if serial_cmd.root {
+                    if !serial_cmd.command.is_empty() {
+                        eprintln!("You cannot use --root and specify a command at the same time");
+                        std::process::exit(64);
+                    }
+                    orbic::enable_command_mode()?;
+                } else if serial_cmd.command.is_empty() {
+                    eprintln!("Command cannot be an empty string");
+                    std::process::exit(64);
+                } else {
+                    let cmd = serial_cmd.command.join(" ");
+                    match orbic::open_orbic()? {
+                        Some(interface) => orbic::send_serial_cmd(&interface, &cmd).await?,
+                        None => bail!(orbic::ORBIC_NOT_FOUND),
+                    }
+                }
+            }
+        }
     }
 
     Ok(())
