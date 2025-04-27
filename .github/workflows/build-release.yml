@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_serial_and_check:
+  build_rayhunter_check:
     strategy:
       matrix:
         platform:
@@ -32,18 +32,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform.target }}
-      - name: Build serial
-        run: cargo build --bin serial --release --target ${{ matrix.platform.target }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: serial-${{ matrix.platform.name }}
-          path: target/${{ matrix.platform.target }}/release/serial${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
-          if-no-files-found: error
-      - uses: actions/checkout@v4
-      - name: Build check
+      - name: Build rayhunter-check
         run: cargo build --bin rayhunter-check --release
       - uses: actions/upload-artifact@v4
         with:
@@ -126,7 +115,7 @@ jobs:
 
   build_release_zip:
     needs:
-      - build_serial_and_check
+      - build_rayhunter_check
       - build_rootshell
       - build_rayhunter
     runs-on: ubuntu-latest
