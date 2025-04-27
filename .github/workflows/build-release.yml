@@ -109,7 +109,7 @@ jobs:
       - run: cargo build --bin installer --release --target ${{ matrix.platform.target }} --features vendor
       - uses: actions/upload-artifact@v4
         with:
-          name: tplink-installer-${{ matrix.platform.name }}
+          name: installer-${{ matrix.platform.name }}
           path: target/${{ matrix.platform.target }}/release/installer${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
 
@@ -118,14 +118,15 @@ jobs:
       - build_rayhunter_check
       - build_rootshell
       - build_rayhunter
+      - build_rust_installer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
-        run: chmod +x serial-*/serial rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
+        run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
       - name: Setup release directory
-        run: mv rayhunter-daemon-* rootshell/rootshell serial-* dist
+        run: mv rayhunter-daemon-* rootshell/rootshell installer-* dist
       - name: Archive release directory
         run: tar -cvf release.tar -C dist .
       # TODO: have this create a release directly

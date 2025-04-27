@@ -1,40 +1,304 @@
-//! Serial communication with the orbic device
-//!
-//! This binary has two main functions, putting the orbic device in update mode which enables ADB
-//! and running AT commands on the serial modem interface which can be used to upload a shell and chown it to root
-//!
-//! # Errors
-//!
-//! No device found - make sure your device is plugged in and turned on. If it is, it's possible you have a device with a different
-//! usb id, file a bug with the output of `lsusb` attached.
-use std::str;
+use std::io::{ErrorKind, Write};
+use std::path::Path;
 use std::time::Duration;
 
-use anyhow::{bail, Context, Result};
+use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
+use anyhow::{Context, Result, anyhow, bail};
+use nusb::hotplug::HotplugEvent;
 use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
 use nusb::{Device, Interface};
+use sha2::{Digest, Sha256};
+use tokio::time::sleep;
+use tokio_stream::StreamExt;
+
+use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
 Make sure your device is plugged in and turned on.
 
-If it's possible you have a device with a different usb id:
-please file a bug with the output of `lsusb` attached."#;
+If you're sure you've plugged in an Orbic device via USB, there may be a bug in
+our installer. Please file a bug with the output of `lsusb` attached."#;
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<()> {
-    let args: Vec<String> = std::env::args().collect();
+const ORBIC_BUSY: &str = r#"The Orbic is plugged in but is being used by another program.
 
-    if args.len() != 2 || args[1] == "-h" || args[1] == "--help" {
-        println!("usage: {0} [<command> | --root]", args[0]);
-        std::process::exit(1);
+Please close any program that might be using your USB devices.
+If you have adb installed you may need to kill the adb daemon"#;
+
+const VENDOR_ID: u16 = 0x05c6;
+const PRODUCT_ID: u16 = 0xf601;
+
+macro_rules! echo {
+    ($($arg:tt)*) => {
+        print!($($arg)*);
+        let _ = std::io::stdout().flush();
+    };
+}
+
+pub async fn install() -> Result<()> {
+    let mut adb_device = force_debug_mode().await?;
+    let serial_interface = open_orbic()?.ok_or_else(|| anyhow!(ORBIC_NOT_FOUND))?;
+    echo!("Installing rootshell... ");
+    setup_rootshell(&serial_interface, &mut adb_device).await?;
+    println!("done");
+    echo!("Installing rayhunter... ");
+    let mut adb_device = setup_rayhunter(&serial_interface, adb_device).await?;
+    println!("done");
+    echo!("Testing rayhunter... ");
+    test_rayhunter(&mut adb_device).await?;
+    println!("done");
+    Ok(())
+}
+
+async fn force_debug_mode() -> Result<ADBUSBDevice> {
+    println!("Forcing a switch into the debug mode to enable ADB");
+    enable_command_mode()?;
+    echo!("ADB enabled, waiting for reboot... ");
+    let mut adb_device = wait_for_adb_shell().await?;
+    println!("it's alive!");
+    echo!("Waiting for atfwd_daemon to startup... ");
+    adb_command(&mut adb_device, &["pgrep", "atfwd_daemon"])?;
+    println!("done");
+    Ok(adb_device)
+}
+
+async fn setup_rootshell(
+    serial_interface: &Interface,
+    adb_device: &mut ADBUSBDevice,
+) -> Result<()> {
+    #[cfg(feature = "vendor")]
+    let rootshell_bin = include_bytes!("../../rootshell/rootshell");
+
+    #[cfg(not(feature = "vendor"))]
+    let rootshell_bin = &tokio::fs::read("target/armv7-unknown-linux-musleabihf/release/rootshell")
+        .await
+        .context("Error reading rootshell from local file system")?;
+
+    install_file(
+        serial_interface,
+        adb_device,
+        "/bin/rootshell",
+        rootshell_bin,
+    )
+    .await?;
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    at_syscmd(serial_interface, "chown root /bin/rootshell").await?;
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    at_syscmd(serial_interface, "chmod 4755 /bin/rootshell").await?;
+    let output = adb_command(adb_device, &["/bin/rootshell", "-c", "id"])?;
+    if !output.contains("uid=0") {
+        bail!("rootshell is not giving us root.");
     }
+    Ok(())
+}
 
-    if args[1] == "--root" {
-        enable_command_mode()
-    } else {
-        match open_orbic()? {
-            Some(interface) => send_command(interface, &args[1]).await,
-            None => bail!(ORBIC_NOT_FOUND),
+async fn setup_rayhunter(
+    serial_interface: &Interface,
+    mut adb_device: ADBUSBDevice,
+) -> Result<ADBUSBDevice> {
+    #[cfg(feature = "vendor")]
+    let rayhunter_daemon_bin = include_bytes!("../../rayhunter-daemon-orbic/rayhunter-daemon");
+
+    #[cfg(not(feature = "vendor"))]
+    let rayhunter_daemon_bin =
+        &tokio::fs::read("target/armv7-unknown-linux-musleabihf/release/rayhunter-daemon")
+            .await
+            .context("Error reading rayhunter-daemon from local file system")?;
+
+    at_syscmd(serial_interface, "mkdir -p /data/rayhunter").await?;
+    install_file(
+        serial_interface,
+        &mut adb_device,
+        "/data/rayhunter/rayhunter-daemon",
+        rayhunter_daemon_bin,
+    )
+    .await?;
+    install_file(
+        serial_interface,
+        &mut adb_device,
+        "/data/rayhunter/config.toml",
+        CONFIG_TOML,
+    )
+    .await?;
+    install_file(
+        serial_interface,
+        &mut adb_device,
+        "/etc/init.d/rayhunter_daemon",
+        RAYHUNTER_DAEMON_INIT,
+    )
+    .await?;
+    install_file(
+        serial_interface,
+        &mut adb_device,
+        "/etc/init.d/misc-daemon",
+        include_bytes!("../../dist/scripts/misc-daemon"),
+    )
+    .await?;
+    at_syscmd(serial_interface, "chmod 755 /etc/init.d/rayhunter_daemon").await?;
+    at_syscmd(serial_interface, "chmod 755 /etc/init.d/misc-daemon").await?;
+    println!("done");
+    echo!("Waiting for reboot... ");
+    at_syscmd(serial_interface, "shutdown -r -t 1 now").await?;
+    // first wait for shutdown (it can take ~10s)
+    tokio::time::timeout(Duration::from_secs(30), async {
+        while let Ok(dev) = adb_echo_test(adb_device).await {
+            adb_device = dev;
+            sleep(Duration::from_secs(1)).await;
+        }
+    })
+    .await
+    .context("Orbic took too long to shutdown")?;
+    // now wait for boot to finish
+    let adb_device = wait_for_adb_shell().await?;
+    Ok(adb_device)
+}
+
+async fn test_rayhunter(adb_device: &mut ADBUSBDevice) -> Result<()> {
+    const MAX_FAILURES: u32 = 10;
+    let mut failures = 0;
+    while failures < MAX_FAILURES {
+        if let Ok(output) = adb_command(
+            adb_device,
+            &["wget", "-O", "-", "http://localhost:8080/index.html"],
+        ) {
+            if output.contains("html") {
+                return Ok(());
+            }
+        }
+        failures += 1;
+        sleep(Duration::from_secs(3)).await;
+    }
+    bail!("timeout reached! failed to reach rayhunter, something went wrong :(")
+}
+
+async fn install_file(
+    serial_interface: &Interface,
+    adb_device: &mut ADBUSBDevice,
+    dest: &str,
+    payload: &[u8],
+) -> Result<()> {
+    const MAX_FAILURES: u32 = 5;
+    let mut failures = 0;
+    loop {
+        match install_file_impl(serial_interface, adb_device, dest, payload).await {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                if failures > MAX_FAILURES {
+                    return Err(e);
+                } else {
+                    sleep(Duration::from_secs(1)).await;
+                    failures += 1;
+                }
+            }
+        }
+    }
+}
+
+async fn install_file_impl(
+    serial_interface: &Interface,
+    adb_device: &mut ADBUSBDevice,
+    dest: &str,
+    payload: &[u8],
+) -> Result<()> {
+    let file_name = Path::new(dest)
+        .file_name()
+        .ok_or_else(|| anyhow!("{dest} does not have a file name"))?
+        .to_str()
+        .ok_or_else(|| anyhow!("{dest}'s file name is not UTF8"))?
+        .to_owned();
+    let push_tmp_path = format!("/tmp/{file_name}");
+    let mut hasher = Sha256::new();
+    hasher.update(payload);
+    let file_hash_bytes = hasher.finalize();
+    let file_hash = format!("{file_hash_bytes:x}");
+    #[allow(clippy::useless_asref)]
+    adb_device.push(&mut payload.as_ref(), &push_tmp_path)?;
+    at_syscmd(serial_interface, &format!("mv {push_tmp_path} {dest}")).await?;
+    let file_info = adb_device
+        .stat(dest)
+        .context("Failed to stat transfered file")?;
+    if file_info.file_size == 0 {
+        bail!("File transfer unseccessful\nFile is empty");
+    }
+    let ouput = adb_command(adb_device, &["sha256sum", dest])?;
+    if !ouput.contains(&file_hash) {
+        bail!("File transfer unseccessful\nBad hash expected {file_hash} got {ouput}");
+    }
+    Ok(())
+}
+
+fn adb_command(adb_device: &mut ADBUSBDevice, command: &[&str]) -> Result<String> {
+    let mut buf = Vec::<u8>::new();
+    adb_device.shell_command(command, &mut buf)?;
+    Ok(String::from_utf8_lossy(&buf).into_owned())
+}
+
+async fn wait_for_adb_shell() -> Result<ADBUSBDevice> {
+    const MAX_FAILURES: u32 = 10;
+    let mut failures = 0;
+    loop {
+        match ADBUSBDevice::new(VENDOR_ID, PRODUCT_ID) {
+            Ok(dev) => match adb_echo_test(dev).await {
+                Ok(dev) => return Ok(dev),
+                Err(e) => {
+                    if failures > MAX_FAILURES {
+                        return Err(e);
+                    } else {
+                        sleep(Duration::from_secs(1)).await;
+                        failures += 1;
+                    }
+                }
+            },
+            Err(RustADBError::IOError(e)) if e.kind() == ErrorKind::ResourceBusy => {
+                bail!(ORBIC_BUSY);
+            }
+            Err(RustADBError::DeviceNotFound(_)) => {
+                wait_for_usb_device(VENDOR_ID, PRODUCT_ID).await?;
+            }
+            Err(e) => {
+                if failures > MAX_FAILURES {
+                    return Err(e.into());
+                } else {
+                    sleep(Duration::from_secs(1)).await;
+                    failures += 1;
+                }
+            }
+        }
+    }
+}
+
+async fn adb_echo_test(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
+    let mut buf = Vec::<u8>::new();
+    // Random string to echo
+    let test_echo = "qwertyzxcvbnm";
+    let thread = std::thread::spawn(move || {
+        // This call to run a shell command is run on a separate thread because it can block
+        // indefinitely until the command runs, which is undesirable.
+        adb_device.shell_command(&["echo", test_echo], &mut buf)?;
+        Ok::<(ADBUSBDevice, Vec<u8>), RustADBError>((adb_device, buf))
+    });
+    sleep(Duration::from_secs(1)).await;
+    if thread.is_finished() {
+        if let Ok(Ok((dev, buf))) = thread.join() {
+            if let Ok(s) = std::str::from_utf8(&buf) {
+                if s.contains(test_echo) {
+                    return Ok(dev);
+                }
+            }
+        }
+    }
+    //  I'd like to kill the background thread here if that was possible.
+    bail!("Could not communicate with the Orbic. Try disconnecting and reconnecting.");
+}
+
+async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
+    loop {
+        let mut watcher = nusb::watch_devices()?;
+        while let Some(event) = watcher.next().await {
+            if let HotplugEvent::Connected(dev) = event {
+                if dev.vendor_id() == vendor_id && dev.product_id() == product_id {
+                    return Ok(());
+                }
+            }
         }
     }
 }
@@ -42,13 +306,13 @@ async fn main() -> Result<()> {
 /// Sends an AT command to the usb device over the serial port
 ///
 /// First establish a USB handle and context by calling `open_orbic(<T>)
-async fn send_command(interface: Interface, command: &str) -> Result<()> {
+async fn at_syscmd(interface: &Interface, command: &str) -> Result<()> {
     let mut data = String::new();
     data.push_str("\r\n");
-    data.push_str(command);
+    data.push_str(&format!("AT+SYSCMD={command}"));
     data.push_str("\r\n");
 
-    let timeout = Duration::from_secs(1);
+    let timeout = Duration::from_secs(2);
 
     let enable_serial_port = Control {
         control_type: ControlType::Class,
@@ -89,8 +353,7 @@ async fn send_command(interface: Interface, command: &str) -> Result<()> {
     // the garbage with `from_utf8_lossy` and look for our expected success string.
     let responsestr = String::from_utf8_lossy(&response);
     if !responsestr.contains("\r\nOK\r\n") {
-        println!("Received unexpected response: {0}", responsestr);
-        std::process::exit(1);
+        bail!("Received unexpected response: {0}", responsestr);
     }
 
     Ok(())
@@ -107,7 +370,7 @@ fn enable_command_mode() -> Result<()> {
 
     let timeout = Duration::from_secs(1);
 
-    if let Some(device) = open_device(0x05c6, 0xf626)? {
+    if let Some(device) = open_usb_device(VENDOR_ID, 0xf626)? {
         let enable_command_mode = Control {
             control_type: ControlType::Vendor,
             recipient: Recipient::Device,
@@ -135,7 +398,7 @@ fn enable_command_mode() -> Result<()> {
 /// Get an Interface for the orbic device
 fn open_orbic() -> Result<Option<Interface>> {
     // Device after initial mode switch
-    if let Some(device) = open_device(0x05c6, 0xf601)? {
+    if let Some(device) = open_usb_device(VENDOR_ID, PRODUCT_ID)? {
         let interface = device
             .detach_and_claim_interface(1) // will reattach drivers on release
             .context("detach_and_claim_interface(1) failed")?;
@@ -143,7 +406,7 @@ fn open_orbic() -> Result<Option<Interface>> {
     }
 
     // Device with rndis enabled as well
-    if let Some(device) = open_device(0x05c6, 0xf622)? {
+    if let Some(device) = open_usb_device(VENDOR_ID, 0xf622)? {
         let interface = device
             .detach_and_claim_interface(1) // will reattach drivers on release
             .context("detach_and_claim_interface(1) failed")?;
@@ -154,7 +417,7 @@ fn open_orbic() -> Result<Option<Interface>> {
 }
 
 /// General function to open a USB device
-fn open_device(vid: u16, pid: u16) -> Result<Option<Device>> {
+fn open_usb_device(vid: u16, pid: u16) -> Result<Option<Device>> {
     let devices = match nusb::list_devices() {
         Ok(d) => d,
         Err(_) => return Ok(None),
