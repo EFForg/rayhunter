@@ -62,7 +62,7 @@ async fn run_function() -> Result<(), Error> {
     let Args { command } = Args::parse();
 
     match command {
-        Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi. Currently only Hardware Revision v3 is supported.")?,
+        Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         Command::Orbic(_) => orbic::install().await.context("Failed to install rayhunter on the Orbic RC400L")?,
         Command::Util(subcommand) => match subcommand.command {
             UntilSubCommand::Serial(serial_cmd) => {
