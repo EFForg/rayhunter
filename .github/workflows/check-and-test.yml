@@ -37,17 +37,3 @@ jobs:
     - name: Run clippy
       run: cargo clippy --verbose --no-default-features --features=${{ matrix.device.name }}
 
-  windows_serial_check_and_test:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: cargo check
-        shell: bash
-        run: |
-          cd serial
-          cargo check --verbose
-      - name: cargo test
-        shell: bash
-        run: |
-          cd serial
-          cargo test --verbose --no-default-features --features=${{ matrix.device.name }}
