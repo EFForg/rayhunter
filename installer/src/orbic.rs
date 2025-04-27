@@ -13,7 +13,7 @@ use tokio_stream::StreamExt;
 
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
-const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
+pub const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
 Make sure your device is plugged in and turned on.
 
 If you're sure you've plugged in an Orbic device via USB, there may be a bug in
@@ -303,13 +303,16 @@ async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
     }
 }
 
+async fn at_syscmd(interface: &Interface, command: &str) -> Result<()> {
+    send_serial_cmd(interface, &format!("AT+SYSCMD={command}")).await
+}
 /// Sends an AT command to the usb device over the serial port
 ///
 /// First establish a USB handle and context by calling `open_orbic(<T>)
-async fn at_syscmd(interface: &Interface, command: &str) -> Result<()> {
+pub async fn send_serial_cmd(interface: &Interface, command: &str) -> Result<()> {
     let mut data = String::new();
     data.push_str("\r\n");
-    data.push_str(&format!("AT+SYSCMD={command}"));
+    data.push_str(command);
     data.push_str("\r\n");
 
     let timeout = Duration::from_secs(2);
@@ -362,7 +365,7 @@ async fn at_syscmd(interface: &Interface, command: &str) -> Result<()> {
 /// Send a command to switch the device into generic mode, exposing serial
 ///
 /// If the device reboots while the command is still executing you may get a pipe error here, not sure what to do about this race condition.
-fn enable_command_mode() -> Result<()> {
+pub fn enable_command_mode() -> Result<()> {
     if open_orbic()?.is_some() {
         println!("Device already in command mode. Doing nothing...");
         return Ok(());
@@ -396,7 +399,7 @@ fn enable_command_mode() -> Result<()> {
 }
 
 /// Get an Interface for the orbic device
-fn open_orbic() -> Result<Option<Interface>> {
+pub fn open_orbic() -> Result<Option<Interface>> {
     // Device after initial mode switch
     if let Some(device) = open_usb_device(VENDOR_ID, PRODUCT_ID)? {
         let interface = device
