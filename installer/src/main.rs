@@ -1,6 +1,7 @@
 use anyhow::{Context, Error};
 use clap::{Parser, Subcommand};
 
+mod orbic;
 mod tplink;
 
 pub static CONFIG_TOML: &[u8] = include_bytes!("../../dist/config.toml.example");
@@ -15,6 +16,8 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 enum Command {
+    /// Install rayhunter on the Orbic Orbic RC400L.
+    InstallOrbic(InstallOrbic),
     /// Install rayhunter on the TP-Link M7350.
     InstallTplink(InstallTpLink),
 }
@@ -39,13 +42,24 @@ struct InstallTpLink {
     admin_ip: String,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
+#[derive(Parser, Debug)]
+struct InstallOrbic {}
+
+async fn run_function() -> Result<(), Error> {
     let Args { command } = Args::parse();
 
     match command {
         Command::InstallTplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi. Currently only Hardware Revision v3 is supported.")?,
+        Command::InstallOrbic(_) => orbic::install().await.context("Failed to install rayhunter on the Orbic RC400L")?,
     }
 
     Ok(())
+}
+
+#[tokio::main]
+async fn main() {
+    if let Err(e) = run_function().await {
+        eprintln!("{e:?}");
+        std::process::exit(1);
+    }
 }

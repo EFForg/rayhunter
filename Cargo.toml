@@ -3,8 +3,8 @@
 members = [
     "lib",
     "bin",
-    "serial",
     "rootshell",
-    "telcom-parser", "installer",
+    "telcom-parser",
+    "installer",
 ]
 resolver = "2"
