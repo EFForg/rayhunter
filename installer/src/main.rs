@@ -17,9 +17,9 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Install rayhunter on the Orbic Orbic RC400L.
-    InstallOrbic(InstallOrbic),
+    Orbic(InstallOrbic),
     /// Install rayhunter on the TP-Link M7350.
-    InstallTplink(InstallTpLink),
+    Tplink(InstallTpLink),
 }
 
 #[derive(Parser, Debug)]
@@ -41,8 +41,8 @@ async fn run_function() -> Result<(), Error> {
     let Args { command } = Args::parse();
 
     match command {
-        Command::InstallTplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi. Currently only Hardware Revision v3 is supported.")?,
-        Command::InstallOrbic(_) => orbic::install().await.context("Failed to install rayhunter on the Orbic RC400L")?,
+        Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi. Currently only Hardware Revision v3 is supported.")?,
+        Command::Orbic(_) => orbic::install().await.context("Failed to install rayhunter on the Orbic RC400L")?,
     }
 
     Ok(())
