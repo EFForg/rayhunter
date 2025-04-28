@@ -10,10 +10,12 @@ Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 
 ## The Hardware
 
-Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. It may work on other Orbics and other
-Linux/Qualcom devices, but this is the only one we have tested on.
-You can buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
-or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
+Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. It may
+work on other Orbics and other Linux/Qualcom devices, but this is the only one
+we have tested on. You can buy the orbic [using bezos
+bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
+or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l). Please ensure
+that the [Orbic works in your country](#orbic) before buying.
 
 ## Setup (Mac, Linux)
 
@@ -84,17 +86,19 @@ If you've received a Rayhunter warning and would like to help us with our resear
 
 Please note that this file may contain sensitive information such as your IMSI and the unique IDs of cell towers you were near which could be used to ascertain your location at the time.
 
-### Does Rayhunter work outside of the US?
+<a name="orbic"></a>
 
-**Probably**. Some Rayhunter users have reported successfully using it in other countries with unlocked devices and SIM cards from local telcos. We can't guarantee whether or not it will work for you though.
+### Does Rayhunter work outside of the US, or on any other devices besides the Orbic RC400L?
+
+**Maybe**. Rayhunter currently only supports the Orbic RC400L, which itself only works in the US and some other countries. Please check whether the Orbic RC400L supports the right frequency bands for your purpose before buying.
+
+We have not tested Rayhunter on any other hardware but we would love to expand the supported platforms. We will consider giving official support to any hardware platform that can be bought for around $20-30USD. The Rayhunter daemon should theoretically work on any Linux/Android device that has a qualcomm chip with a `/dev/diag` interface and root access, though our installer script has only been tested with an Orbic. If you get it working on another device, please let us know!
+
+There is work underway to support [TP-Link M7350](https://github.com/EFForg/rayhunter/issues/186) to support more frequency bands and therefore support most of Europe.
 
 ### Should I get a locked or unlocked orbic device? What is the difference?
 
 If you want to use a non-Verizon SIM card you will probably need an unlocked device. But it's not clear how locked the locked devices are nor how to unlock them, we welcome any experimentation and information regarding the use of unlocked devices.
-
-### Does Rayhunter work on any other devices besides the Orbic RC400L?
-
-**Maybe**. We have not tested Rayhunter on any other hardware but we would love to expand the supported platforms. We will consider giving official support to any hardware platform that can be bought for around $20-30USD. The Rayhunter daemon should theoretically work on any Linux/Android device that has a qualcomm chip with a `/dev/diag` interface and root access, though our installer script has only been tested with an Orbic. If you get it working on another device, please let us know!
 
 ### How do I delete capture files from the Rayhunter device?
 
