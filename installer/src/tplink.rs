@@ -281,7 +281,7 @@ async fn tplink_launch_telnet_v5(admin_ip: String) -> Result<(), Error> {
 
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
 
-    while telnet_send_command(addr, &format!("true"), "exit code 0")
+    while telnet_send_command(addr, "true", "exit code 0")
         .await
         .is_err()
     {
