@@ -10,15 +10,17 @@ Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot.
 
 ## The Hardware
 
-Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. It may work on other Orbics and other
-Linux/Qualcom devices, but this is the only one we have tested on.
-You can buy the orbic [using bezos bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
-or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
+Rayhunter has been built and tested for the Orbic RC400L mobile hotspot. It may
+work on other Orbics and other Linux/Qualcom devices, but this is the only one
+we have tested on. You can buy the orbic [using bezos
+bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
+or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l). Please ensure
+that the [Orbic works in your country](#orbic) before buying.
 
 ## Setup (macOS, Linux)
 
 1. Download the latest `release.tar` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
-2. Unzip the `release.tar`. Open the terminal and navigate to the folder
+2. Decompress the `release.tar` archive. Open the terminal and navigate to the folder
 
     ```bash
     mkdir ~/Downloads/release
@@ -84,17 +86,19 @@ If you've received a Rayhunter warning and would like to help us with our resear
 
 Please note that this file may contain sensitive information such as your IMSI and the unique IDs of cell towers you were near which could be used to ascertain your location at the time.
 
-### Does Rayhunter work outside of the US?
+<a name="orbic"></a>
 
-**Probably**. Some Rayhunter users have reported successfully using it in other countries with unlocked devices and SIM cards from local telcos. We can't guarantee whether or not it will work for you though.
+### Does Rayhunter work outside of the US, or on any other devices besides the Orbic RC400L?
+
+**Maybe**. Rayhunter currently only supports the Orbic RC400L, which itself only works in the US and some other countries. Please check whether the Orbic RC400L supports the right frequency bands for your purpose before buying.
+
+We have not tested Rayhunter on any other hardware but we would love to expand the supported platforms. We will consider giving official support to any hardware platform that can be bought for around $20-30USD. The Rayhunter daemon should theoretically work on any Linux/Android device that has a qualcomm chip with a `/dev/diag` interface and root access, though our installer script has only been tested with an Orbic. If you get it working on another device, please let us know!
+
+There is work underway to support [TP-Link M7350](https://github.com/EFForg/rayhunter/issues/186) to support more frequency bands and therefore support most of Europe.
 
 ### Should I get a locked or unlocked orbic device? What is the difference?
 
 If you want to use a non-Verizon SIM card you will probably need an unlocked device. But it's not clear how locked the locked devices are nor how to unlock them, we welcome any experimentation and information regarding the use of unlocked devices.
-
-### Does Rayhunter work on any other devices besides the Orbic RC400L?
-
-**Maybe**. We have not tested Rayhunter on any other hardware but we would love to expand the supported platforms. We will consider giving official support to any hardware platform that can be bought for around $20-30USD. The Rayhunter daemon should theoretically work on any Linux/Android device that has a qualcomm chip with a `/dev/diag` interface and root access, though our installer script has only been tested with an Orbic. If you get it working on another device, please let us know!
 
 ### How do I delete capture files from the Rayhunter device?
 
@@ -112,15 +116,27 @@ Building Rayhunter from source, either for development or because the install sc
     * [linux](https://askubuntu.com/questions/652936/adding-android-sdk-platform-tools-to-path-downloaded-from-umake)
     * [macOS](https://www.repeato.app/setting-up-adb-on-macos-a-step-by-step-guide/)
     * [Windows](https://medium.com/@yadav-ajay/a-step-by-step-guide-to-setting-up-adb-path-on-windows-0b833faebf18)
+* Install `curl` on your computer to run the install scripts. It is not needed to build binaries.
 
-### If you're on x86 linux
+### Install Rust targets
 
-Install Rust the usual way and then install cross compiling dependences:
+[Install Rust the usual way](https://www.rust-lang.org/tools/install). Then,
 
-```bash
-sudo apt install curl build-essential libc6-armhf-cross libc6-dev-armhf-cross gcc-arm-linux-gnueabihf
-rustup target add x86_64-unknown-linux-gnu
-rustup target add armv7-unknown-linux-gnueabihf
+- install the cross-compilation target for the device rayhunter will run on:
+```sh
+rustup target add armv7-unknown-linux-musleabihf
+```
+
+- install the statically compiled target for your host machine to build the binary installer [`serial`](./serial).
+```sh
+# check which toolchain you have installed by default with
+rustup show
+# now install the correct variant for your host platform, one of:
+rustup target add x86_64-unknown-linux-musl
+rustup target add aarch64-unknown-linux-musl
+rustup target add aarch64-apple-darwin
+rustup target add x86_64-apple-darwin
+rustup target add x86_64-pc-windows-gnu
 ```
 
 Now you can root your device and install Rayhunter by running `./tools/install-dev.sh`

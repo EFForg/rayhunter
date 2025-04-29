@@ -9,9 +9,9 @@
 # ./tools/run-docker-devenv
 #
 # Inside the shell:
-# cargo build --bin rayhunter-daemon --target armv7-unknown-linux-gnueabihf --release
+# cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --release
 #
-# Your output binary is in ./target/armv7-unknown-linux-gnueabihf/release/rayhunter-daemon
+# Your output binary is in ./target/armv7-unknown-linux-musleabihf/release/rayhunter-daemon
 
 docker build -t rayhunter-devenv -f tools/devenv.dockerfile .
 exec docker run --user $UID:$GID -v ./:/workdir -w /workdir -it rayhunter-devenv "$@"

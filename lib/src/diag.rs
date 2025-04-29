@@ -25,14 +25,14 @@ pub struct RequestContainer {
 }
 
 #[derive(Debug, Clone, PartialEq, DekuWrite)]
-#[deku(type = "u32")]
+#[deku(id_type = "u32")]
 pub enum Request {
     #[deku(id = "115")]
     LogConfig(LogConfigRequest),
 }
 
 #[derive(Debug, Clone, PartialEq, DekuWrite)]
-#[deku(type = "u32", endian = "little")]
+#[deku(id_type = "u32", endian = "little")]
 pub enum LogConfigRequest {
     #[deku(id = "1")]
     RetrieveIdRanges,
@@ -46,7 +46,7 @@ pub enum LogConfigRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-#[deku(type = "u32", endian = "little")]
+#[deku(id_type = "u32", endian = "little")]
 pub enum DataType {
     #[deku(id = "32")]
     UserSpace,
@@ -121,7 +121,7 @@ pub struct HdlcEncapsulatedMessage {
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-#[deku(type = "u8")]
+#[deku(id_type = "u8")]
 pub enum Message {
     #[deku(id = "16")]
     Log {
