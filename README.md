@@ -51,6 +51,46 @@ that the [Orbic works in your country](#orbic) before buying.
 
 * **Windows:** We don't currently support automated installs on Windows, you will have to follow the instructions in the **Development** section below.
 
+Below are *unsupported* installation instructions that have proven successful.
+
+1. Install Windows Subsystem for Linux (WSL)
+
+    ```powershell
+    wsl --install
+    ```
+
+2. Follow the [Microsoft instructions on how to install USBIPD-WIN](https://learn.microsoft.com/en-us/windows/wsl/connect-usb), which allows WSL to communicate with USB devices
+3. Follow [steps 1-3 from the Setup instructions above](#setup-macos-linux)
+4. In an administrator powershell prompt, run `usbipd list`. Locate the device, like in the example below. **Note the BUSID**, you will need this.
+
+    ```powershell
+    PS C:\> usbipd list
+    Connected:
+    BUSID  VID:PID    DEVICE                                                        STATE
+    2-8    <GUID>     Remote NDIS based Internet Sharing Device                     Not shared
+    ```
+5. Bind the USB device and then attach it to WSL with the commands below. Be sure to replace `BUSID` with the one you captured from the previous step.
+
+    ```powershell
+    PS C:\> usbipd bind --busid BUSID
+    PS C:\> usbipd attach --wsl --busid BUSID
+    ```
+
+    If successful, you should see an output like below
+
+    ```powershell
+    usbipd: info: Using WSL distribution 'Ubuntu' to attach; the device will be available in all WSL 2 distributions.
+    usbipd: info: Detected networking mode 'nat'.
+    usbipd: info: Using IP address 172.25.48.1 to reach the host.
+    ```
+
+    Keep this command prompt open for later steps.
+
+6. Open up your WSL prompt, by searching for `wsl` in Windows start menu.
+7. Navigate to the location of the `install.sh` script.
+8. Run `sudo ./install.sh`.
+9. Every time the device restarts, run the `usbipd attach --wsl --busid BUSID` in the administrator powershell command prompt
+
 ## Updating Rayhunter
 
 Great news: if you've successfully installed rayhunter, you already know how to update it! Our update process is identical to the setup process: simply download the latest release and follow the steps in the [setup section](#setup-macos-linux).
