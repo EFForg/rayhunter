@@ -1,12 +1,82 @@
 
 # cargo-vet imports lock
 
+[[publisher.anyhow]]
+version = "1.0.97"
+when = "2025-03-03"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.async-trait]]
+version = "0.1.77"
+when = "2024-01-02"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
 [[publisher.core-foundation]]
 version = "0.9.3"
 when = "2022-02-07"
 user-id = 5946
 user-login = "jrmuizel"
 user-name = "Jeff Muizelaar"
+
+[[publisher.proc-macro2]]
+version = "1.0.95"
+when = "2025-04-16"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.ryu]]
+version = "1.0.17"
+when = "2024-02-19"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.serde_json]]
+version = "1.0.114"
+when = "2024-02-20"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.serde_path_to_error]]
+version = "0.1.15"
+when = "2024-01-02"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.syn]]
+version = "1.0.109"
+when = "2023-02-24"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.syn]]
+version = "2.0.50"
+when = "2024-02-19"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.thiserror]]
+version = "1.0.57"
+when = "2024-02-11"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
+
+[[publisher.thiserror-impl]]
+version = "1.0.57"
+when = "2024-02-11"
+user-id = 3618
+user-login = "dtolnay"
+user-name = "David Tolnay"
 
 [[publisher.windows-sys]]
 version = "0.48.0"
