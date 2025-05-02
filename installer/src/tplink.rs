@@ -227,7 +227,10 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
         .unwrap_or(path);
 
     let uri = format!("http://{}{}", state.admin_ip, path_query);
-    let is_settings_js = path_query == "/js/settings.min.js";
+
+    // on version 5.2, this path is /settings.min.js
+    // on other versions, this path is /js/settings.min.js
+    let is_settings_js = path.ends_with("/settings.min.js");
 
     *req.uri_mut() = Uri::try_from(uri).unwrap();
 
