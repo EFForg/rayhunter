@@ -86,7 +86,7 @@ async fn tplink_run_install(skip_sdcard: bool, admin_ip: String) -> Result<(), E
 
     #[cfg(not(feature = "vendor"))]
     let rayhunter_daemon_bin =
-        &tokio::fs::read("target/armv7-unknown-linux-gnueabihf/release/rayhunter-daemon").await?;
+        &tokio::fs::read("target/armv7-unknown-linux-musleabihf/release/rayhunter-daemon").await?;
 
     telnet_send_file(addr, "/media/card/rayhunter-daemon", rayhunter_daemon_bin).await?;
     telnet_send_file(
