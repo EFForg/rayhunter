@@ -90,7 +90,17 @@ Please note that this file may contain sensitive information such as your IMSI a
 
 ### Does Rayhunter work outside of the US, or on any other devices besides the Orbic RC400L?
 
-**Maybe**. Rayhunter currently only supports the Orbic RC400L, which itself only works in the US and some other countries. Please check whether the Orbic RC400L supports the right frequency bands for your purpose before buying.
+**Maybe**. Rayhunter currently only supports the Orbic RC400L, which itself only works in the US and some other countries. [Please check](https://www.frequencycheck.com/countries/) whether the Orbic RC400L supports the right frequency bands for your purpose before buying.
+
+Orbic RC400L Supported Bands
+| Frequency | Band          |
+| ------- | ------------------ |
+| 5G (wideband,midband,nationwide)  | n260/n261, n77, n2/5/48/66 | 
+| 4G |    2/4/5/12/13/48/66       |
+| Global & Roaming | n257/n78     |
+| Wifi 2.4Ghz | b/g/n |
+| Wifi 5Ghz | a/ac/ax |
+| Wifi 6 | :white_check_mark: |
 
 We have not tested Rayhunter on any other hardware but we would love to expand the supported platforms. We will consider giving official support to any hardware platform that can be bought for around $20-30USD. The Rayhunter daemon should theoretically work on any Linux/Android device that has a qualcomm chip with a `/dev/diag` interface and root access, though our installer script has only been tested with an Orbic. If you get it working on another device, please let us know!
 
