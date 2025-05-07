@@ -23,19 +23,24 @@ use crate::InstallTpLink;
 
 type HttpProxyClient = hyper_util::client::legacy::Client<HttpConnector, Body>;
 
-pub async fn main_tplink(args: InstallTpLink) -> Result<(), Error> {
-    let InstallTpLink {
+pub async fn main_tplink(
+    InstallTpLink {
         skip_sdcard,
         admin_ip,
-    } = args;
+    }: InstallTpLink,
+) -> Result<(), Error> {
+    start_telnet(&admin_ip).await?;
+    tplink_run_install(skip_sdcard, admin_ip).await
+}
 
+#[derive(Deserialize)]
+struct V3RootResponse {
+    result: u64,
+}
+
+pub async fn start_telnet(admin_ip: &str) -> Result<(), Error> {
     let qcmap_web_cgi_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi");
     let client = reqwest::Client::new();
-
-    #[derive(Deserialize)]
-    struct RootResponse {
-        result: u64,
-    }
 
     println!("Launching telnet on the device");
 
@@ -48,9 +53,9 @@ pub async fn main_tplink(args: InstallTpLink) -> Result<(), Error> {
 
     if response.status() == 404 {
         println!("Got a 404 trying to run exploit for hardware revision v3, trying v5 exploit");
-        tplink_launch_telnet_v5(admin_ip.clone()).await?;
+        tplink_launch_telnet_v5(admin_ip).await?;
     } else {
-        let RootResponse { result } = response.error_for_status()?.json().await?;
+        let V3RootResponse { result } = response.error_for_status()?.json().await?;
 
         if result != 0 {
             anyhow::bail!("Bad result code when trying to root device: {result}");
@@ -59,9 +64,10 @@ pub async fn main_tplink(args: InstallTpLink) -> Result<(), Error> {
         println!("Detected hardware revision v3");
     }
 
-    println!("Succeeded in rooting the device!");
-
-    tplink_run_install(skip_sdcard, admin_ip).await
+    println!(
+        "Succeeded in rooting the device! Now you can use 'telnet {admin_ip}' to get a root shell. Use './installer util tplink-start-telnet' to root again without installing rayhunter."
+    );
+    Ok(())
 }
 
 async fn tplink_run_install(skip_sdcard: bool, admin_ip: String) -> Result<(), Error> {
@@ -70,7 +76,14 @@ async fn tplink_run_install(skip_sdcard: bool, admin_ip: String) -> Result<(), E
 
     if !skip_sdcard {
         println!("Mounting sdcard");
-        telnet_send_command(addr, "mount /dev/mmcblk0p1 /media/card", "exit code 0").await.context("Rayhunter needs a FAT-formatted SD card to function for more than a few minutes. Insert one and rerun this installer, or pass --skip-sdcard")?;
+        if telnet_send_command(addr, "mount | grep -q /media/card", "exit code 0")
+            .await
+            .is_err()
+        {
+            telnet_send_command(addr, "mount /dev/mmcblk0p1 /media/card", "exit code 0").await.context("Rayhunter needs a FAT-formatted SD card to function for more than a few minutes. Insert one and rerun this installer, or pass --skip-sdcard")?;
+        } else {
+            println!("sdcard already mounted");
+        }
     }
 
     // there is too little space on the internal flash to store anything, but the initrd script
@@ -79,7 +92,12 @@ async fn tplink_run_install(skip_sdcard: bool, admin_ip: String) -> Result<(), E
     telnet_send_command(addr, "mkdir -p /data", "exit code 0").await?;
     telnet_send_command(addr, "ln -sf /media/card /data/rayhunter", "exit code 0").await?;
 
-    telnet_send_file(addr, "/media/card/config.toml", crate::CONFIG_TOML).await?;
+    telnet_send_file(
+        addr,
+        "/media/card/config.toml",
+        crate::CONFIG_TOML.as_bytes(),
+    )
+    .await?;
 
     #[cfg(feature = "vendor")]
     let rayhunter_daemon_bin = include_bytes!("../../rayhunter-daemon-tplink/rayhunter-daemon");
@@ -92,7 +110,7 @@ async fn tplink_run_install(skip_sdcard: bool, admin_ip: String) -> Result<(), E
     telnet_send_file(
         addr,
         "/etc/init.d/rayhunter_daemon",
-        crate::RAYHUNTER_DAEMON_INIT,
+        get_rayhunter_daemon().as_bytes(),
     )
     .await?;
 
@@ -260,7 +278,7 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
     Ok(response)
 }
 
-async fn tplink_launch_telnet_v5(admin_ip: String) -> Result<(), Error> {
+async fn tplink_launch_telnet_v5(admin_ip: &str) -> Result<(), Error> {
     let client: HttpProxyClient =
         hyper_util::client::legacy::Client::<(), ()>::builder(TokioExecutor::new())
             .build(HttpConnector::new());
@@ -270,7 +288,7 @@ async fn tplink_launch_telnet_v5(admin_ip: String) -> Result<(), Error> {
         .route("/{*path}", any(handler))
         .with_state(AppState {
             client,
-            admin_ip: admin_ip.clone(),
+            admin_ip: admin_ip.to_owned(),
         });
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:4000")
@@ -294,4 +312,22 @@ async fn tplink_launch_telnet_v5(admin_ip: String) -> Result<(), Error> {
     handle.abort();
 
     Ok(())
+}
+
+fn get_rayhunter_daemon() -> String {
+    // Even though TP-Link eventually auto-mounts the SD card, it sometimes does so too late. And
+    // changing the order in which daemons are started up seems to not work reliably.
+    //
+    // This part of the daemon dynamically generated because we may have to eventually add logic
+    // specific to a particular hardware revision here.
+    crate::RAYHUNTER_DAEMON_INIT.replace(
+        "#RAYHUNTER-PRESTART",
+        "mount /dev/mmcblk0p1 /media/card || true",
+    )
+}
+
+#[test]
+fn test_get_rayhunter_daemon() {
+    let s = get_rayhunter_daemon();
+    assert!(s.contains("mount /dev/mmcblk0p1 /media/card"));
 }

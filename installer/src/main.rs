@@ -4,8 +4,8 @@ use clap::{Parser, Subcommand};
 mod orbic;
 mod tplink;
 
-pub static CONFIG_TOML: &[u8] = include_bytes!("../../dist/config.toml.example");
-pub static RAYHUNTER_DAEMON_INIT: &[u8] = include_bytes!("../../dist/scripts/rayhunter_daemon");
+pub static CONFIG_TOML: &str = include_str!("../../dist/config.toml.example");
+pub static RAYHUNTER_DAEMON_INIT: &str = include_str!("../../dist/scripts/rayhunter_daemon");
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -42,13 +42,22 @@ struct InstallOrbic {}
 #[derive(Parser, Debug)]
 struct Util {
     #[command(subcommand)]
-    command: UntilSubCommand,
+    command: UtilSubCommand,
 }
 
 #[derive(Subcommand, Debug)]
-enum UntilSubCommand {
+enum UtilSubCommand {
     /// Send a serial command to the Orbic.
     Serial(Serial),
+    /// Root the tplink and launch telnetd.
+    TplinkStartTelnet(TplinkStartTelnet),
+}
+
+#[derive(Parser, Debug)]
+struct TplinkStartTelnet {
+    /// IP address for TP-Link admin interface, if custom.
+    #[arg(long, default_value = "192.168.0.1")]
+    admin_ip: String,
 }
 
 #[derive(Parser, Debug)]
@@ -65,7 +74,7 @@ async fn run_function() -> Result<(), Error> {
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         Command::Orbic(_) => orbic::install().await.context("Failed to install rayhunter on the Orbic RC400L")?,
         Command::Util(subcommand) => match subcommand.command {
-            UntilSubCommand::Serial(serial_cmd) => {
+            UtilSubCommand::Serial(serial_cmd) => {
                 if serial_cmd.root {
                     if !serial_cmd.command.is_empty() {
                         eprintln!("You cannot use --root and specify a command at the same time");
@@ -82,6 +91,9 @@ async fn run_function() -> Result<(), Error> {
                         None => bail!(orbic::ORBIC_NOT_FOUND),
                     }
                 }
+            }
+            UtilSubCommand::TplinkStartTelnet(options) => {
+                tplink::start_telnet(&options.admin_ip).await?;
             }
         }
     }

@@ -116,14 +116,14 @@ async fn setup_rayhunter(
         serial_interface,
         &mut adb_device,
         "/data/rayhunter/config.toml",
-        CONFIG_TOML,
+        CONFIG_TOML.as_bytes(),
     )
     .await?;
     install_file(
         serial_interface,
         &mut adb_device,
         "/etc/init.d/rayhunter_daemon",
-        RAYHUNTER_DAEMON_INIT,
+        RAYHUNTER_DAEMON_INIT.as_bytes(),
     )
     .await?;
     install_file(
