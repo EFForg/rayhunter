@@ -61,6 +61,21 @@ pub async fn start_telnet(admin_ip: &str) -> Result<(), Error> {
             anyhow::bail!("Bad result code when trying to root device: {result}");
         }
 
+        // resetting the language is important because otherwise the tplink's admin interface is
+        // unusuable.
+        let V3RootResponse { result } = client
+            .post(&qcmap_web_cgi_endpoint)
+            .body(r#"{"module": "webServer", "action": 1, "language": "en"}"#)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+
+        if result != 0 {
+            anyhow::bail!("Bad result code when trying to reset the language: {result}");
+        }
+
         println!("Detected hardware revision v3");
     }
 
