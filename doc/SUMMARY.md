@@ -12,5 +12,6 @@
   - [How we analyze a capture](./analyzing-a-capture.md)
 - [Supported devices](./supported-devices.md)
   - [TP-Link M7350](./tplink-m7350.md)
+  - [Orbic RC400L](./orbic.md)
 - [Support, feedback, and community](./support-feedback-community.md)
   - [Frequently Asked Questions](./faq.md)
