@@ -6,7 +6,7 @@ To uninstall Rayhunter, power on your Orbic device and connect to it via USB. Th
 
 Once in a rootshell, run:
 
-```
+```shell
 echo 3 > /usrdata/mode.cfg
 rm -rf /data/rayhunter /etc/init.d/rayhunter-daemon /bin/rootshell.sh
 reboot
