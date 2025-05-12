@@ -23,6 +23,6 @@ Orbic RC400L Supported Bands
 | Wifi 6 | :white_check_mark: |
 
 
-## TPLink M7350 HW rev. 3, 5, 9
+## TPLink M7350
 
-There is work underway to support [TP-Link M7350](https://github.com/EFForg/rayhunter/issues/186) to support more frequency bands and therefore support most of Europe.
+See [TP-Link M7350](./tplink-m7350.md)
