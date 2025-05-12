@@ -20,7 +20,7 @@ Building Rayhunter from source, either for development or because the install sc
 rustup target add armv7-unknown-linux-musleabihf
 ```
 
-- install the statically compiled target for your host machine to build the binary installer [`serial`](./serial).
+- install the statically compiled target for your host machine to build the binary installer `serial`.
 ```sh
 # check which toolchain you have installed by default with
 rustup show
