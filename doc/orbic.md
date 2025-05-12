@@ -17,4 +17,4 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 | Global & Roaming | n257/n78     |
 | Wifi 2.4Ghz | b/g/n |
 | Wifi 5Ghz | a/ac/ax |
-| Wifi 6 | :white_check_mark: |
+| Wifi 6 | 🮱 |
