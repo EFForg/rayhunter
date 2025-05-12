@@ -1,5 +1,5 @@
 [book]
-authors = ["the rayhunter Authors"]
+authors = ["The Rayhunter Team"]
 language = "en"
 src = "doc"
-title = "rayhunter Documentation"
+title = "Rayhunter - An IMSI Catcher Catcher"

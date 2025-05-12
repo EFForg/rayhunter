@@ -1,4 +1,15 @@
 # Summary
 
+[Introduction](./introduction.md)
 - [Installation](./installation.md)
-- [Supported Devices](./supported_devices.md)
+  - [Installing from the latest release](./installing-from-release.md)
+    - [Installing from the latest release (Windows)](./installing-from-release-windows.md)
+  - [Installing from source](./installing-from-source.md)
+  - [Updating Rayhunter](./updating-rayhunter.md)
+- [Uninstalling](./uninstalling.md)
+- [Using Rayhunter](./using-rayhunter.md)
+  - [Rayhunter's hueristics](./heuristics.md)
+  - [How we analyze a capture](./analyzing-a-capture.md)
+- [Supported devices](./supported-devices.md)
+- [Support, feedback, and community](./support-feedback-community.md)
+  - [Frequently Asked Questions](./faq.md)
