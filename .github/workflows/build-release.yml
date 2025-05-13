@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, "release-*"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -99,14 +99,21 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
         run: chmod +x serial-*/serial rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
-      - name: Setup release directory
-        run: mv rayhunter-daemon-* rootshell/rootshell serial-* dist
+      - name: Get Rayhunter version
+        id: get_version
+        run: echo "VERSION=$(grep '^version' bin/Cargo.toml | head -n 1 | cut -d'"' -f2)" >> $GITHUB_ENV
+      - name: Setup versioned release directory
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          mkdir "$VERSIONED_DIR"
+          mv dist/* "$VERSIONED_DIR"/
       - name: Archive release directory
-        run: tar -cvf release.tar -C dist .
-      # TODO: have this create a release directly
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          tar -cvf "$VERSIONED_DIR.tar" "$VERSIONED_DIR"
       - name: Upload release
         uses: actions/upload-artifact@v4
         with:
-          name: release.tar
-          path: release.tar
+          name: rayhunter-v${{ env.VERSION }}.tar
+          path: rayhunter-v${{ env.VERSION }}.tar
           if-no-files-found: error
