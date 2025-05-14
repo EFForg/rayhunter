@@ -8,7 +8,7 @@
   - [Updating Rayhunter](./updating-rayhunter.md)
 - [Uninstalling](./uninstalling.md)
 - [Using Rayhunter](./using-rayhunter.md)
-  - [Rayhunter's hueristics](./heuristics.md)
+  - [Rayhunter's heuristics](./heuristics.md)
   - [How we analyze a capture](./analyzing-a-capture.md)
 - [Supported devices](./supported-devices.md)
   - [TP-Link M7350](./tplink-m7350.md)
