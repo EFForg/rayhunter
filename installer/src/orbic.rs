@@ -4,12 +4,10 @@ use std::time::Duration;
 
 use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
 use anyhow::{Context, Result, anyhow, bail};
-use nusb::hotplug::HotplugEvent;
 use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
 use nusb::{Device, Interface};
 use sha2::{Digest, Sha256};
 use tokio::time::sleep;
-use tokio_stream::StreamExt;
 
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
@@ -263,7 +261,12 @@ async fn wait_for_adb_shell() -> Result<ADBUSBDevice> {
                 bail!(ORBIC_BUSY_MAC);
             }
             Err(RustADBError::DeviceNotFound(_)) => {
-                wait_for_usb_device(VENDOR_ID, PRODUCT_ID).await?;
+                tokio::time::timeout(
+                    Duration::from_secs(30),
+                    wait_for_usb_device(VENDOR_ID, PRODUCT_ID),
+                )
+                .await
+                .context("Timeout waiting for Orbic to reconnect")??;
             }
             Err(e) => {
                 if failures > MAX_FAILURES {
@@ -301,7 +304,10 @@ async fn adb_echo_test(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
     bail!("Could not communicate with the Orbic. Try disconnecting and reconnecting.");
 }
 
+#[cfg(not(target_os = "macos"))]
 async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
+    use nusb::hotplug::HotplugEvent;
+    use tokio_stream::StreamExt;
     loop {
         let mut watcher = nusb::watch_devices()?;
         while let Some(event) = watcher.next().await {
@@ -311,6 +317,19 @@ async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
                 }
             }
         }
+    }
+}
+
+#[cfg(target_os = "macos")]
+/// `nusb::watch_devices` doesn't appear to work on macOS to poll instead.
+async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
+    loop {
+        for device_info in nusb::list_devices()? {
+            if device_info.vendor_id() == vendor_id && device_info.product_id() == product_id {
+                return Ok(());
+            }
+        }
+        tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }
 
