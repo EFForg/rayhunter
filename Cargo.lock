@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "adb_client"
 version = "2.1.11"
-source = "git+https://github.com/gaykitty/adb_client.git?branch=rayhunter#6a8054f0e04be9d669e06631e23882e6403d6e1e"
+source = "git+https://github.com/gaykitty/adb_client.git?branch=rayhunter#1fb0f4f5cbcc95bbbb98db4ee2f1e53a1005aa81"
 dependencies = [
  "async-io",
  "base64",
@@ -585,7 +585,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "117725a109d387c937a1533ce01b450cbde6b88abceea8473c4d7a85853cda3c"
 dependencies = [
  "lazy_static",
- "windows-sys 0.59.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
