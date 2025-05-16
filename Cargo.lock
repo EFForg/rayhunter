@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "adb_client"
 version = "2.1.11"
-source = "git+https://github.com/gaykitty/adb_client.git?branch=rayhunter#1fb0f4f5cbcc95bbbb98db4ee2f1e53a1005aa81"
+source = "git+https://github.com/gaykitty/adb_client.git?rev=1fb0f4f5cbcc95bbbb98db4ee2f1e53a1005aa81#1fb0f4f5cbcc95bbbb98db4ee2f1e53a1005aa81"
 dependencies = [
  "async-io",
  "base64",
