@@ -13,7 +13,7 @@
     });
 </script>
 
-<div class="container max-h-96 overflow-auto">
+<div class="container">
     {#if entry.analysis_report === undefined}
         <p>Report unavailable, try refreshing.</p>
     {:else if typeof(entry.analysis_report) === 'string'}
