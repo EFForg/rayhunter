@@ -30,7 +30,7 @@
 </script>
 
 <tr class="{status_row_color}">
-    <th class="font-bold p-2 bg-blue-100" scope='row'>{entry.name}</th>
+    <th class="font-bold p-2" scope='row'>{entry.name}</th>
     <td class="p-2">{date_formatter.format(entry.start_time)}</td>
     <td class="p-2">{date_formatter.format(entry.last_message_time)}</td>
     <td class="p-2">{entry.qmdl_size_bytes}</td>
@@ -49,8 +49,7 @@
     {/if}
 </tr>
 <tr class="{alternating_row_color} border-b {analysis_visible ? '' : 'hidden'}">
-    <td class="font-bold p-2 bg-blue-100"></td>
-    <td class="border-t border-dashed p-2" colspan="7">
+    <td class="border-t border-dashed p-2" colspan="8">
         <AnalysisView {entry} />
     </td>
 </tr>

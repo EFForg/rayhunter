@@ -13,7 +13,7 @@
     }
 </script>
 
-<div class="flex flex-row gap-2">
+<div class="flex flex-row justify-between gap-2">
     <RecordingControls {server_is_recording} />
     <DeleteButton
         text="Delete ALL Recordings"
