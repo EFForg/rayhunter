@@ -7,7 +7,7 @@
 </script>
 
 <div>
-    <p class="text-xl">System Stats</p>
+    <p class="text-xl mb-2">System Information</p>
     <table class="table-auto border">
         <tbody>
             <tr class="border">

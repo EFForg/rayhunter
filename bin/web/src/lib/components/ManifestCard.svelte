@@ -29,15 +29,17 @@
         analysis_visible = !analysis_visible;
     }
 </script>
-<div class="{status_row_color} drop-shadow p-4 flex flex-col">
-    <span class="">Name: {entry.name}</span>
+<div class="{status_row_color} drop-shadow p-4 flex flex-col gap-2">
+    <div class="flex flex-row justify-between">
+        <span class="">Name: {entry.name}</span>
+        <span class=""><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} /></span>
+    </div>
     <span class="">Started: {date_formatter.format(entry.start_time)}</span>
     <span class="">Last Message: {date_formatter.format(entry.last_message_time)}</span>
     <span class="">Size: {entry.qmdl_size_bytes} bytes</span>
-    <span class=""><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} /></span>
-    <div class="flex flex-row justify-between">
-        <span class=""><DownloadLink url={entry.get_pcap_url()} text="pcap" /></span>
-        <span class=""><DownloadLink url={entry.get_qmdl_url()} text="qmdl" /></span>
+    <div class="flex flex-row justify-between mt-2">
+        <DownloadLink url={entry.get_pcap_url()} text="pcap" full_button=true />
+        <DownloadLink url={entry.get_qmdl_url()} text="qmdl" full_button=true />
         {#if current}
             <RecordingControls {server_is_recording} />
         {:else}
