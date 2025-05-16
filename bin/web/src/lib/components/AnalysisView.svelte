@@ -13,14 +13,14 @@
     });
 </script>
 
-<div class="container">
+<div class="container mt-2">
     {#if entry.analysis_report === undefined}
         <p>Report unavailable, try refreshing.</p>
     {:else if typeof(entry.analysis_report) === 'string'}
         <p>Error getting analysis report: {entry.analysis_report}</p>
     {:else}
         {@const metadata: ReportMetadata = entry.analysis_report.metadata}
-        <div class="flex flex-col gap-2 my-2 lg:my-4">
+        <div class="flex flex-col gap-2">
             {#if entry.analysis_report.rows.length > 0}
                 <AnalysisTable report={entry.analysis_report} />
             {:else}
