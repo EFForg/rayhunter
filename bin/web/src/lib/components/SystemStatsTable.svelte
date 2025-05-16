@@ -12,7 +12,7 @@
         <tbody>
             <tr class="border">
                 <th class="border">
-                    Rayhunter version
+                    Rayhunter Version
                 </th>
                 <td class="border">{stats.runtime_metadata.rayhunter_version}</td>
             </tr>
