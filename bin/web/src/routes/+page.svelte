@@ -30,7 +30,9 @@
     })
 </script>
 
-<h1 class="m-4 xl:m-8 text-4xl font-extrabold">Rayhunter Dashboard</h1>
+<div class="p-4 xl:p-8 bg-rayhunter-blue">
+    <span class="text-4xl font-extrabold text-rayhunter-green">Rayhunter</span>
+</div>
 <div class="m-4 xl:m-8 flex flex-col gap-4">
 {#if loaded}
     <SystemStatsTable stats={system_stats!} />

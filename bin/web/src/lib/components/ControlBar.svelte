@@ -7,7 +7,7 @@
     } = $props();
 
     function confirmDelete() {
-        if (window.confirm(`Permanently delete ALL entries?`)) {
+        if (window.confirm(`Permanently delete ALL recordings?`)) {
             req('POST', '/api/delete-all-recordings')
         }
     }
@@ -16,8 +16,8 @@
 <div class="flex flex-row gap-2">
     <RecordingControls {server_is_recording} />
     <DeleteButton
-        text="Delete ALL Entries"
-        prompt={`Are you sure you want to delete ALL entries?`}
+        text="Delete ALL Recordings"
+        prompt={`Are you sure you want to delete ALL recordings?`}
         url={`/api/delete-all-recordings`}
     />
 </div>
