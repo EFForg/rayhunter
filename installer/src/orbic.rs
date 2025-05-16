@@ -70,13 +70,7 @@ async fn setup_rootshell(
     serial_interface: &Interface,
     adb_device: &mut ADBUSBDevice,
 ) -> Result<()> {
-    #[cfg(feature = "vendor")]
-    let rootshell_bin = include_bytes!("../../rootshell/rootshell");
-
-    #[cfg(not(feature = "vendor"))]
-    let rootshell_bin = &tokio::fs::read("target/armv7-unknown-linux-musleabihf/release/rootshell")
-        .await
-        .context("Error reading rootshell from local file system")?;
+    let rootshell_bin = include_bytes!(env!("FILE_ROOTSHELL"));
 
     install_file(
         serial_interface,
@@ -100,14 +94,7 @@ async fn setup_rayhunter(
     serial_interface: &Interface,
     mut adb_device: ADBUSBDevice,
 ) -> Result<ADBUSBDevice> {
-    #[cfg(feature = "vendor")]
-    let rayhunter_daemon_bin = include_bytes!("../../rayhunter-daemon-orbic/rayhunter-daemon");
-
-    #[cfg(not(feature = "vendor"))]
-    let rayhunter_daemon_bin =
-        &tokio::fs::read("target/armv7-unknown-linux-musleabihf/release/rayhunter-daemon")
-            .await
-            .context("Error reading rayhunter-daemon from local file system")?;
+    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON_ORBIC"));
 
     at_syscmd(serial_interface, "mkdir -p /data/rayhunter").await?;
     install_file(

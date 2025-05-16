@@ -8,6 +8,10 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  FILE_ROOTSHELL: ../../rootshell/rootshell
+  FILE_RAYHUNTER_DAEMON_ORBIC: ../../rayhunter-daemon-orbic/rayhunter-daemon
+  FILE_RAYHUNTER_DAEMON_TPLINK: ../../rayhunter-daemon-tplink/rayhunter-daemon
+
 
 jobs:
   build_rayhunter_check:
@@ -105,8 +109,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform.target }}
-
-      - run: cargo build --bin installer --release --target ${{ matrix.platform.target }} --features vendor
+      - run: cargo build --bin installer --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform.name }}
