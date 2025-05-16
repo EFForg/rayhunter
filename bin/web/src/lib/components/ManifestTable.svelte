@@ -25,9 +25,6 @@
         </tr>
     </thead>
     <tbody>
-        {#if current_entry !== undefined}
-            <TableRow entry={current_entry} current={true} i={0} />
-        {/if}
         {#each entries as entry, i}
             <TableRow {entry} current={false} {i} />
         {/each}
@@ -35,9 +32,6 @@
 </table>
 <!--For smaller screens we use cards-->
 <div class="lg:hidden flex flex-col gap-4">
-    {#if current_entry !== undefined}
-        <Card entry={current_entry} current={true} i={0} server_is_recording={server_is_recording}/>
-    {/if}
     {#each entries as entry, i}
         <Card {entry} current={false} {i} />
     {/each}

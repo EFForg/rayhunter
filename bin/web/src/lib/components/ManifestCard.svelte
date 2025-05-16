@@ -36,7 +36,7 @@
         analysis_visible = !analysis_visible;
     }
 </script>
-<div class="{status_row_color} {status_border_color} drop-shadow p-4 flex flex-col gap-2 border rounded-md">
+<div class="{status_row_color} {status_border_color} drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1">
     {#if current}
         <span class="text-2xl font-bold mb-2">Current Recording</span>
     {/if}
