@@ -4,10 +4,9 @@
     import Card from "./ManifestCard.svelte"
     interface Props {
         entries: ManifestEntry[];
-        current_entry: ManifestEntry | undefined;
         server_is_recording: boolean;
     }
-    let { entries, current_entry, server_is_recording }: Props = $props();
+    let { entries, server_is_recording }: Props = $props();
 </script>
 
 <!--For larger screens we use a table-->

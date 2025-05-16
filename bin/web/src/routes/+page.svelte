@@ -56,16 +56,21 @@
         {#if recording}
             <Card entry={current_entry} current={true} i={0} server_is_recording={recording}/>
         {:else}
-            <div class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1">
-                <span class="text-2xl font-bold mb-2">WARNING: Not Recording</span>
+            <div class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between">
+                <span class="text-2xl font-bold mb-2 flex flex-row items-center gap-2">
+                    <svg class="w-8 h-8 text-red-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z" clip-rule="evenodd"/>
+                    </svg>
+                    WARNING: Not Recording
+                </span>
                 <span>Rayhunter is not currently running!</span>
-                <div class="flex flex-row justify-between mt-2">
+                <div class="flex flex-row justify-end mt-2">
                     <RecordingControls {recording} />
                 </div>
             </div>
         {/if}
     </div>
-    <ManifestTable entries={entries} current_entry={current_entry} server_is_recording={recording} />
+    <ManifestTable entries={entries} server_is_recording={recording} />
     <DeleteAllButton/>
 {:else}
     <p>Loading...</p>
