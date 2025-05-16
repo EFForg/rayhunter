@@ -29,7 +29,7 @@
     }
 </script>
 
-<tr class="{status_row_color}">
+<tr class="{status_row_color} drop-shadow">
     <th class="font-bold p-2" scope='row'>{entry.name}</th>
     <td class="p-2">{date_formatter.format(entry.start_time)}</td>
     <td class="p-2">{date_formatter.format(entry.last_message_time)}</td>

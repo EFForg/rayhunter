@@ -7,9 +7,9 @@
     }
     let { entries, current_entry }: Props = $props();
 </script>
-<table class="table-auto text-left border">
-    <thead class="p-2">
-        <tr class="bg-gray-300">
+<table class="table-auto text-left">
+    <thead>
+        <tr class="bg-gray-100 drop-shadow">
             <th class='p-2' scope="col">Name</th>
             <th class='p-2' scope="col">Started</th>
             <th class='p-2' scope="col">Last Message</th>
