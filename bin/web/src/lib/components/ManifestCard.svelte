@@ -38,12 +38,17 @@
 </script>
 <div class="{status_row_color} {status_border_color} drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1">
     {#if current}
-        <span class="text-2xl font-bold mb-2">Current Recording</span>
+        <div class="flex flex-row justify-between gap-2">
+            <span class="text-xl mb-2">Current Recording</span>
+            <span class=""><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} analysis_visible={analysis_visible}/></span>
+        </div>
     {/if}
     <div class="flex flex-col">
         <div class="flex flex-row justify-between">
             <span class="font-bold">ID: {entry.name}</span>
-            <span class=""><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} analysis_visible={analysis_visible}/></span>
+            {#if !current}
+                <span class=""><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} analysis_visible={analysis_visible}/></span>
+            {/if}
         </div>
         <span class="">{entry.qmdl_size_bytes} bytes</span>
     </div>
@@ -51,7 +56,7 @@
         <span class="">Start: {date_formatter.format(entry.start_time)}</span>
         <span class="">Last Message: {date_formatter.format(entry.last_message_time)}</span>
     </div>
-    <div class="flex flex-row justify-between mt-2">
+    <div class="flex flex-row justify-between lg:justify-end gap-2 mt-2">
         <DownloadLink url={entry.get_pcap_url()} text="pcap" full_button=true />
         <DownloadLink url={entry.get_qmdl_url()} text="qmdl" full_button=true />
         {#if current}
