@@ -34,7 +34,7 @@
     </tbody>
 </table>
 <!--For smaller screens we use cards-->
-<div class="lg:hidden flex flex-col gap-2">
+<div class="lg:hidden flex flex-col gap-4">
     {#if current_entry !== undefined}
         <Card entry={current_entry} current={true} i={0} server_is_recording={server_is_recording}/>
     {/if}
