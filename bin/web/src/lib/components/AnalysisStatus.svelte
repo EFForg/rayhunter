@@ -41,10 +41,10 @@
         return finished && report_available;
     })
 
-    let button_class = $derived(ready ? "text-blue-600 underline" : '');
+    let button_class = $derived(ready ? "text-blue-600 border rounded-full px-2" : '');
 </script>
 
-<button class={button_class} disabled={!ready} {onclick}>
+<button class="{button_class} {entry.get_num_warnings() < 1 ? 'text-green-700 border-green-500 bg-green-200' : 'text-red-700 border-red-500 bg-red-200'}" disabled={!ready} {onclick}>
     {summary}
 </button>
 
