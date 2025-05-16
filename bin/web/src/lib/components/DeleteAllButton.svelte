@@ -1,10 +1,6 @@
 <script lang="ts">
 	import { req } from "$lib/utils.svelte";
 	import DeleteButton from "./DeleteButton.svelte";
-	import RecordingControls from "./RecordingControls.svelte";
-	let { server_is_recording }: {
-        server_is_recording: boolean;
-    } = $props();
 
     function confirmDelete() {
         if (window.confirm(`Permanently delete ALL recordings?`)) {
@@ -14,7 +10,6 @@
 </script>
 
 <div class="flex flex-row justify-between gap-2">
-    <RecordingControls {server_is_recording} />
     <DeleteButton
         text="Delete ALL Recordings"
         prompt={`Are you sure you want to delete ALL recordings?`}
