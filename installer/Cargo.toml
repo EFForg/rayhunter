@@ -3,9 +3,6 @@ name = "installer"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-vendor = []
-
 [dependencies]
 anyhow = "1.0.98"
 axum = "0.8.3"

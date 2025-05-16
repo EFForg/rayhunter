@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  NO_FIRMWARE_BIN: true
 
 jobs:
   check_and_test:
