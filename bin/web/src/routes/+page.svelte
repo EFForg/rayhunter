@@ -37,7 +37,7 @@
 {#if loaded}
     <SystemStatsTable stats={system_stats!} />
     <ControlBar server_is_recording={recording} />
-    <ManifestTable entries={entries} current_entry={current_entry} />
+    <ManifestTable entries={entries} current_entry={current_entry} server_is_recording={recording} />
 {:else}
     <p>Loading...</p>
 {/if}
