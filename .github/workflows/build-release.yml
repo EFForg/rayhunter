@@ -107,13 +107,19 @@ jobs:
           VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
           mkdir "$VERSIONED_DIR"
           mv dist/* "$VERSIONED_DIR"/
-      - name: Archive release directory
+      - name: Archive release directory as zip
         run: |
           VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
-          tar -cvf "$VERSIONED_DIR.tar" "$VERSIONED_DIR"
-      - name: Upload release
+          zip -r "$VERSIONED_DIR.zip" "$VERSIONED_DIR"
+      - name: Compute SHA256 of zip
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          sha256sum "$VERSIONED_DIR.zip" > "$VERSIONED_DIR.zip.sha256"
+      - name: Upload zip release and sha256
         uses: actions/upload-artifact@v4
         with:
-          name: rayhunter-v${{ env.VERSION }}.tar
-          path: rayhunter-v${{ env.VERSION }}.tar
+          name: rayhunter-v${{ env.VERSION }}
+          path: |
+            rayhunter-v${{ env.VERSION }}.zip
+            rayhunter-v${{ env.VERSION }}.zip.sha256
           if-no-files-found: error
