@@ -8,7 +8,6 @@
         entry: ManifestEntry;
         current: boolean;
         i: number;
-        server_is_recording: boolean;
     } = $props();
 
     // passing `undefined` as the locale uses the browser default
