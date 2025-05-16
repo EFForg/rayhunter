@@ -58,7 +58,7 @@ async fn force_debug_mode() -> Result<ADBUSBDevice> {
     println!("Forcing a switch into the debug mode to enable ADB");
     enable_command_mode()?;
     echo!("ADB enabled, waiting for reboot... ");
-    let mut adb_device = wait_for_adb_shell().await?;
+    let mut adb_device = get_adb().await?;
     println!("it's alive!");
     echo!("Waiting for atfwd_daemon to startup... ");
     adb_command(&mut adb_device, &["pgrep", "atfwd_daemon"])?;
@@ -153,8 +153,7 @@ async fn setup_rayhunter(
     .await
     .context("Orbic took too long to shutdown")?;
     // now wait for boot to finish
-    let adb_device = wait_for_adb_shell().await?;
-    Ok(adb_device)
+    get_adb().await
 }
 
 async fn test_rayhunter(adb_device: &mut ADBUSBDevice) -> Result<()> {
@@ -202,7 +201,7 @@ async fn install_file_impl(
     serial_interface: &Interface,
     adb_device: &mut ADBUSBDevice,
     dest: &str,
-    payload: &[u8],
+    mut payload: &[u8],
 ) -> Result<()> {
     let file_name = Path::new(dest)
         .file_name()
@@ -215,8 +214,7 @@ async fn install_file_impl(
     hasher.update(payload);
     let file_hash_bytes = hasher.finalize();
     let file_hash = format!("{file_hash_bytes:x}");
-    #[allow(clippy::useless_asref)]
-    adb_device.push(&mut payload.as_ref(), &push_tmp_path)?;
+    adb_device.push(&mut payload, &push_tmp_path)?;
     at_syscmd(serial_interface, &format!("mv {push_tmp_path} {dest}")).await?;
     let file_info = adb_device
         .stat(dest)
@@ -237,7 +235,10 @@ fn adb_command(adb_device: &mut ADBUSBDevice, command: &[&str]) -> Result<String
     Ok(String::from_utf8_lossy(&buf).into_owned())
 }
 
-async fn wait_for_adb_shell() -> Result<ADBUSBDevice> {
+/// Creates an ADB interface instance.
+///
+/// This function waits for the ADB device then checks that an ADB shell command runs.
+async fn get_adb() -> Result<ADBUSBDevice> {
     const MAX_FAILURES: u32 = 10;
     let mut failures = 0;
     loop {
