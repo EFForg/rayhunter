@@ -1,7 +1,9 @@
+use std::io::{self, ErrorKind};
+use std::path::{Path, PathBuf};
+
 use chrono::{DateTime, Local};
 use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::{
     fs::{self, try_exists, File, OpenOptions},
@@ -289,10 +291,10 @@ impl RecordingStore {
         self.write_manifest().await?;
         let qmdl_filepath = entry_to_delete.get_qmdl_filepath(&self.path);
         let analysis_filepath = entry_to_delete.get_analysis_filepath(&self.path);
-        tokio::fs::remove_file(qmdl_filepath)
+        remove_file_if_exists(&qmdl_filepath)
             .await
             .map_err(RecordingStoreError::DeleteFileError)?;
-        tokio::fs::remove_file(analysis_filepath)
+        remove_file_if_exists(&analysis_filepath)
             .await
             .map_err(RecordingStoreError::DeleteFileError)?;
         Ok(entry_to_delete)
@@ -303,19 +305,38 @@ impl RecordingStore {
             self.close_current_entry().await?;
         }
 
+        let mut keep = Vec::new();
+
         for entry in &self.manifest.entries {
             let qmdl_filepath = entry.get_qmdl_filepath(&self.path);
             let analysis_filepath = entry.get_analysis_filepath(&self.path);
-            tokio::fs::remove_file(qmdl_filepath)
-                .await
-                .map_err(RecordingStoreError::DeleteFileError)?;
-            tokio::fs::remove_file(analysis_filepath)
-                .await
-                .map_err(RecordingStoreError::DeleteFileError)?;
+
+            if let Err(e) = remove_file_if_exists(&qmdl_filepath).await {
+                log::warn!("failed to remove {qmdl_filepath:?}: {e:?}");
+                keep.push(true);
+                continue;
+            }
+
+            if let Err(e) = remove_file_if_exists(&analysis_filepath).await {
+                log::warn!("failed to remove {analysis_filepath:?}: {e:?}");
+                keep.push(true);
+                continue;
+            }
+
+            keep.push(false);
         }
-        self.manifest.entries.drain(..);
+
+        let mut keep_iter = keep.into_iter();
+        self.manifest.entries.retain(|_| keep_iter.next().unwrap());
         self.write_manifest().await?;
         Ok(())
+    }
+}
+
+async fn remove_file_if_exists(path: &Path) -> Result<(), io::Error> {
+    match tokio::fs::remove_file(path).await {
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(()),
+        res => res,
     }
 }
 
