@@ -30,10 +30,10 @@
     })
 </script>
 
-<div class="p-4 xl:p-8 bg-rayhunter-blue">
+<div class="p-4 xl:px-8 bg-rayhunter-blue">
     <span class="text-4xl font-extrabold text-rayhunter-green">Rayhunter</span>
 </div>
-<div class="m-4 xl:m-8 flex flex-col gap-4">
+<div class="m-4 xl:mx-8 flex flex-col gap-4">
 {#if loaded}
     <SystemStatsTable stats={system_stats!} />
     <ControlBar server_is_recording={recording} />
