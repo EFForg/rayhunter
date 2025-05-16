@@ -67,12 +67,12 @@ struct Serial {
     command: Vec<String>,
 }
 
-async fn run_function() -> Result<(), Error> {
+async fn run() -> Result<(), Error> {
     let Args { command } = Args::parse();
 
     match command {
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
-        Command::Orbic(_) => orbic::install().await.context("Failed to install rayhunter on the Orbic RC400L")?,
+        Command::Orbic(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Util(subcommand) => match subcommand.command {
             UtilSubCommand::Serial(serial_cmd) => {
                 if serial_cmd.root {
@@ -103,7 +103,7 @@ async fn run_function() -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() {
-    if let Err(e) = run_function().await {
+    if let Err(e) = run().await {
         eprintln!("{e:?}");
         std::process::exit(1);
     }
