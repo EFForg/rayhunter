@@ -24,19 +24,26 @@
         }
         return current ? "bg-green-100" : "bg-gray-100"
     });
+    let status_border_color = $derived.by(() => {
+        const num_warnings = entry.get_num_warnings();
+        if (num_warnings !== undefined && num_warnings > 0) {
+            return "border-red-100";
+        }
+        return current ? "border-green-100" : "border-gray-100"
+    });
     let analysis_visible = $state(false);
     function toggle_analysis_visibility() {
         analysis_visible = !analysis_visible;
     }
 </script>
-<div class="{status_row_color} drop-shadow p-4 flex flex-col gap-2">
+<div class="{status_row_color} {status_border_color} drop-shadow p-4 flex flex-col gap-2 border rounded-md">
     {#if current}
         <span class="text-2xl font-bold mb-2">Current Recording</span>
     {/if}
     <div class="flex flex-col">
         <div class="flex flex-row justify-between">
             <span class="font-bold">ID: {entry.name}</span>
-            <span class=""><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} /></span>
+            <span class=""><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} analysis_visible={analysis_visible}/></span>
         </div>
         <span class="">{entry.qmdl_size_bytes} bytes</span>
     </div>

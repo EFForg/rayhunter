@@ -37,7 +37,7 @@
     <td class="p-2">{entry.qmdl_size_bytes}</td>
     <td class="p-2"><DownloadLink url={entry.get_pcap_url()} text="pcap" /></td>
     <td class="p-2"><DownloadLink url={entry.get_qmdl_url()} text="qmdl" /></td>
-    <td class="p-2"><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} /></td>
+    <td class="p-2"><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} analysis_visible={analysis_visible}/></td>
     {#if current}
         <td class="p-2"></td>
     {:else}
