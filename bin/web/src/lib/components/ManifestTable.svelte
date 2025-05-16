@@ -13,7 +13,7 @@
 <table class="hidden table-auto text-left lg:table">
     <thead>
         <tr class="bg-gray-100 drop-shadow">
-            <th class='p-2' scope="col">Name</th>
+            <th class='p-2' scope="col">ID</th>
             <th class='p-2' scope="col">Started</th>
             <th class='p-2' scope="col">Last Message</th>
             <th class='p-2' scope="col">Size (bytes)</th>
