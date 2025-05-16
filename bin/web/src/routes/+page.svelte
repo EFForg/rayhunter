@@ -30,11 +30,11 @@
     })
 </script>
 
-<h1 class="ml-8 mt-8 text-4xl font-extrabold">Rayhunter Dashboard</h1>
-<div class="p-8 flex flex-col gap-2">
+<h1 class="m-4 xl:m-8 text-4xl font-extrabold">Rayhunter Dashboard</h1>
+<div class="m-4 xl:m-8 flex flex-col gap-4">
 {#if loaded}
-    <ControlBar server_is_recording={recording} />
     <SystemStatsTable stats={system_stats!} />
+    <ControlBar server_is_recording={recording} />
     <ManifestTable entries={entries} current_entry={current_entry} />
 {:else}
     <p>Loading...</p>
