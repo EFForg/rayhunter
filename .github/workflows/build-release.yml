@@ -4,14 +4,13 @@ on:
   push:
     branches: [main, "release-*"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
   FILE_ROOTSHELL: ../../rootshell/rootshell
   FILE_RAYHUNTER_DAEMON_ORBIC: ../../rayhunter-daemon-orbic/rayhunter-daemon
   FILE_RAYHUNTER_DAEMON_TPLINK: ../../rayhunter-daemon-tplink/rayhunter-daemon
-
 
 jobs:
   build_rayhunter_check:
@@ -128,14 +127,28 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
         run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
-      - name: Setup release directory
-        run: mv rayhunter-daemon-* rootshell/rootshell installer-* dist
-      - name: Archive release directory
-        run: tar -cvf release.tar -C dist .
+      - name: Get Rayhunter version
+        id: get_version
+        run: echo "VERSION=$(grep '^version' bin/Cargo.toml | head -n 1 | cut -d'"' -f2)" >> $GITHUB_ENV
+      - name: Setup versioned release directory
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          mkdir "$VERSIONED_DIR"
+          mv rayhunter-daemon-* rootshell/rootshell installer-* "$VERSIONED_DIR"/
+      - name: Archive release directory as zip
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          zip -r "$VERSIONED_DIR.zip" "$VERSIONED_DIR"
+      - name: Compute SHA256 of zip
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          sha256sum "$VERSIONED_DIR.zip" > "$VERSIONED_DIR.zip.sha256"
       # TODO: have this create a release directly
-      - name: Upload release
+      - name: Upload zip release and sha256
         uses: actions/upload-artifact@v4
         with:
-          name: release.tar
-          path: release.tar
+          name: rayhunter-v${{ env.VERSION }}
+          path: |
+            rayhunter-v${{ env.VERSION }}.zip
+            rayhunter-v${{ env.VERSION }}.zip.sha256
           if-no-files-found: error
