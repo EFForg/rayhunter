@@ -6,9 +6,15 @@ It also serves a web UI that provides some basic controls, such as being able to
 
 You can access this UI in one of two ways:
 
-1. **Connect over wifi:** Connect your phone/laptop to your device's wifi network and visit [http://192.168.1.1:8080](http://192.168.1.1:8080). (Click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet).
-    * On the Orbic, you can find the wifi network password by going to the Orbic's menu > 2.4 GHz WIFI Info > Enter > find the 8-character password next to the lock 🔒 icon.
-2. **Connect over USB:** Connect your device to your laptop via USB. Run `adb forward tcp:8080 tcp:8080`, then visit [http://localhost:8080](http://localhost:8080).
+* **Connect over wifi:** Connect your phone/laptop to your device's wifi
+  network and visit [http://192.168.1.1:8080](http://192.168.1.1:8080) (orbic)
+  or [http://192.168.0.1:8080](http://192.168.0.1:8080) (tplink).
+
+  Click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet.
+
+  On the Orbic, you can find the wifi network password by going to the Orbic's menu > 2.4 GHz WIFI Info > Enter > find the 8-character password next to the lock 🔒 icon.
+* **Connect over USB (orbic):** Connect your device to your laptop via USB. Run `adb forward tcp:8080 tcp:8080`, then visit [http://localhost:8080](http://localhost:8080).
     * For this you will need to install the Android Debug Bridge (ADB) on your computer, you can copy the version that was downloaded inside the `releases/platform-tools/` folder to somewhere else in your path or you can install it manually.
     * You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer), (don't worry about instructions for installing it on a phone/device yet).
     * On macOS, the easiest way to install ADB is with Homebrew: First [install Homebrew](https://brew.sh/), then run `brew install android-platform-tools`.
+* **Connect over USB (tplink):** Plug in the TP-Link and use USB tethering to establish a network connection. ADB support can be enabled on the device, but the installer won't do it for you.
