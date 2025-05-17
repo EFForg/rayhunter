@@ -2,13 +2,14 @@
 
 Make sure you've got one of Rayhunter's [supported devices](./supported-devices.md). These instructions have only been tested on macOS and Ubuntu 24.04. If they fail, you will need to [install Rayhunter from source](./installing-from-source.md).
 
-1. Download the latest `release.tar` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
-2. Decompress the `release.tar` archive. Open the terminal and navigate to the folder
+1. Download the latest `rayhunter-vX.X.X.zip
+` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
+2. Decompress the `rayhunter-vX.X.X.zip` archive. Open the terminal and navigate to the folder. (Be sure to replace X.X.X with the correct version number!)
 
     ```bash
-    mkdir ~/Downloads/release
-    tar -xvf ~/Downloads/release.tar -C ~/Downloads/release
-    cd ~/Downloads/release
+    mkdir ~/Downloads/rayhunter
+    unzip ~/Downloads/rayhunter-vX.X.X.zip -C ~/Downloads/rayhunter
+    cd ~/Downloads/rayhunter
     ```
 
 3. Turn on your device by holding the power button on the front.
