@@ -15,18 +15,27 @@ rustflags = ["-C", "target-feature=+crt-static"]
 linker = "rust-lld"
 rustflags = ["-C", "target-feature=+crt-static"]
 
-[target.x86_64-apple-darwin]
-linker = "rust-lld"
-rustflags = ["-C", "target-feature=+crt-static"]
+# Disable rust-lld for x86 macOS because the linker crashers when compiling
+# the installer in release mode with debug info on.
+# [target.x86_64-apple-darwin]
+# linker = "rust-lld"
+# rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.x86_64-unknown-linux-musl]
 linker = "rust-lld"
 rustflags = ["-C", "target-feature=+crt-static"]
 
-# optimizations to reduce the binary size
+# keep line numbers in stack traces for non-firmware binaries
 [profile.release]
+debug = "limited"
+
+# optimizations to reduce the binary size of firmware binaries
+[profile.firmware]
+inherits = "release"
 strip = true
 opt-level = "z"
 lto = true
 codegen-units = 1
 panic = "abort"
+debug = false
+
