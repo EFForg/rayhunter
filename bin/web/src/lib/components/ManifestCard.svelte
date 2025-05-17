@@ -50,7 +50,7 @@
                 <span class=""><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} analysis_visible={analysis_visible}/></span>
             {/if}
         </div>
-        <span class="">{entry.qmdl_size_bytes} bytes</span>
+        <span class="">{entry.get_readable_qmdl_size()}</span>
     </div>
     <div class="flex flex-col">
         <span class="">Start: {date_formatter.format(entry.start_time)}</span>
