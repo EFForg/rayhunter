@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  NO_FIRMWARE_BIN: true
 
 jobs:
   check_and_test:
@@ -37,17 +38,17 @@ jobs:
     - name: Run clippy
       run: cargo clippy --verbose --no-default-features --features=${{ matrix.device.name }}
 
-  windows_serial_check_and_test:
+  windows_installer_check_and_test:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
       - name: cargo check
         shell: bash
         run: |
-          cd serial
+          cd installer
           cargo check --verbose
       - name: cargo test
         shell: bash
         run: |
-          cd serial
+          cd installer
           cargo test --verbose --no-default-features --features=${{ matrix.device.name }}

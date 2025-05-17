@@ -4,13 +4,16 @@ on:
   push:
     branches: [main, "release-*"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
+  FILE_ROOTSHELL: ../../rootshell/rootshell
+  FILE_RAYHUNTER_DAEMON_ORBIC: ../../rayhunter-daemon-orbic/rayhunter-daemon
+  FILE_RAYHUNTER_DAEMON_TPLINK: ../../rayhunter-daemon-tplink/rayhunter-daemon
 
 jobs:
-  build_serial_and_check:
+  build_rayhunter_check:
     strategy:
       matrix:
         platform:
@@ -32,18 +35,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform.target }}
-      - name: Build serial
-        run: cargo build --bin serial --release --target ${{ matrix.platform.target }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: serial-${{ matrix.platform.name }}
-          path: target/${{ matrix.platform.target }}/release/serial${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
-          if-no-files-found: error
-      - uses: actions/checkout@v4
-      - name: Build check
+      - name: Build rayhunter-check
         run: cargo build --bin rayhunter-check --release
       - uses: actions/upload-artifact@v4
         with:
@@ -88,25 +80,75 @@ jobs:
           name: rayhunter-daemon-${{ matrix.device.name }}
           path: target/armv7-unknown-linux-musleabihf/release/rayhunter-daemon
           if-no-files-found: error
+  build_rust_installer:
+    needs:
+      - build_rayhunter
+    strategy:
+      matrix:
+        platform:
+          - name: ubuntu-24
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - name: ubuntu-24-aarch64
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+          - name: macos-arm
+            os: macos-latest
+            target: aarch64-apple-darwin
+          - name: macos-intel
+            os: macos-13
+            target: x86_64-apple-darwin
+          - name: windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-gnu
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+      - run: cargo build --bin installer --release --target ${{ matrix.platform.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.platform.name }}
+          path: target/${{ matrix.platform.target }}/release/installer${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
+          if-no-files-found: error
+
   build_release_zip:
     needs:
-      - build_serial_and_check
+      - build_rayhunter_check
       - build_rootshell
       - build_rayhunter
+      - build_rust_installer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
-        run: chmod +x serial-*/serial rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
-      - name: Setup release directory
-        run: mv rayhunter-daemon-* rootshell/rootshell serial-* dist
-      - name: Archive release directory
-        run: tar -cvf release.tar -C dist .
+        run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
+      - name: Get Rayhunter version
+        id: get_version
+        run: echo "VERSION=$(grep '^version' bin/Cargo.toml | head -n 1 | cut -d'"' -f2)" >> $GITHUB_ENV
+      - name: Setup versioned release directory
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          mkdir "$VERSIONED_DIR"
+          mv rayhunter-daemon-* rootshell/rootshell installer-* "$VERSIONED_DIR"/
+      - name: Archive release directory as zip
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          zip -r "$VERSIONED_DIR.zip" "$VERSIONED_DIR"
+      - name: Compute SHA256 of zip
+        run: |
+          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
+          sha256sum "$VERSIONED_DIR.zip" > "$VERSIONED_DIR.zip.sha256"
       # TODO: have this create a release directly
-      - name: Upload release
+      - name: Upload zip release and sha256
         uses: actions/upload-artifact@v4
         with:
-          name: release.tar
-          path: release.tar
+          name: rayhunter-v${{ env.VERSION }}
+          path: |
+            rayhunter-v${{ env.VERSION }}.zip
+            rayhunter-v${{ env.VERSION }}.zip.sha256
           if-no-files-found: error

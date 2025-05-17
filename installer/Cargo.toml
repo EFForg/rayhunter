@@ -1,0 +1,32 @@
+[package]
+name = "installer"
+version = "0.3.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+axum = "0.8.3"
+bytes = "1.10.1"
+clap = { version = "4.5.37", features = ["derive"] }
+hyper = "1.6.0"
+hyper-util = "0.1.11"
+md5 = "0.7.0"
+nusb = "0.1.13"
+reqwest = { version = "0.12.15", features = ["json"], default-features = false }
+serde = { version = "1.0.219", features = ["derive"] }
+sha2 = "0.10.8"
+tokio = { version = "1.44.2", features = ["full"] }
+tokio-retry2 = "0.5.7"
+tokio-stream = "0.1.17"
+
+[target.'cfg(target_os = "linux")'.dependencies.adb_client]
+git = "https://github.com/gaykitty/adb_client.git"
+rev = "1fb0f4f5cbcc95bbbb98db4ee2f1e53a1005aa81"
+default-features = false
+features = ["trans-nusb"]
+
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies.adb_client]
+git = "https://github.com/gaykitty/adb_client.git"
+rev = "1fb0f4f5cbcc95bbbb98db4ee2f1e53a1005aa81"
+default-features = false
+features = ["trans-libusb"]

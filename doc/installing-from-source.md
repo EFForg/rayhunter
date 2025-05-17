@@ -32,7 +32,15 @@ rustup target add x86_64-apple-darwin
 rustup target add x86_64-pc-windows-gnu
 ```
 
-Now you can root your device and install Rayhunter by running `./tools/install-dev.sh`
+Now you can root your device and install Rayhunter by running:
+
+```sh
+cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --release --no-default-features --features orbic
+
+cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --release
+
+cargo run --bin installer orbic
+```
 
 ### If you're on Windows or can't run the install scripts
 
