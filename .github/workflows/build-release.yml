@@ -50,11 +50,11 @@ jobs:
         with:
           targets: armv7-unknown-linux-musleabihf
       - name: Build rootshell (arm32)
-        run: cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --release
+        run: cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --profile=firmware
       - uses: actions/upload-artifact@v4
         with:
           name: rootshell
-          path: target/armv7-unknown-linux-musleabihf/release/rootshell
+          path: target/armv7-unknown-linux-musleabihf/firmware/rootshell
           if-no-files-found: error
   build_rayhunter:
     strategy:
@@ -74,11 +74,11 @@ jobs:
           npm install
           npm run build
           popd
-          cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --release --no-default-features --features ${{ matrix.device.name }}
+          cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile=firmware --no-default-features --features ${{ matrix.device.name }}
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-daemon-${{ matrix.device.name }}
-          path: target/armv7-unknown-linux-musleabihf/release/rayhunter-daemon
+          path: target/armv7-unknown-linux-musleabihf/firmware/rayhunter-daemon
           if-no-files-found: error
   build_rust_installer:
     needs:
