@@ -7,7 +7,7 @@
     let { entry, current, i }: {
         entry: ManifestEntry;
         current: boolean;
-        i: number
+        i: number;
     } = $props();
 
     // passing `undefined` as the locale uses the browser default
@@ -29,14 +29,14 @@
     }
 </script>
 
-<tr class="{status_row_color}">
-    <th class="font-bold p-2 bg-blue-100" scope='row'>{entry.name}</th>
+<tr class="{status_row_color} drop-shadow">
+    <td class="p-2">{entry.name}</td>
     <td class="p-2">{date_formatter.format(entry.start_time)}</td>
     <td class="p-2">{date_formatter.format(entry.last_message_time)}</td>
-    <td class="p-2">{entry.qmdl_size_bytes}</td>
+    <td class="p-2">{entry.get_readable_qmdl_size()}</td>
     <td class="p-2"><DownloadLink url={entry.get_pcap_url()} text="pcap" /></td>
     <td class="p-2"><DownloadLink url={entry.get_qmdl_url()} text="qmdl" /></td>
-    <td class="p-2"><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} /></td>
+    <td class="p-2"><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} analysis_visible={analysis_visible}/></td>
     {#if current}
         <td class="p-2"></td>
     {:else}
@@ -49,8 +49,7 @@
     {/if}
 </tr>
 <tr class="{alternating_row_color} border-b {analysis_visible ? '' : 'hidden'}">
-    <td class="font-bold p-2 bg-blue-100"></td>
-    <td class="border-t border-dashed p-2" colspan="7">
+    <td class="border-t border-dashed p-2" colspan="8">
         <AnalysisView {entry} />
     </td>
 </tr>

@@ -25,60 +25,63 @@
         return map;
     });
 </script>
-
-<p class="text-lg underline">Warnings and Informational Logs</p>
-{#if report.statistics.num_warnings === 0 && report.statistics.num_informational_logs === 0}
-    <p>Nothing to show!</p>
-{:else}
-    <table class="table-auto text-left border">
-        <thead class="p-2">
-            <tr class="bg-gray-300">
-                <th scope="col">Timestamp</th>
-                <th scope="col">Warning</th>
-                <th scope="col">Severity</th>
-            </tr>
-        </thead>
-        <tbody>
-            {#each report.rows as row, row_idx}
-                {#each row.analysis as analysis}
-                    {@const parsed_date = new Date(analysis.timestamp)}
-                    {#each analysis.events.filter(e => e !== null) as event}
-                        <tr class="even:bg-gray-200 border-b">
-                        {#if event.type === EventType.Warning}
+<div>
+    <p class="text-lg underline">Warnings and Informational Logs</p>
+    {#if report.statistics.num_warnings === 0 && report.statistics.num_informational_logs === 0}
+        <p>Nothing to show!</p>
+    {:else}
+        <table class="table-auto text-left">
+            <thead class="p-2">
+                <tr class="bg-gray-300">
+                    <th class="p-2">Timestamp</th>
+                    <th class="p-2">Warning</th>
+                    <th class="p-2">Severity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#each report.rows as row, row_idx}
+                    {#each row.analysis as analysis}
+                        {@const parsed_date = new Date(analysis.timestamp)}
+                        {#each analysis.events.filter(e => e !== null) as event}
+                            <tr class="even:bg-gray-200 odd:bg-white">
+                            {#if event.type === EventType.Warning}
                             {@const severity = ['Low', 'Medium', 'High'][event.severity]}
-                            {@const severity_class = ['bg-red-200', 'bg-red-400', 'bg-red-600'][event.severity]}
-                            <th class="p-2">{date_formatter.format(parsed_date)}</th>
-                            <td class="p-2">{event.message}</td>
-                            <td class="p-2 {severity_class}">{severity}</td>
-                        {:else if event.type === EventType.Informational}
-                            <th class="p-2">{date_formatter.format(parsed_date)}</th>
-                            <td class="p-2">{event.message}</td>
-                            <td class="p-2">Info</td>
-                        {/if}
-                        </tr>
+                                {@const severity_class = ['bg-red-200', 'bg-red-400', 'bg-red-600'][event.severity]}
+                                <td class="p-2">{date_formatter.format(parsed_date)}</td>
+                                <td class="p-2">{event.message}</td>
+                                <td class="p-2 {severity_class} text-center">{severity}</td>
+                            {:else if event.type === EventType.Informational}
+                                <td class="p-2">{date_formatter.format(parsed_date)}</td>
+                                <td class="p-2">{event.message}</td>
+                                <td class="p-2">Info</td>
+                            {/if}
+                            </tr>
+                        {/each}
                     {/each}
                 {/each}
-            {/each}
-        </tbody>
-    </table>
-{/if}
+            </tbody>
+        </table>
+    {/if}
+</div>
 {#if report.statistics.num_skipped_packets > 0}
-    <p class="text-lg underline">Unparsed Messages</p>
-    <p>These are due to a limitation or bug in Rayhunter's parser, and aren't ususally a problem.</p>
-    <table class="table-auto text-left border">
-        <thead class="p-2">
-            <tr class="bg-gray-300">
-                <th scope="col"># of messages affected</th>
-                <th scope="col">Reason/Error</th>
-            </tr>
-        </thead>
-        <tbody>
-            {#each skipped_messages.entries() as [message, count]}
-                <tr class="even:bg-gray-200 border-b">
-                    <td>{count}</td>
-                    <td>{message}</td>
+    <div class="flex flex-col flex-1">
+        <p class="text-lg underline">Unparsed Messages</p>
+        <p>These are due to a limitation or bug in Rayhunter's parser, and aren't ususally a problem.</p>
+        <table class="table-auto text-left">
+            <thead class="p-2">
+                <tr class="bg-gray-300">
+                    <th scope="col" class="p-2"># of messages affected</th>
+                    <th scope="col">Reason/Error</th>
                 </tr>
-            {/each}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {#each skipped_messages.entries() as [message, count]}
+                    <tr class="even:bg-gray-200 odd:bg-white">
+                        <td class="text-center">{count}</td>
+                        <td>{message}</td>
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
+    </div>
 {/if}
