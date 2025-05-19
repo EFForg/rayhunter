@@ -7,10 +7,10 @@ The TP-Link M7350 is supported by Rayhunter from 0.3.0 release. TP-Link M7350 su
 The TP-Link comes in many different *hardware versions*. Support for installation varies:
 
 * `1.0`, `2.0`: **Not suported**, probably impossible to obtain anymore (even second-hand), however there is one report that installation is possible on `1.0` (but no reports if it is working or not)
-* `3.0`, `3.2`, `5.0`, `5.2`, `7.0`, `8.0`: **Tested, no known issues.**
+* `3.0`, `3.2`, `5.0`, `5.2`, `7.0`, `8.0`: **Tested, no known issues since 0.3.0.**
 * `6.2`: **One user reported it is working**
-* `4.0`: **Not working yet** ([issue](https://github.com/EFForg/rayhunter/issues/332)), however [it could be installed manually](https://github.com/m0veax/rayhunter-tplink-m7350/))
-* `9.0`: **Not working yet** ([issue](https://github.com/EFForg/rayhunter/issues/325), however opening/rooting works, Rayhunter could be installed manually, but does not work because of [IOCTL error](#302))
+* `4.0`: **Manual firmware downgrade required** ([issue](https://github.com/EFForg/rayhunter/issues/332))
+* `9.0`: **Working since 0.3.2.**
 
 TP-Link versions newer than `3.0` have cyan packaging and a color display. Version `3.0` has a one-bit display and white packaging.
 
@@ -61,6 +61,15 @@ You can change the `port` (default is `8080`) where Rayhunter is listening for i
 
 By default the device will go to sleep after N minutes of no devices being connected. In that mode it will also turn off connections to cell phone towers.
 In order for Rayhunter to record continuously, you have to turn off this sleep mode in TP-Link's admin panel (go to **Advanced** - **Power Saving**) or keep e.g. your phone connectd on the TP-Link's WiFi.
+
+## Port triggers
+
+On hardware revisions starting with v4.0, the installer will modify settings to
+add two port triggers. You can look at `Settings > NAT Settings > Port
+Triggers` in TP-Link's admin UI to see them.
+
+1. One port trigger "rayhunter-root" to launch the telnet shell. This is only needed for installation, and can be removed after upgrade. You can reinstall it using `./installer util tplink-start-telnet`.
+2. One port trigger "rayhunter-daemon" to auto-start rayhunter on boot. If you remove this, rayhunter will have to be started manually from shell.
 
 ## Other links
 
