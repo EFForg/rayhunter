@@ -1,4 +1,4 @@
-$global:adb = "./platform-tools-latest-windows/platform-tools/adb.exe"
+$global:adb = ".\platform-tools-latest-windows\platform-tools\adb.exe"
 $global:serial = ".\installer-windows-x86_64\installer.exe"
 
 function _adb_push {
@@ -98,7 +98,7 @@ function setup_rayhunter {
 }
 
 function test_rayhunter {
-	$URL = "http://localhost:8080"
+	$URL = "http://localhost:8080/index.html"
 	& $global:adb -d forward tcp:8080 tcp:8080
     $exitCode = $LASTEXITCODE
 	if ($exitCode -ne 0) {

@@ -134,7 +134,7 @@ jobs:
         run: |
           VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
           mkdir "$VERSIONED_DIR"
-          mv rayhunter-daemon-* rootshell/rootshell installer-* "$VERSIONED_DIR"/
+          mv rayhunter-daemon-* rootshell/rootshell installer-* dist/* "$VERSIONED_DIR"/
       - name: Archive release directory as zip
         run: |
           VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
