@@ -391,7 +391,7 @@ pub fn enable_command_mode() -> Result<()> {
 
     let timeout = Duration::from_secs(1);
 
-    if let Some(device) = open_usb_device(VENDOR_ID, PRODUCT_ID)? {
+    if let Some(device) = open_usb_device(VENDOR_ID, 0xf626)? {
         let enable_command_mode = Control {
             control_type: ControlType::Vendor,
             recipient: Recipient::Device,
