@@ -36,7 +36,7 @@ function _wait_for_atfwd_daemon {
 function force_debug_mode {
 	write-host "Using adb at $($global:adb)"
 	write-host "Forcing a switch into debug mode to enable ADB"
-	_serial "util" "serial" "--root" | Out-Host
+	_serial "util serial --root" | Out-Host
 	write-host "adb enabled, waiting for reboot..." -nonewline
 	_wait_for_adb_shell
 	write-host " it's alive!"
