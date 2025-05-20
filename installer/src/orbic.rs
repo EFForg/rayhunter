@@ -1,5 +1,5 @@
 use std::io::{ErrorKind, Write};
-use std::path::Path;
+use std::path::{Path, Prefix};
 use std::time::Duration;
 
 use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
@@ -30,8 +30,7 @@ Please close any program that might be using your Orbic.
 If you have adb installed you may need to kill the adb daemon"#;
 
 const VENDOR_ID: u16 = 0x05c6;
-//const PRODUCT_ID: u16 = 0xf601;
-const PRODUCT_ID: u16 = 0xf626;
+const PRODUCT_ID: u16 = 0xf601;
 
 macro_rules! echo {
     ($($arg:tt)*) => {
@@ -392,7 +391,7 @@ pub fn enable_command_mode() -> Result<()> {
 
     let timeout = Duration::from_secs(1);
 
-    if let Some(device) = open_usb_device(VENDOR_ID, 0xf626)? {
+    if let Some(device) = open_usb_device(VENDOR_ID, PRODUCT_ID)? {
         let enable_command_mode = Control {
             control_type: ControlType::Vendor,
             recipient: Recipient::Device,
@@ -429,6 +428,14 @@ pub fn open_orbic() -> Result<Option<Interface>> {
 
     // Device with rndis enabled as well
     if let Some(device) = open_usb_device(VENDOR_ID, 0xf622)? {
+        let interface = device
+            .detach_and_claim_interface(1) // will reattach drivers on release
+            .context("detach_and_claim_interface(1) failed")?;
+        return Ok(Some(interface));
+    }
+
+    // Another device with rndis enabled as well
+    if let Some(device) = open_usb_device(VENDOR_ID, 0xf626)? {
         let interface = device
             .detach_and_claim_interface(1) // will reattach drivers on release
             .context("detach_and_claim_interface(1) failed")?;
