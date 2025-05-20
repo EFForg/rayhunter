@@ -30,7 +30,7 @@ Please close any program that might be using your Orbic.
 If you have adb installed you may need to kill the adb daemon"#;
 
 const VENDOR_ID: u16 = 0x05c6;
-const PRODUCT_ID: u16 = 0xf601;
+const PRODUCT_ID: u16 = 0xf626;
 
 macro_rules! echo {
     ($($arg:tt)*) => {
