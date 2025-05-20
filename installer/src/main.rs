@@ -68,6 +68,7 @@ struct Serial {
 }
 
 async fn run() -> Result<(), Error> {
+    env_logger::init();
     let Args { command } = Args::parse();
 
     match command {
