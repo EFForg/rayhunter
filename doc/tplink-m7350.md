@@ -1,6 +1,24 @@
 # TP-Link M7350
 
-The TP-Link M7350 is supported by Rayhunter as of 0.2.9. It supports many more frequency bands than Orbic and therefore works in Europe.
+The TP-Link M7350 is supported by Rayhunter as of 0.3.0. It supports many more frequency bands than Orbic and therefore works in Europe.
+
+## Hardware versions
+
+The TP-Link comes in many different *hardware versions*. Support for installation varies:
+
+* `1.0`, `2.0`: **Not suported**, probably impossible to obtain anymore (even second-hand)
+* `3.0`, `3.2`, `5.0`, `5.2`, `7.0`, `8.0`: **Tested, no known issues.**
+* `4.0`: **Not working.** [issue](https://github.com/EFForg/rayhunter/issues/332)
+* `9.0`: **Not working.** [issue](https://github.com/EFForg/rayhunter/issues/325)
+
+TP-Link versions newer than `3.0` have cyan packaging and a color display.
+Version `3.0` has a one-bit display and white packaging.
+
+You can find the exact hardware version of each device under the battery or
+next to the barcode on the outer packaging, for example `V3.0` or `V5.2`. 
+
+When filing bug reports, particularly with the installer, please always
+specify the exact hardware version.
 
 You can get it from:
 
@@ -31,23 +49,6 @@ show an emoji to indicate status:
 * `!` means "warning (potential IMSI catcher)"
 * `:)` (smiling) means "recording"
 * `:` (face with no mouth) means "paused"
-
-## Hardware versions
-
-The TP-Link comes in many different *hardware versions*. Support for installation varies:
-
-* `1.0-2.0`: Not tested, probably impossible to obtain anymore (even second-hand)
-* `3.0`, `3.2`, `5.0`, `5.2`, `7.0`, `8.0`: Tested, no issues.
-* `9.0`: Recording might be broken, could be fixed if there is demand.
-
-TP-Link versions newer than `3.0` have cyan packaging and a color display.
-Version `3.0` has a one-bit display and white packaging.
-
-You can find the exact hardware version of each device under the battery or
-next to the barcode on the outer packaging, for example `V3.0` or `V5.2`. 
-
-When filing bug reports, particularly with the installer, please always
-specify the exact hardware version.
 
 ## Other links
 
