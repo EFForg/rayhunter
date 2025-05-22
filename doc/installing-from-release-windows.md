@@ -1,5 +1,16 @@
 # Installing from the latest release (Windows)
 
+Windows support in Rayhunter's installer is a work-in-progress. Depending on the device, the installation instructions differ.
+
+## TP-Link
+
+1. Connect the device via WiFi or USB Tethering -- you should be able to view the TP-Link admin page on [http://192.168.0.1](http://192.168.0.1).
+2. Download the latest release (must be at least 0.3.0), and unpack the zipfile.
+3. Open PowerShell or CMD in that extracted folder, and run the binary appropriate for your operating system: `./installer-windows-x86_64/installer tplink`
+4. Follow the instructions on the screen, if there are any.
+
+## Orbic
+
 1. Install the [Zadig WinUSB driver](https://zadig.akeo.ie/).
 2. Download the latest `release.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases).
 3. Unzip `release.zip`.
