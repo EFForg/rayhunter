@@ -76,6 +76,9 @@
     </div>
     <DeleteAllButton/>
 {:else}
-    <p>Loading...</p>
+    <div class="flex flex-col justify-center items-center">
+        <img src="/rayhunter_orca_only.png" class="h-48 animate-spin"/>
+        <p class="text-xl">Loading...</p>
+    </div>
 {/if}
 </div>
