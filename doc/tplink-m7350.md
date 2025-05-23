@@ -50,6 +50,13 @@ show an emoji to indicate status:
 * `:)` (smiling) means "recording"
 * `:` (face with no mouth) means "paused"
 
+## Power-saving mode/sleep
+
+By default the device will go to sleep after N minutes of no devices being
+connected. In that mode it will also turn off connections to cell phone towers.
+In order for Rayhunter to record continuously, you have to turn off this sleep
+mode in TP-Link's admin panel or keep e.g. your phone in the TP-Link's WiFi.
+
 ## Other links
 
 For more information on the device and instructions on how to install Rayhunter without an installer, see [rayhunter-tplink-m7350](https://github.com/m0veax/rayhunter-tplink-m7350/)
