@@ -1,5 +1,5 @@
 use std::io::{ErrorKind, Write};
-use std::path::{Path, Prefix};
+use std::path::Path;
 use std::time::Duration;
 
 use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
