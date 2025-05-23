@@ -33,7 +33,7 @@
 </script>
 
 <div class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center">
-    <span class="text-4xl font-extrabold text-rayhunter-green"><span class="text-white">ray</span>hunter</span>
+    <img src="/rayhunter_text.png" class="h-10 xl:h-12"/>
     <div class="flex flex-row gap-4">
         <a class="flex flex-row gap-1 group" href="https://github.com/EFForg/rayhunter/issues" target="_blank">
             <span class="hidden text-white group-hover:text-gray-400 lg:flex">Report Issue</span>
