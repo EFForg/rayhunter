@@ -34,6 +34,13 @@ struct InstallTpLink {
     /// IP address for TP-Link admin interface, if custom.
     #[arg(long, default_value = "192.168.0.1")]
     admin_ip: String,
+
+    /// For advanced users: Specify the path of the SD card to be mounted explicitly.
+    ///
+    /// Only do this when the installer does not work on your hardware version, as otherwise your
+    /// custom path may conflict with the systems
+    #[arg(long, default_value = "/media/card")]
+    sdcard_path: String,
 }
 
 #[derive(Parser, Debug)]

@@ -27,10 +27,11 @@ pub async fn main_tplink(
     InstallTpLink {
         skip_sdcard,
         admin_ip,
+        sdcard_path,
     }: InstallTpLink,
 ) -> Result<(), Error> {
     start_telnet(&admin_ip).await?;
-    tplink_run_install(skip_sdcard, admin_ip).await
+    tplink_run_install(skip_sdcard, admin_ip, sdcard_path).await
 }
 
 #[derive(Deserialize)]
@@ -85,17 +86,25 @@ pub async fn start_telnet(admin_ip: &str) -> Result<(), Error> {
     Ok(())
 }
 
-async fn tplink_run_install(skip_sdcard: bool, admin_ip: String) -> Result<(), Error> {
+async fn tplink_run_install(
+    skip_sdcard: bool,
+    admin_ip: String,
+    sdcard_path: String,
+) -> Result<(), Error> {
     println!("Connecting via telnet to {admin_ip}");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
 
     if !skip_sdcard {
         println!("Mounting sdcard");
-        if telnet_send_command(addr, "mount | grep -q /media/card", "exit code 0")
-            .await
-            .is_err()
+        if telnet_send_command(
+            addr,
+            &format!("mount | grep -q {sdcard_path}"),
+            "exit code 0",
+        )
+        .await
+        .is_err()
         {
-            telnet_send_command(addr, "mount /dev/mmcblk0p1 /media/card", "exit code 0").await.context("Rayhunter needs a FAT-formatted SD card to function for more than a few minutes. Insert one and rerun this installer, or pass --skip-sdcard")?;
+            telnet_send_command(addr, &format!("mount /dev/mmcblk0p1 {sdcard_path}"), "exit code 0").await.context("Rayhunter needs a FAT-formatted SD card to function for more than a few minutes. Insert one and rerun this installer, or pass --skip-sdcard")?;
         } else {
             println!("sdcard already mounted");
         }
@@ -105,28 +114,38 @@ async fn tplink_run_install(skip_sdcard: bool, admin_ip: String) -> Result<(), E
     // expects things to be at this location
     telnet_send_command(addr, "rm -rf /data/rayhunter", "exit code 0").await?;
     telnet_send_command(addr, "mkdir -p /data", "exit code 0").await?;
-    telnet_send_command(addr, "ln -sf /media/card /data/rayhunter", "exit code 0").await?;
+    telnet_send_command(
+        addr,
+        &format!("ln -sf {sdcard_path} /data/rayhunter"),
+        "exit code 0",
+    )
+    .await?;
 
     telnet_send_file(
         addr,
-        "/media/card/config.toml",
+        &format!("{sdcard_path}/config.toml"),
         crate::CONFIG_TOML.as_bytes(),
     )
     .await?;
 
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON_TPLINK"));
 
-    telnet_send_file(addr, "/media/card/rayhunter-daemon", rayhunter_daemon_bin).await?;
+    telnet_send_file(
+        addr,
+        &format!("{sdcard_path}/rayhunter-daemon"),
+        rayhunter_daemon_bin,
+    )
+    .await?;
     telnet_send_file(
         addr,
         "/etc/init.d/rayhunter_daemon",
-        get_rayhunter_daemon().as_bytes(),
+        get_rayhunter_daemon(&sdcard_path).as_bytes(),
     )
     .await?;
 
     telnet_send_command(
         addr,
-        "chmod ugo+x /media/card/rayhunter-daemon",
+        &format!("chmod ugo+x {sdcard_path}/rayhunter-daemon"),
         "exit code 0",
     )
     .await?;
@@ -324,7 +343,7 @@ async fn tplink_launch_telnet_v5(admin_ip: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn get_rayhunter_daemon() -> String {
+fn get_rayhunter_daemon(sdcard_path: &str) -> String {
     // Even though TP-Link eventually auto-mounts the SD card, it sometimes does so too late. And
     // changing the order in which daemons are started up seems to not work reliably.
     //
@@ -332,12 +351,12 @@ fn get_rayhunter_daemon() -> String {
     // specific to a particular hardware revision here.
     crate::RAYHUNTER_DAEMON_INIT.replace(
         "#RAYHUNTER-PRESTART",
-        "mount /dev/mmcblk0p1 /media/card || true",
+        &format!("mount /dev/mmcblk0p1 {sdcard_path} || true"),
     )
 }
 
 #[test]
 fn test_get_rayhunter_daemon() {
-    let s = get_rayhunter_daemon();
+    let s = get_rayhunter_daemon("/media/card");
     assert!(s.contains("mount /dev/mmcblk0p1 /media/card"));
 }
