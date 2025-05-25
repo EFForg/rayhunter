@@ -13,7 +13,6 @@ use std::thread::sleep;
 
 #[derive(Copy, Clone)]
 pub struct Dimensions {
-    pub height: u32,
     pub width: u32,
 }
 
