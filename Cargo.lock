@@ -2352,7 +2352,6 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-macro",
- "image",
  "include_dir",
  "libc",
  "log",

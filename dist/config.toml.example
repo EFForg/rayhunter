@@ -9,10 +9,8 @@ colorblind_mode = false
 # Orbic and TP-Link with color display:
 # 0 = invisible mode, no indicator that rayhunter is running
 # 1 = Subtle mode, display a colored line at the top of the screen when rayhunter is running (green=running, white=paused, red=warnings)
-# 2 = Demo Mode, display a fun orca gif
-# 3 = display the EFF logo
 #
 # TP-Link with one-bit display:
 # 0 = invisible mode
-# 1..3 = show emoji for status. :) for running, :( for warnings, no mouth for paused.
+# 1 = show emoji for status. :) for running, :( for warnings, no mouth for paused.
 ui_level = 1
