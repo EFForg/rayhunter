@@ -6,7 +6,7 @@ use crate::hdlc::hdlc_encapsulate;
 use crate::log_codes;
 
 use deku::prelude::*;
-use futures_core::TryStream;
+use futures::TryStream;
 use log::{error, info};
 use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
