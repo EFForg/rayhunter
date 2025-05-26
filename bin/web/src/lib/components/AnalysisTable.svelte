@@ -64,24 +64,24 @@
     {/if}
 </div>
 {#if report.statistics.num_skipped_packets > 0}
-    <div class="flex flex-col flex-1">
-        <p class="text-lg underline">Unparsed Messages</p>
-        <p>These are due to a limitation or bug in Rayhunter's parser, and aren't ususally a problem.</p>
-        <table class="table-auto text-left">
-            <thead class="p-2">
-                <tr class="bg-gray-300">
-                    <th scope="col" class="p-2"># of messages affected</th>
-                    <th scope="col">Reason/Error</th>
+<div>
+    <p class="text-lg underline">Unparsed Messages</p>
+    <p>These are due to a limitation or bug in Rayhunter's parser, and aren't ususally a problem.</p>
+    <table class="table-auto text-left">
+        <thead class="p-2">
+            <tr class="bg-gray-300">
+                <th scope="col" class="p-2">Total Msgs Affected</th>
+                <th scope="col">Reason/Error</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each skipped_messages.entries() as [message, count]}
+                <tr class="even:bg-gray-200 odd:bg-white">
+                    <td class="text-center">{count}</td>
+                    <td>{message}</td>
                 </tr>
-            </thead>
-            <tbody>
-                {#each skipped_messages.entries() as [message, count]}
-                    <tr class="even:bg-gray-200 odd:bg-white">
-                        <td class="text-center">{count}</td>
-                        <td>{message}</td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
+            {/each}
+        </tbody>
+    </table>
+</div>
 {/if}

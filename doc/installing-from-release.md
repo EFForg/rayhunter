@@ -18,6 +18,9 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 4. Run the install script for your operating system:
 
     ```bash
+    # On macOS, you must first remove the quarantine bit
+    xattr -d com.apple.quarantine install
+
     ./install orbic
     # or: ./install tplink
     ```

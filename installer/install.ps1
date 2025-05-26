@@ -1,40 +1,42 @@
-$global:adb = "./platform-tools-latest-windows/platform-tools/adb.exe"
+$global:adb = ".\platform-tools-latest-windows\platform-tools\adb.exe"
 $global:serial = ".\installer-windows-x86_64\installer.exe"
 
 function _adb_push {
-    & $global:adb -d push @args
+    & $global:adb -d push @args | Out-Null
     $exitCode = $LASTEXITCODE	
 	if ($exitCode -ne 0) {
 		write-host "push exited with exit code $($exitCode)"
 	}
-	return $proc.exitcode
+	return $exitCode
 }
 
 function _adb_shell {
-    & $global:adb -d shell @args
+    & $global:adb -d shell @args | Out-Null
     $exitCode = $LASTEXITCODE	
 	if ($exitCode -ne 0) {
 		write-host "shell exited with exit code $($exitCode)"
 	}
-	return $proc.exitcode
+	return $exitCode
 }
 
 function _wait_for_adb_shell {
 	do {
 		start-sleep -seconds 1
-	} until ((_adb_shell "uname -a") -eq 0)
+		$success = _adb_shell "uname -a"
+	} until ($success -eq 0)
 }
 
 function _wait_for_atfwd_daemon {
 	do {
 		start-sleep -seconds 1
-	} until ((_adb_shell "pgrep atfwd_daemon") -eq 0)
+		$success = _adb_shell "pgrep atfwd_daemon"
+	} until ($success -eq 0)
 }
 
 function force_debug_mode {
 	write-host "Using adb at $($global:adb)"
 	write-host "Forcing a switch into debug mode to enable ADB"
-	_serial "util" "serial" "--root" | Out-Host
+	_serial "util serial --root" | Out-Host
 	write-host "adb enabled, waiting for reboot..." -nonewline
 	_wait_for_adb_shell
 	write-host " it's alive!"
@@ -96,11 +98,11 @@ function setup_rayhunter {
 }
 
 function test_rayhunter {
-	$URL = "http://localhost:8080"
-	& $global:adb -d shell forward tcp:8080 tcp:8080
+	$URL = "http://localhost:8080/index.html"
+	& $global:adb -d forward tcp:8080 tcp:8080
     $exitCode = $LASTEXITCODE
 	if ($exitCode -ne 0) {
-		write-host "adb forward tcp:8080 tcp:8080 failed with exit code $($proc.exitcode)"
+		write-host "adb forward tcp:8080 tcp:8080 failed with exit code $($exitCode)"
 		return
 	}
 	write-host "checking for rayhunter server..." -nonewline
