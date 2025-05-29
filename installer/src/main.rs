@@ -50,7 +50,7 @@ struct Util {
 enum UtilSubCommand {
     /// Send a serial command to the Orbic.
     Serial(Serial),
-    /// Start an ADB shell 
+    /// Start an ADB shell
     Shell(Shell),
     /// Root the tplink and launch telnetd.
     TplinkStartTelnet(TplinkStartTelnet),
