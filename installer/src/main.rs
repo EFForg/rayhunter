@@ -50,6 +50,8 @@ struct Util {
 enum UtilSubCommand {
     /// Send a serial command to the Orbic.
     Serial(Serial),
+    /// Start an ADB shell 
+    Shell(Shell),
     /// Root the tplink and launch telnetd.
     TplinkStartTelnet(TplinkStartTelnet),
 }
@@ -67,6 +69,9 @@ struct Serial {
     root: bool,
     command: Vec<String>,
 }
+
+#[derive(Parser, Debug)]
+struct Shell {}
 
 async fn run() -> Result<(), Error> {
     env_logger::Builder::from_env(Env::default().default_filter_or("off")).init();
@@ -94,6 +99,7 @@ async fn run() -> Result<(), Error> {
                     }
                 }
             }
+            UtilSubCommand::Shell(_) => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
             UtilSubCommand::TplinkStartTelnet(options) => {
                 tplink::start_telnet(&options.admin_ip).await?;
             }

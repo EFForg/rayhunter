@@ -54,6 +54,13 @@ pub async fn install() -> Result<()> {
     Ok(())
 }
 
+pub async fn shell() -> Result<()> {
+    println!("opening shell");
+    let mut adb_device = get_adb().await?;
+    adb_device.shell(&mut std::io::stdin(), Box::new(std::io::stdout()))?;
+    Ok(())
+}
+
 async fn force_debug_mode() -> Result<ADBUSBDevice> {
     println!("Forcing a switch into the debug mode to enable ADB");
     enable_command_mode()?;
