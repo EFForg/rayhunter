@@ -434,14 +434,6 @@ pub fn open_orbic() -> Result<Option<Interface>> {
         return Ok(Some(interface));
     }
 
-    // Another device with rndis enabled as well
-    if let Some(device) = open_usb_device(VENDOR_ID, 0xf626)? {
-        let interface = device
-            .detach_and_claim_interface(1) // will reattach drivers on release
-            .context("detach_and_claim_interface(1) failed")?;
-        return Ok(Some(interface));
-    }
-
     Ok(None)
 }
 

@@ -20,8 +20,8 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
     First, enter the correct subfolder for your operating system:
     - for Ubuntu on x64 arhitecture: `cd installer-ubuntu-24`
     - for Ubuntu on ARM64 arhitecture: `cd installer-ubuntu-24-aarch64`
-    - for MacOS on Intel architecture: `cd installer-macos-intel`
-    - for MacOS on ARM achitecture: `cd installer-macos-arm`
+    - for MacOS on Intel (old macbooks) architecture: `cd installer-macos-intel`
+    - for MacOS on ARM (M1/M2 etc.) achitecture: `cd installer-macos-arm`
     - for Windows: `cd installer-windows-x86_64`
 
     ```bash
