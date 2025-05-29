@@ -1,5 +1,6 @@
 use anyhow::{Context, Error, bail};
 use clap::{Parser, Subcommand};
+use env_logger::Env;
 
 mod orbic;
 mod tplink;
@@ -68,7 +69,7 @@ struct Serial {
 }
 
 async fn run() -> Result<(), Error> {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("off")).init();
     let Args { command } = Args::parse();
 
     match command {
