@@ -7,7 +7,7 @@ use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use futures::{StreamExt, TryStreamExt};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use rayhunter::diag::DataType;
 use rayhunter::diag_device::DiagDevice;
 use rayhunter::qmdl::QmdlWriter;
@@ -24,7 +24,7 @@ use crate::server::ServerState;
 
 pub enum DiagDeviceCtrlMessage {
     StopRecording,
-    StartRecording((QmdlWriter<File>, File)),
+    StartRecording,
     Exit,
 }
 
@@ -46,13 +46,28 @@ pub fn run_diag_read_thread(
             tokio::select! {
                 msg = qmdl_file_rx.recv() => {
                     match msg {
-                        Some(DiagDeviceCtrlMessage::StartRecording((new_writer, new_analysis_file))) => {
-                            maybe_qmdl_writer = Some(new_writer);
+                        Some(DiagDeviceCtrlMessage::StartRecording) => {
+                            let mut qmdl_store = qmdl_store_lock.write().await;
+                            let (qmdl_file, new_analysis_file) = match qmdl_store.new_entry().await {
+                                Ok(x) => x,
+                                Err(e) => {
+                                    error!("couldn't create new qmdl entry: {}", e);
+                                    continue;
+                                }
+                            };
+
+                            maybe_qmdl_writer = Some(QmdlWriter::new(qmdl_file));
+
                             if let Some(analysis_writer) = maybe_analysis_writer {
                                 analysis_writer.close().await.expect("failed to close analysis writer");
                             }
+
                             maybe_analysis_writer = Some(AnalysisWriter::new(new_analysis_file, enable_dummy_analyzer).await
                                 .expect("failed to write to analysis file"));
+
+                            if let Err(e) = ui_update_sender.send(display::DisplayState::Recording).await {
+                                warn!("couldn't send ui update message: {}", e);
+                            }
                         },
                         Some(DiagDeviceCtrlMessage::StopRecording) => {
                             maybe_qmdl_writer = None;
@@ -60,6 +75,10 @@ pub fn run_diag_read_thread(
                                 analysis_writer.close().await.expect("failed to close analysis writer");
                             }
                             maybe_analysis_writer = None;
+
+                            if let Err(e) = ui_update_sender.send(display::DisplayState::Paused).await {
+                                warn!("couldn't send ui update message: {}", e);
+                            }
                         },
                         // None means all the Senders have been dropped, so it's
                         // time to go
@@ -125,37 +144,15 @@ pub async fn start_recording(
     if state.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
-    let mut qmdl_store = state.qmdl_store_lock.write().await;
-    let (qmdl_file, analysis_file) = qmdl_store.new_entry().await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("couldn't create new qmdl entry: {}", e),
-        )
-    })?;
-    let qmdl_writer = QmdlWriter::new(qmdl_file);
+
     state
         .diag_device_ctrl_sender
-        .send(DiagDeviceCtrlMessage::StartRecording((
-            qmdl_writer,
-            analysis_file,
-        )))
+        .send(DiagDeviceCtrlMessage::StartRecording)
         .await
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send stop recording message: {}", e),
-            )
-        })?;
-
-    let display_state = display::DisplayState::Recording;
-    state
-        .ui_update_sender
-        .send(display_state)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send ui update message: {}", e),
+                format!("couldn't send start recording message: {}", e),
             )
         })?;
 
@@ -200,16 +197,6 @@ pub async fn stop_recording(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("couldn't send stop recording message: {}", e),
-            )
-        })?;
-    state
-        .ui_update_sender
-        .send(display::DisplayState::Paused)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send ui update message: {}", e),
             )
         })?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
