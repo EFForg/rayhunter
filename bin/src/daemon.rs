@@ -4,6 +4,7 @@ mod diag;
 mod display;
 mod dummy_analyzer;
 mod error;
+mod key_input;
 mod pcap;
 mod qmdl_store;
 mod server;
@@ -175,7 +176,7 @@ async fn main() -> Result<(), RayhunterError> {
     let store = init_qmdl_store(&config).await?;
     let analysis_status = AnalysisStatus::new(&store);
     let qmdl_store_lock = Arc::new(RwLock::new(store));
-    let (tx, rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
+    let (diag_tx, diag_rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
     let mut maybe_ui_shutdown_tx = None;
@@ -193,13 +194,16 @@ async fn main() -> Result<(), RayhunterError> {
         run_diag_read_thread(
             &task_tracker,
             dev,
-            rx,
+            diag_rx,
             ui_update_tx.clone(),
             qmdl_store_lock.clone(),
             config.enable_dummy_analyzer,
         );
         info!("Starting UI");
         display::update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
+
+        info!("Starting Key Input service");
+        key_input::run_key_input_thread(&task_tracker, &config, diag_tx.clone());
     }
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     info!("create shutdown thread");
@@ -213,7 +217,7 @@ async fn main() -> Result<(), RayhunterError> {
     );
     run_ctrl_c_thread(
         &task_tracker,
-        tx.clone(),
+        diag_tx.clone(),
         server_shutdown_tx,
         maybe_ui_shutdown_tx,
         qmdl_store_lock.clone(),
@@ -221,7 +225,7 @@ async fn main() -> Result<(), RayhunterError> {
     );
     let state = Arc::new(ServerState {
         qmdl_store_lock: qmdl_store_lock.clone(),
-        diag_device_ctrl_sender: tx,
+        diag_device_ctrl_sender: diag_tx,
         ui_update_sender: ui_update_tx,
         debug_mode: config.debug_mode,
         analysis_status_lock,
