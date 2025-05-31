@@ -11,6 +11,7 @@ pub struct Config {
     pub ui_level: u8,
     pub enable_dummy_analyzer: bool,
     pub colorblind_mode: bool,
+    pub key_input_mode: u8,
 }
 
 impl Default for Config {
@@ -22,6 +23,7 @@ impl Default for Config {
             ui_level: 1,
             enable_dummy_analyzer: false,
             colorblind_mode: false,
+            key_input_mode: 1,
         }
     }
 }
