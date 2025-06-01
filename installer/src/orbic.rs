@@ -1,5 +1,5 @@
 use std::io::{ErrorKind, Write};
-use std::path::{Path, Prefix};
+use std::path::Path;
 use std::time::Duration;
 
 use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
@@ -51,6 +51,13 @@ pub async fn install() -> Result<()> {
     echo!("Testing rayhunter... ");
     test_rayhunter(&mut adb_device).await?;
     println!("done");
+    Ok(())
+}
+
+pub async fn shell() -> Result<()> {
+    println!("opening shell");
+    let mut adb_device = get_adb().await?;
+    adb_device.shell(&mut std::io::stdin(), Box::new(std::io::stdout()))?;
     Ok(())
 }
 
@@ -428,14 +435,6 @@ pub fn open_orbic() -> Result<Option<Interface>> {
 
     // Device with rndis enabled as well
     if let Some(device) = open_usb_device(VENDOR_ID, 0xf622)? {
-        let interface = device
-            .detach_and_claim_interface(1) // will reattach drivers on release
-            .context("detach_and_claim_interface(1) failed")?;
-        return Ok(Some(interface));
-    }
-
-    // Another device with rndis enabled as well
-    if let Some(device) = open_usb_device(VENDOR_ID, 0xf626)? {
         let interface = device
             .detach_and_claim_interface(1) // will reattach drivers on release
             .context("detach_and_claim_interface(1) failed")?;

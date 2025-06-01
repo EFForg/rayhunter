@@ -74,7 +74,15 @@ jobs:
           npm install
           npm run build
           popd
-          cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile=firmware --no-default-features --features ${{ matrix.device.name }}
+          # Run with -p so that cargo will select the minimum feature set for this package.
+          #
+          # Otherwise, it will consider the union of all requested features
+          # from all packages in the workspace. For example, if installer
+          # requires tokio with "full" feature, it will be included no matter
+          # what the feature selection in rayhunter-daemon is.
+          #
+          # https://github.com/rust-lang/cargo/issues/4463
+          cargo build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile=firmware --no-default-features --features ${{ matrix.device.name }}
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-daemon-${{ matrix.device.name }}

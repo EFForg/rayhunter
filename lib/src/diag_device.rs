@@ -6,7 +6,7 @@ use crate::hdlc::hdlc_encapsulate;
 use crate::log_codes;
 
 use deku::prelude::*;
-use futures_core::TryStream;
+use futures::TryStream;
 use log::{error, info};
 use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
@@ -251,6 +251,7 @@ impl DiagDevice {
 //
 // TPLINK M7350 v5 source code can be downloaded at https://www.tp-link.com/de/support/gpl-code/?app=omada
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 struct diag_logging_mode_param_t {
     req_mode: u32,
     peripheral_mask: u32,
@@ -261,30 +262,41 @@ struct diag_logging_mode_param_t {
 fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
     unsafe {
         if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
-            let mut params = if cfg!(feature = "tplink") {
+            let try_params: &[diag_logging_mode_param_t] = &[
+                // tplink M7350 HW revision 3-8 need this mode
+                #[cfg(feature = "tplink")]
                 diag_logging_mode_param_t {
                     req_mode: mode,
                     peripheral_mask: 0,
                     mode_param: 1,
-                }
-            } else {
+                },
+                // tplink M7350 HW revision v9 requires the same parameters as orbic
                 diag_logging_mode_param_t {
                     req_mode: mode,
                     peripheral_mask: u32::MAX,
                     mode_param: 0,
-                }
-            };
+                },
+            ];
 
-            let ret = libc::ioctl(
-                fd,
-                DIAG_IOCTL_SWITCH_LOGGING,
-                &mut params as *mut _,
-                std::mem::size_of::<diag_logging_mode_param_t>(),
-                0,
-                0,
-                0,
-                0,
-            );
+            let mut ret = 0;
+
+            for params in try_params {
+                let mut params = *params;
+                ret = libc::ioctl(
+                    fd,
+                    DIAG_IOCTL_SWITCH_LOGGING,
+                    &mut params as *mut diag_logging_mode_param_t,
+                    std::mem::size_of::<diag_logging_mode_param_t>(),
+                    0,
+                    0,
+                    0,
+                    0,
+                );
+                if ret == 0 {
+                    break;
+                }
+            }
+
             if ret < 0 {
                 let msg = format!(
                     "DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {}",

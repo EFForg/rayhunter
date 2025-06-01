@@ -1,5 +1,6 @@
 use anyhow::{Context, Error, bail};
 use clap::{Parser, Subcommand};
+use env_logger::Env;
 
 mod orbic;
 mod tplink;
@@ -34,6 +35,17 @@ struct InstallTpLink {
     /// IP address for TP-Link admin interface, if custom.
     #[arg(long, default_value = "192.168.0.1")]
     admin_ip: String,
+
+    /// For advanced users: Specify the path of the SD card to be mounted explicitly.
+    ///
+    /// The default (empty string) is to use whichever sdcard path the device would use natively to
+    /// mount storage on. On most TP-Link this is /media/card, but on hardware versions 9+ this is
+    /// /media/sdcard
+    ///
+    /// Only override this when the installer does not work on your hardware version, as otherwise
+    /// your custom path may conflict with the builtin storage functionality.
+    #[arg(long, default_value = "")]
+    sdcard_path: String,
 }
 
 #[derive(Parser, Debug)]
@@ -49,6 +61,8 @@ struct Util {
 enum UtilSubCommand {
     /// Send a serial command to the Orbic.
     Serial(Serial),
+    /// Start an ADB shell
+    Shell(Shell),
     /// Root the tplink and launch telnetd.
     TplinkStartTelnet(TplinkStartTelnet),
 }
@@ -67,8 +81,11 @@ struct Serial {
     command: Vec<String>,
 }
 
+#[derive(Parser, Debug)]
+struct Shell {}
+
 async fn run() -> Result<(), Error> {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("off")).init();
     let Args { command } = Args::parse();
 
     match command {
@@ -93,6 +110,7 @@ async fn run() -> Result<(), Error> {
                     }
                 }
             }
+            UtilSubCommand::Shell(_) => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
             UtilSubCommand::TplinkStartTelnet(options) => {
                 tplink::start_telnet(&options.admin_ip).await?;
             }

@@ -6,7 +6,7 @@ fn main() {
     println!("cargo::rerun-if-env-changed=NO_FIRMWARE_BIN");
     let include_dir = Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../target/armv7-unknown-linux-musleabihf/release/"
+        "/../target/armv7-unknown-linux-musleabihf/firmware/"
     ));
     set_binary_var(&include_dir, "FILE_ROOTSHELL", "rootshell");
     set_binary_var(
