@@ -4,18 +4,23 @@ use axum::extract::State;
 use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use include_dir::{include_dir, Dir};
 use std::sync::Arc;
+use tokio::fs::write;
 use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{oneshot, RwLock};
 use tokio_util::io::ReaderStream;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
+use crate::config::parse_config;
+use crate::config::Config;
 use crate::qmdl_store::RecordingStore;
 use crate::{display, DiagDeviceCtrlMessage};
 
 pub struct ServerState {
+    pub config_path: String,
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
     pub ui_update_sender: Sender<display::DisplayState>,
@@ -35,12 +40,15 @@ pub async fn get_qmdl(
         StatusCode::NOT_FOUND,
         format!("couldn't find qmdl file with name {}", qmdl_idx),
     ))?;
-    let qmdl_file = qmdl_store.open_entry_qmdl(entry_index).await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("error opening QMDL file: {}", e),
-        )
-    })?;
+    let qmdl_file = qmdl_store
+        .open_entry_qmdl(entry_index)
+        .await
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("error opening QMDL file: {}", err),
+            )
+        })?;
     let limited_qmdl_file = qmdl_file.take(entry.qmdl_size_bytes as u64);
     let qmdl_stream = ReaderStream::new(limited_qmdl_file);
 
@@ -84,13 +92,12 @@ pub async fn restart_daemon(
     let mut restart_tx = state.daemon_restart_tx.write().await;
 
     if let Some(sender) = restart_tx.take() {
-        sender.send(()).map_err(|()| {
+        sender.send(()).map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "couldn't send restart signal".to_string(),
             )
         })?;
-
         Ok((StatusCode::ACCEPTED, "restart signal sent".to_string()))
     } else {
         Ok((
@@ -98,4 +105,38 @@ pub async fn restart_daemon(
             "restart already triggered".to_string(),
         ))
     }
+}
+
+pub async fn get_config(
+    State(state): State<Arc<ServerState>>,
+) -> Result<Json<Config>, (StatusCode, String)> {
+    let config = parse_config(&state.config_path).await.map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to read config file: {}", err),
+        )
+    })?;
+
+    Ok(Json(config))
+}
+
+pub async fn set_config(
+    State(state): State<Arc<ServerState>>,
+    Json(config): Json<Config>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let config_str = toml::to_string_pretty(&config).map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to serialize config as TOML: {}", err),
+        )
+    })?;
+
+    write(&state.config_path, config_str).await.map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to write config file: {}", err),
+        )
+    })?;
+
+    Ok((StatusCode::ACCEPTED, "wrote config".to_string()))
 }

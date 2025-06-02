@@ -20,7 +20,7 @@ use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-use crate::server::{get_qmdl, restart_daemon, serve_static, ServerState};
+use crate::server::{get_config, get_qmdl, restart_daemon, serve_static, set_config, ServerState};
 use crate::stats::{get_qmdl_manifest, get_system_stats};
 
 use analysis::{
@@ -60,6 +60,8 @@ fn get_router() -> AppRouter {
         .route("/api/analysis", get(get_analysis_status))
         .route("/api/analysis/{name}", post(start_analysis))
         .route("/api/restart-daemon", post(restart_daemon))
+        .route("/api/config", get(get_config))
+        .route("/api/config", post(set_config))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/{*path}", get(serve_static))
 }
@@ -187,8 +189,8 @@ async fn main() -> Result<(), RayhunterError> {
     let args = parse_args();
 
     loop {
-        let config = parse_config(&args.config_path)?;
-        if !run_with_config(&config).await? {
+        let config = parse_config(&args.config_path).await?;
+        if !run_with_config(&args, &config).await? {
             return Ok(());
         }
 
@@ -199,7 +201,10 @@ async fn main() -> Result<(), RayhunterError> {
     }
 }
 
-async fn run_with_config(config: &config::Config) -> Result<bool, RayhunterError> {
+async fn run_with_config(
+    args: &config::Args,
+    config: &config::Config,
+) -> Result<bool, RayhunterError> {
     // TaskTrackers give us an interface to spawn tokio threads, and then
     // eventually await all of them ending
     let task_tracker = TaskTracker::new();
@@ -264,6 +269,7 @@ async fn run_with_config(config: &config::Config) -> Result<bool, RayhunterError
         analysis_tx.clone(),
     );
     let state = Arc::new(ServerState {
+        config_path: args.config_path.clone(),
         qmdl_store_lock: qmdl_store_lock.clone(),
         diag_device_ctrl_sender: diag_tx,
         ui_update_sender: ui_update_tx,
