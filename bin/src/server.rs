@@ -8,7 +8,7 @@ use include_dir::{include_dir, Dir};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::RwLock;
+use tokio::sync::{oneshot, RwLock};
 use tokio_util::io::ReaderStream;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
@@ -22,6 +22,7 @@ pub struct ServerState {
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub debug_mode: bool,
+    pub daemon_restart_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
 }
 
 pub async fn get_qmdl(
@@ -74,5 +75,27 @@ pub async fn serve_static(
             )
             .body(Body::from(file.contents()))
             .unwrap(),
+    }
+}
+
+pub async fn restart_daemon(
+    State(state): State<Arc<ServerState>>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let mut restart_tx = state.daemon_restart_tx.write().await;
+
+    if let Some(sender) = restart_tx.take() {
+        sender.send(()).map_err(|()| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "couldn't send restart signal".to_string(),
+            )
+        })?;
+
+        Ok((StatusCode::ACCEPTED, "restart signal sent".to_string()))
+    } else {
+        Ok((
+            StatusCode::ACCEPTED,
+            "restart already triggered".to_string(),
+        ))
     }
 }
