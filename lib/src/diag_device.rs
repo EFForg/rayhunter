@@ -7,7 +7,7 @@ use crate::log_codes;
 
 use deku::prelude::*;
 use futures::TryStream;
-use log::{error, info};
+use log::{debug, error, info};
 use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
 use thiserror::Error;
@@ -123,7 +123,7 @@ impl DiagDevice {
                 .map_err(DiagDeviceError::DeviceReadFailed)?;
         }
 
-        info!(
+        debug!(
             "Parsing messages container size = {:?} [{:?}]",
             bytes_read,
             &self.read_buf[0..bytes_read]
