@@ -197,6 +197,7 @@ async fn main() -> Result<(), RayhunterError> {
             diag_rx,
             ui_update_tx.clone(),
             qmdl_store_lock.clone(),
+            analysis_tx.clone(),
             config.enable_dummy_analyzer,
         );
         info!("Starting UI");

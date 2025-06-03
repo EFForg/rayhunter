@@ -34,6 +34,7 @@ pub fn run_diag_read_thread(
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
     ui_update_sender: Sender<display::DisplayState>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
+    analysis_sender: Sender<AnalysisCtrlMessage>,
     enable_dummy_analyzer: bool,
 ) {
     task_tracker.spawn(async move {
@@ -70,6 +71,23 @@ pub fn run_diag_read_thread(
                             }
                         },
                         Some(DiagDeviceCtrlMessage::StopRecording) => {
+                            let mut qmdl_store = qmdl_store_lock.write().await;
+                            match qmdl_store.get_current_entry() {
+                                Some((_, entry)) => {
+                                        if let Err(e) = analysis_sender
+                                        .send(AnalysisCtrlMessage::RecordingFinished(
+                                                entry.name.to_string(),
+                                        ))
+                                        .await {
+                                            warn!("couldn't send analysis message: {}", e);
+                                        }
+                                }
+                                None => todo!(),
+                            }
+                            if let Err(e) = qmdl_store.close_current_entry().await {
+                                error!("couldn't close current entry: {}", e);
+                            }
+
                             maybe_qmdl_writer = None;
                             if let Some(analysis_writer) = maybe_analysis_writer {
                                 analysis_writer.close().await.expect("failed to close analysis writer");
@@ -165,30 +183,6 @@ pub async fn stop_recording(
     if state.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
-    let mut qmdl_store = state.qmdl_store_lock.write().await;
-    match qmdl_store.get_current_entry() {
-        Some((_, entry)) => {
-            state
-                .analysis_sender
-                .send(AnalysisCtrlMessage::RecordingFinished(
-                    entry.name.to_string(),
-                ))
-                .await
-                .map_err(|e| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        format!("couldn't send AnalysisCtrlMessage: {}", e),
-                    )
-                })?;
-        }
-        None => todo!(),
-    }
-    qmdl_store.close_current_entry().await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("couldn't close current qmdl entry: {}", e),
-        )
-    })?;
     state
         .diag_device_ctrl_sender
         .send(DiagDeviceCtrlMessage::StopRecording)
