@@ -6,6 +6,8 @@ Once installed, Rayhunter will run automatically whenever your device is running
 
 It also serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, delete captures, and view heuristic analyses of captures.
 
+## The web UI
+
 You can access this UI in one of two ways:
 
 * **Connect over WiFi:** Connect your phone/laptop to your device's WiFi
@@ -23,3 +25,7 @@ You can access this UI in one of two ways:
     * On MacOS, the easiest way to install ADB is with Homebrew: First [install Homebrew](https://brew.sh/), then run `brew install android-platform-tools`.
 
 * **Connect over USB (TP-Link):** Plug in the TP-Link and use USB tethering to establish a network connection. ADB support can be enabled on the device, but the installer won't do it for you.
+
+## Key shortcuts
+
+As of 0.3.3, you can start a new recording by double-tapping the power button. Any current recording will be stopped and a new recording will be started, resetting the red line as well.
