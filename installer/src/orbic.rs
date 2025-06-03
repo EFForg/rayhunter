@@ -32,6 +32,14 @@ If you have adb installed you may need to kill the adb daemon"#;
 const VENDOR_ID: u16 = 0x05c6;
 const PRODUCT_ID: u16 = 0xf601;
 
+const INTERFACE: u8 = 1;
+
+#[cfg(target_os = "windows")]
+const RNDIS_INTERFACE: u8 = 0;
+
+#[cfg(not(target_os = "windows"))]
+const RNDIS_INTERFACE: u8 = 1;
+
 macro_rules! echo {
     ($($arg:tt)*) => {
         print!($($arg)*);
@@ -407,7 +415,7 @@ pub fn enable_command_mode() -> Result<()> {
             index: 0,
         };
         let interface = device
-            .detach_and_claim_interface(1)
+            .detach_and_claim_interface(RNDIS_INTERFACE)
             .context("detach_and_claim_interface(1) failed")?;
         if let Err(e) = interface.control_out_blocking(enable_command_mode, &[], timeout) {
             // If the device reboots while the command is still executing we
@@ -428,7 +436,7 @@ pub fn open_orbic() -> Result<Option<Interface>> {
     // Device after initial mode switch
     if let Some(device) = open_usb_device(VENDOR_ID, PRODUCT_ID)? {
         let interface = device
-            .detach_and_claim_interface(1) // will reattach drivers on release
+            .detach_and_claim_interface(INTERFACE) // will reattach drivers on release
             .context("detach_and_claim_interface(1) failed")?;
         return Ok(Some(interface));
     }
@@ -436,7 +444,7 @@ pub fn open_orbic() -> Result<Option<Interface>> {
     // Device with rndis enabled as well
     if let Some(device) = open_usb_device(VENDOR_ID, 0xf622)? {
         let interface = device
-            .detach_and_claim_interface(1) // will reattach drivers on release
+            .detach_and_claim_interface(INTERFACE) // will reattach drivers on release
             .context("detach_and_claim_interface(1) failed")?;
         return Ok(Some(interface));
     }
