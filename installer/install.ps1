@@ -2,20 +2,14 @@ $global:adb = ".\platform-tools-latest-windows\platform-tools\adb.exe"
 $global:serial = ".\installer-windows-x86_64\installer.exe"
 
 function _adb_push {
-    & $global:adb -d push @args | Out-Null
+    & $global:adb -d push @args *> $null
     $exitCode = $LASTEXITCODE	
-	if ($exitCode -ne 0) {
-		write-host "push exited with exit code $($exitCode)"
-	}
 	return $exitCode
 }
 
 function _adb_shell {
-    & $global:adb -d shell @args | Out-Null
+    & $global:adb -d shell @args *> $null
     $exitCode = $LASTEXITCODE	
-	if ($exitCode -ne 0) {
-		write-host "shell exited with exit code $($exitCode)"
-	}
 	return $exitCode
 }
 
@@ -36,7 +30,7 @@ function _wait_for_atfwd_daemon {
 function force_debug_mode {
 	write-host "Using adb at $($global:adb)"
 	write-host "Forcing a switch into debug mode to enable ADB"
-	_serial "util serial --root" | Out-Host
+	_serial "--root" | Out-Host
 	write-host "adb enabled, waiting for reboot..." -nonewline
 	_wait_for_adb_shell
 	write-host " it's alive!"
@@ -58,7 +52,8 @@ function _serial {
 }
 
 function setup_rootshell {
-	_adb_push "rootshell" "/tmp"
+	write-host "setting up rootshell"
+	_adb_push "rootshell" "/tmp" | Out-null
 	write-host "cp..."
 	_serial "AT+SYSCMD=cp /tmp/rootshell /bin/rootshell" | Out-Host
 	start-sleep -seconds 1
@@ -68,19 +63,20 @@ function setup_rootshell {
 	write-host "chmod..."
 	_serial "AT+SYSCMD=chmod 4755 /bin/rootshell" | Out-Host
 	start-sleep -seconds 1
-	_adb_shell '/bin/rootshell -c id'
+	_adb_shell '/bin/rootshell -c id' | Out-null
 	write-host "we have root!"
 }
 
 function setup_rayhunter {
+	write-host "installing rayhunter..."
 	_serial "AT+SYSCMD=mkdir -p /data/rayhunter" | Out-Host
-	_adb_push "config.toml.example" "/tmp/config.toml"
+	_adb_push "config.toml.example" "/tmp/config.toml" | Out-Null
 	_serial "AT+SYSCMD=mv /tmp/config.toml /data/rayhunter" | Out-Host
-	_adb_push "rayhunter-daemon-orbic/rayhunter-daemon" "/tmp/rayhunter-daemon"
+	_adb_push "rayhunter-daemon-orbic/rayhunter-daemon" "/tmp/rayhunter-daemon" | Out-Null
 	_serial "AT+SYSCMD=mv /tmp/rayhunter-daemon /data/rayhunter" | Out-Host
-	_adb_push "scripts/rayhunter_daemon" "/tmp/rayhunter_daemon"
+	_adb_push "scripts/rayhunter_daemon" "/tmp/rayhunter_daemon" | Out-Null
 	_serial "AT+SYSCMD=mv /tmp/rayhunter_daemon /etc/init.d/rayhunter_daemon" | Out-Host
-	_adb_push "scripts/misc-daemon" "/tmp/misc-daemon"
+	_adb_push "scripts/misc-daemon" "/tmp/misc-daemon" | Out-Null
 	_serial "AT+SYSCMD=mv /tmp/misc-daemon /etc/init.d/misc-daemon" | Out-Host
 
 	_serial "AT+SYSCMD=chmod 755 /data/rayhunter/rayhunter-daemon" | Out-Host
@@ -108,7 +104,12 @@ function test_rayhunter {
 	write-host "checking for rayhunter server..." -nonewline
 	$seconds = 0
 	do {
-		$resp = invoke-webrequest -uri $URL
+		try {
+			$resp = invoke-webrequest -uri $URL
+		} catch {
+			# Fail silently
+			$resp = $null			
+		}
 		if ($resp.statuscode -eq 200) {
 			write-host "success!"
 			write-host "you can access rayhunter at $($URL)"
