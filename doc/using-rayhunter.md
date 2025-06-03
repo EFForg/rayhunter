@@ -2,7 +2,7 @@
 
 Once installed, Rayhunter will run automatically whenever your device is running. You'll see a green line on top of the device's display to indicate that it's running and recording. [The line will turn red](#red) once a potential IMSI catcher has been found, until the device is rebooted or a new recording is started through the web UI.
 
-![Rayhunter_0 3 2](https://github.com/user-attachments/assets/ae4f3253-7be6-4f9c-a14e-a0ad0e0998b9)
+![Rayhunter_0 3 2](./Rayhunter_0.3.2.png)
 
 It also serves a web UI that provides some basic controls, such as being able to start/stop recordings, download captures, delete captures, and view heuristic analyses of captures.
 
