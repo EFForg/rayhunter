@@ -11,10 +11,20 @@ Windows support in Rayhunter's installer is a work-in-progress. Depending on the
 
 ## Orbic
 
-1. Install the [Zadig WinUSB driver](https://zadig.akeo.ie/).
+1. Connect the device to your computer using the provided USB cable.
+1. Install the [Zadig WinUSB driver installer](https://zadig.akeo.ie/).
+1. Open Zadig, click options->show all devices 
+
+    ![Zadig](./zadig2.png)
+
+1. Select 'RNDIS (Interface 0)'
+
+    ![Zadig](./zadig.png)
+
+1. Click 'install driver' and wait for it to finish. 
 2. Download the latest `rayhunter-vX.X.X.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases). The version you download will have numbers instead of X
 3. Unzip `rayhunter-vX.X.X` .
-4. Save the [`install.ps1` file here](https://github.com/EFForg/rayhunter/blob/powershell/installer/install.ps1) in top of the folder that was unzipped from release.zip.
+1. Open a powershell terminal by pressing Win+R and typing `powershell` and hitting enter. 
 5. Run the following powershell command `Set-ExecutionPolicy remotesigned`
 5. Run the install script by double clicking on `install.ps1`. A powershell window will launch.
     The device will restart multiple times over the next few minutes.
