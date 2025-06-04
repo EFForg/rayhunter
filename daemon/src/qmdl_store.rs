@@ -1,7 +1,9 @@
 use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
+use std::time::UNIX_EPOCH;
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeZone};
+use rayhunter::analysis;
 use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -70,6 +72,7 @@ impl ManifestEntry {
             arch: Some(metadata.arch),
         }
     }
+
 
     pub fn get_qmdl_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         let mut filepath = path.as_ref().join(&self.name);
@@ -166,6 +169,40 @@ impl RecordingStore {
         let analysis_file = File::create(&analysis_filepath)
             .await
             .map_err(RecordingStoreError::CreateFileError)?;
+        self.manifest.entries.push(new_entry);
+        self.current_entry = Some(self.manifest.entries.len() - 1);
+        self.write_manifest().await?;
+        Ok((qmdl_file, analysis_file))
+    }
+    
+    pub async fn new_entry_from_existing(&mut self, name: String) -> Result<(File, File), RecordingStoreError> {
+        // if we've already got an entry open, close it
+        if self.current_entry.is_some() {
+            self.close_current_entry().await?;
+        }
+        let mut new_entry = ManifestEntry::new();
+        new_entry.name = name;
+        let qmdl_filepath = new_entry.get_qmdl_filepath(&self.path);
+        let qmdl_file = File::open(&qmdl_filepath)
+            .await
+            .map_err(RecordingStoreError::ReadFileError)?;
+        let qmdl_meta = qmdl_file.metadata().await.map_err(RecordingStoreError::ReadFileError)?;
+        let analysis_filepath = new_entry.get_analysis_filepath(&self.path);
+        let analysis_file = File::open(&analysis_filepath)
+            .await
+            .map_err(RecordingStoreError::ReadFileError)?;
+
+        let timestamp = Local.timestamp_opt(new_entry.name.parse::<i64>().expect("Invalid timestamp"), 0).unwrap();
+        new_entry.start_time = timestamp;
+
+        // I can't think of a better way to find this 
+        let update = qmdl_meta.modified().expect("no mod date").duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+        new_entry.last_message_time = Some(Local.timestamp_opt(update.as_secs().try_into().expect("error"), 0).unwrap());
+
+        new_entry.analysis_size_bytes = analysis_file.metadata().await.map_err(RecordingStoreError::ReadFileError)?.len().try_into().expect("file too large");
+        new_entry.qmdl_size_bytes = qmdl_meta.len().try_into().expect("file too large");
+
         self.manifest.entries.push(new_entry);
         self.current_entry = Some(self.manifest.entries.len() - 1);
         self.write_manifest().await?;
