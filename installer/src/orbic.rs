@@ -49,12 +49,11 @@ macro_rules! echo {
 
 pub async fn install() -> Result<()> {
     let mut adb_device = force_debug_mode().await?;
-    let serial_interface = open_orbic()?.ok_or_else(|| anyhow!(ORBIC_NOT_FOUND))?;
     echo!("Installing rootshell... ");
-    setup_rootshell(&serial_interface, &mut adb_device).await?;
+    setup_rootshell(&mut adb_device).await?;
     println!("done");
     echo!("Installing rayhunter... ");
-    let mut adb_device = setup_rayhunter(&serial_interface, adb_device).await?;
+    let mut adb_device = setup_rayhunter(adb_device).await?;
     println!("done");
     echo!("Testing rayhunter... ");
     test_rayhunter(&mut adb_device).await?;
@@ -74,6 +73,7 @@ async fn force_debug_mode() -> Result<ADBUSBDevice> {
     enable_command_mode()?;
     echo!("ADB enabled, waiting for reboot... ");
     let mut adb_device = get_adb().await?;
+    adb_setup_serial(&mut adb_device).await?;
     println!("it's alive!");
     echo!("Waiting for atfwd_daemon to startup... ");
     adb_command(&mut adb_device, &["pgrep", "atfwd_daemon"])?;
@@ -82,22 +82,20 @@ async fn force_debug_mode() -> Result<ADBUSBDevice> {
 }
 
 async fn setup_rootshell(
-    serial_interface: &Interface,
     adb_device: &mut ADBUSBDevice,
 ) -> Result<()> {
     let rootshell_bin = include_bytes!(env!("FILE_ROOTSHELL"));
 
     install_file(
-        serial_interface,
         adb_device,
         "/bin/rootshell",
         rootshell_bin,
     )
     .await?;
     tokio::time::sleep(Duration::from_secs(1)).await;
-    at_syscmd(serial_interface, "chown root /bin/rootshell").await?;
+    adb_at_syscmd(adb_device, "chown root /bin/rootshell").await?;
     tokio::time::sleep(Duration::from_secs(1)).await;
-    at_syscmd(serial_interface, "chmod 4755 /bin/rootshell").await?;
+    adb_at_syscmd(adb_device, "chmod 4755 /bin/rootshell").await?;
     let output = adb_command(adb_device, &["/bin/rootshell", "-c", "id"])?;
     if !output.contains("uid=0") {
         bail!("rootshell is not giving us root.");
@@ -106,45 +104,40 @@ async fn setup_rootshell(
 }
 
 async fn setup_rayhunter(
-    serial_interface: &Interface,
     mut adb_device: ADBUSBDevice,
 ) -> Result<ADBUSBDevice> {
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON_ORBIC"));
 
-    at_syscmd(serial_interface, "mkdir -p /data/rayhunter").await?;
+    adb_at_syscmd(&mut adb_device, "mkdir -p /data/rayhunter").await?;
     install_file(
-        serial_interface,
         &mut adb_device,
         "/data/rayhunter/rayhunter-daemon",
         rayhunter_daemon_bin,
     )
     .await?;
     install_file(
-        serial_interface,
         &mut adb_device,
         "/data/rayhunter/config.toml",
         CONFIG_TOML.as_bytes(),
     )
     .await?;
     install_file(
-        serial_interface,
         &mut adb_device,
         "/etc/init.d/rayhunter_daemon",
         RAYHUNTER_DAEMON_INIT.as_bytes(),
     )
     .await?;
     install_file(
-        serial_interface,
         &mut adb_device,
         "/etc/init.d/misc-daemon",
         include_bytes!("../../dist/scripts/misc-daemon"),
     )
     .await?;
-    at_syscmd(serial_interface, "chmod 755 /etc/init.d/rayhunter_daemon").await?;
-    at_syscmd(serial_interface, "chmod 755 /etc/init.d/misc-daemon").await?;
+    adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/rayhunter_daemon").await?;
+    adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/misc-daemon").await?;
     println!("done");
     echo!("Waiting for reboot... ");
-    at_syscmd(serial_interface, "shutdown -r -t 1 now").await?;
+    adb_at_syscmd(&mut adb_device, "shutdown -r -t 1 now").await?;
     // first wait for shutdown (it can take ~10s)
     tokio::time::timeout(Duration::from_secs(30), async {
         while let Ok(dev) = adb_echo_test(adb_device).await {
@@ -177,7 +170,6 @@ async fn test_rayhunter(adb_device: &mut ADBUSBDevice) -> Result<()> {
 }
 
 async fn install_file(
-    serial_interface: &Interface,
     adb_device: &mut ADBUSBDevice,
     dest: &str,
     payload: &[u8],
@@ -185,7 +177,7 @@ async fn install_file(
     const MAX_FAILURES: u32 = 5;
     let mut failures = 0;
     loop {
-        match install_file_impl(serial_interface, adb_device, dest, payload).await {
+        match install_file_impl(adb_device, dest, payload).await {
             Ok(()) => return Ok(()),
             Err(e) => {
                 if failures > MAX_FAILURES {
@@ -200,7 +192,6 @@ async fn install_file(
 }
 
 async fn install_file_impl(
-    serial_interface: &Interface,
     adb_device: &mut ADBUSBDevice,
     dest: &str,
     mut payload: &[u8],
@@ -217,7 +208,7 @@ async fn install_file_impl(
     let file_hash_bytes = hasher.finalize();
     let file_hash = format!("{file_hash_bytes:x}");
     adb_device.push(&mut payload, &push_tmp_path)?;
-    at_syscmd(serial_interface, &format!("mv {push_tmp_path} {dest}")).await?;
+    adb_at_syscmd(adb_device, &format!("mv {push_tmp_path} {dest}")).await?;
     let file_info = adb_device
         .stat(dest)
         .context("Failed to stat transfered file")?;
@@ -336,9 +327,58 @@ async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
     }
 }
 
-async fn at_syscmd(interface: &Interface, command: &str) -> Result<()> {
-    send_serial_cmd(interface, &format!("AT+SYSCMD={command}")).await
+async fn adb_setup_serial(adb_device: &mut ADBUSBDevice) -> Result<()> {
+    Ok(adb_device.get_transport_mut().claim_interface(INTERFACE)?)
 }
+
+async fn adb_at_syscmd(adb_device: &mut ADBUSBDevice, command: &str) -> Result<()> {
+    adb_serial_cmd(adb_device, &format!("AT+SYSCMD={command}")).await
+}
+
+async fn adb_serial_cmd(adb_device: &mut ADBUSBDevice, command: &str) -> Result<()> {
+    let mut data = String::new();
+    data.push_str("\r\n");
+    data.push_str(command);
+    data.push_str("\r\n");
+
+    let timeout = Duration::from_secs(2);
+    let mut response = [0; 256];
+
+    // Set up the serial port appropriately
+    adb_device
+        .get_transport_mut()
+        .send_usb_class_control_msg(INTERFACE, 0x22, 3, 1, &[], timeout)
+        .context("Failed to send control request")?;
+
+    // Send the command
+    adb_device
+        .get_transport_mut()
+        .usb_bulk_write(INTERFACE, 0x2, data.as_bytes(), timeout)
+        .context("Failed to write command")?;
+
+    // Consume the echoed command
+    adb_device
+        .get_transport_mut()
+        .usb_bulk_read(INTERFACE, 0x82, &mut response, timeout)
+        .context("Failed to read submitted command")?;
+
+    // Read the actual response
+    adb_device
+        .get_transport_mut()
+        .usb_bulk_read(INTERFACE, 0x82, &mut response, timeout)
+        .context("Failed to read response")?;
+
+    // For some reason, on macOS the response buffer gets filled with garbage data that's
+    // rarely valid UTF-8. Luckily we only care about the first couple bytes, so just drop
+    // the garbage with `from_utf8_lossy` and look for our expected success string.
+    let responsestr = String::from_utf8_lossy(&response);
+    if !responsestr.contains("\r\nOK\r\n") {
+        bail!("Received unexpected response: {0}", responsestr);
+    }
+
+    Ok(())
+}
+
 /// Sends an AT command to the usb device over the serial port
 ///
 /// First establish a USB handle and context by calling `open_orbic(<T>)
