@@ -22,10 +22,10 @@ const ORBIC_BUSY: &str = r#"The Orbic is plugged in but is being used by another
 Please close any program that might be using your USB devices.
 If you have adb installed you may need to kill the adb daemon"#;
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 const ORBIC_BUSY_MAC: &str = r#"Permission denied.
 
-On macOS this might be caused by another program using the Orbic.
+On macOS or windows this might be caused by another program using the Orbic.
 Please close any program that might be using your Orbic.
 If you have adb installed you may need to kill the adb daemon"#;
 
@@ -250,7 +250,7 @@ async fn get_adb() -> Result<ADBUSBDevice> {
             Err(RustADBError::IOError(e)) if e.kind() == ErrorKind::ResourceBusy => {
                 bail!(ORBIC_BUSY);
             }
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os="windows"))]
             Err(RustADBError::IOError(e)) if e.kind() == ErrorKind::PermissionDenied => {
                 bail!(ORBIC_BUSY_MAC);
             }
