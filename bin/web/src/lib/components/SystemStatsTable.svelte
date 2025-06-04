@@ -22,7 +22,7 @@
                     Storage
                 </th>
                 <td class={table_cell_classes}>
-                    {stats.disk_stats.used_percent} used ({stats.disk_stats.used_size} / {stats.disk_stats.available_size})
+                    {stats.disk_stats.used_percent} used ({stats.disk_stats.used_size} used / {stats.disk_stats.available_size} available)
                 </td>
             </tr>
             <tr class="border-b">

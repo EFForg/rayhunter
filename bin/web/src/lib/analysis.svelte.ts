@@ -72,7 +72,7 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Anal
             const events: Event[] = analysis_json.events.map((event_json: any): Event | null => {
                     if (event_json === null) {
                         return null;
-                    } else if (event_json.event_type === "Informational") {
+                    } else if (event_json.event_type.type === "Informational") {
                         num_informational_logs += 1;
                         return {
                             type: EventType.Informational,
@@ -82,8 +82,8 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Anal
                         num_warnings += 1;
                         return {
                             type: EventType.Warning,
-                            severity: event_json.severity === "High" ? Severity.High :
-                                event_json.severity === "Medium" ? Severity.Medium : Severity.Low,
+                            severity: event_json.event_type.severity === "High" ? Severity.High :
+                                event_json.event_type.severity === "Medium" ? Severity.Medium : Severity.Low,
                             message: event_json.message,
                         };
                     }
