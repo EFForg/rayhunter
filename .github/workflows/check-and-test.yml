@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - name: Check formatting
+      run: cargo fmt --all --check
     - name: Check
       run: |
         pushd bin/web
@@ -51,4 +53,4 @@ jobs:
         shell: bash
         run: |
           cd installer
-          cargo test --verbose --no-default-features --features=${{ matrix.device.name }}
+          cargo test --verbose --no-default-features
