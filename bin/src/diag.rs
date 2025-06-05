@@ -72,17 +72,14 @@ pub fn run_diag_read_thread(
                         },
                         Some(DiagDeviceCtrlMessage::StopRecording) => {
                             let mut qmdl_store = qmdl_store_lock.write().await;
-                            match qmdl_store.get_current_entry() {
-                                Some((_, entry)) => {
-                                        if let Err(e) = analysis_sender
-                                        .send(AnalysisCtrlMessage::RecordingFinished(
-                                                entry.name.to_string(),
-                                        ))
-                                        .await {
-                                            warn!("couldn't send analysis message: {}", e);
-                                        }
-                                }
-                                None => todo!(),
+                            if let Some((_, entry)) = qmdl_store.get_current_entry() {
+                                    if let Err(e) = analysis_sender
+                                    .send(AnalysisCtrlMessage::RecordingFinished(
+                                            entry.name.to_string(),
+                                    ))
+                                    .await {
+                                        warn!("couldn't send analysis message: {}", e);
+                                    }
                             }
                             if let Err(e) = qmdl_store.close_current_entry().await {
                                 error!("couldn't close current entry: {}", e);
