@@ -1,0 +1,48 @@
+# To use: navigate on Github to Actions, select "Release rayhunter" on the left, click "Run workflow" > "Run workflow" on the right.
+# https://github.com/EFForg/rayhunter/actions/workflows/release.yml
+name: Release rayhunter
+on:
+  workflow_dispatch:
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  check_version_same:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure all Cargo.toml files have the same version defined.
+        run: |
+          defined_versions=$(find lib bin installer rootshell telcom-parser -name Cargo.toml -exec grep ^version {} \; | uniq | wc -l)
+          find lib bin installer rootshell telcom-parser -name Cargo.toml -exec grep ^version {} \;
+          echo number of defined versions = $defined_versions
+          if [ $defined_versions != "1" ]
+          then
+            echo "all Cargo.toml files must have the same version defined"
+            exit 1
+          fi
+
+  main:
+    needs: check_version_same
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+      pages: write
+    uses: ./.github/workflows/main.yml
+
+  release:
+    runs-on: ubuntu-latest
+    needs: main
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - name: Create release
+        run: |
+          version=$(grep ^version lib/Cargo.toml | cut -d' ' -f3 | tr -d '"')
+          gh release create --generate-notes -t "Rayhunter v$version" "v$version" rayhunter-v${version}/rayhunter-*
