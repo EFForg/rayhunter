@@ -81,17 +81,10 @@ async fn force_debug_mode() -> Result<ADBUSBDevice> {
     Ok(adb_device)
 }
 
-async fn setup_rootshell(
-    adb_device: &mut ADBUSBDevice,
-) -> Result<()> {
+async fn setup_rootshell(adb_device: &mut ADBUSBDevice) -> Result<()> {
     let rootshell_bin = include_bytes!(env!("FILE_ROOTSHELL"));
 
-    install_file(
-        adb_device,
-        "/bin/rootshell",
-        rootshell_bin,
-    )
-    .await?;
+    install_file(adb_device, "/bin/rootshell", rootshell_bin).await?;
     tokio::time::sleep(Duration::from_secs(1)).await;
     adb_at_syscmd(adb_device, "chown root /bin/rootshell").await?;
     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -103,9 +96,7 @@ async fn setup_rootshell(
     Ok(())
 }
 
-async fn setup_rayhunter(
-    mut adb_device: ADBUSBDevice,
-) -> Result<ADBUSBDevice> {
+async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON_ORBIC"));
 
     adb_at_syscmd(&mut adb_device, "mkdir -p /data/rayhunter").await?;
@@ -169,11 +160,7 @@ async fn test_rayhunter(adb_device: &mut ADBUSBDevice) -> Result<()> {
     bail!("timeout reached! failed to reach rayhunter, something went wrong :(")
 }
 
-async fn install_file(
-    adb_device: &mut ADBUSBDevice,
-    dest: &str,
-    payload: &[u8],
-) -> Result<()> {
+async fn install_file(adb_device: &mut ADBUSBDevice, dest: &str, payload: &[u8]) -> Result<()> {
     const MAX_FAILURES: u32 = 5;
     let mut failures = 0;
     loop {
@@ -250,7 +237,7 @@ async fn get_adb() -> Result<ADBUSBDevice> {
             Err(RustADBError::IOError(e)) if e.kind() == ErrorKind::ResourceBusy => {
                 bail!(ORBIC_BUSY);
             }
-            #[cfg(any(target_os = "macos", target_os="windows"))]
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
             Err(RustADBError::IOError(e)) if e.kind() == ErrorKind::PermissionDenied => {
                 bail!(ORBIC_BUSY_MAC);
             }
