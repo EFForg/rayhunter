@@ -21,13 +21,13 @@ tokio-retry2 = "0.5.7"
 tokio-stream = "0.1.17"
 
 [target.'cfg(target_os = "linux")'.dependencies.adb_client]
-git = "https://github.com/gaykitty/adb_client.git"
-rev = "e732fc178a0eb237138e4091059ff5ffa241385a"
+git = "https://github.com/EFForg/adb_client.git"
+rev = "e511662394e4fa32865c154c40f81a3d846f700c"
 default-features = false
 features = ["trans-nusb"]
 
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies.adb_client]
-git = "https://github.com/gaykitty/adb_client.git"
-rev = "e732fc178a0eb237138e4091059ff5ffa241385a"
+git = "https://github.com/EFForg/adb_client.git"
+rev = "e511662394e4fa32865c154c40f81a3d846f700c"
 default-features = false
 features = ["trans-libusb"]
