@@ -26,5 +26,5 @@ pcap-file-tokio = "0.1.0"
 thiserror = "1.0.50"
 telcom-parser = { path = "../telcom-parser" }
 tokio = { version = "1.44.2", default-features = false }
-futures = { version = "0.3.40", default-features = false }
+futures = { version = "0.3.30", default-features = false }
 serde = { version = "1.0.197", features = ["derive"] }
