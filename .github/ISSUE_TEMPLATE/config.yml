@@ -1,4 +1,4 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
   - name: Rayhunter Mattermost
     url: https://opensource.eff.org/signup_user_complete/?id=6iqur37ucfrctfswrs14iscobw&md=link&sbr=su

@@ -1,6 +1,5 @@
 name: Feature Request
 description: Suggest a new feature or improvement to Rayhunter
-title: "[Feature Request]: "
 labels: ["enhancement"]
 body:
   - type: textarea
