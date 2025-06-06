@@ -1,4 +1,4 @@
-name: Check, test, build release zip, publish docs
+name: main
 
 on:
   push:
@@ -100,6 +100,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      NO_FIRMWARE_BIN=true
     steps:
     - uses: actions/checkout@v4
     - name: Check formatting
@@ -110,13 +112,13 @@ jobs:
         npm install
         npm run build
         popd
-        NO_FIRMWARE_BIN=true cargo check --verbose --no-default-features --features=${{ matrix.device.name }}
+        cargo check --verbose --no-default-features --features=${{ matrix.device.name }}
     - name: Run tests
       run: |
-        NO_FIRMWARE_BIN=true cargo test --verbose --no-default-features --features=${{ matrix.device.name }}
+        cargo test --verbose --no-default-features --features=${{ matrix.device.name }}
     - name: Run clippy
       run: |
-        NO_FIRMWARE_BIN=true cargo clippy --verbose --no-default-features --features=${{ matrix.device.name }}
+        cargo clippy --verbose --no-default-features --features=${{ matrix.device.name }}
 
   windows_installer_check_and_test:
     needs: files_changed
@@ -124,18 +126,20 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read
+    env:
+      NO_FIRMWARE_BIN=true
     steps:
       - uses: actions/checkout@v4
       - name: cargo check
         shell: bash
         run: |
           cd installer
-          NO_FIRMWARE_BIN=true cargo check --verbose
+          cargo check --verbose
       - name: cargo test
         shell: bash
         run: |
           cd installer
-          NO_FIRMWARE_BIN=true cargo test --verbose --no-default-features
+          cargo test --verbose --no-default-features
 
   build_rayhunter_check:
     if: needs.files_changed.outputs.daemon_changed != '0'
@@ -242,6 +246,7 @@ jobs:
       packages: write
     needs:
       - build_rayhunter
+      - build_rootshell
       - files_changed
       - windows_installer_check_and_test
     strategy:
