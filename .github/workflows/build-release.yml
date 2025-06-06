@@ -91,6 +91,7 @@ jobs:
   build_rust_installer:
     needs:
       - build_rayhunter
+      - build_rootshell
     strategy:
       matrix:
         platform:
