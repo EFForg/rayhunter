@@ -15,7 +15,7 @@ To install the hampi compiler, run:
 To generate the parser for LTE RRC, run:
 
 ```
-> hampi-rs-asn1c --codec uper --derive clone --derive partial-eq --derive serialize --module src/lte_rrc.rs -- specs/EUTRA* specs/PC5-RRC-Definitions.asn
+> rs-asn1c --codec uper --derive clone --derive partial-eq --derive serialize --module src/lte_rrc.rs -- specs/EUTRA* specs/PC5-RRC-Definitions.asn
 ```
 
 ## Sourcing the ASN.1 files
