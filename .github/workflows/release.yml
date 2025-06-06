@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Ensure all Cargo.toml files have the same version defined.
         run: |
-          defined_versions=$(find lib bin installer rootshell telcom-parser -name Cargo.toml -exec grep ^version {} \; | uniq | wc -l)
+          defined_versions=$(find lib bin installer rootshell telcom-parser -name Cargo.toml -exec grep ^version {} \; | sort -u | wc -l)
           find lib bin installer rootshell telcom-parser -name Cargo.toml -exec grep ^version {} \;
           echo number of defined versions = $defined_versions
           if [ $defined_versions != "1" ]
