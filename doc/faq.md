@@ -18,3 +18,18 @@ Please note that this file may contain sensitive information such as your IMSI a
 ### Should I get a locked or unlocked orbic device? What is the difference?
 
 If you want to use a non-Verizon SIM card you will probably need an unlocked device. But it's not clear how locked the locked devices are nor how to unlock them, we welcome any experimentation and information regarding the use of unlocked devices.
+
+
+### How do I re-enable USB tethering after installing Rayhunter?
+
+Make sure USB tethering is also enabled in the Orbic's UI, and then run the following commands:
+
+    installer util serial "echo 9 > /usrdata/mode.cfg"
+    installer util serial reboot
+
+To disable tethering again:
+
+    installer util serial "echo 3 > /usrdata/mode.cfg"
+    installer util serial reboot
+
+See `/data/usb/boot_hsusb_composition` for a list of USB modes and Android USB gadget settings.
