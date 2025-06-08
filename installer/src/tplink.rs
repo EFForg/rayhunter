@@ -236,7 +236,7 @@ async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) -> R
     Ok(())
 }
 
-async fn telnet_send_command(
+pub async fn telnet_send_command(
     addr: SocketAddr,
     command: &str,
     expected_output: &str,

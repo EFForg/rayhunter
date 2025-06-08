@@ -13,6 +13,7 @@ path = "src/lib.rs"
 default = []
 orbic = []
 tplink = []
+wingtech = []
 
 [dependencies]
 bytes = "1.5.0"

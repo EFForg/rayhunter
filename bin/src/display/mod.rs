@@ -15,6 +15,11 @@ mod orbic;
 #[cfg(feature = "orbic")]
 pub use orbic::update_ui;
 
+#[cfg(feature = "wingtech")]
+mod wingtech;
+#[cfg(feature = "wingtech")]
+pub use wingtech::update_ui;
+
 pub enum DisplayState {
     Recording,
     Paused,
@@ -24,5 +29,8 @@ pub enum DisplayState {
 #[cfg(all(feature = "orbic", feature = "tplink"))]
 compile_error!("cannot compile for many devices at once");
 
-#[cfg(not(any(feature = "orbic", feature = "tplink")))]
+#[cfg(all(feature = "orbic", feature = "wingtech"))]
+compile_error!("cannot compile for many devices at once");
+
+#[cfg(not(any(feature = "orbic", feature = "tplink", feature = "wingtech",)))]
 compile_error!("cannot compile for no device at all");

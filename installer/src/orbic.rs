@@ -46,6 +46,7 @@ macro_rules! echo {
         let _ = std::io::stdout().flush();
     };
 }
+pub(crate) use echo;
 
 pub async fn install() -> Result<()> {
     let mut adb_device = force_debug_mode().await?;

@@ -19,6 +19,11 @@ fn main() {
         "FILE_RAYHUNTER_DAEMON_TPLINK",
         "rayhunter-daemon",
     );
+    set_binary_var(
+        &include_dir,
+        "FILE_RAYHUNTER_DAEMON_WINGTECH",
+        "rayhunter-daemon",
+    );
 }
 
 fn set_binary_var(include_dir: &Path, var: &str, file: &str) {
