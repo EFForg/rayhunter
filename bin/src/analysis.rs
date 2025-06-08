@@ -8,7 +8,7 @@ use axum::{
 };
 use futures::TryStreamExt;
 use log::{debug, error, info};
-use rayhunter::analysis::analyzer::Harness;
+use rayhunter::analysis::analyzer::{AnalyzerConfig, Harness};
 use rayhunter::diag::{DataType, MessagesContainer};
 use rayhunter::qmdl::QmdlReader;
 use serde::Serialize;
@@ -35,8 +35,12 @@ pub struct AnalysisWriter {
 // lets us simply append new rows to the end without parsing the entire JSON
 // object beforehand.
 impl AnalysisWriter {
-    pub async fn new(file: File, enable_dummy_analyzer: bool) -> Result<Self, std::io::Error> {
-        let mut harness = Harness::new_with_all_analyzers();
+    pub async fn new(
+        file: File,
+        enable_dummy_analyzer: bool,
+        analyzer_config: &AnalyzerConfig,
+    ) -> Result<Self, std::io::Error> {
+        let mut harness = Harness::new_with_config(analyzer_config);
         if enable_dummy_analyzer {
             harness.add_analyzer(Box::new(TestAnalyzer { count: 0 }));
         }
@@ -131,6 +135,7 @@ async fn perform_analysis(
     name: &str,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     enable_dummy_analyzer: bool,
+    analyzer_config: &AnalyzerConfig,
 ) -> Result<(), String> {
     info!("Opening QMDL and analysis file for {}...", name);
     let (analysis_file, qmdl_file, entry_index) = {
@@ -150,9 +155,10 @@ async fn perform_analysis(
         (analysis_file, qmdl_file, entry_index)
     };
 
-    let mut analysis_writer = AnalysisWriter::new(analysis_file, enable_dummy_analyzer)
-        .await
-        .map_err(|e| format!("{:?}", e))?;
+    let mut analysis_writer =
+        AnalysisWriter::new(analysis_file, enable_dummy_analyzer, analyzer_config)
+            .await
+            .map_err(|e| format!("{:?}", e))?;
     let file_size = qmdl_file
         .metadata()
         .await
@@ -196,6 +202,7 @@ pub fn run_analysis_thread(
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     enable_dummy_analyzer: bool,
+    analyzer_config: AnalyzerConfig,
 ) {
     task_tracker.spawn(async move {
         loop {
@@ -204,9 +211,13 @@ pub fn run_analysis_thread(
                     let count = queued_len(analysis_status_lock.clone()).await;
                     for _ in 0..count {
                         let name = dequeue_to_running(analysis_status_lock.clone()).await;
-                        if let Err(err) =
-                            perform_analysis(&name, qmdl_store_lock.clone(), enable_dummy_analyzer)
-                                .await
+                        if let Err(err) = perform_analysis(
+                            &name,
+                            qmdl_store_lock.clone(),
+                            enable_dummy_analyzer,
+                            &analyzer_config,
+                        )
+                        .await
                         {
                             error!("failed to analyze {}: {}", name, err);
                         }
