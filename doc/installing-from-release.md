@@ -26,7 +26,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 
     ```bash
     # On MacOS, you must first remove the quarantine bit
-    xattr -d com.apple.quarantine install
+    xattr -d com.apple.quarantine installer
     ```
     Then run the installer:
     ```bash
