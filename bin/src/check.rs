@@ -2,7 +2,7 @@ use clap::Parser;
 use futures::TryStreamExt;
 use log::{info, warn};
 use rayhunter::{
-    analysis::analyzer::{EventType, Harness},
+    analysis::analyzer::{AnalyzerConfig, EventType, Harness},
     diag::DataType,
     gsmtap_parser,
     pcap::GsmtapPcapWriter,
@@ -33,7 +33,7 @@ struct Args {
 }
 
 async fn analyze_file(enable_dummy_analyzer: bool, qmdl_path: &str, show_skipped: bool) {
-    let mut harness = Harness::new_with_all_analyzers();
+    let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     if enable_dummy_analyzer {
         harness.add_analyzer(Box::new(dummy_analyzer::TestAnalyzer { count: 0 }));
     }
@@ -141,7 +141,7 @@ async fn main() {
         .unwrap();
     info!("Analyzers:");
 
-    let mut harness = Harness::new_with_all_analyzers();
+    let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     if args.enable_dummy_analyzer {
         harness.add_analyzer(Box::new(dummy_analyzer::TestAnalyzer { count: 0 }));
     }

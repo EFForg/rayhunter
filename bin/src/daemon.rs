@@ -199,6 +199,7 @@ async fn main() -> Result<(), RayhunterError> {
             qmdl_store_lock.clone(),
             analysis_tx.clone(),
             config.enable_dummy_analyzer,
+            config.analyzers.clone(),
         );
         info!("Starting UI");
         display::update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
@@ -215,6 +216,7 @@ async fn main() -> Result<(), RayhunterError> {
         qmdl_store_lock.clone(),
         analysis_status_lock.clone(),
         config.enable_dummy_analyzer,
+        config.analyzers.clone(),
     );
     run_ctrl_c_thread(
         &task_tracker,

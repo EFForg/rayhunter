@@ -1,5 +1,5 @@
 use chrono::{DateTime, FixedOffset};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 use crate::util::RuntimeMetadata;
@@ -8,8 +8,31 @@ use crate::{diag::MessagesContainer, gsmtap_parser};
 use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, information_element::InformationElement,
-    priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
+    null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
 };
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct AnalyzerConfig {
+    pub imsi_requested: bool,
+    pub connection_redirect_2g_downgrade: bool,
+    pub lte_sib6_and_7_downgrade: bool,
+    pub null_cipher: bool,
+}
+
+impl Default for AnalyzerConfig {
+    fn default() -> Self {
+        AnalyzerConfig {
+            imsi_requested: true,
+            connection_redirect_2g_downgrade: true,
+            lte_sib6_and_7_downgrade: true,
+            // FIXME: our RRC parser is reporting false positives for this due to an
+            // upstream hampi bug (https://github.com/ystero-dev/hampi/issues/133).
+            // once that's fixed, we should regenerate our parser and re-enable this
+            null_cipher: false,
+        }
+    }
+}
 
 /// Qualitative measure of how severe a Warning event type is.
 /// The levels should break down like this:
@@ -122,16 +145,21 @@ impl Harness {
         }
     }
 
-    pub fn new_with_all_analyzers() -> Self {
+    pub fn new_with_config(analyzer_config: &AnalyzerConfig) -> Self {
         let mut harness = Harness::new();
-        harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new()));
-        harness.add_analyzer(Box::new(ConnectionRedirect2GDowngradeAnalyzer {}));
-        harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer {}));
 
-        // FIXME: our RRC parser is reporting false positives for this due to an
-        // upstream hampi bug (https://github.com/ystero-dev/hampi/issues/133).
-        // once that's fixed, we should regenerate our parser and re-enable this
-        // harness.add_analyzer(Box::new(NullCipherAnalyzer{}));
+        if analyzer_config.imsi_requested {
+            harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new()));
+        }
+        if analyzer_config.connection_redirect_2g_downgrade {
+            harness.add_analyzer(Box::new(ConnectionRedirect2GDowngradeAnalyzer {}));
+        }
+        if analyzer_config.lte_sib6_and_7_downgrade {
+            harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer {}));
+        }
+        if analyzer_config.null_cipher {
+            harness.add_analyzer(Box::new(NullCipherAnalyzer {}));
+        }
 
         harness
     }

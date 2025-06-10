@@ -1,6 +1,8 @@
-use crate::error::RayhunterError;
-
 use serde::Deserialize;
+
+use rayhunter::analysis::analyzer::AnalyzerConfig;
+
+use crate::error::RayhunterError;
 
 #[derive(Debug, Deserialize)]
 #[serde(default)]
@@ -12,6 +14,7 @@ pub struct Config {
     pub enable_dummy_analyzer: bool,
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
+    pub analyzers: AnalyzerConfig,
 }
 
 impl Default for Config {
@@ -24,6 +27,7 @@ impl Default for Config {
             enable_dummy_analyzer: false,
             colorblind_mode: false,
             key_input_mode: 1,
+            analyzers: AnalyzerConfig::default(),
         }
     }
 }
