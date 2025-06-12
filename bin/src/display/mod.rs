@@ -26,11 +26,5 @@ pub enum DisplayState {
     WarningDetected,
 }
 
-#[cfg(all(feature = "orbic", feature = "tplink"))]
-compile_error!("cannot compile for many devices at once");
-
-#[cfg(all(feature = "orbic", feature = "wingtech"))]
-compile_error!("cannot compile for many devices at once");
-
 #[cfg(not(any(feature = "orbic", feature = "tplink", feature = "wingtech",)))]
 compile_error!("cannot compile for no device at all");
