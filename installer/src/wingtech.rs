@@ -15,13 +15,10 @@ use anyhow::{Result, bail};
 use base64_light::base64_encode_bytes;
 use block_padding::{Padding, Pkcs7};
 use reqwest::Client;
-use tokio::io::AsyncWriteExt;
-use tokio::net::TcpStream;
 use tokio::time::sleep;
 
 use crate::InstallWingtech as Args;
-use crate::orbic::echo;
-use crate::tplink::telnet_send_command;
+use crate::util::{echo, telnet_send_command, telnet_send_file};
 
 pub async fn install(
     Args {
@@ -45,7 +42,15 @@ fn encrypt_password(password: &[u8]) -> Result<String> {
     Ok(base64_encode_bytes(&b))
 }
 
-pub async fn start_telnet(admin_ip: &str, admin_password: &str) -> Result<bool> {
+pub async fn start_telnet(admin_ip: &str, admin_password: &str) -> Result<()> {
+    run_command(admin_ip, admin_password, "busybox telnetd -l /bin/sh").await
+}
+
+pub async fn start_adb(admin_ip: &str, admin_password: &str) -> Result<()> {
+    run_command(admin_ip, admin_password, "/sbin/usb/compositions/9025").await
+}
+
+async fn run_command(admin_ip: &str, admin_password: &str, cmd: &str) -> Result<()> {
     let qcmap_auth_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_auth");
     let qcmap_web_cgi_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi");
 
@@ -66,9 +71,8 @@ pub async fn start_telnet(admin_ip: &str, admin_password: &str) -> Result<bool> 
         None => bail!("login did not return a token in response: {}", login),
     };
 
-    let cmd = "busybox telnetd -l /bin/sh";
     let telnet = client.post(&qcmap_web_cgi_endpoint)
-        .body(format!("page=setFWMacFilter&cmd=add&mode=0&mac=50:5A:CA:B5:05:AC||{cmd}&key=50:5A:CA:B5:05:AC&token={token}"))
+        .body(format!("page=setFWMacFilter&cmd=add&mode=0&mac=50:5A:CA:B5:05||{cmd}&key=50:5A:CA:B5:05:AC&token={token}"))
         .send()
         .await?;
     if telnet.status() != 200 {
@@ -78,7 +82,7 @@ pub async fn start_telnet(admin_ip: &str, admin_password: &str) -> Result<bool> 
         );
     }
 
-    Ok(true)
+    Ok(())
 }
 
 async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Result<()> {
@@ -130,70 +134,38 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
     telnet_send_command(addr, "reboot", "exit code 0").await?;
     sleep(Duration::from_secs(30)).await;
 
-    echo!("Testing rayhunter... ");
-    const MAX_FAILURES: u32 = 10;
-    let mut failures = 0;
-    let rayhunter_url = format!("http://{admin_ip}:8080/index.html");
-    let client = Client::new();
-    loop {
-        match client.get(&rayhunter_url).send().await {
-            Ok(test) => {
-                if test.status() == 200 {
-                    println!("rayhunter is running at http://{admin_ip}:8080");
-                    return Ok(());
-                } else {
-                    bail!(
-                        "request for url ({rayhunter_url}) failed with status code: {:?}",
-                        test.status()
-                    );
-                }
-            }
-            Err(e) => {
-                if failures > MAX_FAILURES {
-                    return Err(e.into());
-                } else {
-                    failures += 1;
-                    sleep(Duration::from_secs(3)).await;
-                }
-            }
-        }
-    }
+    echo!("Testing rayhunter ... ");
+    let max_failures = 10;
+    http_ok_every(
+        format!("http://{admin_ip}:8080/index.html"),
+        Duration::from_secs(3),
+        max_failures,
+    ).await?;
+    println!("ok");
+    println!("rayhunter is running at http://{admin_ip}:8080");
+
+    Ok(())
 }
 
-async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) -> Result<()> {
-    println!("Sending file {filename}");
-
-    {
-        let filename = filename.to_owned();
-        let handle = tokio::spawn(async move {
-            telnet_send_command(addr, &format!("nc -l -p 8081 >{filename}.tmp"), "").await
-        });
-
-        sleep(Duration::from_millis(100)).await;
-
-        let mut addr = addr;
-        addr.set_port(8081);
-        let mut stream = TcpStream::connect(addr).await?;
-        stream.write_all(payload).await?;
-
-        handle.await??;
+async fn http_ok_every(rayhunter_url: String, interval: Duration, max_failures: u32) -> Result<()> {
+    let client = Client::new();
+    let mut failures = 0;
+    loop {
+        match client.get(&rayhunter_url).send().await {
+            Ok(test) => match test.status().is_success() {
+                true => break,
+                false => bail!(
+                    "request for url ({rayhunter_url}) failed with status code: {:?}",
+                    test.status()
+                ),
+            },
+            Err(e) => match failures > max_failures {
+                true => return Err(e.into()),
+                false => failures += 1,
+            },
+        }
+        sleep(interval).await;
     }
-
-    let checksum = md5::compute(payload);
-
-    telnet_send_command(
-        addr,
-        &format!("md5sum {filename}.tmp"),
-        &format!("{checksum:x}  {filename}.tmp"),
-    )
-    .await?;
-
-    telnet_send_command(
-        addr,
-        &format!("mv {filename}.tmp {filename}"),
-        "exit code 0",
-    )
-    .await?;
 
     Ok(())
 }

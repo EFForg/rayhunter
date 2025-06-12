@@ -10,6 +10,7 @@ use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
+use crate::util::echo;
 
 pub const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
 Make sure your device is plugged in and turned on.
@@ -39,14 +40,6 @@ const RNDIS_INTERFACE: u8 = 0;
 
 #[cfg(not(target_os = "windows"))]
 const RNDIS_INTERFACE: u8 = 1;
-
-macro_rules! echo {
-    ($($arg:tt)*) => {
-        print!($($arg)*);
-        let _ = std::io::stdout().flush();
-    };
-}
-pub(crate) use echo;
 
 pub async fn install() -> Result<()> {
     let mut adb_device = force_debug_mode().await?;
