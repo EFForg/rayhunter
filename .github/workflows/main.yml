@@ -10,6 +10,7 @@ env:
   FILE_ROOTSHELL: ../../rootshell/rootshell
   FILE_RAYHUNTER_DAEMON_ORBIC: ../../rayhunter-daemon-orbic/rayhunter-daemon
   FILE_RAYHUNTER_DAEMON_TPLINK: ../../rayhunter-daemon-tplink/rayhunter-daemon
+  FILE_RAYHUNTER_DAEMON_WINGTECH: ../../rayhunter-daemon-wingtech/rayhunter-daemon
 
 jobs:
   files_changed:
@@ -95,8 +96,9 @@ jobs:
     strategy:
       matrix:
         device:
-          - name: tplink
           - name: orbic
+          - name: tplink
+          - name: wingtech
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -206,8 +208,9 @@ jobs:
     strategy:
       matrix:
         device:
-          - name: tplink
           - name: orbic
+          - name: tplink
+          - name: wingtech
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
