@@ -140,7 +140,8 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
         format!("http://{admin_ip}:8080/index.html"),
         Duration::from_secs(3),
         max_failures,
-    ).await?;
+    )
+    .await?;
     println!("ok");
     println!("rayhunter is running at http://{admin_ip}:8080");
 

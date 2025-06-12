@@ -4,8 +4,8 @@ use env_logger::Env;
 
 mod orbic;
 mod tplink;
-mod wingtech;
 mod util;
+mod wingtech;
 
 pub static CONFIG_TOML: &str = include_str!("../../dist/config.toml.example");
 pub static RAYHUNTER_DAEMON_INIT: &str = include_str!("../../dist/scripts/rayhunter_daemon");

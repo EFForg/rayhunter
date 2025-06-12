@@ -9,8 +9,8 @@ use nusb::{Device, Interface};
 use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
-use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 use crate::util::echo;
+use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 pub const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
 Make sure your device is plugged in and turned on.
