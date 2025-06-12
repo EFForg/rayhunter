@@ -8,19 +8,19 @@ fn main() {
         env!("CARGO_MANIFEST_DIR"),
         "/../target/armv7-unknown-linux-musleabihf/firmware/"
     ));
-    set_binary_var(&include_dir, "FILE_ROOTSHELL", "rootshell");
+    set_binary_var(include_dir, "FILE_ROOTSHELL", "rootshell");
     set_binary_var(
-        &include_dir,
+        include_dir,
         "FILE_RAYHUNTER_DAEMON_ORBIC",
         "rayhunter-daemon",
     );
     set_binary_var(
-        &include_dir,
+        include_dir,
         "FILE_RAYHUNTER_DAEMON_TPLINK",
         "rayhunter-daemon",
     );
     set_binary_var(
-        &include_dir,
+        include_dir,
         "FILE_RAYHUNTER_DAEMON_WINGTECH",
         "rayhunter-daemon",
     );
@@ -31,7 +31,7 @@ fn set_binary_var(include_dir: &Path, var: &str, file: &str) {
         let out_dir = std::env::var("OUT_DIR").unwrap();
         std::fs::create_dir_all(&out_dir).unwrap();
         let blank = Path::new(&out_dir).join("blank");
-        std::fs::write(&blank, &[]).unwrap();
+        std::fs::write(&blank, []).unwrap();
         println!("cargo::rustc-env={var}={}", blank.display());
         return;
     }
