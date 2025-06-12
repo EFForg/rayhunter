@@ -25,6 +25,3 @@ pub enum DisplayState {
     Paused,
     WarningDetected,
 }
-
-#[cfg(not(any(feature = "orbic", feature = "tplink", feature = "wingtech",)))]
-compile_error!("cannot compile for no device at all");
