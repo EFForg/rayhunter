@@ -6,3 +6,4 @@ If you have a device in mind which you'd like Rayhunter to support, please [open
 
 - [Orbic RC400L](./orbic.md)
 - [TP-Link M7350](./tplink-m7350.md)
+- [TP-Link M7310](./tplink-m7310.md)

