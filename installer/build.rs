@@ -16,6 +16,11 @@ fn main() {
     );
     set_binary_var(
         include_dir,
+        "FILE_RAYHUNTER_DAEMON_TMOBILE",
+        "rayhunter-daemon",
+    );
+    set_binary_var(
+        include_dir,
         "FILE_RAYHUNTER_DAEMON_TPLINK",
         "rayhunter-daemon",
     );
