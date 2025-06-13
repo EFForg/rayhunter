@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use env_logger::Env;
 
 mod orbic;
+mod tmobile;
 mod tplink;
 mod util;
 mod wingtech;
@@ -21,6 +22,8 @@ struct Args {
 enum Command {
     /// Install rayhunter on the Orbic Orbic RC400L.
     Orbic(InstallOrbic),
+    /// Install rayhunter on the TMobile TMOHS1.
+    Tmobile(TmobileArgs),
     /// Install rayhunter on the TP-Link M7350.
     Tplink(InstallTpLink),
     /// Install rayhunter on the Wingtech CT2MHS01.
@@ -67,6 +70,10 @@ enum UtilSubCommand {
     Serial(Serial),
     /// Start an ADB shell
     Shell(Shell),
+    /// Root the Tmobile and launch adb.
+    TmobileStartAdb(TmobileArgs),
+    /// Root the Tmobile and launch telnetd.
+    TmobileStartTelnet(TmobileArgs),
     /// Root the tplink and launch telnetd.
     TplinkStartTelnet(TplinkStartTelnet),
     /// Root the Wingtech and launch telnetd.
@@ -83,6 +90,17 @@ enum UtilSubCommand {
     /// Before running this utility, you need to make telnet accessible with `installer util
     /// wingtech-start-telnet`.
     WingtechSendFile(WingtechSendFile),
+}
+
+#[derive(Parser, Debug)]
+struct TmobileArgs {
+    /// IP address for Tmobile admin interface, if custom.
+    #[arg(long, default_value = "192.168.0.1")]
+    admin_ip: String,
+
+    /// Web portal admin password.
+    #[arg(long)]
+    admin_password: String,
 }
 
 #[derive(Parser, Debug)]
@@ -140,6 +158,7 @@ async fn run() -> Result<(), Error> {
     let Args { command } = Args::parse();
 
     match command {
+        Command::Tmobile(args) => tmobile::install(args).await.context("Failed to install rayhunter on the Tmobile TMOHS1. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         Command::Orbic(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
@@ -163,6 +182,8 @@ async fn run() -> Result<(), Error> {
                 }
             }
             UtilSubCommand::Shell(_) => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
+            UtilSubCommand::TmobileStartTelnet(args) => tmobile::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Tmobile TMOHS1")?,
+            UtilSubCommand::TmobileStartAdb(args) => tmobile::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Tmobile TMOHS1")?,
             UtilSubCommand::TplinkStartTelnet(options) => {
                 tplink::start_telnet(&options.admin_ip).await?;
             }
