@@ -17,7 +17,7 @@ use block_padding::{Padding, Pkcs7};
 use reqwest::Client;
 use tokio::time::sleep;
 
-use crate::InstallWingtech as Args;
+use crate::WingtechArgs as Args;
 use crate::util::{echo, telnet_send_command, telnet_send_file};
 
 pub async fn install(

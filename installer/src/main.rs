@@ -24,7 +24,7 @@ enum Command {
     /// Install rayhunter on the TP-Link M7350.
     Tplink(InstallTpLink),
     /// Install rayhunter on the Wingtech CT2MHS01.
-    Wingtech(InstallWingtech),
+    Wingtech(WingtechArgs),
     /// Developer utilities.
     Util(Util),
 }
@@ -54,17 +54,6 @@ struct InstallTpLink {
 
 #[derive(Parser, Debug)]
 struct InstallOrbic {}
-
-#[derive(Parser, Debug)]
-struct InstallWingtech {
-    /// IP address for Wingtech admin interface, if custom.
-    #[arg(long, default_value = "192.168.1.1")]
-    admin_ip: String,
-
-    /// Web portal admin password.
-    #[arg(long)]
-    admin_password: String,
-}
 
 #[derive(Parser, Debug)]
 struct Util {
