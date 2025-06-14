@@ -92,9 +92,8 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
 
     echo!("Connecting via telnet to {admin_ip} ... ");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
-    println!("ok");
-
     telnet_send_command(addr, "mkdir -p /data/rayhunter", "exit code 0").await?;
+    println!("ok");
 
     telnet_send_file(
         addr,
