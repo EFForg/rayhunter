@@ -2,6 +2,6 @@
 
 # Rayhunter
 
-![Tests](https://github.com/EFForg/rayhunter/actions/workflows/check-and-test.yml/badge.svg)
+![Tests](https://github.com/EFForg/rayhunter/actions/workflows/main.yml/badge.svg)
 
 Rayhunter is an IMSI Catcher Catcher for the Orbic mobile hotspot. To learn more, check out the [Rayhunter Book](https://efforg.github.io/rayhunter/).
