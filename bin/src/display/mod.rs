@@ -1,4 +1,10 @@
+#[cfg(any(feature = "orbic", feature = "tplink", feature = "wingtech"))]
 mod generic_framebuffer;
+
+#[cfg(feature = "tmobile")]
+mod tmobile;
+#[cfg(feature = "tmobile")]
+pub use tmobile::update_ui;
 
 #[cfg(feature = "tplink")]
 mod tplink;
@@ -15,14 +21,14 @@ mod orbic;
 #[cfg(feature = "orbic")]
 pub use orbic::update_ui;
 
+#[cfg(feature = "wingtech")]
+mod wingtech;
+#[cfg(feature = "wingtech")]
+pub use wingtech::update_ui;
+
+#[derive(Clone, Copy, PartialEq)]
 pub enum DisplayState {
     Recording,
     Paused,
     WarningDetected,
 }
-
-#[cfg(all(feature = "orbic", feature = "tplink"))]
-compile_error!("cannot compile for many devices at once");
-
-#[cfg(not(any(feature = "orbic", feature = "tplink")))]
-compile_error!("cannot compile for no device at all");

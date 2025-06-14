@@ -6,7 +6,9 @@ edition = "2021"
 [features]
 # These feature flags are mutually exclusive, and exactly one must be enabled.
 orbic = ["rayhunter/orbic"]
+tmobile = ["rayhunter/tmobile"]
 tplink = ["rayhunter/tplink"]
+wingtech = ["rayhunter/wingtech"]
 
 default = ["orbic"]
 
