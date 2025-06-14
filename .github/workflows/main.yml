@@ -2,8 +2,9 @@ name: main
 
 on:
   push:
+    branches: [ main ]
   pull_request:
-  workflow_call:
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -65,7 +66,7 @@ jobs:
   mdbook_publish:
     name: Publish mdBook to Github Pages
     needs: mdbook_test
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     permissions:
       pages: write
       contents: write
