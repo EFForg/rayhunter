@@ -32,7 +32,7 @@
 <tr class="{status_row_color} drop-shadow">
     <td class="p-2">{entry.name}</td>
     <td class="p-2">{date_formatter.format(entry.start_time)}</td>
-    <td class="p-2">{date_formatter.format(entry.last_message_time)}</td>
+    <td class="p-2">{entry.last_message_time && date_formatter.format(entry.last_message_time) || "N/A"}</td>
     <td class="p-2">{entry.get_readable_qmdl_size()}</td>
     <td class="p-2"><DownloadLink url={entry.get_pcap_url()} text="pcap" /></td>
     <td class="p-2"><DownloadLink url={entry.get_qmdl_url()} text="qmdl" /></td>

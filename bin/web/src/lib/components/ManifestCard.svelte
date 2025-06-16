@@ -54,7 +54,7 @@
     </div>
     <div class="flex flex-col">
         <span class="">Start: {date_formatter.format(entry.start_time)}</span>
-        <span class="">Last Message: {date_formatter.format(entry.last_message_time)}</span>
+        <span class="">Last Message: {entry.last_message_time && date_formatter.format(entry.last_message_time) || "N/A"}</span>
     </div>
     <div class="flex flex-row justify-between lg:justify-end gap-2 mt-2">
         <DownloadLink url={entry.get_pcap_url()} text="pcap" full_button=true />
