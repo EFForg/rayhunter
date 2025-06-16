@@ -11,14 +11,20 @@ use std::time::Duration;
 
 use aes::Aes128;
 use aes::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use base64_light::base64_encode_bytes;
 use block_padding::{Padding, Pkcs7};
 use reqwest::Client;
+use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::WingtechArgs as Args;
 use crate::util::{echo, telnet_send_command, telnet_send_file};
+
+#[derive(Deserialize)]
+struct LoginResponse {
+    token: String,
+}
 
 pub async fn install(
     Args {
@@ -57,19 +63,16 @@ async fn run_command(admin_ip: &str, admin_password: &str, cmd: &str) -> Result<
     let encrypted_pw = encrypt_password(admin_password.as_bytes()).ok().unwrap();
 
     let client = Client::new();
-    let login = client
+    let LoginResponse { token } = client
         .post(&qcmap_auth_endpoint)
         .body(format!(
             "type=login&pwd={encrypted_pw}&timeout=60000&user=admin"
         ))
         .send()
         .await?
-        .text()
-        .await?;
-    let token = match login.find("token") {
-        Some(n) => &login[n + 8..n + 8 + 16],
-        None => bail!("login did not return a token in response: {}", login),
-    };
+        .json()
+        .await
+        .context("login did not return a token in response")?;
 
     let command = client.post(&qcmap_web_cgi_endpoint)
         .body(format!("page=setFWMacFilter&cmd=add&mode=0&mac=50:5A:CA:B5:05||{cmd}&key=50:5A:CA:B5:05:AC&token={token}"))
