@@ -37,6 +37,7 @@ pub fn run_key_input_thread(
 
         let mut buffer = [0u8; INPUT_EVENT_SIZE];
         let mut last_keyup: Option<Instant> = None;
+        let mut last_event_time: Option<Instant> = None;
 
         loop {
             if let Err(e) = file.read_exact(&mut buffer).await {
@@ -46,21 +47,41 @@ pub fn run_key_input_thread(
 
             let event = parse_event(buffer);
 
+            let now = Instant::now();
+
+            // On orbic it was observed that pressing the power button can trigger many successive
+            // events. Drop events that are too close together.
+            if let Some(last_time) = last_event_time {
+                if now.duration_since(last_time) < Duration::from_millis(50) {
+                    last_event_time = Some(now);
+                    continue;
+                }
+            }
+            last_event_time = Some(now);
+
             match event {
                 Event::KeyUp => {
-                    if last_keyup.is_some()
-                        && last_keyup.unwrap().elapsed() < Duration::from_millis(500)
-                    {
-                        if let Err(e) = diag_tx.send(DiagDeviceCtrlMessage::StopRecording).await {
-                            error!("Failed to send StopRecording: {}", e);
+                    if let Some(last_keyup_instant) = last_keyup {
+                        let elapsed = now.duration_since(last_keyup_instant);
+
+                        if elapsed >= Duration::from_millis(100)
+                            && elapsed <= Duration::from_millis(800)
+                        {
+                            if let Err(e) = diag_tx.send(DiagDeviceCtrlMessage::StopRecording).await
+                            {
+                                error!("Failed to send StopRecording: {}", e);
+                            }
+                            if let Err(e) =
+                                diag_tx.send(DiagDeviceCtrlMessage::StartRecording).await
+                            {
+                                error!("Failed to send StartRecording: {}", e);
+                            }
+                            last_keyup = None;
+                            continue;
                         }
-                        if let Err(e) = diag_tx.send(DiagDeviceCtrlMessage::StartRecording).await {
-                            error!("Failed to send StartRecording: {}", e);
-                        }
-                        last_keyup = None;
-                    } else {
-                        last_keyup = Some(Instant::now());
                     }
+
+                    last_keyup = Some(now);
                 }
                 Event::KeyDown => {}
             }
