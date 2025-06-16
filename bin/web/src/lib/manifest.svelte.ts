@@ -64,7 +64,7 @@ export class ManifestEntry {
         this.qmdl_size_bytes = json.qmdl_size_bytes;
         this.analysis_size_bytes = json.analysis_size_bytes;
         this.start_time = new Date(json.start_time);
-        if (json.last_message_time !== undefined) {
+        if (json.last_message_time) {
             this.last_message_time = new Date(json.last_message_time);
         }
     }
