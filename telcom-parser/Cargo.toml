@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# FIXME: When this branch is merged into main point this at the release version of hampi again
 asn1-compiler = { git = "https://github.com/ystero-dev/hampi", rev = "67f3283764eda20022d190c3d3d6edd1a88047e0" }
 asn1-codecs = { git = "https://github.com/ystero-dev/hampi", rev = "67f3283764eda20022d190c3d3d6edd1a88047e0" }
 asn1_codecs_derive = { git = "https://github.com/ystero-dev/hampi", rev = "67f3283764eda20022d190c3d3d6edd1a88047e0" }

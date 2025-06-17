@@ -26,10 +26,7 @@ impl Default for AnalyzerConfig {
             imsi_requested: true,
             connection_redirect_2g_downgrade: true,
             lte_sib6_and_7_downgrade: true,
-            // FIXME: our RRC parser is reporting false positives for this due to an
-            // upstream hampi bug (https://github.com/ystero-dev/hampi/issues/133).
-            // once that's fixed, we should regenerate our parser and re-enable this
-            null_cipher: false,
+            null_cipher: true,
         }
     }
 }
