@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-asn1-compiler = "0.6.1"
-asn1-codecs = "0.6.1"
-asn1_codecs_derive = "0.6.1"
+asn1-compiler = { git = "https://github.com/ystero-dev/hampi", rev = "67f3283764eda20022d190c3d3d6edd1a88047e0" }
+asn1-codecs = { git = "https://github.com/ystero-dev/hampi", rev = "67f3283764eda20022d190c3d3d6edd1a88047e0" }
+asn1_codecs_derive = { git = "https://github.com/ystero-dev/hampi", rev = "67f3283764eda20022d190c3d3d6edd1a88047e0" }
 bitvec = { version = "1.0", features = ["serde"] }
 log = "0.4"
 thiserror = "1.0.56"
