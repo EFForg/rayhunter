@@ -21,12 +21,15 @@ use tokio_util::io::ReaderStream;
 // pcap data to a channel that's piped to the client.
 pub async fn get_pcap(
     State(state): State<Arc<ServerState>>,
-    Path(qmdl_name): Path<String>,
+    Path(mut qmdl_name): Path<String>,
 ) -> Result<Response, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
+    if qmdl_name.ends_with("pcapng") {
+        qmdl_name = qmdl_name.trim_end_matches(".pcapng").to_string();
+    }
     let (entry_index, entry) = qmdl_store.entry_for_name(&qmdl_name).ok_or((
         StatusCode::NOT_FOUND,
-        format!("couldn't find qmdl file with name {}", qmdl_name),
+        format!("couldn't find manifest entry with name {}", qmdl_name),
     ))?;
     if entry.qmdl_size_bytes == 0 {
         return Err((
