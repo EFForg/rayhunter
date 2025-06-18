@@ -93,6 +93,10 @@ export class ManifestEntry {
         return `/api/qmdl/${this.name}.qmdl`;
     }
 
+    get_zip_url(): string {
+        return `/api/zip/${this.name}.zip`;
+    }
+
     get_analysis_report_url(): string {
         return `/api/analysis-report/${this.name}`;
     }
