@@ -26,7 +26,7 @@ impl Default for Config {
             ui_level: 1,
             enable_dummy_analyzer: false,
             colorblind_mode: false,
-            key_input_mode: 1,
+            key_input_mode: 0,
             analyzers: AnalyzerConfig::default(),
         }
     }
