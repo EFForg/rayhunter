@@ -1,6 +1,24 @@
 import { Manifest } from "./manifest.svelte";
 import type { SystemStats } from "./systemStats";
 
+export interface AnalyzerConfig {
+    imsi_requested: boolean;
+    connection_redirect_2g_downgrade: boolean;
+    lte_sib6_and_7_downgrade: boolean;
+    null_cipher: boolean;
+}
+
+export interface Config {
+    qmdl_store_path: string;
+    port: number;
+    debug_mode: boolean;
+    ui_level: number;
+    enable_dummy_analyzer: boolean;
+    colorblind_mode: boolean;
+    key_input_mode: number;
+    analyzers: AnalyzerConfig;
+}
+
 export async function req(method: string, url: string): Promise<string> {
     const response = await fetch(url, {
         method: method,
@@ -20,4 +38,23 @@ export async function get_manifest(): Promise<Manifest> {
 
 export async function get_system_stats(): Promise<SystemStats> {
     return JSON.parse(await req('GET', '/api/system-stats'));
+}
+
+export async function get_config(): Promise<Config> {
+    return JSON.parse(await req('GET', '/api/config'));
+}
+
+export async function set_config(config: Config): Promise<void> {
+    const response = await fetch('/api/config', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config)
+    });
+    
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+    }
 }
