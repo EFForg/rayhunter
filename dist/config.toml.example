@@ -19,7 +19,7 @@ ui_level = 1
 
 # 0 = rayhunter does not read button presses
 # 1 = double-tapping the power button starts/stops recordings
-key_input_mode = 1
+key_input_mode = 0
 
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics
