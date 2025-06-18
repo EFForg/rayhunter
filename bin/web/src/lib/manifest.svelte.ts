@@ -86,11 +86,11 @@ export class ManifestEntry {
     }
 
     get_pcap_url(): string {
-        return `/api/pcap/${this.name}`;
+        return `/api/pcap/${this.name}.pcapng`;
     }
 
     get_qmdl_url(): string {
-        return `/api/qmdl/${this.name}`;
+        return `/api/qmdl/${this.name}.qmdl`;
     }
 
     get_analysis_report_url(): string {
