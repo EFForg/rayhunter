@@ -6,6 +6,7 @@
     - [Installing from the latest release (Windows)](./installing-from-release-windows.md)
   - [Installing from source](./installing-from-source.md)
   - [Updating Rayhunter](./updating-rayhunter.md)
+- [Configuration](./configuration.md)
 - [Uninstalling](./uninstalling.md)
 - [Using Rayhunter](./using-rayhunter.md)
   - [Rayhunter's heuristics](./heuristics.md)
