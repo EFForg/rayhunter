@@ -131,6 +131,7 @@ fn run_shutdown_thread(
     should_restart_flag: Arc<AtomicBool>,
     server_shutdown_tx: oneshot::Sender<()>,
     maybe_ui_shutdown_tx: Option<oneshot::Sender<()>>,
+    maybe_key_input_shutdown_tx: Option<oneshot::Sender<()>>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_tx: Sender<AnalysisCtrlMessage>,
 ) -> JoinHandle<Result<(), RayhunterError>> {
@@ -164,11 +165,11 @@ fn run_shutdown_thread(
         server_shutdown_tx
             .send(())
             .expect("couldn't send server shutdown signal");
-        info!("sending UI shutdown");
         if let Some(ui_shutdown_tx) = maybe_ui_shutdown_tx {
-            ui_shutdown_tx
-                .send(())
-                .expect("couldn't send ui shutdown signal");
+            let _ = ui_shutdown_tx.send(());
+        }
+        if let Some(key_input_shutdown_tx) = maybe_key_input_shutdown_tx {
+            let _ = key_input_shutdown_tx.send(());
         }
         diag_device_sender
             .send(DiagDeviceCtrlMessage::Exit)
@@ -217,6 +218,7 @@ async fn run_with_config(
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
     let mut maybe_ui_shutdown_tx = None;
+    let mut maybe_key_input_shutdown_tx = None;
     if !config.debug_mode {
         let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
         maybe_ui_shutdown_tx = Some(ui_shutdown_tx);
@@ -242,7 +244,14 @@ async fn run_with_config(
         display::update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
 
         info!("Starting Key Input service");
-        key_input::run_key_input_thread(&task_tracker, &config, diag_tx.clone());
+        let (key_input_shutdown_tx, key_input_shutdown_rx) = oneshot::channel();
+        maybe_key_input_shutdown_tx = Some(key_input_shutdown_tx);
+        key_input::run_key_input_thread(
+            &task_tracker,
+            &config,
+            diag_tx.clone(),
+            key_input_shutdown_rx,
+        );
     }
 
     let (daemon_restart_tx, daemon_restart_rx) = oneshot::channel::<()>();
@@ -265,6 +274,7 @@ async fn run_with_config(
         should_restart_flag.clone(),
         server_shutdown_tx,
         maybe_ui_shutdown_tx,
+        maybe_key_input_shutdown_tx,
         qmdl_store_lock.clone(),
         analysis_tx.clone(),
     );
