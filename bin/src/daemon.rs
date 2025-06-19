@@ -122,6 +122,7 @@ fn run_ctrl_c_thread(
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     server_shutdown_tx: oneshot::Sender<()>,
     maybe_ui_shutdown_tx: Option<oneshot::Sender<()>>,
+    maybe_key_input_shutdown_tx: Option<oneshot::Sender<()>>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_tx: Sender<AnalysisCtrlMessage>,
 ) -> JoinHandle<Result<(), RayhunterError>> {
@@ -138,11 +139,15 @@ fn run_ctrl_c_thread(
                 server_shutdown_tx
                     .send(())
                     .expect("couldn't send server shutdown signal");
-                info!("sending UI shutdown");
                 if let Some(ui_shutdown_tx) = maybe_ui_shutdown_tx {
                     ui_shutdown_tx
                         .send(())
                         .expect("couldn't send ui shutdown signal");
+                }
+                if let Some(key_input_shutdown_tx) = maybe_key_input_shutdown_tx {
+                    key_input_shutdown_tx
+                        .send(())
+                        .expect("couldn't send key input shutdown signal");
                 }
                 diag_device_sender
                     .send(DiagDeviceCtrlMessage::Exit)
@@ -180,6 +185,7 @@ async fn main() -> Result<(), RayhunterError> {
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
     let mut maybe_ui_shutdown_tx = None;
+    let mut maybe_key_input_shutdown_tx = None;
     if !config.debug_mode {
         let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
         maybe_ui_shutdown_tx = Some(ui_shutdown_tx);
@@ -205,7 +211,14 @@ async fn main() -> Result<(), RayhunterError> {
         display::update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
 
         info!("Starting Key Input service");
-        key_input::run_key_input_thread(&task_tracker, &config, diag_tx.clone());
+        let (key_input_shutdown_tx, key_input_shutdown_rx) = oneshot::channel();
+        maybe_key_input_shutdown_tx = Some(key_input_shutdown_tx);
+        key_input::run_key_input_thread(
+            &task_tracker,
+            &config,
+            diag_tx.clone(),
+            key_input_shutdown_rx,
+        );
     }
     let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     info!("create shutdown thread");
@@ -223,6 +236,7 @@ async fn main() -> Result<(), RayhunterError> {
         diag_tx.clone(),
         server_shutdown_tx,
         maybe_ui_shutdown_tx,
+        maybe_key_input_shutdown_tx,
         qmdl_store_lock.clone(),
         analysis_tx.clone(),
     );
