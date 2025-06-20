@@ -50,7 +50,7 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
         // in particular: https://www.yuque.com/docs/share/fca60ef9-e5a4-462a-a984-61def4c9b132
         format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi"),
         // TP-Link M7310 v1
-        // (adaptation of M7350 exploit
+        // (adaptation of M7350 exploit)
         format!("http://{admin_ip}/cgi-bin/web_cgi"),
     ] {
         let response = client.post(&endpoint)
@@ -62,7 +62,10 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
             continue;
         }
 
-        let V3RootResponse { result } = response.error_for_status()?.json().await?;
+        let Ok(V3RootResponse { result }) = response.error_for_status()?.json().await else {
+            // On TP-Link M7350 v9, the endpoint /cgi-bin/web_cgi returns 200 OK without launching telnet, and without a response body.
+            continue;
+        };
 
         if result != 0 {
             anyhow::bail!("Bad result code when trying to root device: {result}");
