@@ -9,6 +9,7 @@ use nusb::{Device, Interface};
 use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
+use crate::util::echo;
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 pub const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
@@ -39,13 +40,6 @@ const RNDIS_INTERFACE: u8 = 0;
 
 #[cfg(not(target_os = "windows"))]
 const RNDIS_INTERFACE: u8 = 1;
-
-macro_rules! echo {
-    ($($arg:tt)*) => {
-        print!($($arg)*);
-        let _ = std::io::stdout().flush();
-    };
-}
 
 pub async fn install() -> Result<()> {
     let mut adb_device = force_debug_mode().await?;
