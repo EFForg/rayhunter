@@ -12,8 +12,8 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 
 3. Turn on your device by holding the power button on the front.
 
-  * For the Orbic, connect the device using a USB-C cable.
-  * For TP-Link, connect to its network using either WiFi or USB Tethering.
+   * For the Orbic, connect the device using a USB-C cable.
+   * For TP-Link, connect to its network using either WiFi or USB Tethering.
 
 4. Run the install script for your operating system:
 
@@ -38,7 +38,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 
     You will know it is done when you see terminal output that says `Testing Rayhunter... done`
 
-5. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter). You should also see a green line flash along the top of top the display on the device.
+5. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter.md). You should also see a green line flash along the top of top the display on the device.
 
 ## Troubleshooting
 

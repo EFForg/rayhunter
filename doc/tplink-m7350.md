@@ -1,14 +1,14 @@
 # TP-Link M7350
 
-The TP-Link M7350 is supported by Rayhunter from 0.3.0 release. TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
+The TP-Link M7350 is **supported by Rayhunter since 0.3.0**. TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
 
 ## Hardware versions
 
 The TP-Link comes in many different *hardware versions*. Support for installation varies:
 
-* `1.0`, `2.0`: **Not suported**, probably impossible to obtain anymore (even second-hand), however there is one report that installation is possible on `1.0` (but no reports if it is working or not)
+* `1.0`, `2.0`: **Not supported**, devs are not able to obtain a device
 * `3.0`, `3.2`, `5.0`, `5.2`, `7.0`, `8.0`: **Tested, no known issues since 0.3.0.**
-* `6.2`: **One user reported it is working**
+* `6.2`: **One user reported it is working, not tested**
 * `4.0`: **Manual firmware downgrade required** ([issue](https://github.com/EFForg/rayhunter/issues/332))
 * `9.0`: **Working since 0.3.2.**
 
@@ -20,13 +20,15 @@ When filing bug reports, particularly with the installer, please always specify 
 
 You can get your TP-Link M7350 from:
 
-* First check for used offers on Ebay or equivalent, sometimes it's much cheaper there.
+* First check for used offers on local sites, sometimes it's much cheaper there.
 * [Geizhals price comparison](https://geizhals.eu/?fs=tp-link+m7350)
 * [Ebay](https://www.ebay.com/sch/i.html?_nkw=tp-link+m7350&_sacat=0&_from=R40&_trksid=p4432023.m570.l1313)
 
 ## Installation & Usage
 
 Follow the [release installation guide](./installing-from-release.md). Substitute `./installer orbic` for `./installer tplink` in other documentation. The Rayhunter UI will be available at [http://192.168.0.1:8080](http://192.168.0.1:8080).
+
+## Obtaining a shell
 
 Unlike on Orbic, the installer will not enable ADB. Instead, you can obtain a root shell with the following command:
 
@@ -44,18 +46,6 @@ If your device has a one-bit (black-and-white) display, Rayhunter will instead s
 * `!` means "warning (potential IMSI catcher)"
 * `:)` (smiling) means "recording"
 * `:` (face with no mouth) means "paused"
-
-## Configuration
-
-Displaying status can be changed in the configuration (`config.toml`) file, where UI level (`ui_level` variable) could be changed to:
-- `0`: invisible mode, no indicator that Rayhunter is running
-- `1`: subtle mode, display a green line at the top of the screen when Rayhunter is running
-- `2`: demo mode, display a fun Orca GIF
-- `3`: display the EFF logo
-
-You can also change `colorblind_mode` (default is `false`) to `true`. In that case there will be blue line instead of green line.
-
-You can change the `port` (default is `8080`) where Rayhunter is listening for incoming connections and more advanced users can change the variables `qmdl_store_path` and `debug_mode`. However, change those variables only if you know what you are doing.
 
 ## Power-saving mode/sleep
 

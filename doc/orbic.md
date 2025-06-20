@@ -18,3 +18,9 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 | Wifi 2.4Ghz | b/g/n |
 | Wifi 5Ghz | a/ac/ax |
 | Wifi 6 | 🮱 |
+
+## Obtaining a shell
+
+After running through the installation procedure, you can obtain a root shell
+by running `adb shell` or `./installer util shell`. Then, inside of that shell
+you can run `/bin/rootshell` to obtain "fakeroot."

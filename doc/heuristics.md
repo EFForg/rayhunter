@@ -1,6 +1,6 @@
 # Heuristics
 
-Rayhunter includes several analyzers to detect potential IMSI catcher activity. These can be enabled and disabled in your [config.toml](https://github.com/EFForg/rayhunter/blob/main/dist/config.toml.example) file.
+Rayhunter includes several analyzers to detect potential IMSI catcher activity. These can be enabled and disabled in your [config.toml](./configuration.md) file.
 
 ## Available Analyzers
 

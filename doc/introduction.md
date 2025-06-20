@@ -1,6 +1,6 @@
-![Rayhunter Logo - An Orca taking a bite out of a cellular signal bar](https://www.eff.org/files/styles/media_browser_preview/public/banner_library/rayhunter-banner.png)
-
 # Rayhunter
+
+<img style="display: block; margin: 0 auto" alt="Rayhunter Logo - An Orca taking a bite out of a cellular signal bar" src="https://www.eff.org/files/styles/media_browser_preview/public/banner_library/rayhunter-banner.png" />
 
 Rayhunter is a project for detecting IMSI catchers, also known as cell-site simulators or stingrays. It's designed to run on a cheap mobile hotspot called the Orbic RC400L, but thanks to community efforts can [support some other devices as well](./supported-devices.md).
 

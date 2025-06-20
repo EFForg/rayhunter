@@ -29,4 +29,4 @@ Windows support in Rayhunter's installer is a work-in-progress. Depending on the
 5. Run the install script: `.\installer.exe orbic` and hit enter.
     - The device will restart multiple times over the next few minutes.
     - You will know it is done when you see terminal output that says `checking for rayhunter server...success!`
-6. Rayhunter should now be running! You can verify this by following the instructions below to [view the web UI](#usage-viewing-the-web-ui). You should also see a green line flash along the top of top the display on the device.
+6. Rayhunter should now be running! You can verify this by following the instructions below to [view the web UI](./using-rayhunter.md#the-web-ui). You should also see a green line flash along the top of top the display on the device.
