@@ -8,6 +8,7 @@
 	import SystemStatsTable from "$lib/components/SystemStatsTable.svelte";
 	import DeleteAllButton from "$lib/components/DeleteAllButton.svelte";
     import RecordingControls from "$lib/components//RecordingControls.svelte";
+    import ConfigForm from "$lib/components/ConfigForm.svelte";
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -75,6 +76,7 @@
         <ManifestTable entries={entries} server_is_recording={recording} />
     </div>
     <DeleteAllButton/>
+    <ConfigForm />
 {:else}
     <div class="flex flex-col justify-center items-center">
         <img src="/rayhunter_orca_only.png" class="h-48 animate-spin"/>

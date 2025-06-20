@@ -1,8 +1,9 @@
-use log::error;
+use log::{error, info};
 use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::oneshot;
 use tokio_util::task::TaskTracker;
 
 use crate::config;
@@ -20,6 +21,7 @@ pub fn run_key_input_thread(
     task_tracker: &TaskTracker,
     config: &config::Config,
     diag_tx: Sender<DiagDeviceCtrlMessage>,
+    mut ui_shutdown_rx: oneshot::Receiver<()>,
 ) {
     if config.key_input_mode == 0 {
         return;
@@ -40,9 +42,17 @@ pub fn run_key_input_thread(
         let mut last_event_time: Option<Instant> = None;
 
         loop {
-            if let Err(e) = file.read_exact(&mut buffer).await {
-                error!("failed to read key input: {}", e);
-                return;
+            tokio::select! {
+                _ = &mut ui_shutdown_rx => {
+                    info!("received key input shutdown");
+                    return;
+                }
+                result = file.read_exact(&mut buffer) => {
+                    if let Err(e) = result {
+                        error!("failed to read key input: {}", e);
+                        return;
+                    }
+                }
             }
 
             let event = parse_event(buffer);
