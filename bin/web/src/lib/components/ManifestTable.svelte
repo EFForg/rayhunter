@@ -19,6 +19,7 @@
             <th class='p-2' scope="col">Size</th>
             <th class='p-2' scope="col">PCAP</th>
             <th class='p-2' scope="col">QMDL</th>
+            <th class='p-2' scope="col">ZIP</th>
             <th class='p-2' scope="col">Analysis</th>
             <th class='p-2' scope="col"></th>
         </tr>
@@ -32,6 +33,6 @@
 <!--For smaller screens we use cards-->
 <div class="lg:hidden flex flex-col gap-4">
     {#each entries as entry, i}
-        <Card {entry} current={false} {i} />
+        <Card {entry} current={false} {i} {server_is_recording} />
     {/each}
 </div>

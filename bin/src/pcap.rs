@@ -1,19 +1,18 @@
 use crate::ServerState;
 
+use anyhow::Error;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use futures::TryStreamExt;
 use log::error;
 use rayhunter::diag::DataType;
 use rayhunter::gsmtap_parser;
 use rayhunter::pcap::GsmtapPcapWriter;
 use rayhunter::qmdl::QmdlReader;
 use std::sync::Arc;
-use std::{future, pin::pin};
-use tokio::io::duplex;
+use tokio::io::{duplex, AsyncRead, AsyncWrite};
 use tokio_util::io::ReaderStream;
 
 // Streams a pcap file chunk-by-chunk to the client by reading the QMDL data
@@ -45,39 +44,50 @@ pub async fn get_pcap(
     // the QMDL reader should stop at the last successfully written data chunk
     // (entry.size_bytes)
     let (reader, writer) = duplex(1024);
-    let mut pcap_writer = GsmtapPcapWriter::new(writer).await.unwrap();
-    pcap_writer.write_iface_header().await.unwrap();
 
     tokio::spawn(async move {
-        let mut reader = QmdlReader::new(qmdl_file, Some(qmdl_size_bytes));
-        let mut messages_stream = pin!(reader
-            .as_stream()
-            .try_filter(|container| future::ready(container.data_type == DataType::UserSpace)));
-
-        while let Some(container) = messages_stream
-            .try_next()
-            .await
-            .expect("failed getting QMDL container")
-        {
-            for maybe_msg in container.into_messages() {
-                match maybe_msg {
-                    Ok(msg) => {
-                        let maybe_gsmtap_msg =
-                            gsmtap_parser::parse(msg).expect("error parsing gsmtap message");
-                        if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
-                            pcap_writer
-                                .write_gsmtap_message(gsmtap_msg, timestamp)
-                                .await
-                                .expect("error writing pcap packet");
-                        }
-                    }
-                    Err(e) => error!("error parsing message: {:?}", e),
-                }
-            }
+        if let Err(e) = generate_pcap_data(writer, qmdl_file, qmdl_size_bytes).await {
+            error!("failed to generate PCAP: {:?}", e);
         }
     });
 
     let headers = [(CONTENT_TYPE, "application/vnd.tcpdump.pcap")];
     let body = Body::from_stream(ReaderStream::new(reader));
     Ok((headers, body).into_response())
+}
+
+pub async fn generate_pcap_data<R, W>(
+    writer: W,
+    qmdl_file: R,
+    qmdl_size_bytes: usize,
+) -> Result<(), Error>
+where
+    W: AsyncWrite + Unpin + Send,
+    R: AsyncRead + Unpin,
+{
+    let mut pcap_writer = GsmtapPcapWriter::new(writer).await?;
+    pcap_writer.write_iface_header().await?;
+
+    let mut reader = QmdlReader::new(qmdl_file, Some(qmdl_size_bytes));
+    while let Some(container) = reader.get_next_messages_container().await? {
+        if container.data_type != DataType::UserSpace {
+            continue;
+        }
+
+        for maybe_msg in container.into_messages() {
+            match maybe_msg {
+                Ok(msg) => {
+                    let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
+                    if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
+                        pcap_writer
+                            .write_gsmtap_message(gsmtap_msg, timestamp)
+                            .await?;
+                    }
+                }
+                Err(e) => error!("error parsing message: {:?}", e),
+            }
+        }
+    }
+
+    Ok(())
 }
