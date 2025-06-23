@@ -83,32 +83,6 @@
         {:else if config}
             <form class="space-y-4" onsubmit={(e) => { e.preventDefault(); saveConfig(); }}>
                 <div>
-                    <label for="qmdl_store_path" class="block text-sm font-medium text-gray-700 mb-1">
-                        QMDL Store Path
-                    </label>
-                    <input
-                        id="qmdl_store_path"
-                        type="text"
-                        bind:value={config.qmdl_store_path}
-                        disabled
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                    />
-                </div>
-
-                <div>
-                    <label for="port" class="block text-sm font-medium text-gray-700 mb-1">
-                        Web UI Port
-                    </label>
-                    <input
-                        id="port"
-                        type="number"
-                        bind:value={config.port}
-                        disabled
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                    />
-                </div>
-
-                <div>
                     <label for="ui_level" class="block text-sm font-medium text-gray-700 mb-1">
                         Device UI Level
                     </label>
@@ -139,30 +113,6 @@
                 </div>
 
                 <div class="space-y-3">
-                    <div class="flex items-center">
-                        <input
-                            id="debug_mode"
-                            type="checkbox"
-                            bind:checked={config.debug_mode}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
-                        />
-                        <label for="debug_mode" class="ml-2 block text-sm text-gray-700">
-                            Debug Mode
-                        </label>
-                    </div>
-
-                    <div class="flex items-center">
-                        <input
-                            id="enable_dummy_analyzer"
-                            type="checkbox"
-                            bind:checked={config.enable_dummy_analyzer}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
-                        />
-                        <label for="enable_dummy_analyzer" class="ml-2 block text-sm text-gray-700">
-                            Enable Dummy Analyzer
-                        </label>
-                    </div>
-
                     <div class="flex items-center">
                         <input
                             id="colorblind_mode"
