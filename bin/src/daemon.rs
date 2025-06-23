@@ -19,7 +19,7 @@ use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-use crate::server::{get_config, get_qmdl, restart_daemon, serve_static, set_config, ServerState};
+use crate::server::{get_config, get_qmdl, serve_static, set_config, ServerState};
 use crate::stats::{get_qmdl_manifest, get_system_stats};
 
 use analysis::{
@@ -57,7 +57,6 @@ fn get_router() -> AppRouter {
         .route("/api/analysis-report/{name}", get(get_analysis_report))
         .route("/api/analysis", get(get_analysis_status))
         .route("/api/analysis/{name}", post(start_analysis))
-        .route("/api/restart-daemon", post(restart_daemon))
         .route("/api/config", get(get_config))
         .route("/api/config", post(set_config))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
@@ -69,14 +68,14 @@ fn get_router() -> AppRouter {
 // (i.e. user hit ctrl+c)
 async fn run_server(
     task_tracker: &TaskTracker,
-    config: &config::Config,
     state: Arc<ServerState>,
     server_shutdown_rx: oneshot::Receiver<()>,
 ) -> JoinHandle<()> {
     info!("spinning up server");
-    let app = get_router().with_state(state);
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], state.config.port));
     let listener = TcpListener::bind(&addr).await.unwrap();
+    let app = get_router().with_state(state);
+
     task_tracker.spawn(async move {
         info!("The orca is hunting for stingrays...");
         axum::serve(listener, app)
@@ -189,7 +188,7 @@ async fn main() -> Result<(), RayhunterError> {
 
     loop {
         let config = parse_config(&args.config_path).await?;
-        if !run_with_config(&args, &config).await? {
+        if !run_with_config(&args, config).await? {
             return Ok(());
         }
     }
@@ -197,7 +196,7 @@ async fn main() -> Result<(), RayhunterError> {
 
 async fn run_with_config(
     args: &config::Args,
-    config: &config::Config,
+    config: config::Config,
 ) -> Result<bool, RayhunterError> {
     // TaskTrackers give us an interface to spawn tokio threads, and then
     // eventually await all of them ending
@@ -273,15 +272,15 @@ async fn run_with_config(
     );
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),
+        config,
         qmdl_store_lock: qmdl_store_lock.clone(),
         diag_device_ctrl_sender: diag_tx,
         ui_update_sender: ui_update_tx,
-        debug_mode: config.debug_mode,
         analysis_status_lock,
         analysis_sender: analysis_tx,
         daemon_restart_tx: Arc::new(RwLock::new(Some(daemon_restart_tx))),
     });
-    run_server(&task_tracker, &config, state, server_shutdown_rx).await;
+    run_server(&task_tracker, state, server_shutdown_rx).await;
 
     task_tracker.close();
     task_tracker.wait().await;

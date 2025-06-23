@@ -5,7 +5,6 @@
 
     let loading = $state(false);
     let saving = $state(false);
-    let restarting = $state(false);
     let message = $state("");
     let messageType = $state<"success" | "error" | null>(null);
     let showConfig = $state(false);
@@ -30,7 +29,7 @@
         try {
             saving = true;
             await set_config(config);
-            message = "Config saved successfully!";
+            message = "Config saved successfully! Rayhunter is restarting now. Reload the page in a few seconds.";
             messageType = "success";
         } catch (error) {
             message = `Failed to save config: ${error}`;
@@ -40,23 +39,6 @@
         }
     }
 
-    async function restartRayhunter() {
-        if (!window.confirm('Are you sure you want to restart Rayhunter? This will temporarily stop all monitoring.')) {
-            return;
-        }
-        
-        try {
-            restarting = true;
-            await fetch('/api/restart-daemon', { method: 'POST' });
-            message = "Rayhunter restart initiated!";
-            messageType = "success";
-        } catch (error) {
-            message = `Failed to restart Rayhunter: ${error}`;
-            messageType = "error";
-        } finally {
-            restarting = false;
-        }
-    }
 
     // Load config when first shown
     $effect(() => {
@@ -192,26 +174,10 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Save Config
+                            Apply and restart
                         {/if}
                     </button>
 
-                    <button
-                        type="button"
-                        onclick={restartRayhunter}
-                        disabled={restarting || saving}
-                        class="bg-red-500 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
-                    >
-                        {#if restarting}
-                            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Restarting...
-                        {:else}
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                            </svg>
-                            Restart Rayhunter
-                        {/if}
-                    </button>
                 </div>
             </form>
             {#if message}

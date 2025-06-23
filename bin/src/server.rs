@@ -14,19 +14,18 @@ use tokio::sync::{oneshot, RwLock};
 use tokio_util::io::ReaderStream;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
-use crate::config::parse_config;
 use crate::config::Config;
 use crate::qmdl_store::RecordingStore;
 use crate::{display, DiagDeviceCtrlMessage};
 
 pub struct ServerState {
     pub config_path: String,
+    pub config: Config,
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
     pub ui_update_sender: Sender<display::DisplayState>,
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
-    pub debug_mode: bool,
     pub daemon_restart_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
 }
 
@@ -86,38 +85,10 @@ pub async fn serve_static(
     }
 }
 
-pub async fn restart_daemon(
-    State(state): State<Arc<ServerState>>,
-) -> Result<(StatusCode, String), (StatusCode, String)> {
-    let mut restart_tx = state.daemon_restart_tx.write().await;
-
-    if let Some(sender) = restart_tx.take() {
-        sender.send(()).map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "couldn't send restart signal".to_string(),
-            )
-        })?;
-        Ok((StatusCode::ACCEPTED, "restart signal sent".to_string()))
-    } else {
-        Ok((
-            StatusCode::ACCEPTED,
-            "restart already triggered".to_string(),
-        ))
-    }
-}
-
 pub async fn get_config(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Config>, (StatusCode, String)> {
-    let config = parse_config(&state.config_path).await.map_err(|err| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("failed to read config file: {}", err),
-        )
-    })?;
-
-    Ok(Json(config))
+    Ok(Json(state.config.clone()))
 }
 
 pub async fn set_config(
@@ -138,5 +109,23 @@ pub async fn set_config(
         )
     })?;
 
-    Ok((StatusCode::ACCEPTED, "wrote config".to_string()))
+    // Trigger daemon restart after writing config
+    let mut restart_tx = state.daemon_restart_tx.write().await;
+    if let Some(sender) = restart_tx.take() {
+        sender.send(()).map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "couldn't send restart signal".to_string(),
+            )
+        })?;
+        Ok((
+            StatusCode::ACCEPTED,
+            "wrote config and triggered restart".to_string(),
+        ))
+    } else {
+        Ok((
+            StatusCode::ACCEPTED,
+            "wrote config but restart already triggered".to_string(),
+        ))
+    }
 }
