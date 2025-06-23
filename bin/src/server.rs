@@ -233,7 +233,6 @@ mod tests {
     use super::*;
     use async_zip::base::read::mem::ZipFileReader;
     use axum::extract::{Path, State};
-    use std::io::Cursor;
     use tempfile::TempDir;
 
     async fn create_test_qmdl_store() -> (TempDir, Arc<RwLock<crate::qmdl_store::RecordingStore>>) {
