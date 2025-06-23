@@ -112,13 +112,16 @@ pub async fn get_zip(
 
     tokio::spawn(async move {
         let result: Result<(), Error> = async {
-            let mut zip2 = ZipFileWriter::with_tokio(writer);
+            let mut zip = ZipFileWriter::with_tokio(writer);
 
             // Add QMDL file
             {
                 let entry =
                     ZipEntryBuilder::new(format!("{qmdl_idx}.qmdl").into(), Compression::Stored);
-                let mut entry_writer = zip2.write_entry_stream(entry).await?.compat_write();
+                // FuturesAsyncWriteCompatExt::compat_write because async-zip's entrystream does
+                // not impl tokio's AsyncWrite, but only future's AsyncWrite. This can be removed
+                // once https://github.com/Majored/rs-async-zip/pull/160 is released.
+                let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
 
                 let mut qmdl_file = {
                     let qmdl_store = qmdl_store_lock.read().await;
@@ -136,7 +139,7 @@ pub async fn get_zip(
             {
                 let entry =
                     ZipEntryBuilder::new(format!("{qmdl_idx}.pcapng").into(), Compression::Stored);
-                let mut entry_writer = zip2.write_entry_stream(entry).await?.compat_write();
+                let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
 
                 let qmdl_file_for_pcap = {
                     let qmdl_store = qmdl_store_lock.read().await;
@@ -157,7 +160,7 @@ pub async fn get_zip(
                 entry_writer.into_inner().close().await?;
             }
 
-            zip2.close().await?;
+            zip.close().await?;
             Ok(())
         }
         .await;
