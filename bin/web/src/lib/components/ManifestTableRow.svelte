@@ -36,6 +36,7 @@
     <td class="p-2">{entry.get_readable_qmdl_size()}</td>
     <td class="p-2"><DownloadLink url={entry.get_pcap_url()} text="pcap" /></td>
     <td class="p-2"><DownloadLink url={entry.get_qmdl_url()} text="qmdl" /></td>
+    <td class="p-2"><DownloadLink url={entry.get_zip_url()} text="zip" /></td>
     <td class="p-2"><AnalysisStatus onclick={toggle_analysis_visibility} entry={entry} analysis_visible={analysis_visible}/></td>
     {#if current}
         <td class="p-2"></td>
@@ -49,7 +50,7 @@
     {/if}
 </tr>
 <tr class="{alternating_row_color} border-b {analysis_visible ? '' : 'hidden'}">
-    <td class="border-t border-dashed p-2" colspan="8">
+    <td class="border-t border-dashed p-2" colspan="9">
         <AnalysisView {entry} />
     </td>
 </tr>

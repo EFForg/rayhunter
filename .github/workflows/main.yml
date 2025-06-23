@@ -12,6 +12,7 @@ env:
   FILE_ROOTSHELL: ../../rootshell/rootshell
   FILE_RAYHUNTER_DAEMON_ORBIC: ../../rayhunter-daemon-orbic/rayhunter-daemon
   FILE_RAYHUNTER_DAEMON_TPLINK: ../../rayhunter-daemon-tplink/rayhunter-daemon
+  FILE_RAYHUNTER_DAEMON_WINGTECH: ../../rayhunter-daemon-wingtech/rayhunter-daemon
 
 jobs:
   files_changed:
@@ -33,7 +34,9 @@ jobs:
         id: files_changed
         run: |
           lcommit=${{ github.event.pull_request.base.sha || 'origin/main' }}
-          if [ ${{ github.ref }} = 'refs/heads/main' ]
+
+          # If we are on main, or if these workflow files are being changed, run everything
+          if [ ${{ github.ref }} = 'refs/heads/main' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/
           then
             echo "building everything"
             echo code_count=forced >> "$GITHUB_OUTPUT"
@@ -97,13 +100,15 @@ jobs:
     strategy:
       matrix:
         device:
-          - name: tplink
           - name: orbic
+          - name: tplink
+          - name: wingtech
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
     - uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
     - name: Check formatting
       run: cargo fmt --all --check
     - name: Check
@@ -128,6 +133,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
       - name: cargo check
         shell: bash
         run: |
@@ -168,6 +174,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
       - name: Build rayhunter-check
         run: cargo build --bin rayhunter-check --release
       - uses: actions/upload-artifact@v4
@@ -189,6 +196,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: armv7-unknown-linux-musleabihf
+      - uses: Swatinem/rust-cache@v2
       - name: Build rootshell (arm32)
         run: cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --profile=firmware
       - uses: actions/upload-artifact@v4
@@ -208,14 +216,16 @@ jobs:
     strategy:
       matrix:
         device:
-          - name: tplink
           - name: orbic
+          - name: tplink
+          - name: wingtech
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: armv7-unknown-linux-musleabihf
+      - uses: Swatinem/rust-cache@v2
       - name: Build rayhunter-daemon (arm32)
         run: |
           pushd bin/web
@@ -272,6 +282,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform.target }}
+      - uses: Swatinem/rust-cache@v2
       - run: cargo build --bin installer --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:

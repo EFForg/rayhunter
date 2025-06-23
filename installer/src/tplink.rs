@@ -15,11 +15,10 @@ use bytes::{Bytes, BytesMut};
 use hyper::StatusCode;
 use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 use serde::Deserialize;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
-use tokio::time::{sleep, timeout};
+use tokio::time::sleep;
 
 use crate::InstallTpLink;
+use crate::util::{telnet_send_command, telnet_send_file};
 
 type HttpProxyClient = hyper_util::client::legacy::Client<HttpConnector, Body>;
 
@@ -50,7 +49,7 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
         // in particular: https://www.yuque.com/docs/share/fca60ef9-e5a4-462a-a984-61def4c9b132
         format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi"),
         // TP-Link M7310 v1
-        // (adaptation of M7350 exploit
+        // (adaptation of M7350 exploit)
         format!("http://{admin_ip}/cgi-bin/web_cgi"),
     ] {
         let response = client.post(&endpoint)
@@ -62,7 +61,10 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
             continue;
         }
 
-        let V3RootResponse { result } = response.error_for_status()?.json().await?;
+        let Ok(V3RootResponse { result }) = response.error_for_status()?.json().await else {
+            // On TP-Link M7350 v9, the endpoint /cgi-bin/web_cgi returns 200 OK without launching telnet, and without a response body.
+            continue;
+        };
 
         if result != 0 {
             anyhow::bail!("Bad result code when trying to root device: {result}");
@@ -164,6 +166,7 @@ async fn tplink_run_install(
         rayhunter_daemon_bin,
     )
     .await?;
+
     telnet_send_file(
         addr,
         "/etc/init.d/rayhunter_daemon",
@@ -196,99 +199,6 @@ async fn tplink_run_install(
     );
 
     telnet_send_command(addr, "reboot", "exit code 0").await?;
-
-    Ok(())
-}
-
-async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) -> Result<(), Error> {
-    println!("Sending file {filename}");
-
-    // remove the old file just in case we are close to disk capacity.
-    telnet_send_command(addr, &format!("rm {filename}"), "").await?;
-
-    {
-        let filename = filename.to_owned();
-        let handle = tokio::spawn(async move {
-            telnet_send_command(addr, &format!("nc -l 0.0.0.0:8081 > {filename}.tmp"), "").await
-        });
-
-        sleep(Duration::from_millis(100)).await;
-
-        let mut addr = addr;
-        addr.set_port(8081);
-        let mut stream = TcpStream::connect(addr).await?;
-        stream.write_all(payload).await?;
-
-        handle.await??;
-    }
-
-    let checksum = md5::compute(payload);
-
-    telnet_send_command(
-        addr,
-        &format!("md5sum {filename}.tmp"),
-        &format!("{checksum:x}  {filename}.tmp"),
-    )
-    .await?;
-
-    telnet_send_command(
-        addr,
-        &format!("mv {filename}.tmp {filename}"),
-        "exit code 0",
-    )
-    .await?;
-
-    Ok(())
-}
-
-async fn telnet_send_command(
-    addr: SocketAddr,
-    command: &str,
-    expected_output: &str,
-) -> Result<(), Error> {
-    let stream = TcpStream::connect(addr).await?;
-    let (mut reader, mut writer) = stream.into_split();
-
-    loop {
-        let mut next_byte = 0;
-        reader
-            .read_exact(std::slice::from_mut(&mut next_byte))
-            .await?;
-        if next_byte == b'#' {
-            break;
-        }
-    }
-
-    writer.write_all(command.as_bytes()).await?;
-    writer.write_all(b"; echo exit code $?\r\n").await?;
-
-    let mut read_buf = Vec::new();
-
-    let _ = timeout(Duration::from_secs(5), async {
-        let mut buf = [0; 4096];
-        loop {
-            let Ok(bytes_read) = reader.read(&mut buf).await else {
-                break;
-            };
-            let bytes = &buf[..bytes_read];
-            if bytes.is_empty() {
-                continue;
-            }
-
-            read_buf.extend(bytes);
-
-            if read_buf.ends_with(b"/ # ") {
-                break;
-            }
-        }
-    })
-    .await;
-
-    let string = String::from_utf8_lossy(&read_buf);
-
-    if !string.contains(expected_output) {
-        anyhow::bail!("{expected_output:?} not found in: {string}");
-    }
 
     Ok(())
 }

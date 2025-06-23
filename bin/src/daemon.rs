@@ -19,7 +19,7 @@ use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-use crate::server::{get_config, get_qmdl, serve_static, set_config, ServerState};
+use crate::server::{get_config, get_qmdl, get_zip, serve_static, set_config, ServerState};
 use crate::stats::{get_qmdl_manifest, get_system_stats};
 
 use analysis::{
@@ -48,6 +48,7 @@ fn get_router() -> AppRouter {
     Router::new()
         .route("/api/pcap/{name}", get(get_pcap))
         .route("/api/qmdl/{name}", get(get_qmdl))
+        .route("/api/zip/{name}", get(get_zip))
         .route("/api/system-stats", get(get_system_stats))
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
         .route("/api/start-recording", post(start_recording))
