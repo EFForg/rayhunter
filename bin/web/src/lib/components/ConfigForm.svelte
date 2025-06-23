@@ -79,198 +79,197 @@
     
     {#if showConfig}
         {#if loading}
-        <div class="text-center py-4">Loading config...</div>
+            <div class="text-center py-4">Loading config...</div>
         {:else if config}
-        <form class="space-y-4" onsubmit={(e) => { e.preventDefault(); saveConfig(); }}>
-            <div>
-                <label for="qmdl_store_path" class="block text-sm font-medium text-gray-700 mb-1">
-                    QMDL Store Path
-                </label>
-                <input
-                    id="qmdl_store_path"
-                    type="text"
-                    bind:value={config.qmdl_store_path}
-                    disabled
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                />
-            </div>
-
-            <div>
-                <label for="port" class="block text-sm font-medium text-gray-700 mb-1">
-                    Web UI Port
-                </label>
-                <input
-                    id="port"
-                    type="number"
-                    bind:value={config.port}
-                    disabled
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
-                />
-            </div>
-
-            <div>
-                <label for="ui_level" class="block text-sm font-medium text-gray-700 mb-1">
-                    Device UI Level
-                </label>
-                <select
-                    id="ui_level"
-                    bind:value={config.ui_level}
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
-                >
-                    <option value={0}>0 - Invisible mode</option>
-                    <option value={1}>1 - Subtle mode (colored line)</option>
-                    <option value={2}>2 - Demo mode (orca gif)</option>
-                    <option value={3}>3 - EFF logo</option>
-                </select>
-            </div>
-
-            <div>
-                <label for="key_input_mode" class="block text-sm font-medium text-gray-700 mb-1">
-                    Device Input Mode
-                </label>
-                <select
-                    id="key_input_mode"
-                    bind:value={config.key_input_mode}
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
-                >
-                    <option value={0}>0 - Disable button control</option>
-                    <option value={1}>1 - Double-tap power button to start/stop recording</option>
-                </select>
-            </div>
-
-            <div class="space-y-3">
-                <div class="flex items-center">
-                    <input
-                        id="debug_mode"
-                        type="checkbox"
-                        bind:checked={config.debug_mode}
-                        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
-                    />
-                    <label for="debug_mode" class="ml-2 block text-sm text-gray-700">
-                        Debug Mode
+            <form class="space-y-4" onsubmit={(e) => { e.preventDefault(); saveConfig(); }}>
+                <div>
+                    <label for="qmdl_store_path" class="block text-sm font-medium text-gray-700 mb-1">
+                        QMDL Store Path
                     </label>
+                    <input
+                        id="qmdl_store_path"
+                        type="text"
+                        bind:value={config.qmdl_store_path}
+                        disabled
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
+                    />
                 </div>
 
-                <div class="flex items-center">
-                    <input
-                        id="enable_dummy_analyzer"
-                        type="checkbox"
-                        bind:checked={config.enable_dummy_analyzer}
-                        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
-                    />
-                    <label for="enable_dummy_analyzer" class="ml-2 block text-sm text-gray-700">
-                        Enable Dummy Analyzer
+                <div>
+                    <label for="port" class="block text-sm font-medium text-gray-700 mb-1">
+                        Web UI Port
                     </label>
+                    <input
+                        id="port"
+                        type="number"
+                        bind:value={config.port}
+                        disabled
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
+                    />
                 </div>
 
-                <div class="flex items-center">
-                    <input
-                        id="colorblind_mode"
-                        type="checkbox"
-                        bind:checked={config.colorblind_mode}
-                        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
-                    />
-                    <label for="colorblind_mode" class="ml-2 block text-sm text-gray-700">
-                        Colorblind Mode
+                <div>
+                    <label for="ui_level" class="block text-sm font-medium text-gray-700 mb-1">
+                        Device UI Level
                     </label>
+                    <select
+                        id="ui_level"
+                        bind:value={config.ui_level}
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                    >
+                        <option value={0}>0 - Invisible mode</option>
+                        <option value={1}>1 - Subtle mode (colored line)</option>
+                        <option value={2}>2 - Demo mode (orca gif)</option>
+                        <option value={3}>3 - EFF logo</option>
+                    </select>
                 </div>
-            </div>
 
-            <div class="border-t pt-4 mt-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Analyzer Heuristic Settings</h3>
+                <div>
+                    <label for="key_input_mode" class="block text-sm font-medium text-gray-700 mb-1">
+                        Device Input Mode
+                    </label>
+                    <select
+                        id="key_input_mode"
+                        bind:value={config.key_input_mode}
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                    >
+                        <option value={0}>0 - Disable button control</option>
+                        <option value={1}>1 - Double-tap power button to start/stop recording</option>
+                    </select>
+                </div>
+
                 <div class="space-y-3">
                     <div class="flex items-center">
                         <input
-                            id="imsi_requested"
+                            id="debug_mode"
                             type="checkbox"
-                            bind:checked={config.analyzers.imsi_requested}
+                            bind:checked={config.debug_mode}
                             class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                         />
-                        <label for="imsi_requested" class="ml-2 block text-sm text-gray-700">
-                            IMSI Requested Heuristic
+                        <label for="debug_mode" class="ml-2 block text-sm text-gray-700">
+                            Debug Mode
                         </label>
                     </div>
 
                     <div class="flex items-center">
                         <input
-                            id="connection_redirect_2g_downgrade"
+                            id="enable_dummy_analyzer"
                             type="checkbox"
-                            bind:checked={config.analyzers.connection_redirect_2g_downgrade}
+                            bind:checked={config.enable_dummy_analyzer}
                             class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                         />
-                        <label for="connection_redirect_2g_downgrade" class="ml-2 block text-sm text-gray-700">
-                            Connection Redirect 2G Downgrade Heuristic
+                        <label for="enable_dummy_analyzer" class="ml-2 block text-sm text-gray-700">
+                            Enable Dummy Analyzer
                         </label>
                     </div>
 
                     <div class="flex items-center">
                         <input
-                            id="lte_sib6_and_7_downgrade"
+                            id="colorblind_mode"
                             type="checkbox"
-                            bind:checked={config.analyzers.lte_sib6_and_7_downgrade}
+                            bind:checked={config.colorblind_mode}
                             class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                         />
-                        <label for="lte_sib6_and_7_downgrade" class="ml-2 block text-sm text-gray-700">
-                            LTE SIB6 and SIB7 Downgrade Heuristic
-                        </label>
-                    </div>
-
-                    <div class="flex items-center">
-                        <input
-                            id="null_cipher"
-                            type="checkbox"
-                            bind:checked={config.analyzers.null_cipher}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
-                        />
-                        <label for="null_cipher" class="ml-2 block text-sm text-gray-700">
-                            Null Cipher Heuristic
+                        <label for="colorblind_mode" class="ml-2 block text-sm text-gray-700">
+                            Colorblind Mode
                         </label>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex gap-2 pt-4">
-                <button
-                    type="submit"
-                    disabled={saving}
-                    class="bg-blue-500 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
-                >
-                    {#if saving}
-                        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Saving...
-                    {:else}
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        Save Config
-                    {/if}
-                </button>
+                <div class="border-t pt-4 mt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Analyzer Heuristic Settings</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <input
+                                id="imsi_requested"
+                                type="checkbox"
+                                bind:checked={config.analyzers.imsi_requested}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label for="imsi_requested" class="ml-2 block text-sm text-gray-700">
+                                IMSI Requested Heuristic
+                            </label>
+                        </div>
 
-                <button
-                    type="button"
-                    onclick={restartRayhunter}
-                    disabled={restarting || saving}
-                    class="bg-red-500 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
-                >
-                    {#if restarting}
-                        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Restarting...
-                    {:else}
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        Restart Rayhunter
-                    {/if}
-                </button>
-            </div>
-        </form>
-        
-        {#if message}
-            <div class="mt-4 p-3 rounded {messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
-                {message}
-            </div>
-        {/if}
-    {:else}
+                        <div class="flex items-center">
+                            <input
+                                id="connection_redirect_2g_downgrade"
+                                type="checkbox"
+                                bind:checked={config.analyzers.connection_redirect_2g_downgrade}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label for="connection_redirect_2g_downgrade" class="ml-2 block text-sm text-gray-700">
+                                Connection Redirect 2G Downgrade Heuristic
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input
+                                id="lte_sib6_and_7_downgrade"
+                                type="checkbox"
+                                bind:checked={config.analyzers.lte_sib6_and_7_downgrade}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label for="lte_sib6_and_7_downgrade" class="ml-2 block text-sm text-gray-700">
+                                LTE SIB6 and SIB7 Downgrade Heuristic
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input
+                                id="null_cipher"
+                                type="checkbox"
+                                bind:checked={config.analyzers.null_cipher}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label for="null_cipher" class="ml-2 block text-sm text-gray-700">
+                                Null Cipher Heuristic
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-4">
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        class="bg-blue-500 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
+                    >
+                        {#if saving}
+                            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Saving...
+                        {:else}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Save Config
+                        {/if}
+                    </button>
+
+                    <button
+                        type="button"
+                        onclick={restartRayhunter}
+                        disabled={restarting || saving}
+                        class="bg-red-500 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
+                    >
+                        {#if restarting}
+                            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Restarting...
+                        {:else}
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Restart Rayhunter
+                        {/if}
+                    </button>
+                </div>
+            </form>
+            {#if message}
+                <div class="mt-4 p-3 rounded {messageType === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
+                    {message}
+                </div>
+            {/if}
+        {:else}
             <div class="text-center py-4 text-red-600">
                 Failed to load configuration. Please try reloading the page.
             </div>
