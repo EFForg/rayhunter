@@ -80,7 +80,7 @@
     {#if showConfig}
         {#if loading}
         <div class="text-center py-4">Loading config...</div>
-    {:else if config}
+        {:else if config}
         <form class="space-y-4" onsubmit={(e) => { e.preventDefault(); saveConfig(); }}>
             <div>
                 <label for="qmdl_store_path" class="block text-sm font-medium text-gray-700 mb-1">
@@ -97,7 +97,7 @@
 
             <div>
                 <label for="port" class="block text-sm font-medium text-gray-700 mb-1">
-                    Port
+                    Web UI Port
                 </label>
                 <input
                     id="port"
@@ -110,7 +110,7 @@
 
             <div>
                 <label for="ui_level" class="block text-sm font-medium text-gray-700 mb-1">
-                    UI Level
+                    Device UI Level
                 </label>
                 <select
                     id="ui_level"
@@ -126,7 +126,7 @@
 
             <div>
                 <label for="key_input_mode" class="block text-sm font-medium text-gray-700 mb-1">
-                    Key Input Mode
+                    Device Input Mode
                 </label>
                 <select
                     id="key_input_mode"
@@ -177,7 +177,7 @@
             </div>
 
             <div class="border-t pt-4 mt-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Analyzer Settings</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Analyzer Heuristic Settings</h3>
                 <div class="space-y-3">
                     <div class="flex items-center">
                         <input
@@ -187,7 +187,7 @@
                             class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                         />
                         <label for="imsi_requested" class="ml-2 block text-sm text-gray-700">
-                            IMSI Requested Analyzer
+                            IMSI Requested Heuristic
                         </label>
                     </div>
 
@@ -199,7 +199,7 @@
                             class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                         />
                         <label for="connection_redirect_2g_downgrade" class="ml-2 block text-sm text-gray-700">
-                            Connection Redirect 2G Downgrade Analyzer
+                            Connection Redirect 2G Downgrade Heuristic
                         </label>
                     </div>
 
@@ -211,7 +211,7 @@
                             class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                         />
                         <label for="lte_sib6_and_7_downgrade" class="ml-2 block text-sm text-gray-700">
-                            LTE SIB6 and SIB7 Downgrade Analyzer
+                            LTE SIB6 and SIB7 Downgrade Heuristic
                         </label>
                     </div>
 
@@ -223,7 +223,7 @@
                             class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                         />
                         <label for="null_cipher" class="ml-2 block text-sm text-gray-700">
-                            Null Cipher Analyzer
+                            Null Cipher Heuristic
                         </label>
                     </div>
                 </div>
@@ -249,7 +249,7 @@
                 <button
                     type="button"
                     onclick={restartRayhunter}
-                    disabled={restarting}
+                    disabled={restarting || saving}
                     class="bg-red-500 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
                 >
                     {#if restarting}
