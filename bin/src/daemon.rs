@@ -13,7 +13,6 @@ mod stats;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::config::{parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
@@ -41,7 +40,6 @@ use tokio::select;
 use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
-use tokio::time::sleep;
 use tokio_util::task::TaskTracker;
 
 type AppRouter = Router<Arc<ServerState>>;
@@ -194,11 +192,6 @@ async fn main() -> Result<(), RayhunterError> {
         if !run_with_config(&args, &config).await? {
             return Ok(());
         }
-
-        // For some reason the diag device needs a very long time to become available again within
-        // the same process, on TP-Link M7350 v3. While process restart would reset it faster.
-        println!("Restarting Rayhunter. Waiting for 5 seconds...");
-        sleep(Duration::from_secs(5)).await;
     }
 }
 
