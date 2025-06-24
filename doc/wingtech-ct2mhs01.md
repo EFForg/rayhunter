@@ -1,5 +1,7 @@
 # Wingtech CT2MHS01
 
+Supported in Rayhunter since version 0.4.0.
+
 The Wingtech CT2MHS01 hotspot is a Qualcomm mdm9650-based device with a screen available for US$15-35. This device is often used as a base platform for white labeled versions like the T-Mobile TMOHS1. AT&T branded versions of the hotspot seem to be the most abundant.
 
 ## Hardware
@@ -23,7 +25,7 @@ Please consider sharing the contents of your device's /etc/wt_version file here.
 
 There are likely variants of the device for all three ITU regions.
 
-According to FCC ID 2APXW-CT2MHS01 Test Report No. I20N02441-RF-LTE, the ITU Region 2 American version of the device supports the following LTE bands:
+According to FCC ID 2APXW-CT2MHS01 Test Report No. [I20N02441-RF-LTE](https://apps.fcc.gov/eas/GetApplicationAttachment.html?id=4957451), the ITU Region 2 American version of the device supports the following LTE bands:
 
 | Band | Frequency        |
 | ---- | ---------------- |
@@ -35,6 +37,28 @@ According to FCC ID 2APXW-CT2MHS01 Test Report No. I20N02441-RF-LTE, the ITU Reg
 |   66 | 1700 MHz (E-AWS) |
 
 Note that Band 5 (850 MHz, CLR) is suitable for roaming in ITU regions 2 and 3.
+
+## Installing
+Connect to the Wingtech's network over wifi or usb tethering, then run the installer:
+
+```sh
+./installer wingtech --admin-password 12345678  # replace with your own password
+```
+
+## Obtaining a shell
+Even when rayhunter is running, for security reasons the Wingtech will not have telnet or adb enabled during normal operation.
+
+Use either command below to enable telnet or adb access:
+
+```sh
+./install util wingtech-start-telnet --admin-password 12345678
+telnet 192.168.1.1
+```
+
+```sh
+./install util wingtech-start-adb --admin-password 12345678
+adb shell
+```
 
 ## Developing
 The device has a framebuffer-driven screen at /dev/fb0 that behaves
