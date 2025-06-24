@@ -287,11 +287,14 @@ mod tests {
         };
 
         Arc::new(ServerState {
+            config_path: "/tmp/test_config.toml".to_string(),
+            config: Config::default(),
             qmdl_store_lock: store_lock,
             diag_device_ctrl_sender: tx,
             ui_update_sender: ui_tx,
             analysis_status_lock: Arc::new(RwLock::new(analysis_status)),
             analysis_sender: analysis_tx,
+            daemon_restart_tx: Arc::new(RwLock::new(None)),
         })
     }
 
