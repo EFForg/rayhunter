@@ -2159,6 +2159,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pycrate-rs"
+version = "0.1.0"
+source = "git+https://github.com/wgreenberg/pycrate-rs#9e72e40bee9c3c09205ad871cf681628b443de7c"
+dependencies = [
+ "clap",
+ "deku",
+ "env_logger 0.11.8",
+ "log",
+ "serde",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "qoi"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2316,6 +2329,7 @@ dependencies = [
  "log",
  "nix",
  "pcap-file-tokio",
+ "pycrate-rs",
  "serde",
  "telcom-parser",
  "thiserror 1.0.69",

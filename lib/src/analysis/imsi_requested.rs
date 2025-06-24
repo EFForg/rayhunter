@@ -1,4 +1,9 @@
+use std::any::Any;
 use std::borrow::Cow;
+
+use pycrate_rs::nas::emm::EMMMessage;
+use pycrate_rs::nas::generated::emm::emm_identity_request::{EMMIdentityRequest, IDTypeV};
+use pycrate_rs::nas::NASMessage;
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
@@ -41,30 +46,32 @@ impl Analyzer for ImsiRequestedAnalyzer {
         };
 
         // NAS identity request, ID type IMSI
-        if payload == &[0x07, 0x55, 0x01] {
-            if self.packet_num < PACKET_THRESHHOLD {
-                return Some(Event {
-                    event_type: EventType::QualitativeWarning {
-                        severity: Severity::Medium,
-                    },
-                    message: format!(
-                        "NAS IMSI identity request detected, however it was within \
-                        the first {} packets of this analysis. If you just \
-                        turned your device on, this is likely a \
-                        false-positive.",
-                        PACKET_THRESHHOLD
-                    ),
-                });
-            } else {
-                return Some(Event {
-                    event_type: EventType::QualitativeWarning {
-                        severity: Severity::High,
-                    },
-                    message: format!(
-                        "NAS IMSI identity request detected (packet {})",
-                        self.packet_num
-                    ),
-                });
+        if let NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(req)) = payload {
+            if req.id_type.inner == IDTypeV::IMSI {
+                if self.packet_num < PACKET_THRESHHOLD {
+                    return Some(Event {
+                        event_type: EventType::QualitativeWarning {
+                            severity: Severity::Medium,
+                        },
+                        message: format!(
+                            "NAS IMSI identity request detected, however it was within \
+                            the first {} packets of this analysis. If you just \
+                            turned your device on, this is likely a \
+                            false-positive.",
+                            PACKET_THRESHHOLD
+                        ),
+                    });
+                } else {
+                    return Some(Event {
+                        event_type: EventType::QualitativeWarning {
+                            severity: Severity::High,
+                        },
+                        message: format!(
+                            "NAS IMSI identity request detected (packet {})",
+                            self.packet_num
+                        ),
+                    });
+                }
             }
         }
         None
