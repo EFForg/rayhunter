@@ -9,16 +9,12 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
 
-use aes::Aes128;
-use aes::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
-use anyhow::{Result, bail};
-use base64_light::base64_encode_bytes;
-use block_padding::{Padding, Pkcs7};
-use reqwest::Client;
+use anyhow::Result;
 use tokio::time::sleep;
 
 use crate::TmobileArgs as Args;
-use crate::util::{echo, telnet_send_command, telnet_send_file};
+use crate::util::{echo, http_ok_every, telnet_send_command, telnet_send_file};
+use crate::wingtech::start_telnet;
 
 pub async fn install(
     Args {
@@ -27,62 +23,6 @@ pub async fn install(
     }: Args,
 ) -> Result<()> {
     run_install(admin_ip, admin_password).await
-}
-
-const KEY: &[u8] = b"abcdefghijklmn12";
-
-/// Returns password encrypted in AES128 ECB mode with the key b"abcdefghijklmn12",
-/// with Pkcs7 padding, encoded in base64.
-fn encrypt_password(password: &[u8]) -> Result<String> {
-    let c = Aes128::new_from_slice(KEY)?;
-    let mut b = GenericArray::from([0u8; 16]);
-    b[..password.len()].copy_from_slice(password);
-    Pkcs7::pad(&mut b, password.len());
-    c.encrypt_block(&mut b);
-    Ok(base64_encode_bytes(&b))
-}
-
-pub async fn start_telnet(admin_ip: &str, admin_password: &str) -> Result<()> {
-    run_command(admin_ip, admin_password, "busybox telnetd -l /bin/sh").await
-}
-
-pub async fn start_adb(admin_ip: &str, admin_password: &str) -> Result<()> {
-    run_command(admin_ip, admin_password, "/sbin/usb/compositions/9025").await
-}
-
-async fn run_command(admin_ip: &str, admin_password: &str, cmd: &str) -> Result<()> {
-    let qcmap_auth_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_auth");
-    let qcmap_web_cgi_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi");
-
-    let encrypted_pw = encrypt_password(admin_password.as_bytes()).ok().unwrap();
-
-    let client = Client::new();
-    let login = client
-        .post(&qcmap_auth_endpoint)
-        .body(format!(
-            "type=login&pwd={encrypted_pw}&timeout=60000&user=admin"
-        ))
-        .send()
-        .await?
-        .text()
-        .await?;
-    let token = match login.find("token") {
-        Some(n) => &login[n + 8..n + 8 + 16],
-        None => bail!("login did not return a token in response: {}", login),
-    };
-
-    let telnet = client.post(&qcmap_web_cgi_endpoint)
-        .body(format!("page=setFWMacFilter&cmd=add&mode=0&mac=50:5A:CA:B5:05||{cmd}&key=50:5A:CA:B5:05:AC&token={token}"))
-        .send()
-        .await?;
-    if telnet.status() != 200 {
-        bail!(
-            "starting telnet failed with status code: {:?}",
-            telnet.status()
-        );
-    }
-
-    Ok(())
 }
 
 async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
@@ -153,35 +93,4 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
     println!("rayhunter is running at http://{admin_ip}:8080");
 
     Ok(())
-}
-
-async fn http_ok_every(rayhunter_url: String, interval: Duration, max_failures: u32) -> Result<()> {
-    let client = Client::new();
-    let mut failures = 0;
-    loop {
-        match client.get(&rayhunter_url).send().await {
-            Ok(test) => match test.status().is_success() {
-                true => break,
-                false => bail!(
-                    "request for url ({rayhunter_url}) failed with status code: {:?}",
-                    test.status()
-                ),
-            },
-            Err(e) => match failures > max_failures {
-                true => return Err(e.into()),
-                false => failures += 1,
-            },
-        }
-        sleep(interval).await;
-    }
-
-    Ok(())
-}
-
-#[test]
-fn test_encrypt_password() {
-    let p = b"80536913";
-    let s = encrypt_password(p).ok();
-    let expected = Some("5brvd8xl732cSoFTAy67ig==".to_string());
-    assert_eq!(s, expected);
 }

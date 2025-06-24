@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 
 use anyhow::{Result, bail};
+use reqwest::Client;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
@@ -88,3 +89,26 @@ pub async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) 
     println!("ok");
     Ok(())
 }
+
+pub async fn http_ok_every(rayhunter_url: String, interval: Duration, max_failures: u32) -> Result<()> {
+    let client = Client::new();
+    let mut failures = 0;
+    loop {
+        match client.get(&rayhunter_url).send().await {
+            Ok(test) => match test.status().is_success() {
+                true => break,
+                false => bail!(
+                    "request for url ({rayhunter_url}) failed with status code: {:?}",
+                    test.status()
+                ),
+            },
+            Err(e) => match failures > max_failures {
+                true => return Err(e.into()),
+                false => failures += 1,
+            },
+        }
+        sleep(interval).await;
+    }
+    Ok(())
+}
+
