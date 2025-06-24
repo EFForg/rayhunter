@@ -182,8 +182,8 @@ async fn run() -> Result<(), Error> {
                 }
             }
             UtilSubCommand::Shell(_) => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
-            UtilSubCommand::TmobileStartTelnet(args) => tmobile::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Tmobile TMOHS1")?,
-            UtilSubCommand::TmobileStartAdb(args) => tmobile::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Tmobile TMOHS1")?,
+            UtilSubCommand::TmobileStartTelnet(args) => wingtech::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Tmobile TMOHS1")?,
+            UtilSubCommand::TmobileStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Tmobile TMOHS1")?,
             UtilSubCommand::TplinkStartTelnet(options) => {
                 tplink::start_telnet(&options.admin_ip).await?;
             }
