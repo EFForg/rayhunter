@@ -8,27 +8,32 @@ use axum::extract::State;
 use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use include_dir::{include_dir, Dir};
 use log::error;
 use std::sync::Arc;
+use tokio::fs::write;
 use tokio::io::{copy, duplex, AsyncReadExt};
 use tokio::sync::mpsc::Sender;
-use tokio::sync::RwLock;
+use tokio::sync::{oneshot, RwLock};
 use tokio_util::compat::FuturesAsyncWriteCompatExt;
 use tokio_util::io::ReaderStream;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
+use crate::config::Config;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
 use crate::{display, DiagDeviceCtrlMessage};
 
 pub struct ServerState {
+    pub config_path: String,
+    pub config: Config,
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
     pub ui_update_sender: Sender<display::DisplayState>,
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
-    pub debug_mode: bool,
+    pub daemon_restart_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
 }
 
 pub async fn get_qmdl(
@@ -41,12 +46,15 @@ pub async fn get_qmdl(
         StatusCode::NOT_FOUND,
         format!("couldn't find qmdl file with name {}", qmdl_idx),
     ))?;
-    let qmdl_file = qmdl_store.open_entry_qmdl(entry_index).await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("error opening QMDL file: {}", e),
-        )
-    })?;
+    let qmdl_file = qmdl_store
+        .open_entry_qmdl(entry_index)
+        .await
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("error opening QMDL file: {}", err),
+            )
+        })?;
     let limited_qmdl_file = qmdl_file.take(entry.qmdl_size_bytes as u64);
     let qmdl_stream = ReaderStream::new(limited_qmdl_file);
 
@@ -81,6 +89,51 @@ pub async fn serve_static(
             )
             .body(Body::from(file.contents()))
             .unwrap(),
+    }
+}
+
+pub async fn get_config(
+    State(state): State<Arc<ServerState>>,
+) -> Result<Json<Config>, (StatusCode, String)> {
+    Ok(Json(state.config.clone()))
+}
+
+pub async fn set_config(
+    State(state): State<Arc<ServerState>>,
+    Json(config): Json<Config>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let config_str = toml::to_string_pretty(&config).map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to serialize config as TOML: {}", err),
+        )
+    })?;
+
+    write(&state.config_path, config_str).await.map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to write config file: {}", err),
+        )
+    })?;
+
+    // Trigger daemon restart after writing config
+    let mut restart_tx = state.daemon_restart_tx.write().await;
+    if let Some(sender) = restart_tx.take() {
+        sender.send(()).map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "couldn't send restart signal".to_string(),
+            )
+        })?;
+        Ok((
+            StatusCode::ACCEPTED,
+            "wrote config and triggered restart".to_string(),
+        ))
+    } else {
+        Ok((
+            StatusCode::ACCEPTED,
+            "wrote config but restart already triggered".to_string(),
+        ))
     }
 }
 
@@ -180,7 +233,6 @@ mod tests {
     use super::*;
     use async_zip::base::read::mem::ZipFileReader;
     use axum::extract::{Path, State};
-    use std::io::Cursor;
     use tempfile::TempDir;
 
     async fn create_test_qmdl_store() -> (TempDir, Arc<RwLock<crate::qmdl_store::RecordingStore>>) {
@@ -235,12 +287,14 @@ mod tests {
         };
 
         Arc::new(ServerState {
+            config_path: "/tmp/test_config.toml".to_string(),
+            config: Config::default(),
             qmdl_store_lock: store_lock,
             diag_device_ctrl_sender: tx,
             ui_update_sender: ui_tx,
             analysis_status_lock: Arc::new(RwLock::new(analysis_status)),
             analysis_sender: analysis_tx,
-            debug_mode: true,
+            daemon_restart_tx: Arc::new(RwLock::new(None)),
         })
     }
 

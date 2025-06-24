@@ -1,10 +1,10 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use rayhunter::analysis::analyzer::AnalyzerConfig;
 
 use crate::error::RayhunterError;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Config {
     pub qmdl_store_path: String,
@@ -32,11 +32,11 @@ impl Default for Config {
     }
 }
 
-pub fn parse_config<P>(path: P) -> Result<Config, RayhunterError>
+pub async fn parse_config<P>(path: P) -> Result<Config, RayhunterError>
 where
     P: AsRef<std::path::Path>,
 {
-    if let Ok(config_file) = std::fs::read_to_string(&path) {
+    if let Ok(config_file) = tokio::fs::read_to_string(&path).await {
         Ok(toml::from_str(&config_file).map_err(RayhunterError::ConfigFileParsingError)?)
     } else {
         Ok(Config::default())

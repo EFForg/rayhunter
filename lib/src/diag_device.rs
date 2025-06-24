@@ -7,12 +7,14 @@ use crate::log_codes;
 
 use deku::prelude::*;
 use futures::TryStream;
-use log::{error, info};
+use log::{debug, error, info};
 use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
+use std::time::Duration;
 use thiserror::Error;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::time::sleep;
 
 pub type DiagResult<T> = Result<T, DiagDeviceError>;
 
@@ -85,6 +87,52 @@ pub struct DiagDevice {
 
 impl DiagDevice {
     pub async fn new() -> DiagResult<Self> {
+        Self::new_with_retries(Duration::from_secs(30)).await
+    }
+
+    pub async fn new_with_retries(max_duration: Duration) -> DiagResult<Self> {
+        // For some reason the diag device needs a very long time to become available again with in
+        // the same process, on TP-Link M7350 v3. While process restart would reset it faster.
+
+        let start_time = std::time::Instant::now();
+        let max_delay = Duration::from_secs(5);
+
+        let mut delay = Duration::from_millis(100);
+        let mut num_retries = 0;
+
+        loop {
+            match Self::try_new().await {
+                Ok(device) => {
+                    info!(
+                        "Diag device initialization succeeded after {} retries",
+                        num_retries
+                    );
+                    return Ok(device);
+                }
+                Err(e) => {
+                    num_retries += 1;
+                    if start_time.elapsed() >= max_duration {
+                        error!(
+                            "Failed to initialize diag device after {:?}: {}",
+                            max_duration, e
+                        );
+                        return Err(e);
+                    }
+
+                    info!(
+                        "Diag device initialization failed {} times, retrying in {:?}: {}",
+                        num_retries, delay, e
+                    );
+                    sleep(delay).await;
+
+                    // Exponential backoff
+                    delay = std::cmp::min(delay * 2, max_delay);
+                }
+            }
+        }
+    }
+
+    async fn try_new() -> DiagResult<Self> {
         let diag_file = File::options()
             .read(true)
             .write(true)
@@ -123,7 +171,7 @@ impl DiagDevice {
                 .map_err(DiagDeviceError::DeviceReadFailed)?;
         }
 
-        info!(
+        debug!(
             "Parsing messages container size = {:?} [{:?}]",
             bytes_read,
             &self.read_buf[0..bytes_read]

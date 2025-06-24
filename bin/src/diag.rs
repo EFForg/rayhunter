@@ -158,7 +158,7 @@ pub fn run_diag_read_thread(
 pub async fn start_recording(
     State(state): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if state.debug_mode {
+    if state.config.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
 
@@ -179,7 +179,7 @@ pub async fn start_recording(
 pub async fn stop_recording(
     State(state): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if state.debug_mode {
+    if state.config.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
     state
@@ -199,7 +199,7 @@ pub async fn delete_recording(
     State(state): State<Arc<ServerState>>,
     Path(qmdl_name): Path<String>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if state.debug_mode {
+    if state.config.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
@@ -244,7 +244,7 @@ pub async fn delete_recording(
 pub async fn delete_all_recordings(
     State(state): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    if state.debug_mode {
+    if state.config.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
     state
