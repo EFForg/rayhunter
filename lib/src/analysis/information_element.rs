@@ -4,8 +4,8 @@
 //! standard.
 
 use crate::gsmtap::{GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
-use telcom_parser::{decode, lte_rrc};
 use pycrate_rs::nas::NASMessage;
+use telcom_parser::{decode, lte_rrc};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -93,7 +93,9 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
             }
             GsmtapType::LteNas(LteNasSubtype::Plain) => {
                 let msg = NASMessage::parse(&gsmtap_msg.payload)?;
-                Ok(InformationElement::LTE(Box::new(LteInformationElement::NAS(msg))))
+                Ok(InformationElement::LTE(Box::new(
+                    LteInformationElement::NAS(msg),
+                )))
             }
             _ => Err(InformationElementError::UnsupportedGsmtapType(
                 gsmtap_msg.header.gsmtap_type,
