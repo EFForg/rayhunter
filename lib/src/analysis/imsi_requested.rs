@@ -45,7 +45,6 @@ impl Analyzer for ImsiRequestedAnalyzer {
             _ => return None,
         };
 
-        // NAS identity request, ID type IMSI
         if let NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(req)) = payload {
             if req.id_type.inner == IDTypeV::IMSI {
                 if self.packet_num < PACKET_THRESHHOLD {
