@@ -32,6 +32,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
     ```bash
     ./installer orbic
     # or: ./installer tplink
+    # or: ./installer wingtech
     ```
 
     The device will restart multiple times over the next few minutes.
