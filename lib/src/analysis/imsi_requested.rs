@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::borrow::Cow;
 
 use pycrate_rs::nas::emm::EMMMessage;
