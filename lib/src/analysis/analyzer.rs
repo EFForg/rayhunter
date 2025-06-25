@@ -10,8 +10,8 @@ use crate::{diag::MessagesContainer, gsmtap_parser};
 use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, information_element::InformationElement,
-    null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
-    nas_null_cipher::NasNullCipherAnalyzer,
+    nas_null_cipher::NasNullCipherAnalyzer, null_cipher::NullCipherAnalyzer,
+    priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -31,7 +31,7 @@ impl Default for AnalyzerConfig {
             connection_redirect_2g_downgrade: true,
             lte_sib6_and_7_downgrade: true,
             null_cipher: true,
-            nas_null_cipher: true
+            nas_null_cipher: true,
         }
     }
 }
