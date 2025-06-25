@@ -12,4 +12,5 @@ These devices have been extensively tested by the core developers and are widely
 
 ## Tier 2 - Functional devices
 Some developers have succeeded in getting Rayhunter running on these devices, but they have not received the same level of adoption as tier 1 devices.
+- [Tmobile TMOHS1](./tmobile-tmohs1.md)
 - [Wingtech CT2MHS01](./wingtech-ct2mhs01.md)
