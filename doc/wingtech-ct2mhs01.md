@@ -51,12 +51,12 @@ Even when rayhunter is running, for security reasons the Wingtech will not have 
 Use either command below to enable telnet or adb access:
 
 ```sh
-./install util wingtech-start-telnet --admin-password 12345678
+./installer util wingtech-start-telnet --admin-password 12345678
 telnet 192.168.1.1
 ```
 
 ```sh
-./install util wingtech-start-adb --admin-password 12345678
+./installer util wingtech-start-adb --admin-password 12345678
 adb shell
 ```
 
