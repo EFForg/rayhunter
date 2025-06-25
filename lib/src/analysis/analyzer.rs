@@ -11,6 +11,7 @@ use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, information_element::InformationElement,
     null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
+    nas_null_cipher::NasNullCipherAnalyzer,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -20,6 +21,7 @@ pub struct AnalyzerConfig {
     pub connection_redirect_2g_downgrade: bool,
     pub lte_sib6_and_7_downgrade: bool,
     pub null_cipher: bool,
+    pub nas_null_cipher: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -29,6 +31,7 @@ impl Default for AnalyzerConfig {
             connection_redirect_2g_downgrade: true,
             lte_sib6_and_7_downgrade: true,
             null_cipher: true,
+            nas_null_cipher: true
         }
     }
 }
@@ -160,6 +163,10 @@ impl Harness {
         }
         if analyzer_config.null_cipher {
             harness.add_analyzer(Box::new(NullCipherAnalyzer {}));
+        }
+
+        if analyzer_config.nas_null_cipher {
+            harness.add_analyzer(Box::new(NasNullCipherAnalyzer::new()))
         }
 
         harness
