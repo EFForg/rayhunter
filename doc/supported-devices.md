@@ -21,6 +21,7 @@ Rayhunter is confirmed to work on these devices.
 | Device | Recommended region |
 | ------ | ------ |
 | [Wingtech CT2MHS01](./wingtech-ct2mhs01.md) | Americas |
+| [Tmobile TMOHS1](./tmobile-tmohs1.md) | Americas |
 | [TP-Link M7310](./tplink-m7310.md) | Africa, Europe, Middle East |
 
 ## Adding new devices
