@@ -12,6 +12,7 @@ env:
   FILE_ROOTSHELL: ../../rootshell/rootshell
   FILE_RAYHUNTER_DAEMON_ORBIC: ../../rayhunter-daemon-orbic/rayhunter-daemon
   FILE_RAYHUNTER_DAEMON_TPLINK: ../../rayhunter-daemon-tplink/rayhunter-daemon
+  FILE_RAYHUNTER_DAEMON_TMOBILE: ../../rayhunter-daemon-tmobile/rayhunter-daemon
   FILE_RAYHUNTER_DAEMON_WINGTECH: ../../rayhunter-daemon-wingtech/rayhunter-daemon
   RUSTFLAGS: "-Dwarnings"
 
@@ -107,6 +108,7 @@ jobs:
           - name: orbic
           - name: tplink
           - name: wingtech
+          - name: tmobile
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -245,6 +247,7 @@ jobs:
           - name: orbic
           - name: tplink
           - name: wingtech
+          - name: tmobile
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
