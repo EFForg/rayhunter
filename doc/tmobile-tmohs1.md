@@ -34,10 +34,15 @@ According to FCC ID 2APXW-TMOHS1 Test Report No. I20Z61602-WMD02 ([part 1](https
 |   71 | 600 MHz (USDD)   |
 
 ## Installing
-Connect to the TMOHS1's network over wifi or usb tethering, then run the installer:
+Connect to the TMOHS1's network over wifi or usb tethering.
+
+The device will not accept web requests until after the default password is changed.
+If you have not previously logged in, log in using the default password printed under the battery and change the admin password.
+
+Then run the installer:
 
 ```sh
-./installer tmobile --admin-password 12345678  # replace with your own password
+./installer tmobile --admin-password Admin0123! # replace with your own password
 ```
 
 ## LED modes
@@ -53,11 +58,11 @@ Even when rayhunter is running, for security reasons the TMOHS1 will not have te
 Use either command below to enable telnet or adb access:
 
 ```sh
-./installer util tmobile-start-telnet --admin-password 12345678
+./installer util tmobile-start-telnet --admin-password Admin0123!
 telnet 192.168.0.1
 ```
 
 ```sh
-./installer util tmobile-start-adb --admin-password 12345678
+./installer util tmobile-start-adb --admin-password Admin0123!
 adb shell
 ```
