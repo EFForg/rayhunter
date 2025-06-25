@@ -107,7 +107,11 @@ pub async fn send_file(admin_ip: &str, local_path: &str, remote_path: &str) -> R
     Ok(())
 }
 
-pub async fn http_ok_every(rayhunter_url: String, interval: Duration, max_failures: u32) -> Result<()> {
+pub async fn http_ok_every(
+    rayhunter_url: String,
+    interval: Duration,
+    max_failures: u32,
+) -> Result<()> {
     let client = Client::new();
     let mut failures = 0;
     loop {
