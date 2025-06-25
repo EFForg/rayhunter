@@ -20,12 +20,15 @@ Please consider sharing the contents of your device's /etc/wt_version file here.
 
 ## Supported bands
 
-The TMOHS1 is primarily an ITU Region 2 device, although Band 41 (BRS) may be suitable for roaming in region 3.
+The TMOHS1 is primarily an ITU Region 2 device, although Bands 5 (CLR) and 41 (BRS) may be suitable for roaming in Region 3.
 
 According to FCC ID 2APXW-TMOHS1 Test Report No. I20Z61602-WMD02 ([part 1](https://fcc.report/FCC-ID/2APXW-TMOHS1/4987033.pdf), [part 2](https://fcc.report/FCC-ID/2APXW-TMOHS1/4987034.pdf)), the TMOHS1 supports the following LTE bands:
 
 | Band | Frequency        |
 | ---- | ---------------- |
+|    2 | 1900 MHz (PCS)   |
+|    4 | 1700 MHz (AWS-1) |
+|    5 | 850 MHz (CLR)    |
 |   12 | 700 MHz (LSMH)   |
 |   25 | 1900 MHz (E-PCS) |
 |   26 | 850 MHz (E-CLR)  |
