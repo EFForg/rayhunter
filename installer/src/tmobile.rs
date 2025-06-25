@@ -28,6 +28,7 @@ pub async fn install(
 async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
     echo!("Starting telnet ... ");
     start_telnet(&admin_ip, &admin_password).await?;
+    sleep(Duration::from_millis(200)).await;
     println!("ok");
 
     echo!("Connecting via telnet to {admin_ip} ... ");
