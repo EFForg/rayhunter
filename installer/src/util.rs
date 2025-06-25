@@ -90,7 +90,11 @@ pub async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) 
     Ok(())
 }
 
-pub async fn http_ok_every(rayhunter_url: String, interval: Duration, max_failures: u32) -> Result<()> {
+pub async fn http_ok_every(
+    rayhunter_url: String,
+    interval: Duration,
+    max_failures: u32,
+) -> Result<()> {
     let client = Client::new();
     let mut failures = 0;
     loop {
@@ -111,4 +115,3 @@ pub async fn http_ok_every(rayhunter_url: String, interval: Duration, max_failur
     }
     Ok(())
 }
-
