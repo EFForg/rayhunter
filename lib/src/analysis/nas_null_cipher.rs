@@ -29,7 +29,9 @@ impl Analyzer for NasNullCipherAnalyzer {
     }
 
     fn get_description(&self) -> Cow<str> {
-        Cow::from("Tests whether the MME requests to use a null cipher in the security mode command")
+        Cow::from(
+            "Tests whether the MME requests to use a null cipher in the security mode command",
+        )
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
@@ -44,15 +46,15 @@ impl Analyzer for NasNullCipherAnalyzer {
 
         if let NASMessage::EMMMessage(EMMMessage::EMMSecurityModeCommand(req)) = payload {
             if req.nas_sec_algo.inner.ciph_algo == EPSEncryptionAlgorithmEEA0Null {
-                    return Some(Event {
-                        event_type: EventType::QualitativeWarning {
-                            severity: Severity::High,
-                        },
-                        message: format!(
-                            "NAS Security mode command requested null cipher(packet {})",
-                            self.packet_num
-                        ),
-                    });
+                return Some(Event {
+                    event_type: EventType::QualitativeWarning {
+                        severity: Severity::High,
+                    },
+                    message: format!(
+                        "NAS Security mode command requested null cipher(packet {})",
+                        self.packet_num
+                    ),
+                });
             }
         }
         None
