@@ -27,7 +27,6 @@ You can access this UI in one of two ways:
 * **Connect over USB (TP-Link):** Plug in the TP-Link and use USB tethering to establish a network connection. ADB support can be enabled on the device, but the installer won't do it for you.
 
 ## Key shortcuts
+**This feature is disabled by default since 0.4.0** and needs to be enabled through [configuration](./configuration.md).
 
 As of 0.3.3, you can start a new recording by double-tapping the power button. Any current recording will be stopped and a new recording will be started, resetting the red line as well.
-
-**This feature is disabled by default since 0.4.0** and needs to be enabled through [configuration](./configuration.md).
