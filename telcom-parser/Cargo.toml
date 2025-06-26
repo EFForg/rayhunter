@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# FIXME: When this branch is merged into main point this at the release version of hampi again
 asn1-compiler = "0.7.1"
 asn1-codecs = "0.7.1"
 asn1_codecs_derive = "0.7.1"
