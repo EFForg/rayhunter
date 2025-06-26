@@ -21,6 +21,9 @@ ui_level = 1
 # 1 = double-tapping the power button starts/stops recordings
 key_input_mode = 0
 
+# If set, attempts to send a notification to the ntify topic when a new warning is triggered
+# ntfy_topic =
+
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics
 # See https://github.com/EFForg/rayhunter/blob/main/doc/heuristics.md for details
@@ -28,4 +31,4 @@ key_input_mode = 0
 imsi_requested = true
 connection_redirect_2g_downgrade = true
 lte_sib6_and_7_downgrade = true
-null_cipher = true 
+null_cipher = true

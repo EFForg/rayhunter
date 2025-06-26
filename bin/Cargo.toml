@@ -23,8 +23,17 @@ path = "src/check.rs"
 rayhunter = { path = "../lib" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
-tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt-multi-thread"] }
-axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json"] }
+tokio = { version = "1.44.2", default-features = false, features = [
+    "fs",
+    "signal",
+    "process",
+    "rt-multi-thread",
+] }
+axum = { version = "0.8", default-features = false, features = [
+    "http1",
+    "tokio",
+    "json",
+] }
 thiserror = "1.0.52"
 libc = "0.2.150"
 log = "0.4.20"
@@ -38,8 +47,14 @@ tokio-stream = { version = "0.1.14", default-features = false }
 futures = { version = "0.3.30", default-features = false }
 clap = { version = "4.5.2", features = ["derive"] }
 serde_json = "1.0.114"
-image = { version =  "0.25.1", default-features = false, features = ["png", "gif"] }
+image = { version = "0.25.1", default-features = false, features = [
+    "png",
+    "gif",
+] }
 tempfile = "3.10.1"
 simple_logger = "5.0.0"
 async_zip = { version = "0.0.17", features = ["tokio"] }
 anyhow = "1.0.98"
+reqwest = { version = "0.12.20", default-features = false, features = [
+    "rustls-tls",
+] }
