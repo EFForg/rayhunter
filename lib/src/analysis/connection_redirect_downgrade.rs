@@ -42,7 +42,7 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
             }),
             _ => Some(Event {
                 event_type: EventType::Informational,
-                message: format!("RRCConnectionRelease CarrierInfo: {:?}", carrier_info),
+                message: format!("RRCConnectionRelease CarrierInfo: {carrier_info:?}"),
             }),
         }
     }

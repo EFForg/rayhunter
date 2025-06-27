@@ -28,7 +28,7 @@ pub async fn get_pcap(
     }
     let (entry_index, entry) = qmdl_store.entry_for_name(&qmdl_name).ok_or((
         StatusCode::NOT_FOUND,
-        format!("couldn't find manifest entry with name {}", qmdl_name),
+        format!("couldn't find manifest entry with name {qmdl_name}"),
     ))?;
     if entry.qmdl_size_bytes == 0 {
         return Err((
@@ -40,14 +40,14 @@ pub async fn get_pcap(
     let qmdl_file = qmdl_store
         .open_entry_qmdl(entry_index)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?;
     // the QMDL reader should stop at the last successfully written data chunk
     // (entry.size_bytes)
     let (reader, writer) = duplex(1024);
 
     tokio::spawn(async move {
         if let Err(e) = generate_pcap_data(writer, qmdl_file, qmdl_size_bytes).await {
-            error!("failed to generate PCAP: {:?}", e);
+            error!("failed to generate PCAP: {e:?}");
         }
     });
 
@@ -84,7 +84,7 @@ where
                             .await?;
                     }
                 }
-                Err(e) => error!("error parsing message: {:?}", e),
+                Err(e) => error!("error parsing message: {e:?}"),
             }
         }
     }
