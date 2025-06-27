@@ -32,7 +32,7 @@ pub fn run_key_input_thread(
         let mut file = match File::open("/dev/input/event0").await {
             Ok(file) => file,
             Err(e) => {
-                error!("Failed to open /dev/input/event0: {}", e);
+                error!("Failed to open /dev/input/event0: {e}");
                 return;
             }
         };
@@ -49,7 +49,7 @@ pub fn run_key_input_thread(
                 }
                 result = file.read_exact(&mut buffer) => {
                     if let Err(e) = result {
-                        error!("failed to read key input: {}", e);
+                        error!("failed to read key input: {e}");
                         return;
                     }
                 }
@@ -79,12 +79,12 @@ pub fn run_key_input_thread(
                         {
                             if let Err(e) = diag_tx.send(DiagDeviceCtrlMessage::StopRecording).await
                             {
-                                error!("Failed to send StopRecording: {}", e);
+                                error!("Failed to send StopRecording: {e}");
                             }
                             if let Err(e) =
                                 diag_tx.send(DiagDeviceCtrlMessage::StartRecording).await
                             {
-                                error!("Failed to send StartRecording: {}", e);
+                                error!("Failed to send StartRecording: {e}");
                             }
                             last_keyup = None;
                             continue;

@@ -68,7 +68,7 @@ impl GenericFramebuffer for Framebuffer {
             );
 
             if res < 0 {
-                panic!("failed to send FBIORECT_DISPLAY ioctl, {}", res);
+                panic!("failed to send FBIORECT_DISPLAY ioctl, {res}");
             }
         }
     }

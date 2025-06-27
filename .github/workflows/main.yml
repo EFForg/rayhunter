@@ -13,6 +13,7 @@ env:
   FILE_RAYHUNTER_DAEMON_ORBIC: ../../rayhunter-daemon-orbic/rayhunter-daemon
   FILE_RAYHUNTER_DAEMON_TPLINK: ../../rayhunter-daemon-tplink/rayhunter-daemon
   FILE_RAYHUNTER_DAEMON_WINGTECH: ../../rayhunter-daemon-wingtech/rayhunter-daemon
+  RUSTFLAGS: "-Dwarnings"
 
 jobs:
   files_changed:

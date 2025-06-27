@@ -102,7 +102,7 @@ impl MemoryStats {
 // turns a number of kilobytes (like 28293) into a human-readable string (like "28.3M")
 fn humanize_kb(kb: usize) -> String {
     if kb < 1000 {
-        return format!("{}K", kb);
+        return format!("{kb}K");
     }
     format!("{:.1}M", kb as f64 / 1024.0)
 }
@@ -114,7 +114,7 @@ pub async fn get_system_stats(
     match SystemStats::new(qmdl_store.path.to_str().unwrap()).await {
         Ok(stats) => Ok(Json(stats)),
         Err(err) => {
-            error!("error getting system stats: {}", err);
+            error!("error getting system stats: {err}");
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "error getting system stats".to_string(),

@@ -110,7 +110,7 @@ async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, Rayh
         match RecordingStore::load(&config.qmdl_store_path).await {
             Ok(store) => Ok(store),
             Err(RecordingStoreError::ParseManifestError(err)) => {
-                error!("failed to parse QMDL manifest: {}", err);
+                error!("failed to parse QMDL manifest: {err}");
                 info!("creating new empty manifest...");
                 Ok(RecordingStore::create(&config.qmdl_store_path).await?)
             }
@@ -124,6 +124,7 @@ async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, Rayh
 // Start a thread that'll track when user hits ctrl+c. When that happens,
 // trigger various cleanup tasks, including sending signals to other threads to
 // shutdown
+#[allow(clippy::too_many_arguments)]
 fn run_shutdown_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
@@ -141,14 +142,14 @@ fn run_shutdown_thread(
         select! {
             res = tokio::signal::ctrl_c() => {
                 if let Err(err) = res {
-                    error!("Unable to listen for shutdown signal: {}", err);
+                    error!("Unable to listen for shutdown signal: {err}");
                 }
 
                 should_restart_flag.store(false, Ordering::Relaxed);
             }
             res = daemon_restart_rx => {
                 if let Err(err) = res {
-                    error!("Unable to listen for shutdown signal: {}", err);
+                    error!("Unable to listen for shutdown signal: {err}");
                 }
 
                 should_restart_flag.store(true, Ordering::Relaxed);

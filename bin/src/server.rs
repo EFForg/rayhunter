@@ -44,7 +44,7 @@ pub async fn get_qmdl(
     let qmdl_store = state.qmdl_store_lock.read().await;
     let (entry_index, entry) = qmdl_store.entry_for_name(qmdl_idx).ok_or((
         StatusCode::NOT_FOUND,
-        format!("couldn't find qmdl file with name {}", qmdl_idx),
+        format!("couldn't find qmdl file with name {qmdl_idx}"),
     ))?;
     let qmdl_file = qmdl_store
         .open_entry_qmdl(entry_index)
@@ -52,7 +52,7 @@ pub async fn get_qmdl(
         .map_err(|err| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("error opening QMDL file: {}", err),
+                format!("error opening QMDL file: {err}"),
             )
         })?;
     let limited_qmdl_file = qmdl_file.take(entry.qmdl_size_bytes as u64);
@@ -105,14 +105,14 @@ pub async fn set_config(
     let config_str = toml::to_string_pretty(&config).map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("failed to serialize config as TOML: {}", err),
+            format!("failed to serialize config as TOML: {err}"),
         )
     })?;
 
     write(&state.config_path, config_str).await.map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("failed to write config file: {}", err),
+            format!("failed to write config file: {err}"),
         )
     })?;
 
@@ -146,7 +146,7 @@ pub async fn get_zip(
         let qmdl_store = state.qmdl_store_lock.read().await;
         let (entry_index, entry) = qmdl_store.entry_for_name(&qmdl_idx).ok_or((
             StatusCode::NOT_FOUND,
-            format!("couldn't find entry with name {}", qmdl_idx),
+            format!("couldn't find entry with name {qmdl_idx}"),
         ))?;
 
         if entry.qmdl_size_bytes == 0 {
@@ -207,7 +207,7 @@ pub async fn get_zip(
                 {
                     // if we fail to generate the PCAP file, we should still continue and give the
                     // user the QMDL.
-                    error!("Failed to generate PCAP: {:?}", e);
+                    error!("Failed to generate PCAP: {e:?}");
                 }
 
                 entry_writer.into_inner().close().await?;
@@ -219,7 +219,7 @@ pub async fn get_zip(
         .await;
 
         if let Err(e) = result {
-            error!("Error generating ZIP file: {:?}", e);
+            error!("Error generating ZIP file: {e:?}");
         }
     });
 
@@ -283,7 +283,7 @@ mod tests {
 
         let analysis_status = {
             let store = store_lock.try_read().unwrap();
-            crate::analysis::AnalysisStatus::new(&*store)
+            crate::analysis::AnalysisStatus::new(&store)
         };
 
         Arc::new(ServerState {

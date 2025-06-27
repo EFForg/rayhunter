@@ -31,6 +31,7 @@ pub enum DiagDeviceCtrlMessage {
     Exit,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_diag_read_thread(
     task_tracker: &TaskTracker,
     mut dev: DiagDevice,
@@ -58,7 +59,7 @@ pub fn run_diag_read_thread(
                             let (qmdl_file, new_analysis_file) = match qmdl_store.new_entry().await {
                                 Ok(x) => x,
                                 Err(e) => {
-                                    error!("couldn't create new qmdl entry: {}", e);
+                                    error!("couldn't create new qmdl entry: {e}");
                                     continue;
                                 }
                             };
@@ -73,7 +74,7 @@ pub fn run_diag_read_thread(
                                 .expect("failed to write to analysis file"));
 
                             if let Err(e) = ui_update_sender.send(display::DisplayState::Recording).await {
-                                warn!("couldn't send ui update message: {}", e);
+                                warn!("couldn't send ui update message: {e}");
                             }
                         },
                         Some(DiagDeviceCtrlMessage::StopRecording) => {
@@ -84,11 +85,11 @@ pub fn run_diag_read_thread(
                                             entry.name.to_string(),
                                     ))
                                     .await {
-                                        warn!("couldn't send analysis message: {}", e);
+                                        warn!("couldn't send analysis message: {e}");
                                     }
                             }
                             if let Err(e) = qmdl_store.close_current_entry().await {
-                                error!("couldn't close current entry: {}", e);
+                                error!("couldn't close current entry: {e}");
                             }
 
                             maybe_qmdl_writer = None;
@@ -98,7 +99,7 @@ pub fn run_diag_read_thread(
                             maybe_analysis_writer = None;
 
                             if let Err(e) = ui_update_sender.send(display::DisplayState::Paused).await {
-                                warn!("couldn't send ui update message: {}", e);
+                                warn!("couldn't send ui update message: {e}");
                             }
                         },
                         // None means all the Senders have been dropped, so it's
@@ -154,7 +155,7 @@ pub fn run_diag_read_thread(
                             }
                         },
                         Err(err) => {
-                            error!("error reading diag device: {}", err);
+                            error!("error reading diag device: {err}");
                             return Err(err);
                         }
                     }
@@ -178,7 +179,7 @@ pub async fn start_recording(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send start recording message: {}", e),
+                format!("couldn't send start recording message: {e}"),
             )
         })?;
 
@@ -198,7 +199,7 @@ pub async fn stop_recording(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send stop recording message: {}", e),
+                format!("couldn't send stop recording message: {e}"),
             )
         })?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
@@ -234,7 +235,7 @@ pub async fn delete_recording(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send stop recording message: {}", e),
+                format!("couldn't send stop recording message: {e}"),
             )
         })?;
     state
@@ -244,7 +245,7 @@ pub async fn delete_recording(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send ui update message: {}", e),
+                format!("couldn't send ui update message: {e}"),
             )
         })?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
@@ -263,14 +264,14 @@ pub async fn delete_all_recordings(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send stop recording message: {}", e),
+                format!("couldn't send stop recording message: {e}"),
             )
         })?;
     let mut qmdl_store = state.qmdl_store_lock.write().await;
     qmdl_store.delete_all_entries().await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("couldn't delete all recordings: {}", e),
+            format!("couldn't delete all recordings: {e}"),
         )
     })?;
     state
@@ -280,7 +281,7 @@ pub async fn delete_all_recordings(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send ui update message: {}", e),
+                format!("couldn't send ui update message: {e}"),
             )
         })?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
@@ -299,13 +300,13 @@ pub async fn get_analysis_report(
     } else {
         qmdl_store.entry_for_name(&qmdl_name).ok_or((
             StatusCode::NOT_FOUND,
-            format!("Couldn't find QMDL entry with name \"{}\"", qmdl_name),
+            format!("Couldn't find QMDL entry with name \"{qmdl_name}\""),
         ))?
     };
     let analysis_file = qmdl_store
         .open_entry_analysis(entry_index)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{:?}", e)))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?;
     let analysis_stream = ReaderStream::new(analysis_file);
 
     let headers = [(CONTENT_TYPE, "application/x-ndjson")];
