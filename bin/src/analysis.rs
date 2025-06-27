@@ -137,20 +137,20 @@ async fn perform_analysis(
     enable_dummy_analyzer: bool,
     analyzer_config: &AnalyzerConfig,
 ) -> Result<(), String> {
-    info!("Opening QMDL and analysis file for {}...", name);
+    info!("Opening QMDL and analysis file for {name}...");
     let (analysis_file, qmdl_file, entry_index) = {
         let mut qmdl_store = qmdl_store_lock.write().await;
         let (entry_index, _) = qmdl_store
             .entry_for_name(name)
-            .ok_or(format!("failed to find QMDL store entry for {}", name))?;
+            .ok_or(format!("failed to find QMDL store entry for {name}"))?;
         let analysis_file = qmdl_store
             .clear_and_open_entry_analysis(entry_index)
             .await
-            .map_err(|e| format!("{:?}", e))?;
+            .map_err(|e| format!("{e:?}"))?;
         let qmdl_file = qmdl_store
             .open_entry_qmdl(entry_index)
             .await
-            .map_err(|e| format!("{:?}", e))?;
+            .map_err(|e| format!("{e:?}"))?;
 
         (analysis_file, qmdl_file, entry_index)
     };
@@ -158,7 +158,7 @@ async fn perform_analysis(
     let mut analysis_writer =
         AnalysisWriter::new(analysis_file, enable_dummy_analyzer, analyzer_config)
             .await
-            .map_err(|e| format!("{:?}", e))?;
+            .map_err(|e| format!("{e:?}"))?;
     let file_size = qmdl_file
         .metadata()
         .await
@@ -169,7 +169,7 @@ async fn perform_analysis(
         .as_stream()
         .try_filter(|container| future::ready(container.data_type == DataType::UserSpace)));
 
-    info!("Starting analysis for {}...", name);
+    info!("Starting analysis for {name}...");
     while let Some(container) = qmdl_stream
         .try_next()
         .await
@@ -178,20 +178,20 @@ async fn perform_analysis(
         let (size_bytes, _) = analysis_writer
             .analyze(container)
             .await
-            .map_err(|e| format!("{:?}", e))?;
-        debug!("{} analysis: {} bytes written", name, size_bytes);
+            .map_err(|e| format!("{e:?}"))?;
+        debug!("{name} analysis: {size_bytes} bytes written");
         let mut qmdl_store = qmdl_store_lock.write().await;
         qmdl_store
             .update_entry_analysis_size(entry_index, size_bytes)
             .await
-            .map_err(|e| format!("{:?}", e))?;
+            .map_err(|e| format!("{e:?}"))?;
     }
 
     analysis_writer
         .close()
         .await
-        .map_err(|e| format!("{:?}", e))?;
-    info!("Analysis for {} complete!", name);
+        .map_err(|e| format!("{e:?}"))?;
+    info!("Analysis for {name} complete!");
 
     Ok(())
 }
@@ -219,7 +219,7 @@ pub fn run_analysis_thread(
                         )
                         .await
                         {
-                            error!("failed to analyze {}: {}", name, err);
+                            error!("failed to analyze {name}: {err}");
                         }
                         finish_running_analysis(analysis_status_lock.clone()).await;
                     }
@@ -280,7 +280,7 @@ pub async fn start_analysis(
             .map_err(|e| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("failed to queue new analysis files: {:?}", e),
+                    format!("failed to queue new analysis files: {e:?}"),
                 )
             })?;
     }

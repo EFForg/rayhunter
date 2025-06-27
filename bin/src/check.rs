@@ -84,14 +84,13 @@ async fn analyze_file(enable_dummy_analyzer: bool, qmdl_path: &str, show_skipped
         }
     }
     if show_skipped && skipped > 0 {
-        info!("{}: messages skipped:", qmdl_path);
+        info!("{qmdl_path}: messages skipped:");
         for (reason, count) in skipped_reasons.iter() {
-            info!("    - {}: \"{}\"", count, reason);
+            info!("    - {count}: \"{reason}\"");
         }
     }
     info!(
-        "{}: {} messages analyzed, {} warnings, {} messages skipped",
-        qmdl_path, total_messages, warnings, skipped
+        "{qmdl_path}: {total_messages} messages analyzed, {warnings} warnings, {skipped} messages skipped"
     );
 }
 

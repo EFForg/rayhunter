@@ -182,7 +182,7 @@ impl Harness {
             let qmdl_message = match maybe_qmdl_message {
                 Ok(msg) => msg,
                 Err(err) => {
-                    row.skipped_message_reasons.push(format!("{:?}", err));
+                    row.skipped_message_reasons.push(format!("{err:?}"));
                     continue;
                 }
             };
@@ -190,7 +190,7 @@ impl Harness {
             let gsmtap_message = match gsmtap_parser::parse(qmdl_message) {
                 Ok(msg) => msg,
                 Err(err) => {
-                    row.skipped_message_reasons.push(format!("{:?}", err));
+                    row.skipped_message_reasons.push(format!("{err:?}"));
                     continue;
                 }
             };
@@ -202,7 +202,7 @@ impl Harness {
             let element = match InformationElement::try_from(&gsmtap_msg) {
                 Ok(element) => element,
                 Err(err) => {
-                    row.skipped_message_reasons.push(format!("{:?}", err));
+                    row.skipped_message_reasons.push(format!("{err:?}"));
                     continue;
                 }
             };
