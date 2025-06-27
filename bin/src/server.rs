@@ -1,21 +1,21 @@
 use anyhow::Error;
-use async_zip::tokio::write::ZipFileWriter;
 use async_zip::Compression;
 use async_zip::ZipEntryBuilder;
+use async_zip::tokio::write::ZipFileWriter;
+use axum::Json;
 use axum::body::Body;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::Json;
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use log::error;
 use std::sync::Arc;
 use tokio::fs::write;
-use tokio::io::{copy, duplex, AsyncReadExt};
+use tokio::io::{AsyncReadExt, copy, duplex};
 use tokio::sync::mpsc::Sender;
-use tokio::sync::{oneshot, RwLock};
+use tokio::sync::{RwLock, oneshot};
 use tokio_util::compat::FuturesAsyncWriteCompatExt;
 use tokio_util::io::ReaderStream;
 
@@ -23,7 +23,7 @@ use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::config::Config;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
-use crate::{display, DiagDeviceCtrlMessage};
+use crate::{DiagDeviceCtrlMessage, display};
 
 pub struct ServerState {
     pub config_path: String,

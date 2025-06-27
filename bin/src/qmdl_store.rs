@@ -6,7 +6,7 @@ use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::{
-    fs::{self, try_exists, File, OpenOptions},
+    fs::{self, File, OpenOptions, try_exists},
     io::AsyncWriteExt,
 };
 
@@ -369,9 +369,11 @@ mod tests {
             RecordingStore::read_manifest(dir.path()).await.unwrap(),
             store.manifest
         );
-        assert!(store.manifest.entries[entry_index]
-            .last_message_time
-            .is_none());
+        assert!(
+            store.manifest.entries[entry_index]
+                .last_message_time
+                .is_none()
+        );
 
         store
             .update_entry_qmdl_size(entry_index, 1000)

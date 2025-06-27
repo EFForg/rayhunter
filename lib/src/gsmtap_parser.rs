@@ -47,7 +47,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                         return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
                             ext_header_version,
                             pdu,
-                        ))
+                        ));
                     }
                 },
                 0x09 | 0x0c => match packet.get_pdu_num() {
@@ -63,7 +63,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                         return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
                             ext_header_version,
                             pdu,
-                        ))
+                        ));
                     }
                 },
                 0x0e..=0x10 => match packet.get_pdu_num() {
@@ -79,7 +79,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                         return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
                             ext_header_version,
                             pdu,
-                        ))
+                        ));
                     }
                 },
                 0x13 | 0x1a | 0x1b => match packet.get_pdu_num() {
@@ -102,7 +102,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                         return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
                             ext_header_version,
                             pdu,
-                        ))
+                        ));
                     }
                 },
                 0x14 | 0x18 | 0x19 => match packet.get_pdu_num() {
@@ -125,13 +125,13 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                         return Err(GsmtapParserError::InvalidLteRrcOtaHeaderPduNum(
                             ext_header_version,
                             pdu,
-                        ))
+                        ));
                     }
                 },
                 _ => {
                     return Err(GsmtapParserError::InvalidLteRrcOtaExtHeaderVersion(
                         ext_header_version,
-                    ))
+                    ));
                 }
             };
             let mut header = GsmtapHeader::new(gsmtap_type);

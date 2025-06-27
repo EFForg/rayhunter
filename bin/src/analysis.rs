@@ -165,9 +165,11 @@ async fn perform_analysis(
         .expect("failed to get QMDL file metadata")
         .len();
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(file_size as usize));
-    let mut qmdl_stream = pin::pin!(qmdl_reader
-        .as_stream()
-        .try_filter(|container| future::ready(container.data_type == DataType::UserSpace)));
+    let mut qmdl_stream = pin::pin!(
+        qmdl_reader
+            .as_stream()
+            .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
+    );
 
     info!("Starting analysis for {name}...");
     while let Some(container) = qmdl_stream
