@@ -5,10 +5,10 @@ use crate::gsmtap::GsmtapMessage;
 
 use chrono::prelude::*;
 use deku::prelude::*;
+use pcap_file_tokio::pcapng::PcapNgWriter;
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use pcap_file_tokio::pcapng::blocks::interface_description::InterfaceDescriptionBlock;
 use pcap_file_tokio::pcapng::blocks::section_header::{SectionHeaderBlock, SectionHeaderOption};
-use pcap_file_tokio::pcapng::PcapNgWriter;
 use pcap_file_tokio::{Endianness, PcapError};
 use std::borrow::Cow;
 use thiserror::Error;

@@ -11,26 +11,26 @@ mod server;
 mod stats;
 
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::config::{parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-use crate::server::{get_config, get_qmdl, get_zip, serve_static, set_config, ServerState};
+use crate::server::{ServerState, get_config, get_qmdl, get_zip, serve_static, set_config};
 use crate::stats::{get_qmdl_manifest, get_system_stats};
 
 use analysis::{
-    get_analysis_status, run_analysis_thread, start_analysis, AnalysisCtrlMessage, AnalysisStatus,
+    AnalysisCtrlMessage, AnalysisStatus, get_analysis_status, run_analysis_thread, start_analysis,
 };
+use axum::Router;
 use axum::response::Redirect;
 use axum::routing::{get, post};
-use axum::Router;
 use diag::{
-    delete_all_recordings, delete_recording, get_analysis_report, start_recording, stop_recording,
-    DiagDeviceCtrlMessage,
+    DiagDeviceCtrlMessage, delete_all_recordings, delete_recording, get_analysis_report,
+    start_recording, stop_recording,
 };
 use log::{error, info};
 use qmdl_store::RecordingStoreError;
@@ -38,7 +38,7 @@ use rayhunter::diag_device::DiagDevice;
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::mpsc::{self, Sender};
-use tokio::sync::{oneshot, RwLock};
+use tokio::sync::{RwLock, oneshot};
 use tokio::task::JoinHandle;
 use tokio_util::task::TaskTracker;
 

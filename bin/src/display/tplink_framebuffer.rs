@@ -3,8 +3,8 @@ use std::io::Write;
 use std::os::fd::AsRawFd;
 
 use crate::config;
-use crate::display::generic_framebuffer::{self, Dimensions, GenericFramebuffer};
 use crate::display::DisplayState;
+use crate::display::generic_framebuffer::{self, Dimensions, GenericFramebuffer};
 
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::oneshot;

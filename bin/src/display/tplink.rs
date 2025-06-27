@@ -4,7 +4,7 @@ use tokio::sync::oneshot;
 use tokio_util::task::TaskTracker;
 
 use crate::config;
-use crate::display::{tplink_framebuffer, tplink_onebit, DisplayState};
+use crate::display::{DisplayState, tplink_framebuffer, tplink_onebit};
 
 use std::fs;
 

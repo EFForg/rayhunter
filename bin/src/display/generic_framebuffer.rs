@@ -1,4 +1,4 @@
-use image::{codecs::gif::GifDecoder, imageops::FilterType, AnimationDecoder, DynamicImage};
+use image::{AnimationDecoder, DynamicImage, codecs::gif::GifDecoder, imageops::FilterType};
 use std::io::Cursor;
 use std::time::Duration;
 
@@ -13,7 +13,7 @@ use tokio_util::task::TaskTracker;
 
 use std::thread::sleep;
 
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 
 #[derive(Copy, Clone)]
 pub struct Dimensions {
