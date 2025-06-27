@@ -1,5 +1,5 @@
 #!/bin/bash -e
-pushd bin/web
+pushd daemon/web
     npm run build
 popd
 cargo build --profile firmware --bin rayhunter-daemon --target="armv7-unknown-linux-musleabihf" #--features debug

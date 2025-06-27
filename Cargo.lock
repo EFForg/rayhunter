@@ -2365,6 +2365,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rayhunter-check"
+version = "0.4.0"
+dependencies = [
+ "clap",
+ "futures",
+ "log",
+ "rayhunter",
+ "simple_logger",
+ "tokio",
+]
+
+[[package]]
 name = "rayhunter-daemon"
 version = "0.4.0"
 dependencies = [
@@ -2372,7 +2384,6 @@ dependencies = [
  "async_zip",
  "axum",
  "chrono",
- "clap",
  "env_logger 0.11.8",
  "futures",
  "futures-macro",
@@ -2383,7 +2394,6 @@ dependencies = [
  "rayhunter",
  "serde",
  "serde_json",
- "simple_logger",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",

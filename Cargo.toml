@@ -2,7 +2,8 @@
 
 members = [
     "lib",
-    "bin",
+    "daemon",
+    "check",
     "rootshell",
     "telcom-parser",
     "installer",
