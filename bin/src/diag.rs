@@ -29,6 +29,7 @@ pub enum DiagDeviceCtrlMessage {
     Exit,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_diag_read_thread(
     task_tracker: &TaskTracker,
     mut dev: DiagDevice,
