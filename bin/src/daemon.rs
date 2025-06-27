@@ -122,6 +122,7 @@ async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, Rayh
 // Start a thread that'll track when user hits ctrl+c. When that happens,
 // trigger various cleanup tasks, including sending signals to other threads to
 // shutdown
+#[allow(clippy::too_many_arguments)]
 fn run_shutdown_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
