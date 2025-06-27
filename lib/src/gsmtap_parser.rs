@@ -153,7 +153,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
             }))
         }
         _ => {
-            error!("gsmtap_sink: ignoring unhandled log type: {:?}", value);
+            error!("gsmtap_sink: ignoring unhandled log type: {value:?}");
             Ok(None)
         }
     }

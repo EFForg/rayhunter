@@ -1,8 +1,7 @@
-use std::any::Any;
 use std::borrow::Cow;
 
 use pycrate_rs::nas::emm::EMMMessage;
-use pycrate_rs::nas::generated::emm::emm_identity_request::{EMMIdentityRequest, IDTypeV};
+use pycrate_rs::nas::generated::emm::emm_identity_request::IDTypeV;
 use pycrate_rs::nas::NASMessage;
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
@@ -54,10 +53,9 @@ impl Analyzer for ImsiRequestedAnalyzer {
                         },
                         message: format!(
                             "NAS IMSI identity request detected, however it was within \
-                            the first {} packets of this analysis. If you just \
+                            the first {PACKET_THRESHHOLD} packets of this analysis. If you just \
                             turned your device on, this is likely a \
-                            false-positive.",
-                            PACKET_THRESHHOLD
+                            false-positive."
                         ),
                     });
                 } else {

@@ -104,8 +104,7 @@ impl DiagDevice {
             match Self::try_new().await {
                 Ok(device) => {
                     info!(
-                        "Diag device initialization succeeded after {} retries",
-                        num_retries
+                        "Diag device initialization succeeded after {num_retries} retries"
                     );
                     return Ok(device);
                 }
@@ -113,15 +112,13 @@ impl DiagDevice {
                     num_retries += 1;
                     if start_time.elapsed() >= max_duration {
                         error!(
-                            "Failed to initialize diag device after {:?}: {}",
-                            max_duration, e
+                            "Failed to initialize diag device after {max_duration:?}: {e}"
                         );
                         return Err(e);
                     }
 
                     info!(
-                        "Diag device initialization failed {} times, retrying in {:?}: {}",
-                        num_retries, delay, e
+                        "Diag device initialization failed {num_retries} times, retrying in {delay:?}: {e}"
                     );
                     sleep(delay).await;
 
@@ -240,7 +237,7 @@ impl DiagDevice {
                     }
                     _ => info!("skipping non-LogConfigResponse response..."),
                 },
-                Err(e) => error!("error parsing message: {:?}", e),
+                Err(e) => error!("error parsing message: {e:?}"),
             }
         }
 
@@ -268,7 +265,7 @@ impl DiagDevice {
                         return Ok(());
                     }
                 }
-                Err(e) => error!("error parsing message: {:?}", e),
+                Err(e) => error!("error parsing message: {e:?}"),
             }
         }
 
@@ -282,7 +279,7 @@ impl DiagDevice {
         for (log_type, &log_mask_bitsize) in log_mask_sizes.iter().enumerate() {
             if log_mask_bitsize > 0 {
                 self.set_log_mask(log_type as u32, log_mask_bitsize).await?;
-                info!("enabled logging for log type {}", log_type);
+                info!("enabled logging for log type {log_type}");
             }
         }
 
@@ -347,8 +344,7 @@ fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
 
             if ret < 0 {
                 let msg = format!(
-                    "DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {}",
-                    ret
+                    "DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {ret}"
                 );
                 return Err(DiagDeviceError::InitializationFailed(msg));
             }
