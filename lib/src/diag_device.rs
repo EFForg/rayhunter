@@ -103,17 +103,13 @@ impl DiagDevice {
         loop {
             match Self::try_new().await {
                 Ok(device) => {
-                    info!(
-                        "Diag device initialization succeeded after {num_retries} retries"
-                    );
+                    info!("Diag device initialization succeeded after {num_retries} retries");
                     return Ok(device);
                 }
                 Err(e) => {
                     num_retries += 1;
                     if start_time.elapsed() >= max_duration {
-                        error!(
-                            "Failed to initialize diag device after {max_duration:?}: {e}"
-                        );
+                        error!("Failed to initialize diag device after {max_duration:?}: {e}");
                         return Err(e);
                     }
 
@@ -343,9 +339,7 @@ fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
             }
 
             if ret < 0 {
-                let msg = format!(
-                    "DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {ret}"
-                );
+                let msg = format!("DIAG_IOCTL_SWITCH_LOGGING ioctl failed with error code {ret}");
                 return Err(DiagDeviceError::InitializationFailed(msg));
             }
         }
