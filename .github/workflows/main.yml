@@ -48,7 +48,7 @@ jobs:
             echo installer_count=forced >> "$GITHUB_OUTPUT"
             echo rootshell_count=forced >> "$GITHUB_OUTPUT"
           else
-            echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^bin -e ^installer -e ^lib -e ^rootshell -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
+            echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^bin -e ^installer -e ^check -e ^lib -e ^rootshell -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -e ^bin -e ^lib -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -e ^bin/web | wc -l)" >> "$GITHUB_OUTPUT"
             echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -e ^book.toml -e ^doc | wc -l)" >> "$GITHUB_OUTPUT"
@@ -117,7 +117,7 @@ jobs:
       run: cargo fmt --all --check
     - name: Check
       run: |
-        pushd bin/web
+        pushd daemon/web
         npm install
         npm run build
         popd
@@ -254,7 +254,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build rayhunter-daemon (armv7)
         run: |
-          pushd bin/web
+          pushd daemon/web
           npm install
           npm run build
           popd
@@ -345,7 +345,7 @@ jobs:
         run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
       - name: Get Rayhunter version
         id: get_version
-        run: echo "VERSION=$(grep '^version' bin/Cargo.toml | head -n 1 | cut -d'"' -f2)" >> $GITHUB_ENV
+        run: echo "VERSION=$(grep '^version' daemon/Cargo.toml | head -n 1 | cut -d'"' -f2)" >> $GITHUB_ENV
       - name: Setup versioned release directory
         run: |
           platform="${{ matrix.platform }}"
