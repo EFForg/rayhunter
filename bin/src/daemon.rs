@@ -187,6 +187,10 @@ fn run_shutdown_thread(
 async fn main() -> Result<(), RayhunterError> {
     env_logger::init();
 
+    rustls_rustcrypto::provider()
+        .install_default()
+        .expect("Couldn't install rustcrypto provider");
+
     let args = parse_args();
 
     loop {

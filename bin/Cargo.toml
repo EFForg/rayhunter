@@ -56,5 +56,6 @@ simple_logger = "5.0.0"
 async_zip = { version = "0.0.17", features = ["tokio"] }
 anyhow = "1.0.98"
 reqwest = { version = "0.12.20", default-features = false, features = [
-    "rustls-tls",
+    "rustls-tls-webpki-roots-no-provider",
 ] }
+rustls-rustcrypto = "0.0.2-alpha"

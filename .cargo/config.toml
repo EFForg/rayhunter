@@ -38,7 +38,3 @@ lto = true
 codegen-units = 1
 panic = "abort"
 debug = false
-
-[env]
-CC_armv7_unknown_linux_musleabihf = "clang"
-AR_armv7_unknown_linux_musleabihf = "llvm-ar"
