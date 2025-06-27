@@ -15,7 +15,9 @@ impl Analyzer for TestAnalyzer {
     }
 
     fn get_description(&self) -> Cow<str> {
-        Cow::from("Always returns true, if you are seeing this you are either a developer or you are about to have problems.")
+        Cow::from(
+            "Always returns true, if you are seeing this you are either a developer or you are about to have problems.",
+        )
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {

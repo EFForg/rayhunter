@@ -86,7 +86,7 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
                     _ => {
                         return Err(InformationElementError::UnsupportedGsmtapType(
                             gsmtap_msg.header.gsmtap_type,
-                        ))
+                        ));
                     }
                 };
                 Ok(InformationElement::LTE(Box::new(lte)))

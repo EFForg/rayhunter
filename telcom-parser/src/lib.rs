@@ -1,4 +1,4 @@
-use asn1_codecs::{uper::UperCodec, PerCodecData, PerCodecError};
+use asn1_codecs::{PerCodecData, PerCodecError, uper::UperCodec};
 use thiserror::Error;
 #[allow(warnings, unused, unreachable_patterns, non_camel_case_types)]
 pub mod lte_rrc;

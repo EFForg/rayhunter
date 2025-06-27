@@ -1,6 +1,6 @@
 use crate::diag::{
-    build_log_mask_request, DataType, DiagParsingError, LogConfigRequest, LogConfigResponse,
-    Message, MessagesContainer, Request, RequestContainer, ResponsePayload, CRC_CCITT,
+    CRC_CCITT, DataType, DiagParsingError, LogConfigRequest, LogConfigResponse, Message,
+    MessagesContainer, Request, RequestContainer, ResponsePayload, build_log_mask_request,
 };
 use crate::hdlc::hdlc_encapsulate;
 use crate::log_codes;

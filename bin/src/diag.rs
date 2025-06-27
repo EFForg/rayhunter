@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::extract::{Path, State};
-use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
+use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use futures::{StreamExt, TryStreamExt};
 use log::{debug, error, info, warn};
@@ -13,8 +13,8 @@ use rayhunter::diag::DataType;
 use rayhunter::diag_device::DiagDevice;
 use rayhunter::qmdl::QmdlWriter;
 use tokio::fs::File;
-use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::RwLock;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 
@@ -209,13 +209,13 @@ pub async fn delete_recording(
             return Err((
                 StatusCode::BAD_REQUEST,
                 format!("no recording with name {qmdl_name}"),
-            ))
+            ));
         }
         Err(e) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("couldn't delete recording: {e}"),
-            ))
+            ));
         }
         Ok(_) => {}
     }

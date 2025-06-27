@@ -3,8 +3,8 @@ use crate::ServerState;
 use anyhow::Error;
 use axum::body::Body;
 use axum::extract::{Path, State};
-use axum::http::header::CONTENT_TYPE;
 use axum::http::StatusCode;
+use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use log::error;
 use rayhunter::diag::DataType;
@@ -12,7 +12,7 @@ use rayhunter::gsmtap_parser;
 use rayhunter::pcap::GsmtapPcapWriter;
 use rayhunter::qmdl::QmdlReader;
 use std::sync::Arc;
-use tokio::io::{duplex, AsyncRead, AsyncWrite};
+use tokio::io::{AsyncRead, AsyncWrite, duplex};
 use tokio_util::io::ReaderStream;
 
 // Streams a pcap file chunk-by-chunk to the client by reading the QMDL data

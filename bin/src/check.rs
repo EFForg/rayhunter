@@ -9,7 +9,7 @@ use rayhunter::{
     qmdl::QmdlReader,
 };
 use std::{collections::HashMap, future, path::PathBuf, pin::pin};
-use tokio::fs::{metadata, read_dir, File};
+use tokio::fs::{File, metadata, read_dir};
 
 mod dummy_analyzer;
 
@@ -44,9 +44,11 @@ async fn analyze_file(enable_dummy_analyzer: bool, qmdl_path: &str, show_skipped
         .expect("failed to get QMDL file metadata")
         .len();
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(file_size as usize));
-    let mut qmdl_stream = pin!(qmdl_reader
-        .as_stream()
-        .try_filter(|container| future::ready(container.data_type == DataType::UserSpace)));
+    let mut qmdl_stream = pin!(
+        qmdl_reader
+            .as_stream()
+            .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
+    );
     let mut skipped_reasons: HashMap<String, i32> = HashMap::new();
     let mut total_messages = 0;
     let mut warnings = 0;

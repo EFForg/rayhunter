@@ -4,8 +4,8 @@ use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
 use telcom_parser::lte_rrc::{
     BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1, CellReselectionPriority,
-    SystemInformationBlockType7, SystemInformationCriticalExtensions,
     SystemInformation_r8_IEsSib_TypeAndInfo, SystemInformation_r8_IEsSib_TypeAndInfo_Entry,
+    SystemInformationBlockType7, SystemInformationCriticalExtensions,
 };
 
 /// Based on heuristic T7 from Shinjo Park's "Why We Cannot Win".
@@ -41,7 +41,9 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
     }
 
     fn get_description(&self) -> Cow<str> {
-        Cow::from("Tests for LTE cells broadcasting a SIB type 6 and 7 which include 2G/3G frequencies with higher priorities.")
+        Cow::from(
+            "Tests for LTE cells broadcasting a SIB type 6 and 7 which include 2G/3G frequencies with higher priorities.",
+        )
     }
 
     fn analyze_information_element(
