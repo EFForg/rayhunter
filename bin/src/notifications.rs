@@ -51,7 +51,7 @@ impl NotificationService {
     }
 
     pub fn new_handler(&self) -> mpsc::Sender<Notification> {
-        return self.tx.clone();
+        self.tx.clone()
     }
 }
 
@@ -62,7 +62,7 @@ pub fn run_notification_worker(
     task_tracker.spawn(async move {
         let channel_name = notification_service.channel_name.unwrap_or("".into());
 
-        if channel_name != String::from("") {
+        if !channel_name.is_empty() {
             let mut notification_statuses = HashMap::new();
             let http_client = reqwest::Client::new();
 
@@ -117,7 +117,7 @@ pub fn run_notification_worker(
                     }
 
                     match http_client
-                        .post(format!("{}{}", NTFY_BASE_URL, channel_name))
+                        .post(format!("{NTFY_BASE_URL}{channel_name}"))
                         .body(notification.message.clone())
                         .send()
                         .await
@@ -133,7 +133,7 @@ pub fn run_notification_worker(
                             }
                         }
                         Err(e) => {
-                            error!("Failed to send notification to ntfy: {}", e);
+                            error!("Failed to send notification to ntfy: {e}");
                             notification.failed_since_last_success += 1;
                         }
                     }
