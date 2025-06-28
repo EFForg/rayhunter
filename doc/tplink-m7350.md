@@ -1,6 +1,8 @@
 # TP-Link M7350
 
-The TP-Link M7350 is **supported by Rayhunter since 0.3.0**. TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
+Supported in Rayhunter since version 0.3.0.
+
+The TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
 
 ## Hardware versions
 
