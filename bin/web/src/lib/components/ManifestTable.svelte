@@ -32,7 +32,7 @@
 </table>
 <!--For smaller screens we use cards-->
 <div class="lg:hidden flex flex-col gap-4">
-    {#each entries as entry, i}
-        <Card {entry} current={false} {i} {server_is_recording} />
+    {#each entries as entry}
+        <Card {entry} current={false} {server_is_recording} />
     {/each}
 </div>

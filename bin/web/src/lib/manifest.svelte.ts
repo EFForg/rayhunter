@@ -72,7 +72,7 @@ export class ManifestEntry {
     get_readable_qmdl_size(): string {
         if (this.qmdl_size_bytes === 0) return '0 Bytes';
         const k = 1024;
-        const dm = 2 || 2;
+        const dm = 2;
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
         const i = Math.floor(Math.log(this.qmdl_size_bytes) / Math.log(k));
         return `${Number.parseFloat((this.qmdl_size_bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
