@@ -1,5 +1,5 @@
-import { parse_ndjson, type NewlineDeliminatedJson } from "./ndjson";
-import { req } from "./utils.svelte";
+import { parse_ndjson, type NewlineDeliminatedJson } from './ndjson';
+import { req } from './utils.svelte';
 
 export type AnalysisReport = {
     metadata: ReportMetadata;
@@ -11,7 +11,7 @@ export type ReportStatistics = {
     num_warnings: number;
     num_informational_logs: number;
     num_skipped_packets: number;
-}
+};
 
 export type ReportMetadata = {
     analyzers: AnalyzerMetadata[];
@@ -69,10 +69,11 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Anal
     let num_skipped_packets = 0;
     const rows: AnalysisRow[] = report_json.slice(1).map((row_json: any) => {
         const analysis: PacketAnalysis[] = row_json.analysis.map((analysis_json: any) => {
-            const events: Event[] = analysis_json.events.map((event_json: any): Event | null => {
+            const events: Event[] = analysis_json.events
+                .map((event_json: any): Event | null => {
                     if (event_json === null) {
                         return null;
-                    } else if (event_json.event_type.type === "Informational") {
+                    } else if (event_json.event_type.type === 'Informational') {
                         num_informational_logs += 1;
                         return {
                             type: EventType.Informational,
@@ -82,8 +83,12 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Anal
                         num_warnings += 1;
                         return {
                             type: EventType.Warning,
-                            severity: event_json.event_type.severity === "High" ? Severity.High :
-                                event_json.event_type.severity === "Medium" ? Severity.Medium : Severity.Low,
+                            severity:
+                                event_json.event_type.severity === 'High'
+                                    ? Severity.High
+                                    : event_json.event_type.severity === 'Medium'
+                                      ? Severity.Medium
+                                      : Severity.Low,
                             message: event_json.message,
                         };
                     }

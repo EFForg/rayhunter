@@ -6,7 +6,7 @@ import ts from 'typescript-eslint';
 
 export default ts.config(
     {
-        ignores: ['build/', '.svelte-kit/**', 'dist/']
+        ignores: ['build/', '.svelte-kit/**', 'dist/'],
     },
     js.configs.recommended,
     ...ts.configs.recommended,
@@ -17,26 +17,26 @@ export default ts.config(
         languageOptions: {
             globals: {
                 ...globals.browser,
-                ...globals.node
-            }
-        }
+                ...globals.node,
+            },
+        },
     },
     {
         files: ['**/*.svelte'],
 
         languageOptions: {
             parserOptions: {
-                parser: ts.parser
-            }
-        }
+                parser: ts.parser,
+            },
+        },
     },
     {
         rules: {
             '@typescript-eslint/no-unused-vars': [
                 'error',
-                { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+                { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
             ],
-            '@typescript-eslint/no-explicit-any': 'off'
-        }
+            '@typescript-eslint/no-explicit-any': 'off',
+        },
     }
 );
