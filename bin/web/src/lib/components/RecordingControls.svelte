@@ -18,12 +18,18 @@
     }
 
     const recording_button_classes = "text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1";
+    const stop_recording_classes = `${recording_button_classes} bg-red-500 opacity-50 cursor-not-allowed`;
+    const start_recording_classes = `${recording_button_classes} bg-blue-500 opacity-50 cursor-not-allowed`;
 </script>
 
 <div>
     {#if waiting_for_server}
-        <button class={server_is_recording ? stop_recording_classes : start_recording_classes}>
-            {server_is_recording ? "Stopping..." : "Starting..."}
+        <button class={server_is_recording ? stop_recording_classes : start_recording_classes} disabled>
+            <span>{server_is_recording ? "Stopping..." : "Starting..."}</span>
+            <svg class="w-4 h-4 text-white animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
         </button>
     {:else if server_is_recording}
         <button class="{recording_button_classes} bg-red-500 hover:bg-red-700" onclick={stop_recording}>
