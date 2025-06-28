@@ -9,12 +9,12 @@ export default {
             assets: 'build',
             fallback: undefined,
             precompress: false,
-            strict: true
+            strict: true,
         }),
         version: {
             // Use a deterministic version string for reproducible builds.
             // Without this option, SvelteKit will use a timestamp.
-            name: process.env.GITHUB_SHA || 'dev'
-        }
-    }
+            name: process.env.GITHUB_SHA || 'dev',
+        },
+    },
 };
