@@ -1,6 +1,6 @@
-import { get_report, type AnalysisReport } from "./analysis.svelte";
-import type { Manifest, ManifestEntry } from "./manifest.svelte";
-import { req } from "./utils.svelte";
+import { get_report, type AnalysisReport } from './analysis.svelte';
+import type { Manifest, ManifestEntry } from './manifest.svelte';
+import { req } from './utils.svelte';
 
 export enum AnalysisStatus {
     // rayhunter is currently analyzing this entry (note that this is distinct
@@ -9,7 +9,7 @@ export enum AnalysisStatus {
     // this entry is queued to be analyzed
     Queued,
     // analysis is finished, and the new report can be accessed
-    Finished,
+    Finished
 }
 
 type AnalysisStatusJson = {
@@ -19,8 +19,8 @@ type AnalysisStatusJson = {
 };
 
 export type AnalysisResult = {
-    name: string,
-    status: AnalysisStatus,
+    name: string;
+    status: AnalysisStatus;
 };
 
 export class AnalysisManager {
@@ -53,11 +53,13 @@ export class AnalysisManager {
 
             // fetch the analysis report
             this.reports.delete(entry);
-            get_report(entry).then(report => {
-                this.reports.set(entry, report);
-            }).catch(err => {
-                this.reports.set(entry, `Failed to get analysis: ${err}`);
-            });
+            get_report(entry)
+                .then((report) => {
+                    this.reports.set(entry, report);
+                })
+                .catch((err) => {
+                    this.reports.set(entry, `Failed to get analysis: ${err}`);
+                });
         }
     }
 }

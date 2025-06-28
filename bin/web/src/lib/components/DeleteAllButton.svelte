@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { req } from "$lib/utils.svelte";
-	import DeleteButton from "./DeleteButton.svelte";
+    import { req } from '$lib/utils.svelte';
+    import DeleteButton from './DeleteButton.svelte';
 
     function confirmDelete() {
         if (window.confirm(`Permanently delete ALL recordings?`)) {
-            req('POST', '/api/delete-all-recordings')
+            req('POST', '/api/delete-all-recordings');
         }
     }
 </script>
