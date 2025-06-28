@@ -1,5 +1,4 @@
 import { get_report, type AnalysisReport } from './analysis.svelte';
-import type { Manifest, ManifestEntry } from './manifest.svelte';
 import { req } from './utils.svelte';
 
 export enum AnalysisStatus {

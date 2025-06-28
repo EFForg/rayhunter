@@ -19,7 +19,7 @@ export class Manifest {
     public current_entry: ManifestEntry | undefined;
 
     constructor(json: JsonManifest) {
-        for (let entry of json.entries) {
+        for (const entry of json.entries) {
             this.entries.push(new ManifestEntry(entry));
         }
         if (json.current_entry !== null) {
@@ -31,7 +31,7 @@ export class Manifest {
     }
 
     async set_analysis_status(manager: AnalysisManager) {
-        for (let entry of this.entries) {
+        for (const entry of this.entries) {
             entry.analysis_status = manager.status.get(entry.name);
             entry.analysis_report = manager.reports.get(entry.name);
         }

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { ManifestEntry } from '$lib/manifest.svelte';
     import { req } from '$lib/utils.svelte';
     let {
         text,
