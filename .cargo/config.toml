@@ -29,6 +29,7 @@ rustflags = ["-C", "target-feature=+crt-static"]
 # keep line numbers in stack traces for non-firmware binaries
 debug = "limited"
 lto = "fat"
+opt-level = "z"
 strip = "debuginfo"
 
 # optimizations to reduce the binary size of firmware binaries
