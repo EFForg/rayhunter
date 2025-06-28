@@ -25,9 +25,10 @@ rustflags = ["-C", "target-feature=+crt-static"]
 linker = "rust-lld"
 rustflags = ["-C", "target-feature=+crt-static"]
 
-# keep line numbers in stack traces for non-firmware binaries
 [profile.release]
+# keep line numbers in stack traces for non-firmware binaries
 debug = "limited"
+lto = "fat"
 strip = "debuginfo"
 
 # optimizations to reduce the binary size of firmware binaries
@@ -35,7 +36,7 @@ strip = "debuginfo"
 inherits = "release"
 strip = true
 opt-level = "z"
-lto = true
+lto = "fat"
 codegen-units = 1
 panic = "abort"
 debug = false
