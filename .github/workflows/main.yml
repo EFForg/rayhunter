@@ -37,7 +37,7 @@ jobs:
           lcommit=${{ github.event.pull_request.base.sha || 'origin/main' }}
 
           # If we are on main, or if these workflow files are being changed, run everything
-          if [ ${{ github.ref }} = 'refs/heads/main' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/
+          if [ ${{ github.ref }} = 'refs/heads/main' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/ -e ^.cargo
           then
             echo "building everything"
             echo code_count=forced >> "$GITHUB_OUTPUT"
