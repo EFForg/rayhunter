@@ -51,7 +51,7 @@
 
 <button class="flex flex-row gap-1 lg:gap-2" disabled={!ready} {onclick}>
     <span
-        class="{button_class} {entry.get_num_warnings() < 1
+        class="{button_class} {(entry.get_num_warnings() || 0) < 1
             ? 'text-green-700 border-green-500 bg-green-200'
             : 'text-red-700 border-red-500 bg-red-200'}">{summary}</span
     >
