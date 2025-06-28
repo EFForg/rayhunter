@@ -12,7 +12,6 @@
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
-    let recording = $state(false);
     let entries: ManifestEntry[] = $state([]);
     let current_entry: ManifestEntry | undefined = $state(undefined);
     let system_stats: SystemStats | undefined = $state(undefined);
@@ -23,7 +22,6 @@
             await new_manifest.set_analysis_status(manager);
             entries = new_manifest.entries;
             current_entry = new_manifest.current_entry;
-            recording = current_entry !== undefined;
 
             system_stats = await get_system_stats();
             loaded = true;
@@ -34,7 +32,8 @@
 </script>
 
 <div class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center">
-    <img src="/rayhunter_text.png" class="h-10 xl:h-12" />
+    <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
+    <img src="/rayhunter_text.png" alt="" class="h-10 xl:h-12" />
     <div class="flex flex-row gap-4">
         <a
             class="flex flex-row gap-1 group"
@@ -87,8 +86,8 @@
 <div class="m-4 xl:mx-8 flex flex-col gap-4">
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">
-            {#if recording}
-                <Card entry={current_entry} current={true} i={0} server_is_recording={recording} />
+            {#if current_entry}
+                <Card entry={current_entry} current={true} server_is_recording={!!current_entry} />
             {:else}
                 <div
                     class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
@@ -117,7 +116,7 @@
                         >Rayhunter is not currently running and will not detect abnormal behavior!</span
                     >
                     <div class="flex flex-row justify-end mt-2">
-                        <RecordingControls {recording} />
+                        <RecordingControls server_is_recording={!!current_entry} />
                     </div>
                 </div>
             {/if}
@@ -125,13 +124,14 @@
         </div>
         <div class="flex flex-col gap-2">
             <span class="text-xl">History</span>
-            <ManifestTable {entries} server_is_recording={recording} />
+            <ManifestTable {entries} server_is_recording={!!current_entry} />
         </div>
         <DeleteAllButton />
         <ConfigForm />
     {:else}
         <div class="flex flex-col justify-center items-center">
-            <img src="/rayhunter_orca_only.png" class="h-48 animate-spin" />
+            <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
+            <img src="/rayhunter_orca_only.png" alt="" class="h-48 animate-spin" />
             <p class="text-xl">Loading...</p>
         </div>
     {/if}
