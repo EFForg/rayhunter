@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Manifest, ManifestEntry } from '$lib/manifest.svelte';
+    import { ManifestEntry } from '$lib/manifest.svelte';
     import TableRow from './ManifestTableRow.svelte';
     import Card from './ManifestCard.svelte';
     interface Props {
