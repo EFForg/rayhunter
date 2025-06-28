@@ -1,11 +1,5 @@
 <script lang="ts">
-    import { AnalysisStatus } from '$lib/analysisManager.svelte';
-    import {
-        EventType,
-        type AnalyzerMetadata,
-        type ReportMetadata,
-        type AnalysisRow
-    } from '$lib/analysis.svelte';
+    import { type ReportMetadata } from '$lib/analysis.svelte';
     import type { ManifestEntry } from '$lib/manifest.svelte';
     import AnalysisTable from './AnalysisTable.svelte';
     let {
@@ -13,11 +7,6 @@
     }: {
         entry: ManifestEntry;
     } = $props();
-
-    const date_formatter = new Intl.DateTimeFormat(undefined, {
-        timeStyle: 'long',
-        dateStyle: 'short'
-    });
 </script>
 
 <div class="container mt-2">

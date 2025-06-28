@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-    EventType,
-    parse_finished_report,
-    Severity,
-    type QualitativeWarning
-} from './analysis.svelte';
-import { parse_ndjson, type NewlineDeliminatedJson } from './ndjson';
+import { EventType, parse_finished_report, Severity } from './analysis.svelte';
+import { type NewlineDeliminatedJson } from './ndjson';
 
 const SAMPLE_REPORT_NDJSON: NewlineDeliminatedJson = [
     {

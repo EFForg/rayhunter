@@ -1,13 +1,5 @@
 <script lang="ts">
-    import { AnalysisStatus } from '$lib/analysisManager.svelte';
-    import {
-        EventType,
-        type AnalyzerMetadata,
-        type ReportMetadata,
-        type AnalysisRow,
-        type AnalysisReport
-    } from '$lib/analysis.svelte';
-    import type { ManifestEntry } from '$lib/manifest.svelte';
+    import { EventType, type AnalysisReport } from '$lib/analysis.svelte';
     let {
         report
     }: {
@@ -48,7 +40,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each report.rows as row, row_idx}
+                {#each report.rows as row}
                     {#each row.analysis as analysis}
                         {@const parsed_date = new Date(analysis.timestamp)}
                         {#each analysis.events.filter((e) => e !== null) as event}

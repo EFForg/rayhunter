@@ -8,12 +8,10 @@
     let {
         entry,
         current,
-        i,
         server_is_recording
     }: {
         entry: ManifestEntry;
         current: boolean;
-        i: number;
         server_is_recording: boolean;
     } = $props();
 
