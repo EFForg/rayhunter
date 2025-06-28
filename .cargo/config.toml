@@ -36,8 +36,6 @@ strip = "debuginfo"
 [profile.firmware]
 inherits = "release"
 strip = true
-opt-level = "z"
-lto = "fat"
 codegen-units = 1
 panic = "abort"
 debug = false
