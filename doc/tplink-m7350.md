@@ -28,7 +28,7 @@ You can get your TP-Link M7350 from:
 
 ## Installation & Usage
 
-Follow the [release installation guide](./installing-from-release.md). Substitute `./installer orbic` for `./installer tplink` in other documentation. The Rayhunter UI will be available at [http://192.168.0.1:8080](http://192.168.0.1:8080).
+Follow the [release installation guide](./installing-from-release.md). Substitute `./installer orbic` for `./installer tplink` in other documentation. The Rayhunter UI will be available at <http://192.168.0.1:8080>.
 
 ## Obtaining a shell
 

@@ -5,11 +5,12 @@ Supported in Rayhunter since version 0.4.0.
 The Wingtech CT2MHS01 hotspot is a Qualcomm mdm9650-based device with a screen available for US$15-35. This device is often used as a base platform for white labeled versions like the T-Mobile TMOHS1. AT&T branded versions of the hotspot seem to be the most abundant.
 
 ## Hardware
+
 Wingtechs are abundant on ebay and can also be found on Amazon:
-- https://www.amazon.com/AT-Turbo-Hotspot-256-Black/dp/B09YWLXVWT
-- https://www.ebay.com/itm/135205906535
-- https://www.ebay.com/itm/126987839936
-- https://www.ebay.com/itm/127147132518
+- <https://www.amazon.com/AT-Turbo-Hotspot-256-Black/dp/B09YWLXVWT>
+- <https://www.ebay.com/itm/135205906535>
+- <https://www.ebay.com/itm/126987839936>
+- <https://www.ebay.com/itm/127147132518>
 
 Rayhunter has been tested on 
 
