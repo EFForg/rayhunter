@@ -47,7 +47,7 @@ Connect to the Wingtech's network over wifi or usb tethering, then run the insta
 ```
 
 ## Obtaining a shell
-Even when rayhunter is running, for security reasons the Wingtech will not have telnet or adb enabled during normal operation.
+Even when Rayhunter is running, for security reasons the Wingtech will not have telnet or adb enabled during normal operation.
 
 Use either command below to enable telnet or adb access:
 

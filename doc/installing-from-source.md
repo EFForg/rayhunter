@@ -15,7 +15,7 @@ Building Rayhunter from source, either for development or because the install sc
 
 [Install Rust the usual way](https://www.rust-lang.org/tools/install). Then,
 
-- install the cross-compilation target for the device rayhunter will run on:
+- install the cross-compilation target for the device Rayhunter will run on:
 ```sh
 rustup target add armv7-unknown-linux-musleabihf
 ```
