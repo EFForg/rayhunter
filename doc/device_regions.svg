@@ -27,7 +27,7 @@
    inkscape:pagecheckerboard="0"
    inkscape:deskcolor="#d1d1d1"
    inkscape:zoom="0.8773442"
-   inkscape:cx="749.99071"
+   inkscape:cx="750.56061"
    inkscape:cy="210.29375"
    inkscape:window-width="2560"
    inkscape:window-height="1392"
@@ -35,7 +35,15 @@
    inkscape:window-y="27"
    inkscape:window-maximized="1"
    inkscape:current-layer="svg9" />
-<g
+<rect
+   style="fill:#ffffff;fill-opacity:1"
+   id="rect1"
+   width="1079.3937"
+   height="512.91156"
+   x="-87.253433"
+   y="-52.087292"
+   transform="translate(228.58907,81.722184)"
+   ry="0" /><g
    id="Layer_1"
    transform="translate(228.58907,81.722184)">
 	<path
