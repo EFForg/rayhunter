@@ -18,10 +18,10 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 4. Run the install script for your operating system:
 
     First, enter the correct subfolder for your operating system:
-    - for Ubuntu on x64 arhitecture: `cd installer-ubuntu-24`
-    - for Ubuntu on ARM64 arhitecture: `cd installer-ubuntu-24-aarch64`
+    - for Ubuntu on x64 architecture: `cd installer-ubuntu-24`
+    - for Ubuntu on ARM64 architecture: `cd installer-ubuntu-24-aarch64`
     - for MacOS on Intel (old macbooks) architecture: `cd installer-macos-intel`
-    - for MacOS on ARM (M1/M2 etc.) achitecture: `cd installer-macos-arm`
+    - for MacOS on ARM (M1/M2 etc.) architecture: `cd installer-macos-arm`
     - for Windows: `cd installer-windows-x86_64`
 
     ```bash
@@ -45,5 +45,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 
 * On MacOS if you encounter an error that says "No Orbic device found," it may because you have the "Allow accessories to connect" security setting set to "Ask for approval." You may need to temporarily change it to "Always" for the script to run. Make sure to change it back to a more secure setting when you're done.
 
+```bash
 ./installer --help
 ./installer util --help
+```
