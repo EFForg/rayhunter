@@ -1,5 +1,5 @@
-import { parse_ndjson, type NewlineDeliminatedJson } from "./ndjson";
-import { req } from "./utils.svelte";
+import { parse_ndjson, type NewlineDeliminatedJson } from './ndjson';
+import { req } from './utils.svelte';
 
 export type AnalysisReport = {
     metadata: ReportMetadata;
@@ -11,7 +11,7 @@ export type ReportStatistics = {
     num_warnings: number;
     num_informational_logs: number;
     num_skipped_packets: number;
-}
+};
 
 export type ReportMetadata = {
     analyzers: AnalyzerMetadata[];
@@ -42,7 +42,7 @@ export type PacketAnalysis = {
 export type Event = QualitativeWarning | InformationalEvent;
 export enum EventType {
     Informational,
-    Warning,
+    Warning
 }
 
 export type QualitativeWarning = {
@@ -54,7 +54,7 @@ export type QualitativeWarning = {
 export enum Severity {
     Low,
     Medium,
-    High,
+    High
 }
 
 export type InformationalEvent = {
@@ -69,46 +69,51 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Anal
     let num_skipped_packets = 0;
     const rows: AnalysisRow[] = report_json.slice(1).map((row_json: any) => {
         const analysis: PacketAnalysis[] = row_json.analysis.map((analysis_json: any) => {
-            const events: Event[] = analysis_json.events.map((event_json: any): Event | null => {
+            const events: Event[] = analysis_json.events
+                .map((event_json: any): Event | null => {
                     if (event_json === null) {
                         return null;
-                    } else if (event_json.event_type.type === "Informational") {
+                    } else if (event_json.event_type.type === 'Informational') {
                         num_informational_logs += 1;
                         return {
                             type: EventType.Informational,
-                            message: event_json.message,
+                            message: event_json.message
                         };
                     } else {
                         num_warnings += 1;
                         return {
                             type: EventType.Warning,
-                            severity: event_json.event_type.severity === "High" ? Severity.High :
-                                event_json.event_type.severity === "Medium" ? Severity.Medium : Severity.Low,
-                            message: event_json.message,
+                            severity:
+                                event_json.event_type.severity === 'High'
+                                    ? Severity.High
+                                    : event_json.event_type.severity === 'Medium'
+                                      ? Severity.Medium
+                                      : Severity.Low,
+                            message: event_json.message
                         };
                     }
                 })
                 .filter((maybe_event: Event | null) => maybe_event !== null);
             return {
                 timestamp: analysis_json.timestamp,
-                events,
+                events
             };
         });
         num_skipped_packets += row_json.skipped_message_reasons.length;
         return {
             timestamp: new Date(row_json.timestamp),
             skipped_message_reasons: row_json.skipped_message_reasons,
-            analysis,
+            analysis
         };
     });
     return {
         statistics: {
             num_informational_logs,
             num_warnings,
-            num_skipped_packets,
+            num_skipped_packets
         },
         metadata,
-        rows,
+        rows
     };
 }
 
