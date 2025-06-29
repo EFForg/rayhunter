@@ -5,7 +5,7 @@ Be sure to check your location's [supported frequencies](https://www.frequencych
 ## 1. Recommended devices
 These devices have been extensively tested by the core developers and are widely used. **Use one of these devices if you can.**
 
-| Device | Region |
+| Device | Recommended region |
 | ------ | ------ |
 | [Orbic RC400L](./orbic.md) | Americas |
 | [TP-Link M7350](./tplink-m7350.md) | Africa, Europe, Middle East |
@@ -18,10 +18,10 @@ _Derivative work of [this file](https://commons.wikimedia.org/wiki/File:Internat
 ## 2. Functional devices
 Rayhunter is confirmed to work on these devices.
 
-| Device | Region |
+| Device | Recommended region |
 | ------ | ------ |
 | [Wingtech CT2MHS01](./wingtech-ct2mhs01.md) | Americas |
-| [TP-Link M7310](./tplink-m7310.md) | Africa, Europe, Middle East & Americas |
+| [TP-Link M7310](./tplink-m7310.md) | Africa, Europe, Middle East |
 
 ## Adding new devices
 Rayhunter was built and tested primarily on the Orbic RC400L mobile hotspot, but the community has been working hard at adding support for other devices. Theoretically, if a device runs a Qualcomm modem and exposes a `/dev/diag` interface, Rayhunter may work on it.
