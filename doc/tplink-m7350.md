@@ -1,6 +1,8 @@
 # TP-Link M7350
 
-The TP-Link M7350 is **supported by Rayhunter since 0.3.0**. TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
+Supported in Rayhunter since version 0.3.0.
+
+The TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
 
 ## Hardware versions
 
@@ -26,7 +28,7 @@ You can get your TP-Link M7350 from:
 
 ## Installation & Usage
 
-Follow the [release installation guide](./installing-from-release.md). Substitute `./installer orbic` for `./installer tplink` in other documentation. The Rayhunter UI will be available at [http://192.168.0.1:8080](http://192.168.0.1:8080).
+Follow the [release installation guide](./installing-from-release.md). Substitute `./installer orbic` for `./installer tplink` in other documentation. The Rayhunter UI will be available at <http://192.168.0.1:8080>.
 
 ## Obtaining a shell
 
