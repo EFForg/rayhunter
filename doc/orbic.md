@@ -1,6 +1,6 @@
 # Orbic RC400L
 
-The Orbic RC400L is an inexpensive LTE modem primarily designed for the US marked, and the original device for which Rayhunter is developed.
+The Orbic RC400L is an inexpensive LTE modem primarily designed for the US market, and the original device for which Rayhunter is developed.
 
 You can buy an Orbic [using bezos
 bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
