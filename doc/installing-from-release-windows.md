@@ -25,7 +25,7 @@ Windows support in Rayhunter's installer is a work-in-progress. Depending on the
 2. Download the latest `rayhunter-vX.X.X.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases). The version you download will have numbers instead of X
 3. Unzip `rayhunter-vX.X.X` .
 1. Open a powershell terminal by pressing Win+R and typing `powershell` and hitting enter. 
-5. Type `cd ~\Downloads\rayhunter-v<x.x.x>\installer-windows-x86_64` (**Replace <x.x.x> with the rayhunter version you just unzipped**) and hit enter.
+5. Type `cd ~\Downloads\rayhunter-v<x.x.x>\installer-windows-x86_64` (**Replace <x.x.x> with the Rayhunter version you just unzipped**) and hit enter.
 5. Run the install script: `.\installer.exe orbic` and hit enter.
     - The device will restart multiple times over the next few minutes.
     - You will know it is done when you see terminal output that says `checking for rayhunter server...success!`
