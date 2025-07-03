@@ -11,6 +11,12 @@ export default {
             precompress: false,
             strict: true,
         }),
+        output: {
+            // Force everything into one HTML file. SvelteKit will still generate
+            // a lot of JS files but they are deadweight and will not be included
+            // in the rust binary.
+            bundleStrategy: 'inline',
+        },
         version: {
             // Use a deterministic version string for reproducible builds.
             // Without this option, SvelteKit will use a timestamp.

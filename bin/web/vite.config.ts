@@ -27,6 +27,12 @@ export default defineConfig({
         },
     },
     plugins: [sveltekit()],
+    build: {
+        // Force everything into one HTML file. SvelteKit will still generate
+        // a lot of JS files but they are deadweight and will not be included
+        // in the rust binary.
+        assetsInlineLimit: Infinity,
+    },
     test: {
         include: ['src/**/*.{test,spec}.{js,ts}'],
     },
