@@ -1,8 +1,9 @@
 use std::io::Write;
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::time::Duration;
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
@@ -86,5 +87,21 @@ pub async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) 
     )
     .await?;
     println!("ok");
+    Ok(())
+}
+
+pub async fn send_file(admin_ip: &str, local_path: &str, remote_path: &str) -> Result<()> {
+    let file_content = std::fs::read(local_path)
+        .with_context(|| format!("Failed to read local file: {}", local_path))?;
+
+    println!("Connecting to {admin_ip}");
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:23"))
+        .with_context(|| format!("Invalid IP address: {}", admin_ip))?;
+
+    telnet_send_file(addr, remote_path, &file_content)
+        .await
+        .with_context(|| format!("Failed to send file {} to {}", local_path, remote_path))?;
+
+    println!("Successfully sent {} to {}", local_path, remote_path);
     Ok(())
 }
