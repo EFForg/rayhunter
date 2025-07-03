@@ -2,12 +2,18 @@
 
 Make sure you've got one of Rayhunter's [supported devices](./supported-devices.md). These instructions have only been tested on macOS and Ubuntu 24.04. If they fail, you will need to [install Rayhunter from source](./installing-from-source.md).
 
-1. Download the latest `rayhunter-vX.X.X.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases)
-2. Decompress the `rayhunter-vX.X.X.zip` archive. Open the terminal and navigate to the folder. (Be sure to replace X.X.X with the correct version number!)
+1. Download the latest `rayhunter-vX.X.X-PLATFORM.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases) for your platform:
+    - for Linux on x64 architecture: `linux-x64`
+    - for Linux on ARM64 architecture: `linux-aarch64`
+    - for MacOS on Intel (old macbooks) architecture: `macos-intel`
+    - for MacOS on ARM (M1/M2 etc.) architecture: `macos-arm`
+    - for Windows: `windows-x86_64`
+
+2. Decompress the `rayhunter-vX.X.X-PLATFORM.zip` archive. Open the terminal and navigate to the folder. (Be sure to replace X.X.X with the correct version number!)
 
     ```bash
-    unzip ~/Downloads/rayhunter-vX.X.X.zip
-    cd ~/Downloads/rayhunter-vX.X.X
+    unzip ~/Downloads/rayhunter-vX.X.X-PLATFORM.zip
+    cd ~/Downloads/rayhunter-vX.X.X-PLATFORM
     ```
 
 3. Turn on your device by holding the power button on the front.
@@ -15,14 +21,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
    * For the Orbic, connect the device using a USB-C cable.
    * For TP-Link, connect to its network using either WiFi or USB Tethering.
 
-4. Run the install script for your operating system:
-
-    First, enter the correct subfolder for your operating system:
-    - for Ubuntu on x64 architecture: `cd installer-ubuntu-24`
-    - for Ubuntu on ARM64 architecture: `cd installer-ubuntu-24-aarch64`
-    - for MacOS on Intel (old macbooks) architecture: `cd installer-macos-intel`
-    - for MacOS on ARM (M1/M2 etc.) architecture: `cd installer-macos-arm`
-    - for Windows: `cd installer-windows-x86_64`
+4. Run the installer:
 
     ```bash
     # On MacOS, you must first remove the quarantine bit
