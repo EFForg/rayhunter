@@ -27,7 +27,9 @@ export default defineConfig({
         }
     },
     plugins: [sveltekit()],
-
+    build: {
+        assetsInlineLimit: Infinity
+    },
     test: {
         include: ['src/**/*.{test,spec}.{js,ts}']
     }

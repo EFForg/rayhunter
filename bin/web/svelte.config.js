@@ -11,6 +11,9 @@ export default {
             precompress: false,
             strict: true
         }),
+        output: {
+            bundleStrategy: 'inline'
+        },
         version: {
             // Use a deterministic version string for reproducible builds.
             // Without this option, SvelteKit will use a timestamp.
