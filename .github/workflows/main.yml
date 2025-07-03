@@ -157,10 +157,10 @@ jobs:
     strategy:
       matrix:
         platform:
-          - name: ubuntu-24
+          - name: linux-x64
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-          - name: ubuntu-24-aarch64
+          - name: linux-aarch64
             os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
           - name: macos-arm
@@ -261,10 +261,10 @@ jobs:
     strategy:
       matrix:
         platform:
-          - name: ubuntu-24
+          - name: linux-x64
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-          - name: ubuntu-24-aarch64
+          - name: linux-aarch64
             os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
           - name: macos-arm
@@ -284,7 +284,7 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --bin installer --release --target ${{ matrix.platform.target }}
+      - run: cargo build --package installer --bin installer --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform.name }}
@@ -301,6 +301,14 @@ jobs:
       - build_rayhunter
       - build_rust_installer
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - linux-x64
+          - linux-aarch64
+          - macos-intel
+          - macos-arm
+          - windows-x86_64
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -311,23 +319,19 @@ jobs:
         run: echo "VERSION=$(grep '^version' bin/Cargo.toml | head -n 1 | cut -d'"' -f2)" >> $GITHUB_ENV
       - name: Setup versioned release directory
         run: |
-          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
-          mkdir "$VERSIONED_DIR"
-          mv rayhunter-daemon-* rootshell/rootshell installer-* dist/* installer/install.ps1 "$VERSIONED_DIR"/
-      - name: Archive release directory as zip
-        run: |
-          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
-          zip -r "$VERSIONED_DIR.zip" "$VERSIONED_DIR"
-      - name: Compute SHA256 of zip
-        run: |
-          VERSIONED_DIR="rayhunter-v${{ env.VERSION }}"
-          sha256sum "$VERSIONED_DIR.zip" > "$VERSIONED_DIR.zip.sha256"
-      # TODO: have this create a release directly
+          platform="${{ matrix.platform }}"
+          dest="rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}"
+          mkdir "$dest"
+          mv installer-$platform/installer* "$dest"/installer
+          cp -r rayhunter-daemon-* rootshell/rootshell dist/* installer/install.ps1 "$dest"/
+          zip -r "$dest.zip" "$dest"
+          sha256sum "$dest.zip" > "$dest.zip.sha256"
+
       - name: Upload zip release and sha256
         uses: actions/upload-artifact@v4
         with:
-          name: rayhunter-v${{ env.VERSION }}
+          name: rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}
           path: |
-            rayhunter-v${{ env.VERSION }}.zip
-            rayhunter-v${{ env.VERSION }}.zip.sha256
+            rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}.zip
+            rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}.zip.sha256
           if-no-files-found: error
