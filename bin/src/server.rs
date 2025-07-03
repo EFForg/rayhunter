@@ -9,8 +9,7 @@ use axum::extract::State;
 use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
-use include_dir::{Dir, include_dir};
-use log::error;
+use log::{error, warn};
 use std::sync::Arc;
 use tokio::fs::write;
 use tokio::io::{AsyncReadExt, copy, duplex};
@@ -66,29 +65,45 @@ pub async fn get_qmdl(
     Ok((headers, body).into_response())
 }
 
-// Bundles the server's static files (html/css/js) into the binary for easy distribution
-static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/web/build");
-
 pub async fn serve_static(
     State(_): State<Arc<ServerState>>,
     Path(path): Path<String>,
 ) -> impl IntoResponse {
     let path = path.trim_start_matches('/');
-    let mime_type = mime_guess::from_path(path).first_or_text_plain();
 
-    match STATIC_DIR.get_file(path) {
-        None => Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::empty())
-            .unwrap(),
-        Some(file) => Response::builder()
-            .status(StatusCode::OK)
-            .header(
-                header::CONTENT_TYPE,
-                HeaderValue::from_str(mime_type.as_ref()).unwrap(),
-            )
-            .body(Body::from(file.contents()))
-            .unwrap(),
+    match path {
+        "rayhunter_icon.png" => (
+            [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
+            include_bytes!("../web/build/rayhunter_icon.png"),
+        )
+            .into_response(),
+        "rayhunter_orca_only.png" => (
+            [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
+            include_bytes!("../web/build/rayhunter_orca_only.png"),
+        )
+            .into_response(),
+        "rayhunter_text.png" => (
+            [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
+            include_bytes!("../web/build/rayhunter_text.png"),
+        )
+            .into_response(),
+        "favicon.png" => (
+            [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
+            include_bytes!("../web/build/favicon.png"),
+        )
+            .into_response(),
+        "index.html" => (
+            [
+                (header::CONTENT_TYPE, HeaderValue::from_static("text/html")),
+                (header::CONTENT_ENCODING, HeaderValue::from_static("gzip")),
+            ],
+            include_bytes!("../web/build/index.html.gz"),
+        )
+            .into_response(),
+        path => {
+            warn!("404 on path: {path}");
+            StatusCode::NOT_FOUND.into_response()
+        }
     }
 }
 
