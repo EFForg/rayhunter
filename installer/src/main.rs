@@ -73,6 +73,16 @@ enum UtilSubCommand {
     WingtechStartTelnet(WingtechArgs),
     /// Root the Wingtech and launch adb.
     WingtechStartAdb(WingtechArgs),
+    /// Send a file to the TP-Link device over telnet.
+    ///
+    /// Before running this utility, you need to make telnet accessible with `installer util
+    /// tplink-start-telnet`.
+    TplinkSendFile(TplinkSendFile),
+    /// Send a file to the Wingtech device over telnet.
+    ///
+    /// Before running this utility, you need to make telnet accessible with `installer util
+    /// wingtech-start-telnet`.
+    WingtechSendFile(WingtechSendFile),
 }
 
 #[derive(Parser, Debug)]
@@ -80,6 +90,28 @@ struct TplinkStartTelnet {
     /// IP address for TP-Link admin interface, if custom.
     #[arg(long, default_value = "192.168.0.1")]
     admin_ip: String,
+}
+
+#[derive(Parser, Debug)]
+struct TplinkSendFile {
+    /// IP address for TP-Link admin interface, if custom.
+    #[arg(long, default_value = "192.168.0.1")]
+    admin_ip: String,
+    /// Local path to the file to send.
+    local_path: String,
+    /// Remote path where the file should be stored on the device.
+    remote_path: String,
+}
+
+#[derive(Parser, Debug)]
+struct WingtechSendFile {
+    /// IP address for Wingtech admin interface, if custom.
+    #[arg(long, default_value = "192.168.1.1")]
+    admin_ip: String,
+    /// Local path to the file to send.
+    local_path: String,
+    /// Remote path where the file should be stored on the device.
+    remote_path: String,
 }
 
 #[derive(Parser, Debug)]
@@ -133,6 +165,12 @@ async fn run() -> Result<(), Error> {
             UtilSubCommand::Shell(_) => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
             UtilSubCommand::TplinkStartTelnet(options) => {
                 tplink::start_telnet(&options.admin_ip).await?;
+            }
+            UtilSubCommand::TplinkSendFile(options) => {
+                util::send_file(&options.admin_ip, &options.local_path, &options.remote_path).await?;
+            }
+            UtilSubCommand::WingtechSendFile(options) => {
+                util::send_file(&options.admin_ip, &options.local_path, &options.remote_path).await?;
             }
             UtilSubCommand::WingtechStartTelnet(args) => wingtech::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Wingtech CT2MHS01")?,
             UtilSubCommand::WingtechStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Wingtech CT2MHS01")?,
