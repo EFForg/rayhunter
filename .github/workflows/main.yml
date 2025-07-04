@@ -160,6 +160,9 @@ jobs:
           - name: linux-x64
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
+          - name: linux-armv7
+            os: ubuntu-latest
+            target: armv7-unknown-linux-musleabihf
           - name: linux-aarch64
             os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
@@ -175,13 +178,16 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
       - name: Build rayhunter-check
-        run: cargo build --bin rayhunter-check --release
+        run: cargo build --bin rayhunter-check --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-check-${{ matrix.platform.name }}
-          path: target/release/rayhunter-check${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
+          path: target/${{ matrix.platform.target }}/release/rayhunter-check${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
 
   build_rootshell:
@@ -198,7 +204,7 @@ jobs:
         with:
           targets: armv7-unknown-linux-musleabihf
       - uses: Swatinem/rust-cache@v2
-      - name: Build rootshell (arm32)
+      - name: Build rootshell (armv7)
         run: cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --profile=firmware
       - uses: actions/upload-artifact@v4
         with:
@@ -227,7 +233,7 @@ jobs:
         with:
           targets: armv7-unknown-linux-musleabihf
       - uses: Swatinem/rust-cache@v2
-      - name: Build rayhunter-daemon (arm32)
+      - name: Build rayhunter-daemon (armv7)
         run: |
           pushd bin/web
           npm install
@@ -264,6 +270,9 @@ jobs:
           - name: linux-x64
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
+          - name: linux-armv7
+            os: ubuntu-latest
+            target: armv7-unknown-linux-musleabihf
           - name: linux-aarch64
             os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
@@ -306,6 +315,7 @@ jobs:
         platform:
           - linux-x64
           - linux-aarch64
+          - linux-armv7
           - macos-intel
           - macos-arm
           - windows-x86_64
