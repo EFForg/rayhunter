@@ -14,6 +14,7 @@ pub struct Config {
     pub enable_dummy_analyzer: bool,
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
+    pub ntfy_topic: Option<String>,
     pub analyzers: AnalyzerConfig,
 }
 
@@ -28,6 +29,7 @@ impl Default for Config {
             colorblind_mode: false,
             key_input_mode: 0,
             analyzers: AnalyzerConfig::default(),
+            ntfy_topic: None,
         }
     }
 }

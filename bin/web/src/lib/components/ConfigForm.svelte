@@ -94,6 +94,17 @@
                     </select>
                 </div>
 
+                <div>
+                    <label for="ntfy_topic" class="block text-sm font-medium text-gray-700 mb-1">
+                        ntfy Topic
+					</label>
+					<input
+                        id="ntfy_topic"
+                        bind:value={config.ntfy_topic}
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                    >
+                </div>
+                
                 <div class="space-y-3">
                     <div class="flex items-center">
                         <input
