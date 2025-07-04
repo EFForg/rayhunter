@@ -1,5 +1,5 @@
-import { get_report, type AnalysisReport } from "./analysis.svelte";
-import { AnalysisStatus, type AnalysisManager } from "./analysisManager.svelte";
+import { get_report, type AnalysisReport } from './analysis.svelte';
+import { AnalysisStatus, type AnalysisManager } from './analysisManager.svelte';
 
 interface JsonManifest {
     entries: JsonManifestEntry[];
@@ -19,7 +19,7 @@ export class Manifest {
     public current_entry: ManifestEntry | undefined;
 
     constructor(json: JsonManifest) {
-        for (let entry of json.entries) {
+        for (const entry of json.entries) {
             this.entries.push(new ManifestEntry(entry));
         }
         if (json.current_entry !== null) {
@@ -31,7 +31,7 @@ export class Manifest {
     }
 
     async set_analysis_status(manager: AnalysisManager) {
-        for (let entry of this.entries) {
+        for (const entry of this.entries) {
             entry.analysis_status = manager.status.get(entry.name);
             entry.analysis_report = manager.reports.get(entry.name);
         }
@@ -39,7 +39,7 @@ export class Manifest {
         if (this.current_entry) {
             try {
                 this.current_entry.analysis_report = await get_report(this.current_entry.name);
-            } catch(err) {
+            } catch (err) {
                 this.current_entry.analysis_report = `Err: failed to get analysis report: ${err}`;
             }
 
@@ -47,11 +47,11 @@ export class Manifest {
             // analysis report is always available
             this.current_entry.analysis_status = AnalysisStatus.Finished;
         }
-	}
+    }
 }
 
 export class ManifestEntry {
-    public name = $state("");
+    public name = $state('');
     public start_time: Date;
     public last_message_time: Date | undefined = $state(undefined);
     public qmdl_size_bytes = $state(0);
@@ -70,16 +70,16 @@ export class ManifestEntry {
     }
 
     get_readable_qmdl_size(): string {
-        if (this.qmdl_size_bytes === 0) return "0 Bytes";
+        if (this.qmdl_size_bytes === 0) return '0 Bytes';
         const k = 1024;
-        const dm = 2 || 2;
-        const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+        const dm = 2;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
         const i = Math.floor(Math.log(this.qmdl_size_bytes) / Math.log(k));
         return `${Number.parseFloat((this.qmdl_size_bytes / k ** i).toFixed(dm))} ${sizes[i]}`;
-      }
+    }
 
     get_num_warnings(): number | undefined {
-        if (this.analysis_report === undefined || typeof(this.analysis_report) === 'string') {
+        if (this.analysis_report === undefined || typeof this.analysis_report === 'string') {
             return undefined;
         }
         return this.analysis_report.statistics.num_warnings;
@@ -103,5 +103,5 @@ export class ManifestEntry {
 
     get_delete_url(): string {
         return `/api/delete-recording/${this.name}`;
-	}
+    }
 }

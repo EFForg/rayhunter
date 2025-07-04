@@ -1,5 +1,5 @@
-import { Manifest } from "./manifest.svelte";
-import type { SystemStats } from "./systemStats";
+import { Manifest } from './manifest.svelte';
+import type { SystemStats } from './systemStats';
 
 export interface AnalyzerConfig {
     imsi_requested: boolean;
@@ -17,7 +17,7 @@ export interface Config {
 
 export async function req(method: string, url: string): Promise<string> {
     const response = await fetch(url, {
-        method: method,
+        method: method
     });
     const body = await response.text();
     if (response.status >= 200 && response.status < 300) {
@@ -44,11 +44,11 @@ export async function set_config(config: Config): Promise<void> {
     const response = await fetch('/api/config', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify(config)
     });
-    
+
     if (!response.ok) {
         const error = await response.text();
         throw new Error(error);
