@@ -5,6 +5,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 1. Download the latest `rayhunter-vX.X.X-PLATFORM.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases) for your platform:
     - for Linux on x64 architecture: `linux-x64`
     - for Linux on ARM64 architecture: `linux-aarch64`
+    - for Linux on armv7/v8 (32-bit) architecture: `linux-armv7`
     - for MacOS on Intel (old macbooks) architecture: `macos-intel`
     - for MacOS on ARM (M1/M2 etc.) architecture: `macos-arm`
     - for Windows: `windows-x86_64`
