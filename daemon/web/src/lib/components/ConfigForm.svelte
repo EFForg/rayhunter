@@ -203,8 +203,20 @@
                                 bind:checked={config.analyzers.incomplete_sib}
                                 class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                             />
-                            <label for="nas_null_cipher" class="ml-2 block text-sm text-gray-700">
+                            <label for="incomplete_sib" class="ml-2 block text-sm text-gray-700">
                                 Incomplete SIB Heuristic
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input
+                                id="IMSI Exposed"
+                                type="checkbox"
+                                bind:checked={config.analyzers.imsi_exposed}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label for="imsi_exposed" class="ml-2 block text-sm text-gray-700">
+                                IMSI Exposed Heuristic
                             </label>
                         </div>
                     </div>

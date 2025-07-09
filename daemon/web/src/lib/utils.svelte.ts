@@ -8,6 +8,7 @@ export interface AnalyzerConfig {
     null_cipher: boolean;
     nas_null_cipher: boolean;
     incomplete_sib: boolean;
+    imsi_exposed: boolean;
 }
 
 export interface Config {
