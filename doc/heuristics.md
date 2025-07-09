@@ -20,3 +20,8 @@ Rayhunter includes several analyzers to detect potential IMSI catcher activity. 
 - **LTE SIB6/7 Downgrade**: Tests for LTE cells broadcasting a SIB type 6 and 7
   which include 2G/3G frequencies with higher priorities
 - **Null Cipher**: Tests whether the cell suggests using a null cipher (EEA0).
+- **IMSI Exposed**: Catches any and all messages that may expose IMSI. Can be
+  quite noisy. Based on the detection logic from the Marlin paper ("They Know
+  Where You Are: Tracking Mobile Devices Using Cellular Infrastructure").
+  Since we don't have traffic of many devices, we cannot implement the original
+  exposure ratio calculation, and naively trigger an event on every exposure.

@@ -7,8 +7,9 @@ use crate::{diag::MessagesContainer, gsmtap_parser};
 
 use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
-    imsi_requested::ImsiRequestedAnalyzer, information_element::InformationElement,
-    null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
+    imsi_exposed::ImsiExposedAnalyzer, imsi_requested::ImsiRequestedAnalyzer,
+    information_element::InformationElement, null_cipher::NullCipherAnalyzer,
+    priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -18,6 +19,7 @@ pub struct AnalyzerConfig {
     pub connection_redirect_2g_downgrade: bool,
     pub lte_sib6_and_7_downgrade: bool,
     pub null_cipher: bool,
+    pub imsi_exposed: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -27,6 +29,7 @@ impl Default for AnalyzerConfig {
             connection_redirect_2g_downgrade: true,
             lte_sib6_and_7_downgrade: true,
             null_cipher: true,
+            imsi_exposed: false,
         }
     }
 }
@@ -156,6 +159,9 @@ impl Harness {
         }
         if analyzer_config.null_cipher {
             harness.add_analyzer(Box::new(NullCipherAnalyzer {}));
+        }
+        if analyzer_config.imsi_exposed {
+            harness.add_analyzer(Box::new(ImsiExposedAnalyzer::new()));
         }
 
         harness

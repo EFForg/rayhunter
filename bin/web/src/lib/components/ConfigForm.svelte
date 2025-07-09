@@ -183,6 +183,18 @@
                                 Null Cipher Heuristic
                             </label>
                         </div>
+
+                        <div class="flex items-center">
+                            <input
+                                id="imsi_exposed"
+                                type="checkbox"
+                                bind:checked={config.analyzers.imsi_exposed}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label for="imsi_exposed" class="ml-2 block text-sm text-gray-700">
+                                IMSI Exposed Heuristic
+                            </label>
+                        </div>
                     </div>
                 </div>
 
