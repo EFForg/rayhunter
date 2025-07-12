@@ -192,7 +192,8 @@
                                 class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                             />
                             <label for="imsi_exposed" class="ml-2 block text-sm text-gray-700">
-                                IMSI Exposed Heuristic
+                                IMSI Exposed Heuristic (<strong>EXPERIMENTAL:</strong> do not report
+                                issues via Signal)
                             </label>
                         </div>
                     </div>
