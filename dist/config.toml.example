@@ -29,3 +29,4 @@ imsi_requested = true
 connection_redirect_2g_downgrade = true
 lte_sib6_and_7_downgrade = true
 null_cipher = true 
+imsi_exposed = false
