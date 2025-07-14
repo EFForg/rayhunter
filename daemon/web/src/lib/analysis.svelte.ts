@@ -13,9 +13,23 @@ export type ReportStatistics = {
     num_skipped_packets: number;
 };
 
-export type ReportMetadata = {
-    analyzers: AnalyzerMetadata[];
-    rayhunter: RayhunterMetadata;
+export class ReportMetadata {
+    public analyzers: AnalyzerMetadata[];
+    public rayhunter: RayhunterMetadata;
+    public report_version: number;
+
+    constructor(ndjson: any) {
+        this.analyzers = ndjson.analyzers;
+        this.rayhunter = ndjson.rayhunter;
+        if (ndjson.report_version === undefined) {
+            this.report_version = 1;
+            this.analyzers.forEach(analyzer => {
+                analyzer.version = 1;
+            });
+        } else {
+            this.report_version = ndjson.report_version;
+        }
+    }
 };
 
 export type RayhunterMetadata = {
@@ -27,19 +41,27 @@ export type RayhunterMetadata = {
 export type AnalyzerMetadata = {
     name: string;
     description: string;
+    version: number;
 };
 
-export type AnalysisRow = {
-    timestamp: Date;
-    skipped_message_reasons: string[];
-    analysis: PacketAnalysis[];
-};
+export type AnalysisRow = SkippedPacket | PacketAnalysis;
+export enum AnalysisRowType {
+    Skipped,
+    Analysis,
+}
+
+export type SkippedPacket = {
+    type: AnalysisRowType.Skipped;
+    reason: string;
+}
 
 export type PacketAnalysis = {
-    timestamp: Date;
+    type: AnalysisRowType.Analysis;
+    packet_timestamp: Date;
     events: Event[];
 };
-export type Event = QualitativeWarning | InformationalEvent;
+
+export type Event = QualitativeWarning | InformationalEvent | null;
 export enum EventType {
     Informational,
     Warning,
@@ -62,56 +84,118 @@ export type InformationalEvent = {
     message: string;
 };
 
-export function parse_finished_report(report_json: NewlineDeliminatedJson): AnalysisReport {
-    const metadata: ReportMetadata = report_json[0]; // this can be cast directly
-    let num_warnings = 0;
-    let num_informational_logs = 0;
-    let num_skipped_packets = 0;
-    const rows: AnalysisRow[] = report_json.slice(1).map((row_json: any) => {
-        const analysis: PacketAnalysis[] = row_json.analysis.map((analysis_json: any) => {
+function get_event(event_json: any): Event {
+    if (event_json.event_type.type === 'Informational') {
+        return {
+            type: EventType.Informational,
+            message: event_json.message,
+        };
+    } else {
+        return {
+            type: EventType.Warning,
+            severity:
+                event_json.event_type.severity === 'High'
+                    ? Severity.High
+                    : event_json.event_type.severity === 'Medium'
+                        ? Severity.Medium
+                        : Severity.Low,
+            message: event_json.message,
+        };
+    }
+}
+
+function get_v1_rows(row_jsons: any[]): AnalysisRow[] {
+    const rows: AnalysisRow[] = [];
+    for (const row_json of row_jsons) {
+        for (const reason of row_json.skipped_message_reasons) {
+            rows.push({
+                type: AnalysisRowType.Skipped,
+                reason,
+            })
+        }
+        for (const analysis_json of row_json.analysis) {
             const events: Event[] = analysis_json.events
                 .map((event_json: any): Event | null => {
                     if (event_json === null) {
                         return null;
-                    } else if (event_json.event_type.type === 'Informational') {
-                        num_informational_logs += 1;
-                        return {
-                            type: EventType.Informational,
-                            message: event_json.message,
-                        };
                     } else {
-                        num_warnings += 1;
-                        return {
-                            type: EventType.Warning,
-                            severity:
-                                event_json.event_type.severity === 'High'
-                                    ? Severity.High
-                                    : event_json.event_type.severity === 'Medium'
-                                      ? Severity.Medium
-                                      : Severity.Low,
-                            message: event_json.message,
-                        };
+                        return get_event(event_json);
                     }
-                })
-                .filter((maybe_event: Event | null) => maybe_event !== null);
-            return {
-                timestamp: analysis_json.timestamp,
+                });
+            rows.push({
+                type: AnalysisRowType.Analysis,
+                packet_timestamp: new Date(analysis_json.timestamp),
                 events,
-            };
-        });
-        num_skipped_packets += row_json.skipped_message_reasons.length;
-        return {
-            timestamp: new Date(row_json.timestamp),
-            skipped_message_reasons: row_json.skipped_message_reasons,
-            analysis,
-        };
-    });
+            });
+        }
+    }
+    return rows;
+}
+
+function get_v2_rows(row_jsons: any[]): AnalysisRow[] {
+    const rows: AnalysisRow[] = [];
+    for (const row_json of row_jsons) {
+        if (row_json.skipped_message_reason) {
+            rows.push({
+                type: AnalysisRowType.Skipped,
+                reason: row_json.skipped_message_reason,
+            });
+        } else {
+            const events: Event[] = row_json.events
+                .map((event_json: any): Event | null => {
+                    if (event_json === null) {
+                        return null;
+                    } else {
+                        return get_event(event_json);
+                    }
+                });
+            rows.push({
+                type: AnalysisRowType.Analysis,
+                packet_timestamp: new Date(row_json.packet_timestamp),
+                events,
+            });
+        }
+    }
+    return rows;
+}
+
+function get_report_stats(rows: AnalysisRow[]): ReportStatistics {
+    let num_warnings = 0;
+    let num_informational_logs = 0;
+    let num_skipped_packets = 0;
+    for (const row of rows) {
+        if (row.type === AnalysisRowType.Skipped) {
+            num_skipped_packets++;
+        } else {
+            for (const event of row.events) {
+                if (event !== null) {
+                    if (event.type === EventType.Informational) {
+                        num_informational_logs++;
+                    } else {
+                        num_warnings++;
+                    }
+                }
+            }
+        }
+    }
     return {
-        statistics: {
-            num_informational_logs,
-            num_warnings,
-            num_skipped_packets,
-        },
+        num_warnings,
+        num_informational_logs,
+        num_skipped_packets,
+    }
+}
+
+export function parse_finished_report(report_json: NewlineDeliminatedJson): AnalysisReport {
+    const metadata = new ReportMetadata(report_json[0]);
+    let rows;
+    if (metadata.report_version === 1) {
+        rows = get_v1_rows(report_json.slice(1));
+    } else {
+        rows = get_v2_rows(report_json.slice(1));
+    }
+    let statistics = get_report_stats(rows);
+    return {
+        statistics,
         metadata,
         rows,
     };

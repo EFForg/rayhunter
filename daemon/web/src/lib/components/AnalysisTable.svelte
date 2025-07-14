@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { EventType, type AnalysisReport } from '$lib/analysis.svelte';
+    import { AnalysisRowType, EventType, type AnalysisReport } from '$lib/analysis.svelte';
     let {
         report,
     }: {
@@ -11,15 +11,17 @@
         dateStyle: 'short',
     });
 
+    const analyzers = report.metadata.analyzers;
+
     const skipped_messages: Map<string, number> = $derived.by(() => {
         let map = new Map();
         for (const row of report.rows) {
-            for (const message of row.skipped_message_reasons) {
-                let count = map.get(message);
+            if (row.type === AnalysisRowType.Skipped) {
+                let count = map.get(row.reason);
                 if (count === undefined) {
                     count = 0;
                 }
-                map.set(message, count + 1);
+                map.set(row.reason, count + 1);
             }
         }
         return map;
@@ -35,15 +37,17 @@
             <thead class="p-2">
                 <tr class="bg-gray-300">
                     <th class="p-2">Timestamp</th>
+                    <th class="p-2">Heuristic</th>
                     <th class="p-2">Warning</th>
                     <th class="p-2">Severity</th>
                 </tr>
             </thead>
             <tbody>
                 {#each report.rows as row}
-                    {#each row.analysis as analysis}
-                        {@const parsed_date = new Date(analysis.timestamp)}
-                        {#each analysis.events.filter((e) => e !== null) as event}
+                    {#if row.type === AnalysisRowType.Analysis}
+                        {@const parsed_date = new Date(row.packet_timestamp)}
+                        {#each row.events.filter((e) => e !== null) as event, i}
+                            {@const analyzer = analyzers[i]}
                             <tr class="even:bg-gray-200 odd:bg-white">
                                 {#if event.type === EventType.Warning}
                                     {@const severity = ['Low', 'Medium', 'High'][event.severity]}
@@ -53,16 +57,18 @@
                                         'bg-red-600',
                                     ][event.severity]}
                                     <td class="p-2">{date_formatter.format(parsed_date)}</td>
+                                    <td class="p-2">{analyzer.name} v{analyzer.version}</td>
                                     <td class="p-2">{event.message}</td>
                                     <td class="p-2 {severity_class} text-center">{severity}</td>
                                 {:else if event.type === EventType.Informational}
                                     <td class="p-2">{date_formatter.format(parsed_date)}</td>
+                                    <td class="p-2">{analyzer.name} v{analyzer.version}</td>
                                     <td class="p-2">{event.message}</td>
                                     <td class="p-2">Info</td>
                                 {/if}
                             </tr>
                         {/each}
-                    {/each}
+                    {/if}
                 {/each}
             </tbody>
         </table>
