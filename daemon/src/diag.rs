@@ -37,14 +37,13 @@ pub fn run_diag_read_thread(
     ui_update_sender: Sender<display::DisplayState>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
-    enable_dummy_analyzer: bool,
     analyzer_config: AnalyzerConfig,
 ) {
     task_tracker.spawn(async move {
         let (initial_qmdl_file, initial_analysis_file) = qmdl_store_lock.write().await.new_entry().await.expect("failed creating QMDL file entry");
         let mut maybe_qmdl_writer: Option<QmdlWriter<File>> = Some(QmdlWriter::new(initial_qmdl_file));
         let mut diag_stream = pin!(dev.as_stream().into_stream());
-        let mut maybe_analysis_writer = Some(AnalysisWriter::new(initial_analysis_file, enable_dummy_analyzer, &analyzer_config).await
+        let mut maybe_analysis_writer = Some(AnalysisWriter::new(initial_analysis_file, &analyzer_config).await
             .expect("failed to create analysis writer"));
         loop {
             tokio::select! {
@@ -66,7 +65,7 @@ pub fn run_diag_read_thread(
                                 analysis_writer.close().await.expect("failed to close analysis writer");
                             }
 
-                            maybe_analysis_writer = Some(AnalysisWriter::new(new_analysis_file, enable_dummy_analyzer, &analyzer_config).await
+                            maybe_analysis_writer = Some(AnalysisWriter::new(new_analysis_file, &analyzer_config).await
                                 .expect("failed to write to analysis file"));
 
                             if let Err(e) = ui_update_sender.send(display::DisplayState::Recording).await {

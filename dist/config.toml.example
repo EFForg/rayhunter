@@ -2,7 +2,6 @@
 qmdl_store_path = "/data/rayhunter/qmdl"
 port = 8080
 debug_mode = false
-enable_dummy_analyzer = false
 colorblind_mode = false
 # UI Levels:
 #
@@ -28,4 +27,4 @@ key_input_mode = 0
 imsi_requested = true
 connection_redirect_2g_downgrade = true
 lte_sib6_and_7_downgrade = true
-null_cipher = true 
+null_cipher = true

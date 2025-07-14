@@ -22,6 +22,10 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
         Cow::from("Tests if a cell releases our connection and redirects us to a 2G cell.")
     }
 
+    fn get_version(&self) -> u32 {
+        1
+    }
+
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
         unpack!(InformationElement::LTE(lte_ie) = ie);
         let message = match &**lte_ie {

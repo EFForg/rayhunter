@@ -11,10 +11,12 @@ pub struct Config {
     pub port: u16,
     pub debug_mode: bool,
     pub ui_level: u8,
-    pub enable_dummy_analyzer: bool,
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
     pub analyzers: AnalyzerConfig,
+
+    // deprecated
+    pub enable_dummy_analyzer: bool,
 }
 
 impl Default for Config {
@@ -24,10 +26,12 @@ impl Default for Config {
             port: 8080,
             debug_mode: false,
             ui_level: 1,
-            enable_dummy_analyzer: false,
             colorblind_mode: false,
             key_input_mode: 0,
             analyzers: AnalyzerConfig::default(),
+
+            // deprecated
+            enable_dummy_analyzer: false,
         }
     }
 }
