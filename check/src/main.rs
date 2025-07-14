@@ -1,6 +1,6 @@
 use clap::Parser;
 use futures::TryStreamExt;
-use log::{info, warn};
+use log::{error, info, warn};
 use rayhunter::{
     analysis::analyzer::{AnalyzerConfig, EventType, Harness},
     diag::DataType,
@@ -9,34 +9,27 @@ use rayhunter::{
     qmdl::QmdlReader,
 };
 use std::{collections::HashMap, future, path::PathBuf, pin::pin};
-use tokio::fs::{File, metadata, read_dir};
-
-mod dummy_analyzer;
+use tokio::fs::File;
+use walkdir::WalkDir;
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
     #[arg(short = 'p', long)]
-    qmdl_path: PathBuf,
+    path: PathBuf,
 
-    #[arg(short = 'c', long)]
+    #[arg(long)]
     pcapify: bool,
 
     #[arg(long)]
     show_skipped: bool,
 
-    #[arg(long)]
-    enable_dummy_analyzer: bool,
-
     #[arg(short, long)]
     verbose: bool,
 }
 
-async fn analyze_file(enable_dummy_analyzer: bool, qmdl_path: &str, show_skipped: bool) {
+async fn analyze_file(qmdl_path: &str, show_skipped: bool) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
-    if enable_dummy_analyzer {
-        harness.add_analyzer(Box::new(dummy_analyzer::TestAnalyzer { count: 0 }));
-    }
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
     let file_size = qmdl_file
         .metadata()
@@ -58,26 +51,27 @@ async fn analyze_file(enable_dummy_analyzer: bool, qmdl_path: &str, show_skipped
         .await
         .expect("failed getting QMDL container")
     {
-        let row = harness.analyze_qmdl_messages(container);
-        total_messages += 1;
-        for reason in row.skipped_message_reasons {
-            *skipped_reasons.entry(reason).or_insert(0) += 1;
-            skipped += 1;
-        }
-        for analysis in row.analysis {
-            for maybe_event in analysis.events {
+        for row in harness.analyze_qmdl_messages(container) {
+            total_messages += 1;
+            if let Some(reason) = row.skipped_message_reason {
+                *skipped_reasons.entry(reason).or_insert(0) += 1;
+                skipped += 1;
+                continue;
+            }
+            for maybe_event in row.events {
                 let Some(event) = maybe_event else { continue };
+                let Some(timestamp) = row.packet_timestamp else { continue };
                 match event.event_type {
                     EventType::Informational => {
                         info!(
                             "{}: INFO - {} {}",
-                            qmdl_path, analysis.timestamp, event.message,
+                            qmdl_path, timestamp, event.message,
                         );
                     }
                     EventType::QualitativeWarning { severity } => {
                         warn!(
                             "{}: WARNING (Severity: {:?}) - {} {}",
-                            qmdl_path, severity, analysis.timestamp, event.message,
+                            qmdl_path, severity, timestamp, event.message,
                         );
                         warnings += 1;
                     }
@@ -144,36 +138,27 @@ async fn main() {
         .unwrap();
     info!("Analyzers:");
 
-    let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
-    if args.enable_dummy_analyzer {
-        harness.add_analyzer(Box::new(dummy_analyzer::TestAnalyzer { count: 0 }));
-    }
+    let harness = Harness::new_with_config(&AnalyzerConfig::default());
     for analyzer in harness.get_metadata().analyzers {
-        info!("    - {}: {}", analyzer.name, analyzer.description);
+        info!("    - {}: {} (v{})", analyzer.name, analyzer.description, analyzer.version);
     }
 
-    let metadata = metadata(&args.qmdl_path)
-        .await
-        .expect("failed to get metadata");
-    if metadata.is_dir() {
-        let mut dir = read_dir(&args.qmdl_path).await.expect("failed to read dir");
-        while let Some(entry) = dir.next_entry().await.expect("failed to get entry") {
-            let name = entry.file_name();
-            let name_str = name.to_str().unwrap();
-            if name_str.ends_with(".qmdl") {
-                let path = entry.path();
-                let path_str = path.to_str().unwrap();
-                analyze_file(args.enable_dummy_analyzer, path_str, args.show_skipped).await;
-                if args.pcapify {
-                    pcapify(&path).await;
-                }
+    for maybe_entry in WalkDir::new(&args.path) {
+        let Ok(entry) = maybe_entry else {
+            error!("failed to open dir entry {:?}", maybe_entry);
+            continue;
+        };
+        let name = entry.file_name();
+        let name_str = name.to_str().unwrap();
+        // instead of relying on the QMDL extension, can we check if a file is
+        // QMDL by inspecting the contents?
+        if name_str.ends_with(".qmdl") {
+            let path = entry.path();
+            let path_str = path.to_str().unwrap();
+            analyze_file(path_str, args.show_skipped).await;
+            if args.pcapify {
+                pcapify(&path.to_path_buf()).await;
             }
-        }
-    } else {
-        let path = args.qmdl_path.to_str().unwrap();
-        analyze_file(args.enable_dummy_analyzer, path, args.show_skipped).await;
-        if args.pcapify {
-            pcapify(&args.qmdl_path).await;
         }
     }
 }
