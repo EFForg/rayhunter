@@ -1,6 +1,6 @@
 <script lang="ts">
     import { AnalysisStatus } from '$lib/analysisManager.svelte';
-    import { EventType } from '$lib/analysis.svelte';
+    import { AnalysisRowType, EventType } from '$lib/analysis.svelte';
     import type { ManifestEntry } from '$lib/manifest.svelte';
     let {
         entry,
@@ -23,17 +23,7 @@
             } else if (typeof entry.analysis_report === 'string') {
                 return entry.analysis_report;
             } else {
-                let num_warnings = 0;
-                for (let row of entry.analysis_report.rows) {
-                    for (let analysis of row.analysis) {
-                        for (let event of analysis.events) {
-                            if (event.type === EventType.Warning) {
-                                num_warnings += 1;
-                            }
-                        }
-                    }
-                }
-                return `${num_warnings} warnings`;
+                return `${entry.analysis_report.statistics.num_warnings} warnings`;
             }
         } else {
             return 'Loading...';
