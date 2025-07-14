@@ -31,7 +31,7 @@ impl Default for AnalyzerConfig {
     }
 }
 
-pub const REPORT_VERSION: u32 = 1;
+pub const REPORT_VERSION: u32 = 2;
 
 /// Qualitative measure of how severe a Warning event type is.
 /// The levels should break down like this:
