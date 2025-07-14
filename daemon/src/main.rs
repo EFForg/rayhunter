@@ -2,7 +2,6 @@ mod analysis;
 mod config;
 mod diag;
 mod display;
-mod dummy_analyzer;
 mod error;
 mod key_input;
 mod pcap;
@@ -231,7 +230,6 @@ async fn run_with_config(
             ui_update_tx.clone(),
             qmdl_store_lock.clone(),
             analysis_tx.clone(),
-            config.enable_dummy_analyzer,
             config.analyzers.clone(),
         );
         info!("Starting UI");
@@ -256,7 +254,6 @@ async fn run_with_config(
         analysis_rx,
         qmdl_store_lock.clone(),
         analysis_status_lock.clone(),
-        config.enable_dummy_analyzer,
         config.analyzers.clone(),
     );
     let should_restart_flag = Arc::new(AtomicBool::new(false));

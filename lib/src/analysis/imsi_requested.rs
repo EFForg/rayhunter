@@ -34,6 +34,10 @@ impl Analyzer for ImsiRequestedAnalyzer {
         Cow::from("Tests whether the ME sends an IMSI Identity Request NAS message")
     }
 
+    fn get_version(&self) -> u32 {
+        1
+    }
+
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
         self.packet_num += 1;
         let payload = match ie {

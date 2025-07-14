@@ -31,6 +31,8 @@ impl Default for AnalyzerConfig {
     }
 }
 
+pub const REPORT_VERSION: u32 = 1;
+
 /// Qualitative measure of how severe a Warning event type is.
 /// The levels should break down like this:
 ///   * Low: if combined with a large number of other Warnings, user should investigate
@@ -81,44 +83,44 @@ pub trait Analyzer {
     /// [Analyzer] updates per message, since it may be run over hundreds or
     /// thousands of them alongside many other [Analyzers](Analyzer).
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event>;
+
+    /// Returns a version number for this Analyzer. This should only ever
+    /// increase in value, and do so whenever substantial changes are made to
+    /// the Analyzer's heuristic.
+    fn get_version(&self) -> u32;
 }
 
 #[derive(Serialize, Debug)]
 pub struct AnalyzerMetadata {
     pub name: String,
     pub description: String,
+    pub version: u32,
 }
 
 #[derive(Serialize, Debug)]
 pub struct ReportMetadata {
     pub analyzers: Vec<AnalyzerMetadata>,
     pub rayhunter: RuntimeMetadata,
-}
-
-#[derive(Serialize, Debug, Clone)]
-pub struct PacketAnalysis {
-    pub timestamp: DateTime<FixedOffset>,
-    pub events: Vec<Option<Event>>,
+    // anytime the format of the report changes, bump this by 1
+    pub report_version: u32,
 }
 
 #[derive(Serialize, Debug)]
 pub struct AnalysisRow {
-    pub timestamp: DateTime<FixedOffset>,
-    pub skipped_message_reasons: Vec<String>,
-    pub analysis: Vec<PacketAnalysis>,
+    pub packet_timestamp: Option<DateTime<FixedOffset>>,
+    pub skipped_message_reason: Option<String>,
+    pub events: Vec<Option<Event>>,
 }
 
 impl AnalysisRow {
     pub fn is_empty(&self) -> bool {
-        self.skipped_message_reasons.is_empty() && self.analysis.is_empty()
+        self.skipped_message_reason.is_none() && !self.contains_warnings()
     }
 
     pub fn contains_warnings(&self) -> bool {
-        for analysis in &self.analysis {
-            for event in analysis.events.iter().flatten() {
-                if matches!(event.event_type, EventType::QualitativeWarning { .. }) {
-                    return true;
-                }
+        for event in self.events.iter().flatten() {
+            if matches!(event.event_type, EventType::QualitativeWarning { .. }) {
+                return true;
             }
         }
         false
@@ -165,17 +167,20 @@ impl Harness {
         self.analyzers.push(analyzer);
     }
 
-    pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> AnalysisRow {
-        let mut row = AnalysisRow {
-            timestamp: chrono::Local::now().fixed_offset(),
-            skipped_message_reasons: Vec::new(),
-            analysis: Vec::new(),
-        };
+    pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> Vec<AnalysisRow> {
+        let mut rows = Vec::new();
         for maybe_qmdl_message in container.into_messages() {
+            rows.push(AnalysisRow {
+                packet_timestamp: None,
+                skipped_message_reason: None,
+                events: Vec::new(),
+            });
+            // unwrap is safe here since we just pushed a value
+            let row = rows.last_mut().unwrap();
             let qmdl_message = match maybe_qmdl_message {
                 Ok(msg) => msg,
                 Err(err) => {
-                    row.skipped_message_reasons.push(format!("{err:?}"));
+                    row.skipped_message_reason = Some(format!("{err:?}"));
                     continue;
                 }
             };
@@ -183,7 +188,7 @@ impl Harness {
             let gsmtap_message = match gsmtap_parser::parse(qmdl_message) {
                 Ok(msg) => msg,
                 Err(err) => {
-                    row.skipped_message_reasons.push(format!("{err:?}"));
+                    row.skipped_message_reason = Some(format!("{err:?}"));
                     continue;
                 }
             };
@@ -191,24 +196,19 @@ impl Harness {
             let Some((timestamp, gsmtap_msg)) = gsmtap_message else {
                 continue;
             };
+            row.packet_timestamp = Some(timestamp.to_datetime());
 
             let element = match InformationElement::try_from(&gsmtap_msg) {
                 Ok(element) => element,
                 Err(err) => {
-                    row.skipped_message_reasons.push(format!("{err:?}"));
+                    row.skipped_message_reason = Some(format!("{err:?}"));
                     continue;
                 }
             };
 
-            let analysis_result = self.analyze_information_element(&element);
-            if analysis_result.iter().any(Option::is_some) {
-                row.analysis.push(PacketAnalysis {
-                    timestamp: timestamp.to_datetime(),
-                    events: analysis_result,
-                });
-            }
+            row.events = self.analyze_information_element(&element);
         }
-        row
+        rows
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
@@ -218,28 +218,13 @@ impl Harness {
             .collect()
     }
 
-    pub fn get_names(&self) -> Vec<Cow<'_, str>> {
-        self.analyzers
-            .iter()
-            .map(|analyzer| analyzer.get_name())
-            .collect()
-    }
-
-    pub fn get_descriptions(&self) -> Vec<Cow<'_, str>> {
-        self.analyzers
-            .iter()
-            .map(|analyzer| analyzer.get_description())
-            .collect()
-    }
-
     pub fn get_metadata(&self) -> ReportMetadata {
-        let names = self.get_names();
-        let descriptions = self.get_descriptions();
         let mut analyzers = Vec::new();
-        for (name, description) in names.iter().zip(descriptions.iter()) {
+        for analyzer in &self.analyzers {
             analyzers.push(AnalyzerMetadata {
-                name: name.to_string(),
-                description: description.to_string(),
+                name: analyzer.get_name().to_string(),
+                description: analyzer.get_description().to_string(),
+                version: analyzer.get_version(),
             });
         }
 
@@ -248,6 +233,7 @@ impl Harness {
         ReportMetadata {
             analyzers,
             rayhunter,
+            report_version: REPORT_VERSION,
         }
     }
 }

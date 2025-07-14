@@ -16,6 +16,10 @@ impl Analyzer for ImsiProvidedAnalyzer {
         Cow::from("Tests whether the UE's IMSI was ever provided to the cell")
     }
 
+    fn get_version(&self) -> u32 {
+        1
+    }
+
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
         let pcch_msg = match ie {
             InformationElement::LTE(lte_ie) => match &**lte_ie {
