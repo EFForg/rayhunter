@@ -200,7 +200,7 @@ impl Harness {
                 return row;
             }
         };
-        return row;
+        row
     }
 
     pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> Vec<AnalysisRow> {
