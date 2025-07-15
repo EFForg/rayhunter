@@ -23,14 +23,14 @@ export class ReportMetadata {
         this.rayhunter = ndjson.rayhunter;
         if (ndjson.report_version === undefined) {
             this.report_version = 1;
-            this.analyzers.forEach(analyzer => {
+            this.analyzers.forEach((analyzer) => {
                 analyzer.version = 1;
             });
         } else {
             this.report_version = ndjson.report_version;
         }
     }
-};
+}
 
 export type RayhunterMetadata = {
     rayhunter_version: string;
@@ -53,7 +53,7 @@ export enum AnalysisRowType {
 export type SkippedPacket = {
     type: AnalysisRowType.Skipped;
     reason: string;
-}
+};
 
 export type PacketAnalysis = {
     type: AnalysisRowType.Analysis;
@@ -97,8 +97,8 @@ function get_event(event_json: any): Event {
                 event_json.event_type.severity === 'High'
                     ? Severity.High
                     : event_json.event_type.severity === 'Medium'
-                        ? Severity.Medium
-                        : Severity.Low,
+                      ? Severity.Medium
+                      : Severity.Low,
             message: event_json.message,
         };
     }
@@ -111,17 +111,16 @@ function get_v1_rows(row_jsons: any[]): AnalysisRow[] {
             rows.push({
                 type: AnalysisRowType.Skipped,
                 reason,
-            })
+            });
         }
         for (const analysis_json of row_json.analysis) {
-            const events: Event[] = analysis_json.events
-                .map((event_json: any): Event | null => {
-                    if (event_json === null) {
-                        return null;
-                    } else {
-                        return get_event(event_json);
-                    }
-                });
+            const events: Event[] = analysis_json.events.map((event_json: any): Event | null => {
+                if (event_json === null) {
+                    return null;
+                } else {
+                    return get_event(event_json);
+                }
+            });
             rows.push({
                 type: AnalysisRowType.Analysis,
                 packet_timestamp: new Date(analysis_json.timestamp),
@@ -141,14 +140,13 @@ function get_v2_rows(row_jsons: any[]): AnalysisRow[] {
                 reason: row_json.skipped_message_reason,
             });
         } else {
-            const events: Event[] = row_json.events
-                .map((event_json: any): Event | null => {
-                    if (event_json === null) {
-                        return null;
-                    } else {
-                        return get_event(event_json);
-                    }
-                });
+            const events: Event[] = row_json.events.map((event_json: any): Event | null => {
+                if (event_json === null) {
+                    return null;
+                } else {
+                    return get_event(event_json);
+                }
+            });
             rows.push({
                 type: AnalysisRowType.Analysis,
                 packet_timestamp: new Date(row_json.packet_timestamp),
@@ -182,7 +180,7 @@ function get_report_stats(rows: AnalysisRow[]): ReportStatistics {
         num_warnings,
         num_informational_logs,
         num_skipped_packets,
-    }
+    };
 }
 
 export function parse_finished_report(report_json: NewlineDeliminatedJson): AnalysisReport {

@@ -6,20 +6,18 @@ const SAMPLE_V1_REPORT_NDJSON: NewlineDeliminatedJson = [
     {
         analyzers: [
             {
-                name: "Analyzer 1",
-                description: "A first analyzer",
+                name: 'Analyzer 1',
+                description: 'A first analyzer',
             },
             {
-                name: "Analyzer 2",
-                description: "A second analyzer",
+                name: 'Analyzer 2',
+                description: 'A second analyzer',
             },
         ],
     },
     {
         timestamp: '2024-10-08T13:25:43.011689003-07:00',
-        skipped_message_reasons: [
-            'The reason why the message was skipped',
-        ],
+        skipped_message_reasons: ['The reason why the message was skipped'],
         analysis: [],
     },
     {
@@ -44,13 +42,13 @@ const SAMPLE_V2_REPORT_NDJSON: NewlineDeliminatedJson = [
     {
         analyzers: [
             {
-                name: "Analyzer 1",
-                description: "A first analyzer",
+                name: 'Analyzer 1',
+                description: 'A first analyzer',
                 version: 2,
             },
             {
-                name: "Analyzer 2",
-                description: "A second analyzer",
+                name: 'Analyzer 2',
+                description: 'A second analyzer',
                 version: 2,
             },
         ],
@@ -78,12 +76,12 @@ describe('analysis report parsing', () => {
         expect(report.metadata.analyzers).toEqual([
             {
                 name: 'Analyzer 1',
-                description: "A first analyzer",
+                description: 'A first analyzer',
                 version: 1,
             },
             {
                 name: 'Analyzer 2',
-                description: "A second analyzer",
+                description: 'A second analyzer',
                 version: 1,
             },
         ]);
@@ -95,14 +93,14 @@ describe('analysis report parsing', () => {
             expect(row.events[0]).toBeNull();
             const event = row.events[1];
             const expected_timestamp = new Date('2024-08-19T03:33:54.318Z');
-            expect(row.packet_timestamp.getTime()).toEqual(expected_timestamp.getTime())
+            expect(row.packet_timestamp.getTime()).toEqual(expected_timestamp.getTime());
             if (event !== null && event.type === EventType.Warning) {
                 expect(event.severity).toEqual(Severity.Low);
             } else {
                 throw 'wrong event type';
             }
         } else {
-            throw 'wrong row type'
+            throw 'wrong row type';
         }
     });
 
@@ -112,12 +110,12 @@ describe('analysis report parsing', () => {
         expect(report.metadata.analyzers).toEqual([
             {
                 name: 'Analyzer 1',
-                description: "A first analyzer",
+                description: 'A first analyzer',
                 version: 2,
             },
             {
                 name: 'Analyzer 2',
-                description: "A second analyzer",
+                description: 'A second analyzer',
                 version: 2,
             },
         ]);
@@ -129,14 +127,14 @@ describe('analysis report parsing', () => {
             expect(row.events[0]).toBeNull();
             const event = row.events[1];
             const expected_timestamp = new Date('2024-08-19T03:33:54.318Z');
-            expect(row.packet_timestamp.getTime()).toEqual(expected_timestamp.getTime())
+            expect(row.packet_timestamp.getTime()).toEqual(expected_timestamp.getTime());
             if (event !== null && event.type === EventType.Warning) {
                 expect(event.severity).toEqual(Severity.Low);
             } else {
                 throw 'wrong event type';
             }
         } else {
-            throw 'wrong row type'
+            throw 'wrong row type';
         }
     });
 });
