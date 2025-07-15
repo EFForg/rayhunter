@@ -1,12 +1,9 @@
 use clap::Parser;
 use futures::TryStreamExt;
-use log::{error, info, warn};
+use log::{error, info, warn, debug};
+use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
-    analysis::analyzer::{AnalyzerConfig, EventType, Harness},
-    diag::DataType,
-    gsmtap_parser,
-    pcap::GsmtapPcapWriter,
-    qmdl::QmdlReader,
+    analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness}, diag::DataType, gsmtap_parser, pcap::GsmtapPcapWriter, qmdl::QmdlReader
 };
 use std::{collections::HashMap, future, path::PathBuf, pin::pin};
 use tokio::fs::File;
@@ -28,7 +25,90 @@ struct Args {
     verbose: bool,
 }
 
-async fn analyze_file(qmdl_path: &str, show_skipped: bool) {
+#[derive(Default)]
+struct Report {
+    skipped_reasons: HashMap<String, u32>,
+    total_messages: u32,
+    warnings: u32,
+    skipped: u32,
+    file_path: String,
+}
+
+impl Report {
+    fn new(file_path: &str) -> Self {
+        let mut report = Report::default();
+        report.file_path = file_path.to_string();
+        report
+    }
+
+    fn process_row(&mut self, row: AnalysisRow) {
+        self.total_messages += 1;
+        if let Some(reason) = row.skipped_message_reason {
+            *self.skipped_reasons.entry(reason).or_insert(0) += 1;
+            self.skipped += 1;
+            return;
+        }
+        for maybe_event in row.events {
+            let Some(event) = maybe_event else { continue };
+            let Some(timestamp) = row.packet_timestamp else { continue };
+            match event.event_type {
+                EventType::Informational => {
+                    info!(
+                        "{}: INFO - {} {}",
+                        self.file_path, timestamp, event.message,
+                    );
+                }
+                EventType::QualitativeWarning { severity } => {
+                    warn!(
+                        "{}: WARNING (Severity: {:?}) - {} {}",
+                        self.file_path, severity, timestamp, event.message,
+                    );
+                    self.warnings += 1;
+                }
+            }
+        }
+    }
+
+    fn print_summary(&self, show_skipped: bool) {
+        if show_skipped && self.skipped > 0 {
+            info!("{}: messages skipped:", self.file_path);
+            for (reason, count) in self.skipped_reasons.iter() {
+                info!("    - {count}: \"{reason}\"");
+            }
+        }
+        info!(
+            "{}: {} messages analyzed, {} warnings, {} messages skipped",
+            self.file_path,
+            self.total_messages,
+            self.warnings,
+            self.skipped
+        );
+    }
+}
+
+async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
+    let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
+    let pcap_file = &mut File::open(&pcap_path)
+        .await
+        .expect("failed to open file");
+    let mut pcap_reader = PcapNgReader::new(pcap_file)
+        .await
+        .expect("failed to read PCAP file");
+    let mut report = Report::new(pcap_path);
+    while let Some(Ok(block)) = pcap_reader.next_block().await {
+        let row = match block {
+            Block::EnhancedPacket(packet) => harness.analyze_pcap_packet(packet),
+            other => {
+                debug!("{pcap_path}: skipping pcap packet {other:?}");
+                continue;
+            },
+        };
+        report.process_row(row);
+    }
+    report.print_summary(show_skipped);
+}
+
+async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
     let file_size = qmdl_file
@@ -42,52 +122,17 @@ async fn analyze_file(qmdl_path: &str, show_skipped: bool) {
             .as_stream()
             .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
     );
-    let mut skipped_reasons: HashMap<String, i32> = HashMap::new();
-    let mut total_messages = 0;
-    let mut warnings = 0;
-    let mut skipped = 0;
+    let mut report = Report::new(qmdl_path);
     while let Some(container) = qmdl_stream
         .try_next()
         .await
         .expect("failed getting QMDL container")
     {
         for row in harness.analyze_qmdl_messages(container) {
-            total_messages += 1;
-            if let Some(reason) = row.skipped_message_reason {
-                *skipped_reasons.entry(reason).or_insert(0) += 1;
-                skipped += 1;
-                continue;
-            }
-            for maybe_event in row.events {
-                let Some(event) = maybe_event else { continue };
-                let Some(timestamp) = row.packet_timestamp else { continue };
-                match event.event_type {
-                    EventType::Informational => {
-                        info!(
-                            "{}: INFO - {} {}",
-                            qmdl_path, timestamp, event.message,
-                        );
-                    }
-                    EventType::QualitativeWarning { severity } => {
-                        warn!(
-                            "{}: WARNING (Severity: {:?}) - {} {}",
-                            qmdl_path, severity, timestamp, event.message,
-                        );
-                        warnings += 1;
-                    }
-                }
-            }
+            report.process_row(row);
         }
     }
-    if show_skipped && skipped > 0 {
-        info!("{qmdl_path}: messages skipped:");
-        for (reason, count) in skipped_reasons.iter() {
-            info!("    - {count}: \"{reason}\"");
-        }
-    }
-    info!(
-        "{qmdl_path}: {total_messages} messages analyzed, {warnings} warnings, {skipped} messages skipped"
-    );
+    report.print_summary(show_skipped);
 }
 
 async fn pcapify(qmdl_path: &PathBuf) {
@@ -136,11 +181,11 @@ async fn main() {
         .with_module_level("asn1_codecs", log::LevelFilter::Error)
         .init()
         .unwrap();
-    info!("Analyzers:");
 
     let harness = Harness::new_with_config(&AnalyzerConfig::default());
+    info!("Analyzers:");
     for analyzer in harness.get_metadata().analyzers {
-        info!("    - {}: {} (v{})", analyzer.name, analyzer.description, analyzer.version);
+        info!("    - {} (v{}): {}", analyzer.name, analyzer.description, analyzer.version);
     }
 
     for maybe_entry in WalkDir::new(&args.path) {
@@ -150,15 +195,18 @@ async fn main() {
         };
         let name = entry.file_name();
         let name_str = name.to_str().unwrap();
+        let path = entry.path();
+        let path_str = path.to_str().unwrap();
         // instead of relying on the QMDL extension, can we check if a file is
         // QMDL by inspecting the contents?
         if name_str.ends_with(".qmdl") {
-            let path = entry.path();
-            let path_str = path.to_str().unwrap();
-            analyze_file(path_str, args.show_skipped).await;
+            analyze_qmdl(path_str, args.show_skipped).await;
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
+        } else if name_str.ends_with(".pcap") {
+            // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
+            analyze_pcap(path_str, args.show_skipped).await;
         }
     }
 }

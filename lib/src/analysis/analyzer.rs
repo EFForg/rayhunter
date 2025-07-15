@@ -1,7 +1,9 @@
 use chrono::{DateTime, FixedOffset};
+use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
+use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType};
 use crate::util::RuntimeMetadata;
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
@@ -167,6 +169,39 @@ impl Harness {
         self.analyzers.push(analyzer);
     }
 
+    pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {
+        let epoch = DateTime::parse_from_rfc3339("1980-01-06T00:00:00-00:00").unwrap();
+        let mut row = AnalysisRow {
+            packet_timestamp: Some(epoch + packet.timestamp),
+            skipped_message_reason: None,
+            events: Vec::new(),
+        };
+        let gsmtap_offset = 20 + 8;
+        let gsmtap_data = &packet.data[gsmtap_offset..];
+        // the type and subtype are at byte offsets 3 and 13, respectively
+        let gsmtap_header = match GsmtapType::new(gsmtap_data[2], gsmtap_data[12]) {
+            Ok(gsmtap_type) => GsmtapHeader::new(gsmtap_type),
+            Err(err) => {
+                row.skipped_message_reason = Some(format!("failed to read GsmtapHeader: {err:?}"));
+                return row;
+            },
+        };
+        let packet_offset = gsmtap_offset + 16;
+        let packet_data = &packet.data[packet_offset..];
+        let gsmtap_message = GsmtapMessage {
+            header: gsmtap_header,
+            payload: packet_data.to_vec(),
+        };
+        row.events = match InformationElement::try_from(&gsmtap_message) {
+            Ok(element) => self.analyze_information_element(&element),
+            Err(err) => {
+                row.skipped_message_reason = Some(format!("failed to convert gsmtap message to IE: {err:?}"));
+                return row;
+            },
+        };
+        return row;
+    }
+
     pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> Vec<AnalysisRow> {
         let mut rows = Vec::new();
         for maybe_qmdl_message in container.into_messages() {
@@ -211,7 +246,7 @@ impl Harness {
         rows
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
+    pub fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
         self.analyzers
             .iter_mut()
             .map(|analyzer| analyzer.analyze_information_element(ie))
