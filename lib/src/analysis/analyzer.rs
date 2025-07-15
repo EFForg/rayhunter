@@ -184,7 +184,7 @@ impl Harness {
             Err(err) => {
                 row.skipped_message_reason = Some(format!("failed to read GsmtapHeader: {err:?}"));
                 return row;
-            },
+            }
         };
         let packet_offset = gsmtap_offset + 16;
         let packet_data = &packet.data[packet_offset..];
@@ -195,9 +195,10 @@ impl Harness {
         row.events = match InformationElement::try_from(&gsmtap_message) {
             Ok(element) => self.analyze_information_element(&element),
             Err(err) => {
-                row.skipped_message_reason = Some(format!("failed to convert gsmtap message to IE: {err:?}"));
+                row.skipped_message_reason =
+                    Some(format!("failed to convert gsmtap message to IE: {err:?}"));
                 return row;
-            },
+            }
         };
         return row;
     }

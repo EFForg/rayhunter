@@ -34,12 +34,8 @@ pub struct AnalysisWriter {
 // lets us simply append new rows to the end without parsing the entire JSON
 // object beforehand.
 impl AnalysisWriter {
-    pub async fn new(
-        file: File,
-        analyzer_config: &AnalyzerConfig,
-    ) -> Result<Self, std::io::Error> {
+    pub async fn new(file: File, analyzer_config: &AnalyzerConfig) -> Result<Self, std::io::Error> {
         let harness = Harness::new_with_config(analyzer_config);
-
 
         let mut result = Self {
             writer: BufWriter::new(file),
@@ -154,10 +150,9 @@ async fn perform_analysis(
         (analysis_file, qmdl_file, entry_index)
     };
 
-    let mut analysis_writer =
-        AnalysisWriter::new(analysis_file, analyzer_config)
-            .await
-            .map_err(|e| format!("{e:?}"))?;
+    let mut analysis_writer = AnalysisWriter::new(analysis_file, analyzer_config)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
     let file_size = qmdl_file
         .metadata()
         .await
@@ -211,12 +206,8 @@ pub fn run_analysis_thread(
                     let count = queued_len(analysis_status_lock.clone()).await;
                     for _ in 0..count {
                         let name = dequeue_to_running(analysis_status_lock.clone()).await;
-                        if let Err(err) = perform_analysis(
-                            &name,
-                            qmdl_store_lock.clone(),
-                            &analyzer_config,
-                        )
-                        .await
+                        if let Err(err) =
+                            perform_analysis(&name, qmdl_store_lock.clone(), &analyzer_config).await
                         {
                             error!("failed to analyze {name}: {err}");
                         }

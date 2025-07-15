@@ -1,9 +1,13 @@
 use clap::Parser;
 use futures::TryStreamExt;
-use log::{error, info, warn, debug};
+use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
-    analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness}, diag::DataType, gsmtap_parser, pcap::GsmtapPcapWriter, qmdl::QmdlReader
+    analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness},
+    diag::DataType,
+    gsmtap_parser,
+    pcap::GsmtapPcapWriter,
+    qmdl::QmdlReader,
 };
 use std::{collections::HashMap, future, path::PathBuf, pin::pin};
 use tokio::fs::File;
@@ -50,13 +54,12 @@ impl Report {
         }
         for maybe_event in row.events {
             let Some(event) = maybe_event else { continue };
-            let Some(timestamp) = row.packet_timestamp else { continue };
+            let Some(timestamp) = row.packet_timestamp else {
+                continue;
+            };
             match event.event_type {
                 EventType::Informational => {
-                    info!(
-                        "{}: INFO - {} {}",
-                        self.file_path, timestamp, event.message,
-                    );
+                    info!("{}: INFO - {} {}", self.file_path, timestamp, event.message,);
                 }
                 EventType::QualitativeWarning { severity } => {
                     warn!(
@@ -78,19 +81,14 @@ impl Report {
         }
         info!(
             "{}: {} messages analyzed, {} warnings, {} messages skipped",
-            self.file_path,
-            self.total_messages,
-            self.warnings,
-            self.skipped
+            self.file_path, self.total_messages, self.warnings, self.skipped
         );
     }
 }
 
 async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
-    let pcap_file = &mut File::open(&pcap_path)
-        .await
-        .expect("failed to open file");
+    let pcap_file = &mut File::open(&pcap_path).await.expect("failed to open file");
     let mut pcap_reader = PcapNgReader::new(pcap_file)
         .await
         .expect("failed to read PCAP file");
@@ -101,7 +99,7 @@ async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
             other => {
                 debug!("{pcap_path}: skipping pcap packet {other:?}");
                 continue;
-            },
+            }
         };
         report.process_row(row);
     }
@@ -185,7 +183,10 @@ async fn main() {
     let harness = Harness::new_with_config(&AnalyzerConfig::default());
     info!("Analyzers:");
     for analyzer in harness.get_metadata().analyzers {
-        info!("    - {} (v{}): {}", analyzer.name, analyzer.description, analyzer.version);
+        info!(
+            "    - {} (v{}): {}",
+            analyzer.name, analyzer.description, analyzer.version
+        );
     }
 
     for maybe_entry in WalkDir::new(&args.path) {
