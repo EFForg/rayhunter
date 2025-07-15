@@ -14,9 +14,6 @@ pub struct Config {
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
     pub analyzers: AnalyzerConfig,
-
-    // deprecated
-    pub enable_dummy_analyzer: bool,
 }
 
 impl Default for Config {
@@ -29,9 +26,6 @@ impl Default for Config {
             colorblind_mode: false,
             key_input_mode: 0,
             analyzers: AnalyzerConfig::default(),
-
-            // deprecated
-            enable_dummy_analyzer: false,
         }
     }
 }
