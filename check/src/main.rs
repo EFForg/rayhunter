@@ -40,9 +40,10 @@ struct Report {
 
 impl Report {
     fn new(file_path: &str) -> Self {
-        let mut report = Report::default();
-        report.file_path = file_path.to_string();
-        report
+        Report {
+            file_path: file_path.to_string(),
+            ..Default::default()
+        }
     }
 
     fn process_row(&mut self, row: AnalysisRow) {
@@ -191,7 +192,7 @@ async fn main() {
 
     for maybe_entry in WalkDir::new(&args.path) {
         let Ok(entry) = maybe_entry else {
-            error!("failed to open dir entry {:?}", maybe_entry);
+            error!("failed to open dir entry {maybe_entry:?}");
             continue;
         };
         let name = entry.file_name();
