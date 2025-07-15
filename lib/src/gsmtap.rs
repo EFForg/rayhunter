@@ -1,6 +1,7 @@
 //! The spec for GSMTAP is here: https://github.com/osmocom/libosmocore/blob/master/include/osmocom/core/gsmtap.h
 
 use deku::prelude::*;
+use num_enum::TryFromPrimitive;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum GsmtapType {
@@ -28,14 +29,14 @@ pub enum GsmtapType {
 
 // based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/src/scat/parsers/qualcomm/diagltelogparser.py#L1337
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, TryFromPrimitive)]
 pub enum LteNasSubtype {
     Plain = 0,
     Secure = 1,
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, TryFromPrimitive)]
 pub enum UmSubtype {
     Unknown = 0x00,
     Bcch = 0x01,
@@ -56,7 +57,7 @@ pub enum UmSubtype {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, TryFromPrimitive)]
 pub enum UmtsRrcSubtype {
     DlDcch = 0,
     UlDcch = 1,
@@ -123,7 +124,7 @@ pub enum UmtsRrcSubtype {
 }
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, TryFromPrimitive)]
 pub enum LteRrcSubtype {
     DlCcch = 0,
     DlDcch = 1,
@@ -150,7 +151,54 @@ pub enum LteRrcSubtype {
     ScMcchNb = 22,
 }
 
+#[derive(Debug)]
+pub enum GsmtapTypeError {
+    InvalidTypeSubtypeCombo(u8, u8),
+}
+
 impl GsmtapType {
+    pub fn new(gsmtap_type: u8, gsmtap_subtype: u8) -> Result<Self, GsmtapTypeError> {
+        let maybe_result = match gsmtap_type {
+            0x01 => match UmSubtype::try_from(gsmtap_subtype) {
+                Ok(subtype) => Some(GsmtapType::Um(subtype)),
+                _ => None,
+            },
+            0x02 => Some(GsmtapType::Abis),
+            0x03 => Some(GsmtapType::UmBurst),
+            0x04 => Some(GsmtapType::SIM),
+            0x05 => Some(GsmtapType::TetraI1),
+            0x06 => Some(GsmtapType::TetraI1Burst),
+            0x07 => Some(GsmtapType::WmxBurst),
+            0x08 => Some(GsmtapType::GbLlc),
+            0x09 => Some(GsmtapType::GbSndcp),
+            0x0a => Some(GsmtapType::Gmr1Um),
+            0x0b => Some(GsmtapType::UmtsRlcMac),
+            0x0c => match UmtsRrcSubtype::try_from(gsmtap_subtype) {
+                Ok(subtype) => Some(GsmtapType::UmtsRrc(subtype)),
+                _ => None,
+            },
+            0x0d => match LteRrcSubtype::try_from(gsmtap_subtype) {
+                Ok(subtype) => Some(GsmtapType::LteRrc(subtype)),
+                _ => None,
+            },
+            0x0e => Some(GsmtapType::LteMac),
+            0x0f => Some(GsmtapType::LteMacFramed),
+            0x10 => Some(GsmtapType::OsmocoreLog),
+            0x11 => Some(GsmtapType::QcDiag),
+            0x12 => match LteNasSubtype::try_from(gsmtap_subtype) {
+                Ok(subtype) => Some(GsmtapType::LteNas(subtype)),
+                _ => None,
+            },
+            0x13 => Some(GsmtapType::E1T1),
+            0x14 => Some(GsmtapType::GsmRlp),
+            _ => None,
+        };
+        match maybe_result {
+            Some(result) => Ok(result),
+            None => Err(GsmtapTypeError::InvalidTypeSubtypeCombo(gsmtap_type, gsmtap_subtype)),
+        }
+    }
+
     pub fn get_type(&self) -> u8 {
         match self {
             GsmtapType::Um(_) => 0x01,

@@ -293,7 +293,7 @@ impl DiagDevice {
 // TPLINK M7350 v5 source code can be downloaded at https://www.tp-link.com/de/support/gpl-code/?app=omada
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-struct diag_logging_mode_param_t {
+struct DiagLoggingModeParam {
     req_mode: u32,
     peripheral_mask: u32,
     mode_param: u8,
@@ -303,16 +303,16 @@ struct diag_logging_mode_param_t {
 fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
     unsafe {
         if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
-            let try_params: &[diag_logging_mode_param_t] = &[
+            let try_params: &[DiagLoggingModeParam] = &[
                 // tplink M7350 HW revision 3-8 need this mode
                 #[cfg(feature = "tplink")]
-                diag_logging_mode_param_t {
+                DiagLoggingModeParam {
                     req_mode: mode,
                     peripheral_mask: 0,
                     mode_param: 1,
                 },
                 // tplink M7350 HW revision v9 requires the same parameters as orbic
-                diag_logging_mode_param_t {
+                DiagLoggingModeParam {
                     req_mode: mode,
                     peripheral_mask: u32::MAX,
                     mode_param: 0,
@@ -326,8 +326,8 @@ fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
                 ret = libc::ioctl(
                     fd,
                     DIAG_IOCTL_SWITCH_LOGGING,
-                    &mut params as *mut diag_logging_mode_param_t,
-                    std::mem::size_of::<diag_logging_mode_param_t>(),
+                    &mut params as *mut DiagLoggingModeParam,
+                    std::mem::size_of::<DiagLoggingModeParam>(),
                     0,
                     0,
                     0,

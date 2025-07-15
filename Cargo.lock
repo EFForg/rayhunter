@@ -1928,6 +1928,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_enum"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a973b4e44ce6cad84ce69d797acf9a044532e4184c4f267913d1b546a0727b7a"
+dependencies = [
+ "num_enum_derive",
+ "rustversion",
+]
+
+[[package]]
+name = "num_enum_derive"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77e878c846a8abae00dd069496dbe8751b16ac1c3d6bd2a7283a938e8228f90d"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "num_threads"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2356,6 +2378,7 @@ dependencies = [
  "libc",
  "log",
  "nix",
+ "num_enum",
  "pcap-file-tokio",
  "pycrate-rs",
  "serde",
@@ -2371,6 +2394,7 @@ dependencies = [
  "clap",
  "futures",
  "log",
+ "pcap-file-tokio",
  "rayhunter",
  "simple_logger",
  "tokio",
