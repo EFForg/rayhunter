@@ -1,6 +1,5 @@
 <script lang="ts">
     import { AnalysisStatus } from '$lib/analysisManager.svelte';
-    import { AnalysisRowType, EventType } from '$lib/analysis.svelte';
     import type { ManifestEntry } from '$lib/manifest.svelte';
     let {
         entry,

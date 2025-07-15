@@ -191,7 +191,7 @@ export function parse_finished_report(report_json: NewlineDeliminatedJson): Anal
     } else {
         rows = get_v2_rows(report_json.slice(1));
     }
-    let statistics = get_report_stats(rows);
+    const statistics = get_report_stats(rows);
     return {
         statistics,
         metadata,
