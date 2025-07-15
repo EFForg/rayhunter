@@ -23,8 +23,11 @@ export class ReportMetadata {
         this.rayhunter = ndjson.rayhunter;
         if (ndjson.report_version === undefined) {
             this.report_version = 1;
+            // we consider our legacy (unversioned) heuristics to be v0 --
+            // this'll let us clearly differentiate some known false-positive
+            // results from the pre-versioned era from v1 heuristics
             this.analyzers.forEach((analyzer) => {
-                analyzer.version = 1;
+                analyzer.version = 0;
             });
         } else {
             this.report_version = ndjson.report_version;

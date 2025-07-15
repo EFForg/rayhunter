@@ -77,12 +77,12 @@ describe('analysis report parsing', () => {
             {
                 name: 'Analyzer 1',
                 description: 'A first analyzer',
-                version: 1,
+                version: 0,
             },
             {
                 name: 'Analyzer 2',
                 description: 'A second analyzer',
-                version: 1,
+                version: 0,
             },
         ]);
         expect(report.rows).toHaveLength(2);
