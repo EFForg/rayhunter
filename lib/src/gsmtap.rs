@@ -195,7 +195,10 @@ impl GsmtapType {
         };
         match maybe_result {
             Some(result) => Ok(result),
-            None => Err(GsmtapTypeError::InvalidTypeSubtypeCombo(gsmtap_type, gsmtap_subtype)),
+            None => Err(GsmtapTypeError::InvalidTypeSubtypeCombo(
+                gsmtap_type,
+                gsmtap_subtype,
+            )),
         }
     }
 
