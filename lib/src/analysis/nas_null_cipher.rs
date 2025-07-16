@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
+use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 use pycrate_rs::nas::generated::emm::emm_security_mode_command::NASSecAlgoCiphAlgo::EPSEncryptionAlgorithmEEA0Null;
-use pycrate_rs::nas::NASMessage;
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
@@ -32,6 +32,10 @@ impl Analyzer for NasNullCipherAnalyzer {
         Cow::from(
             "Tests whether the MME requests to use a null cipher in the security mode command",
         )
+    }
+
+    fn get_version(&self) -> u32 {
+        1
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
