@@ -6,6 +6,7 @@ export interface AnalyzerConfig {
     connection_redirect_2g_downgrade: boolean;
     lte_sib6_and_7_downgrade: boolean;
     null_cipher: boolean;
+    nas_null_cipher: boolean;
 }
 
 export interface Config {
