@@ -7,7 +7,7 @@ use axum::{
     http::StatusCode,
 };
 use futures::TryStreamExt;
-use log::{debug, error, info};
+use log::{error, info};
 use rayhunter::analysis::analyzer::{AnalyzerConfig, Harness};
 use rayhunter::diag::{DataType, MessagesContainer};
 use rayhunter::qmdl::QmdlReader;
@@ -24,7 +24,6 @@ use crate::server::ServerState;
 pub struct AnalysisWriter {
     writer: BufWriter<File>,
     harness: Harness,
-    bytes_written: usize,
 }
 
 // We write our analysis results to a file immediately to minimize the amount of
@@ -39,7 +38,6 @@ impl AnalysisWriter {
 
         let mut result = Self {
             writer: BufWriter::new(file),
-            bytes_written: 0,
             harness,
         };
         let metadata = result.harness.get_metadata();
@@ -48,12 +46,11 @@ impl AnalysisWriter {
     }
 
     // Runs the analysis harness on the given container, serializing the results
-    // to the analysis file, returning the file's new length, and whether any
-    // warnings were detected
+    // to the analysis file, returning the whether any warnings were detected
     pub async fn analyze(
         &mut self,
         container: MessagesContainer,
-    ) -> Result<(usize, bool), std::io::Error> {
+    ) -> Result<bool, std::io::Error> {
         let mut warning_detected = false;
         for row in self.harness.analyze_qmdl_messages(container) {
             if !row.is_empty() {
@@ -61,13 +58,12 @@ impl AnalysisWriter {
             }
             warning_detected |= row.contains_warnings();
         }
-        Ok((self.bytes_written, warning_detected))
+        Ok(warning_detected)
     }
 
     async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
         let mut value_str = serde_json::to_string(value).unwrap();
         value_str.push('\n');
-        self.bytes_written += value_str.len();
         self.writer.write_all(value_str.as_bytes()).await?;
         self.writer.flush().await?;
         Ok(())
@@ -133,7 +129,7 @@ async fn perform_analysis(
     analyzer_config: &AnalyzerConfig,
 ) -> Result<(), String> {
     info!("Opening QMDL and analysis file for {name}...");
-    let (analysis_file, qmdl_file, entry_index) = {
+    let (analysis_file, qmdl_file) = {
         let mut qmdl_store = qmdl_store_lock.write().await;
         let (entry_index, _) = qmdl_store
             .entry_for_name(name)
@@ -147,7 +143,7 @@ async fn perform_analysis(
             .await
             .map_err(|e| format!("{e:?}"))?;
 
-        (analysis_file, qmdl_file, entry_index)
+        (analysis_file, qmdl_file)
     };
 
     let mut analysis_writer = AnalysisWriter::new(analysis_file, analyzer_config)
@@ -171,14 +167,8 @@ async fn perform_analysis(
         .await
         .expect("failed getting QMDL container")
     {
-        let (size_bytes, _) = analysis_writer
+        let _ = analysis_writer
             .analyze(container)
-            .await
-            .map_err(|e| format!("{e:?}"))?;
-        debug!("{name} analysis: {size_bytes} bytes written");
-        let mut qmdl_store = qmdl_store_lock.write().await;
-        qmdl_store
-            .update_entry_analysis_size(entry_index, size_bytes)
             .await
             .map_err(|e| format!("{e:?}"))?;
     }

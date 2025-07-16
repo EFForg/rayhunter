@@ -130,18 +130,13 @@ pub fn run_diag_read_thread(
                             }
 
                             if let Some(analysis_writer) = maybe_analysis_writer.as_mut() {
-                                let analysis_output = analysis_writer.analyze(container).await
+                                let heuristic_warning = analysis_writer.analyze(container).await
                                     .expect("failed to analyze container");
-                                let (analysis_file_len, heuristic_warning) = analysis_output;
                                 if heuristic_warning {
                                     info!("a heuristic triggered on this run!");
                                     ui_update_sender.send(display::DisplayState::WarningDetected).await
                                         .expect("couldn't send ui update message: {}");
                                 }
-                                let mut qmdl_store = qmdl_store_lock.write().await;
-                                let index = qmdl_store.current_entry.expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
-                                qmdl_store.update_entry_analysis_size(index, analysis_file_len).await
-                                    .expect("failed to update analysis file size");
                             }
                         },
                         Err(err) => {
