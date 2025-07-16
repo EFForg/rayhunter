@@ -1,5 +1,6 @@
 use std::pin::pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -20,6 +21,7 @@ use tokio_util::task::TaskTracker;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisWriter};
 use crate::display;
+use crate::notifications::Notification;
 use crate::qmdl_store::{RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
 
@@ -39,6 +41,7 @@ pub fn run_diag_read_thread(
     analysis_sender: Sender<AnalysisCtrlMessage>,
     enable_dummy_analyzer: bool,
     analyzer_config: AnalyzerConfig,
+    notification_channel: tokio::sync::mpsc::Sender<Notification>,
 ) {
     task_tracker.spawn(async move {
         let (initial_qmdl_file, initial_analysis_file) = qmdl_store_lock.write().await.new_entry().await.expect("failed creating QMDL file entry");
@@ -46,6 +49,7 @@ pub fn run_diag_read_thread(
         let mut diag_stream = pin!(dev.as_stream().into_stream());
         let mut maybe_analysis_writer = Some(AnalysisWriter::new(initial_analysis_file, enable_dummy_analyzer, &analyzer_config).await
             .expect("failed to create analysis writer"));
+
         loop {
             tokio::select! {
                 msg = qmdl_file_rx.recv() => {
@@ -131,13 +135,18 @@ pub fn run_diag_read_thread(
                             }
 
                             if let Some(analysis_writer) = maybe_analysis_writer.as_mut() {
-                                let analysis_output = analysis_writer.analyze(container).await
+                                let (analysis_file_len, heuristic_warning) = analysis_writer.analyze(container).await
                                     .expect("failed to analyze container");
-                                let (analysis_file_len, heuristic_warning) = analysis_output;
                                 if heuristic_warning {
                                     info!("a heuristic triggered on this run!");
                                     ui_update_sender.send(display::DisplayState::WarningDetected).await
                                         .expect("couldn't send ui update message: {}");
+                                    notification_channel.send(
+                                        Notification::new(
+                                            "heuristic-warning".to_string(),
+                                            "New warning triggered!".to_string(),
+                                            Some(Duration::from_secs(60*5)))
+                                        ).await.expect("Failed to send to notification channel");
                                 }
                                 let mut qmdl_store = qmdl_store_lock.write().await;
                                 let index = qmdl_store.current_entry.expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
