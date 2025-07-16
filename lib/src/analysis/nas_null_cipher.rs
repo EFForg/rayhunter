@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
+use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 use pycrate_rs::nas::generated::emm::emm_security_mode_command::NASSecAlgoCiphAlgo::EPSEncryptionAlgorithmEEA0Null;
-use pycrate_rs::nas::NASMessage;
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
