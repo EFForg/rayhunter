@@ -34,8 +34,6 @@ use diag::{
 use log::{error, info};
 use qmdl_store::RecordingStoreError;
 use rayhunter::diag_device::DiagDevice;
-use std::path::Path;
-use tokio::fs;
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::mpsc::{self, Sender};
@@ -94,7 +92,7 @@ async fn server_shutdown_signal(server_shutdown_rx: oneshot::Receiver<()>) {
 
 // Loads a RecordingStore if one exists, and if not, only create one if we're
 // not in debug mode. If we fail to parse the manifest AND we're not in debug
-// mode, try to recover by making a new (empty) manifest in the same directory.
+// mode, try to recover the manifest from the existing QMDL files
 async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, RayhunterError> {
     let store_exists = RecordingStore::exists(&config.qmdl_store_path).await?;
     if config.debug_mode {
@@ -110,28 +108,8 @@ async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, Rayh
             Ok(store) => Ok(store),
             Err(RecordingStoreError::ParseManifestError(err)) => {
                 error!("failed to parse QMDL manifest: {err}");
-                info!("creating new empty manifest...");
-                let mut recording_store = RecordingStore::create(&config.qmdl_store_path).await?;
-                info!("parsing existing qmdl files into recording store...");
-                let path = Path::new(&config.qmdl_store_path);
-                let mut entries = fs::read_dir(path).await?;
-
-                // We might want to sort these newest to oldest so we don't have entries in manifest.toml in random order
-                while let Some(entry) = entries.next_entry().await? {
-                    let file_name = entry.file_name();
-                    let file_name_str = match file_name.to_str() {
-                        Some(s) => s,
-                        None => continue, // skip non-UTF-8 names
-                    };
-
-                    if file_name_str.ends_with(".qmdl") {
-                        let name = file_name_str.trim_end_matches(".qmdl");
-                        info!("making entry for {}", name);
-                        recording_store.new_entry_from_existing(name.to_string()).await?;
-                    }
-                }
-
-                Ok(recording_store)
+                info!("recovering manifest from existing QMDL files...");
+                Ok(RecordingStore::recover(&config.qmdl_store_path).await?)
             }
             Err(err) => Err(err.into()),
         }
