@@ -51,7 +51,6 @@ pub struct ManifestEntry {
     pub start_time: DateTime<Local>,
     pub last_message_time: Option<DateTime<Local>>,
     pub qmdl_size_bytes: usize,
-    pub analysis_size_bytes: usize,
     pub rayhunter_version: Option<String>,
     pub system_os: Option<String>,
     pub arch: Option<String>,
@@ -66,13 +65,11 @@ impl ManifestEntry {
             start_time: now,
             last_message_time: None,
             qmdl_size_bytes: 0,
-            analysis_size_bytes: 0,
             rayhunter_version: Some(metadata.rayhunter_version),
             system_os: Some(metadata.system_os),
             arch: Some(metadata.arch),
         }
     }
-
 
     pub fn get_qmdl_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         let mut filepath = path.as_ref().join(&self.name);
@@ -239,7 +236,6 @@ impl RecordingStore {
             .open(entry.get_analysis_filepath(&self.path))
             .await
             .map_err(RecordingStoreError::ReadFileError)?;
-        self.update_entry_analysis_size(entry_index, 0).await?;
         Ok(file)
     }
 
@@ -262,16 +258,6 @@ impl RecordingStore {
     ) -> Result<(), RecordingStoreError> {
         self.manifest.entries[entry_index].qmdl_size_bytes = size_bytes;
         self.manifest.entries[entry_index].last_message_time = Some(Local::now());
-        self.write_manifest().await
-    }
-
-    // Sets the given entry's analysis file size
-    pub async fn update_entry_analysis_size(
-        &mut self,
-        entry_index: usize,
-        size_bytes: usize,
-    ) -> Result<(), RecordingStoreError> {
-        self.manifest.entries[entry_index].analysis_size_bytes = size_bytes;
         self.write_manifest().await
     }
 
