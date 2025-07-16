@@ -19,5 +19,5 @@ Rayhunter includes several analyzers to detect potential IMSI catcher activity. 
   See https://en.wikipedia.org/wiki/2G#Past_2G_networks for information about your country. 
 - **LTE SIB6/7 Downgrade**: Tests for LTE cells broadcasting a SIB type 6 and 7
   which include 2G/3G frequencies with higher priorities
-- **Null Cipher**: Tests whether the cell suggests using a null cipher (EEA0).
+- **Null Cipher**: Tests whether the cell suggests using a null cipher (EEA0) in the RRC layer.
 - **NAS Null Cipher**: Tests whether the security mode command at the NAS layer suggests using a null cipher (EEA0). This would usually only happen after a UE has successfully authenticated with the MME but still it shouldn't happen at all, this could be indicative of an attack though using SS7 to get key material from the HLR of the UE for a succesful authentication. It could also indicate an IMSI catcher which is connected to the mobile network MME and HLR through cooperation between government and telco. Or it could be a false positive if the telco is intending to use null ciphers (if encryption is illegal or something.)
