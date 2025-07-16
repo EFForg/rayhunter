@@ -2,7 +2,6 @@ pub mod analyzer;
 pub mod connection_redirect_downgrade;
 pub mod imsi_provided;
 pub mod imsi_requested;
-pub mod imsi_requested_v2;
 pub mod information_element;
 pub mod nas_null_cipher;
 pub mod null_cipher;

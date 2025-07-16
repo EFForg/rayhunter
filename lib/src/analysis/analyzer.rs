@@ -9,7 +9,7 @@ use crate::{diag::MessagesContainer, gsmtap_parser};
 
 use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
-    imsi_requested_v2::ImsiRequestedAnalyzer, information_element::InformationElement,
+    imsi_requested::ImsiRequestedAnalyzer, information_element::InformationElement,
     nas_null_cipher::NasNullCipherAnalyzer, null_cipher::NullCipherAnalyzer,
     priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
 };
