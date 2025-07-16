@@ -45,4 +45,4 @@ jobs:
       - name: Create release
         run: |
           version=$(grep ^version lib/Cargo.toml | cut -d' ' -f3 | tr -d '"')
-          gh release create --generate-notes -t "Rayhunter v$version" "v$version" rayhunter-v${version}/rayhunter-*
+          gh release create --generate-notes -t "Rayhunter v$version" "v$version" rayhunter-v${version}-*/rayhunter-v${version}*.zi*
