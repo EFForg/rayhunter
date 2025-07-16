@@ -15,9 +15,7 @@ use crate::config;
 use crate::display::DisplayState;
 
 macro_rules! led {
-    ($l:expr) => {{
-        format!("/sys/class/leds/led:{}/blink", $l)
-    }};
+    ($l:expr) => {{ format!("/sys/class/leds/led:{}/blink", $l) }};
 }
 
 fn start_blinking(path: String) {
