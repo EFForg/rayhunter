@@ -30,7 +30,7 @@ impl Analyzer for NasNullCipherAnalyzer {
 
     fn get_description(&self) -> Cow<str> {
         Cow::from(
-            "Tests whether the MME requests to use a null cipher in the security mode command",
+            "Tests whether the MME requests to use a null cipher in the NAS security mode command",
         )
     }
 
