@@ -191,7 +191,7 @@ async fn main() {
     for analyzer in harness.get_metadata().analyzers {
         info!(
             "    - {} (v{}): {}",
-            analyzer.name, analyzer.version, analyzer.description 
+            analyzer.name, analyzer.version, analyzer.description
         );
     }
 
@@ -211,7 +211,7 @@ async fn main() {
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
-        } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng"){
+        } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
             analyze_pcap(path_str, args.show_skipped).await;
         }
