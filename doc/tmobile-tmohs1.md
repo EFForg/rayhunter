@@ -4,9 +4,9 @@ The Tmobile TMOHS1 hotspot is a Qualcomm mdm9607-based device with many similari
 
 ## Hardware
 Cheap used versions of the device can be found easily on Ebay, and also from these sellers:
-- https://www.amazon.com/T-Mobile-TMOHS1-Portable-Hotspot-Connect/dp/B0CD9MX232
-- https://www.walmart.com/ip/T-Mobile-TMOHS1-Portable-Internet-4G-LTE-WIFI-Hotspot/3453542421
-- https://www.metrobyt-mobile.com/hotspot-iot-connected-devices/t-mobile-hotspot
+- <https://www.amazon.com/T-Mobile-TMOHS1-Portable-Hotspot-Connect/dp/B0CD9MX232>
+- <https://www.walmart.com/ip/T-Mobile-TMOHS1-Portable-Internet-4G-LTE-WIFI-Hotspot/3453542421>
+- <https://www.metrobyt-mobile.com/hotspot-iot-connected-devices/t-mobile-hotspot>
 
 Rayhunter has been tested on:
 

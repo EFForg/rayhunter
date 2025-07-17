@@ -1,4 +1,4 @@
-//! The spec for GSMTAP is here: https://github.com/osmocom/libosmocore/blob/master/include/osmocom/core/gsmtap.h
+//! The spec for GSMTAP is here: <https://github.com/osmocom/libosmocore/blob/master/include/osmocom/core/gsmtap.h>
 
 use deku::prelude::*;
 use num_enum::TryFromPrimitive;

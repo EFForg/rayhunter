@@ -1,7 +1,7 @@
 //! HDLC stands for "High-level Data Link Control", which the diag protocol uses
 //! to encapsulate its messages. QCSuper's docs describe this in more detail
 //! here:
-//! https://github.com/P1sec/QCSuper/blob/master/docs/The%20Diag%20protocol.md#the-diag-protocol-over-usb
+//! <https://github.com/P1sec/QCSuper/blob/master/docs/The%20Diag%20protocol.md#the-diag-protocol-over-usb>
 
 use bytes::Buf;
 use crc::Crc;
