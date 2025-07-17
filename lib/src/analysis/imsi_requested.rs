@@ -59,7 +59,7 @@ impl ImsiRequestedAnalyzer {
             }
 
             // Unexpected IMSI without AttachRequest
-            (_, State::IdentityRequest) if self.state != State::AttachRequest => {
+            (current, State::IdentityRequest) if *current != State::AttachRequest => {
                 self.flag = Some( Event {
                     event_type: EventType::QualitativeWarning { severity: Severity::High },
                     message: "Identity requested without Attach Request".to_string(),
