@@ -91,7 +91,7 @@ async fn setup_rootshell(adb_device: &mut ADBUSBDevice) -> Result<()> {
 }
 
 async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
-    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON_ORBIC"));
+    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
     adb_at_syscmd(&mut adb_device, "mkdir -p /data/rayhunter").await?;
     install_file(
@@ -103,7 +103,9 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
     install_file(
         &mut adb_device,
         "/data/rayhunter/config.toml",
-        CONFIG_TOML.as_bytes(),
+        CONFIG_TOML
+            .replace("#display = \"orbic\"", "display = \"orbic\"")
+            .as_bytes(),
     )
     .await?;
     install_file(
@@ -194,11 +196,11 @@ async fn install_file_impl(
         .stat(dest)
         .context("Failed to stat transfered file")?;
     if file_info.file_size == 0 {
-        bail!("File transfer unseccessful\nFile is empty");
+        bail!("File transfer unsuccessful\nFile is empty");
     }
-    let ouput = adb_command(adb_device, &["sha256sum", dest])?;
-    if !ouput.contains(&file_hash) {
-        bail!("File transfer unseccessful\nBad hash expected {file_hash} got {ouput}");
+    let output = adb_command(adb_device, &["sha256sum", dest])?;
+    if !output.contains(&file_hash) {
+        bail!("File transfer unsuccessful\nBad hash expected {file_hash} got {output}");
     }
     Ok(())
 }

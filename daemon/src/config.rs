@@ -1,3 +1,4 @@
+use log::warn;
 use serde::{Deserialize, Serialize};
 
 use rayhunter::analysis::analyzer::AnalyzerConfig;
@@ -10,10 +11,20 @@ pub struct Config {
     pub qmdl_store_path: String,
     pub port: u16,
     pub debug_mode: bool,
+    pub display: Display,
     pub ui_level: u8,
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
     pub analyzers: AnalyzerConfig,
+}
+
+#[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Display {
+    Orbic,
+    Tplink,
+    Tmobile,
+    Wingtech,
 }
 
 impl Default for Config {
@@ -22,6 +33,7 @@ impl Default for Config {
             qmdl_store_path: "/data/rayhunter/qmdl".to_string(),
             port: 8080,
             debug_mode: false,
+            display: Display::Orbic,
             ui_level: 1,
             colorblind_mode: false,
             key_input_mode: 0,
@@ -37,6 +49,7 @@ where
     if let Ok(config_file) = tokio::fs::read_to_string(&path).await {
         Ok(toml::from_str(&config_file).map_err(RayhunterError::ConfigFileParsingError)?)
     } else {
+        warn!("unable to read config file, using default config");
         Ok(Config::default())
     }
 }
