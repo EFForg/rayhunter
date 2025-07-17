@@ -8,7 +8,7 @@ mod tplink;
 mod util;
 mod wingtech;
 
-pub static CONFIG_TOML: &str = include_str!("../../dist/config.toml.example");
+pub static CONFIG_TOML: &str = include_str!("../../dist/config.toml.in");
 pub static RAYHUNTER_DAEMON_INIT: &str = include_str!("../../dist/scripts/rayhunter_daemon");
 
 #[derive(Parser, Debug)]

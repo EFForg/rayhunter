@@ -48,5 +48,5 @@ cargo run --bin installer orbic
 * Root your device on Windows using the instructions here: <https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183>
 * Build the web UI using `cd bin/web && npm install && npm run build`
 * Push the scripts in `scripts/` to `/etc/init.d` on device and make a directory called `/data/rayhunter` using `adb shell` (and sshell for your root shell if you followed the steps above)
-* You also need to copy `config.toml.example` to `/data/rayhunter/config.toml`
+* You also need to copy `config.toml.in` to `/data/rayhunter/config.toml`. Uncomment the `device` line and set the value to your device type if necessary.
 * Then run `./make.sh`, which will build the binary, push it over adb, and restart the device. Once it's restarted, Rayhunter should be running!
