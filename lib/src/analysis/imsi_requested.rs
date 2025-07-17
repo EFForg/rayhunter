@@ -23,7 +23,7 @@ pub struct ImsiRequestedAnalyzer {
     packet_num: usize,
     state: State,
     timeout_counter: usize,
-    flag: Option<(bool /*true=warning, false=info */, Severity, String)>,
+    flag: Option<Event>,
 }
 
 impl Default for ImsiRequestedAnalyzer {
@@ -55,36 +55,31 @@ impl ImsiRequestedAnalyzer {
             */
             // Reset on successful auth
             (_, State::AuthAccept) | (State::AuthAccept, State::Disconnect) => {
-                self.state = next_state;
                 self.timeout_counter = 0;
             }
 
             // Unexpected IMSI without AttachRequest
             (_, State::IdentityRequest) if self.state != State::AttachRequest => {
-                self.flag = Some((
-                    true,
-                    Severity::High,
-                    "Identity requested without Attach Request".to_string(),
-                ));
-                self.state = next_state;
+                self.flag = Some( Event {
+                    event_type: EventType::QualitativeWarning { severity: Severity::High },
+                    message: "Identity requested without Attach Request".to_string(),
+                });
             }
 
             // IMSI to Disconnect without AuthAccept
             (State::IdentityRequest, State::Disconnect) => {
-                self.flag = Some((
-                    false,
-                    Severity::Low,
-                    "Disconnected after Identity Request without Auth Accept".to_string(),
-                ));
-                self.state = next_state;
+                self.flag = Some( Event {
+                    event_type: EventType::Informational,
+                    message: "Disconnected after Identity Request without Auth Accept".to_string(),
+                });
             }
 
             // All other transitions proceeed
             _ => {
                 //println!("Transition from {:?} to {:?}", self.state, next_state);
-                self.state = next_state;
             }
         }
+        self.state = next_state;
     }
 }
 
@@ -164,30 +159,15 @@ impl Analyzer for ImsiRequestedAnalyzer {
         if self.state == State::IdentityRequest {
             self.timeout_counter += 1;
             if self.timeout_counter > PACKET_THRESHHOLD {
-                self.flag = Some((
-                    true,
-                    Severity::High,
-                    "Identity request happened without auth request followup".to_string(),
-                ));
+                self.flag = Some(Event {
+                    event_type: EventType::QualitativeWarning { severity: Severity::High},
+                    message: "Identity request happened without auth request followup".to_string(),
+                });
+                self.timeout_counter = 0;
             }
+
         }
 
-        if let Some(flag) = self.flag.clone() {
-            let (warning, severity, message) = flag;
-            self.flag = None; // Clear the flag
-            if warning {
-                return Some(Event {
-                    event_type: EventType::QualitativeWarning { severity: severity },
-                    message: message,
-                });
-            } else {
-                return Some(Event {
-                    event_type: EventType::Informational,
-                    message: message,
-                });
-            }
-        } else {
-            return None;
-        }
+        return self.flag.take();
     }
 }
