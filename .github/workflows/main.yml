@@ -328,7 +328,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
-        run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon-*/rayhunter-daemon
+        run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon/rayhunter-daemon
       - name: Get Rayhunter version
         id: get_version
         run: echo "VERSION=$(grep '^version' daemon/Cargo.toml | head -n 1 | cut -d'"' -f2)" >> $GITHUB_ENV
@@ -338,7 +338,7 @@ jobs:
           dest="rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}"
           mkdir "$dest"
           mv installer-$platform/installer* "$dest"/installer
-          cp -r rayhunter-daemon-* rootshell/rootshell dist/* installer/install.ps1 "$dest"/
+          cp -r rayhunter-daemon rootshell/rootshell dist/* installer/install.ps1 "$dest"/
           zip -r "$dest.zip" "$dest"
           sha256sum "$dest.zip" > "$dest.zip.sha256"
 
