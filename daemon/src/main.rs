@@ -13,7 +13,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::config::{Device, parse_args, parse_config};
+use crate::config::{parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
 use crate::pcap::get_pcap;
@@ -33,6 +33,7 @@ use diag::{
 };
 use log::{error, info};
 use qmdl_store::RecordingStoreError;
+use rayhunter::Device;
 use rayhunter::diag_device::DiagDevice;
 use tokio::net::TcpListener;
 use tokio::select;
@@ -216,7 +217,7 @@ async fn run_with_config(
         let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
         maybe_ui_shutdown_tx = Some(ui_shutdown_tx);
         info!("Using configuration for device: {0:?}", config.device);
-        let mut dev = DiagDevice::new(config.device == Device::Tplink)
+        let mut dev = DiagDevice::new(&config.device)
             .await
             .map_err(RayhunterError::DiagInitError)?;
         dev.config_logs()

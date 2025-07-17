@@ -1,6 +1,7 @@
 use log::warn;
 use serde::{Deserialize, Serialize};
 
+use rayhunter::Device;
 use rayhunter::analysis::analyzer::AnalyzerConfig;
 
 use crate::error::RayhunterError;
@@ -16,15 +17,6 @@ pub struct Config {
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
     pub analyzers: AnalyzerConfig,
-}
-
-#[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Device {
-    Orbic,
-    Tplink,
-    Tmobile,
-    Wingtech,
 }
 
 impl Default for Config {
