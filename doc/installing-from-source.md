@@ -3,7 +3,7 @@
 Building Rayhunter from source, either for development or because the install script doesn't work on your system, involves a number of external dependencies. Unless you need to do this, we recommend you use our [compiled builds](https://github.com/EFForg/rayhunter/releases).
 
 * Install [nodejs/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm), which is required to build Rayhunter's web UI
-  * Make sure to build the site with `cd daemon/web && npm install && npm run build` before building Rayhunter. If you're working directly on the frontend, `npm run dev` will allow you to test a local frontend with hot-reloading (use `http://localhost:5173` instead of `http://localhost:8080`).
+  * Make sure to build the site with `cd bin/web && npm install && npm run build` before building Rayhunter. If you're working directly on the frontend, `npm run dev` will allow you to test a local frontend with hot-reloading (use `http://localhost:5173` instead of `http://localhost:8080`).
 * Install ADB on your computer using the instructions above, and make sure it's in your terminal's PATH
   * You can verify if ADB is in your PATH by running `which adb` in a terminal. If it prints the filepath to where ADB is installed, you're set! Otherwise, try following one of these guides:
     * [linux](https://askubuntu.com/questions/652936/adding-android-sdk-platform-tools-to-path-downloaded-from-umake)
