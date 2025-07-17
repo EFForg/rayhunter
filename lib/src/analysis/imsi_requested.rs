@@ -73,7 +73,9 @@ impl ImsiRequestedAnalyzer {
             // IMSI to Disconnect without AuthAccept
             (State::IdentityRequest, State::Disconnect) => {
                 self.flag = Some(Event {
-                    event_type: EventType::QualitativeWarning { severity: Severity::High },
+                    event_type: EventType::QualitativeWarning {
+                        severity: Severity::High,
+                    },
                     message: format!(
                         "Disconnected after Identity Request without Auth Accept (frame {})",
                         self.packet_num
@@ -126,7 +128,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
                         self.transition(State::AuthAccept);
                     }
-                    NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_)) 
+                    NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMAttachReject(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMO(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMT(_))
