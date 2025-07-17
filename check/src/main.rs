@@ -144,7 +144,7 @@ async fn pcapify(qmdl_path: &PathBuf) {
     let qmdl_file_size = qmdl_file.metadata().await.unwrap().len();
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_file_size as usize));
     let mut pcap_path = qmdl_path.clone();
-    pcap_path.set_extension("pcap");
+    pcap_path.set_extension("pcapng");
     let pcap_file = &mut File::create(&pcap_path)
         .await
         .expect("failed to open pcap file");
@@ -191,7 +191,7 @@ async fn main() {
     for analyzer in harness.get_metadata().analyzers {
         info!(
             "    - {} (v{}): {}",
-            analyzer.name, analyzer.description, analyzer.version
+            analyzer.name, analyzer.version, analyzer.description 
         );
     }
 
@@ -211,7 +211,7 @@ async fn main() {
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
-        } else if name_str.ends_with(".pcap") {
+        } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng"){
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
             analyze_pcap(path_str, args.show_skipped).await;
         }
