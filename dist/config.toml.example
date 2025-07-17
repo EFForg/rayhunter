@@ -3,6 +3,8 @@ qmdl_store_path = "/data/rayhunter/qmdl"
 port = 8080
 debug_mode = false
 colorblind_mode = false
+# Display module, this will be overwritten by the installer. Defaults to "orbic".
+#display = "orbic"
 # UI Levels:
 #
 # Orbic and TP-Link with color display:
