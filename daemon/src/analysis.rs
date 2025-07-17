@@ -47,10 +47,7 @@ impl AnalysisWriter {
 
     // Runs the analysis harness on the given container, serializing the results
     // to the analysis file, returning the whether any warnings were detected
-    pub async fn analyze(
-        &mut self,
-        container: MessagesContainer,
-    ) -> Result<bool, std::io::Error> {
+    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<bool, std::io::Error> {
         let mut warning_detected = false;
         for row in self.harness.analyze_qmdl_messages(container) {
             if !row.is_empty() {
