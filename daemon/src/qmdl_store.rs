@@ -145,11 +145,16 @@ impl RecordingStore {
     where
         P: AsRef<Path>,
     {
-        let mut dir_entries = fs::read_dir(path.as_ref()).await
+        let mut dir_entries = fs::read_dir(path.as_ref())
+            .await
             .map_err(RecordingStoreError::OpenDirError)?;
         let mut manifest_entries = Vec::new();
 
-        while let Some(entry) = dir_entries.next_entry().await.map_err(RecordingStoreError::OpenDirError)? {
+        while let Some(entry) = dir_entries
+            .next_entry()
+            .await
+            .map_err(RecordingStoreError::OpenDirError)?
+        {
             let os_filename = entry.file_name();
             let Some(filename) = os_filename.to_str() else {
                 continue;
