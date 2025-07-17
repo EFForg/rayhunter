@@ -11,7 +11,7 @@ use telcom_parser::lte_rrc::{
     DL_DCCH_MessageType, DL_DCCH_MessageType_c1, UL_CCCH_MessageType, UL_CCCH_MessageType_c1,
 };
 
-const TIMEOUT_THRESHHOLD: usize = 40;
+const TIMEOUT_THRESHHOLD: usize = 50;
 
 #[derive(PartialEq, Debug)]
 pub enum State {
@@ -73,17 +73,13 @@ impl ImsiRequestedAnalyzer {
             // IMSI to Disconnect without AuthAccept
             (State::IdentityRequest, State::Disconnect) => {
                 self.flag = Some(Event {
-                    event_type: EventType::Informational,
+                    event_type: EventType::QualitativeWarning { severity: Severity::High },
                     message: format!(
                         "Disconnected after Identity Request without Auth Accept (frame {})",
                         self.packet_num
                     )
                     .to_string(),
                 });
-                println!(
-                    "reset timeout counter at {}/{} due to disconnect",
-                    self.packet_num, self.timeout_counter
-                );
                 self.timeout_counter = 0;
             }
 
@@ -130,13 +126,11 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
                         self.transition(State::AuthAccept);
                     }
-                    NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_)) => {
-                        self.transition(State::Disconnect);
-                    }
-                    NASMessage::EMMMessage(EMMMessage::EMMAttachReject(_)) => {
-                        self.transition(State::Disconnect);
-                    }
-                    NASMessage::EMMMessage(EMMMessage::EMMTrackingAreaUpdateReject(_)) => {
+                    NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_)) 
+                    | NASMessage::EMMMessage(EMMMessage::EMMAttachReject(_))
+                    | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMO(_))
+                    | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMT(_))
+                    | NASMessage::EMMMessage(EMMMessage::EMMTrackingAreaUpdateReject(_)) => {
                         self.transition(State::Disconnect);
                     }
                     _ => {}
