@@ -104,7 +104,7 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
         &mut adb_device,
         "/data/rayhunter/config.toml",
         CONFIG_TOML
-            .replace("#display = \"orbic\"", "display = \"orbic\"")
+            .replace("#device = \"orbic\"", "device = \"orbic\"")
             .as_bytes(),
     )
     .await?;

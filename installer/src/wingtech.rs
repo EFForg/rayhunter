@@ -102,7 +102,7 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
         addr,
         "/data/rayhunter/config.toml",
         crate::CONFIG_TOML
-            .replace("#display = \"orbic\"", "display = \"wingtech\"")
+            .replace("#device = \"orbic\"", "device = \"wingtech\"")
             .as_bytes(),
     )
     .await?;
