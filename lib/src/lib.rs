@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub mod analysis;
 pub mod diag;
 pub mod gsmtap;
@@ -14,3 +16,12 @@ pub mod diag_device;
 
 // re-export telcom_parser, since we use its types in our API
 pub use telcom_parser;
+
+#[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Device {
+    Orbic,
+    Tplink,
+    Tmobile,
+    Wingtech,
+}
