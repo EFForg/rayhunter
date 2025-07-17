@@ -3,7 +3,7 @@ use crate::diag::{
     MessagesContainer, Request, RequestContainer, ResponsePayload, build_log_mask_request,
 };
 use crate::hdlc::hdlc_encapsulate;
-use crate::log_codes;
+use crate::{Device, log_codes};
 
 use deku::prelude::*;
 use futures::TryStream;
@@ -86,11 +86,14 @@ pub struct DiagDevice {
 }
 
 impl DiagDevice {
-    pub async fn new(tplink: bool) -> DiagResult<Self> {
-        Self::new_with_retries(Duration::from_secs(30), tplink).await
+    pub async fn new(configured_device: &Device) -> DiagResult<Self> {
+        Self::new_with_retries(Duration::from_secs(30), configured_device).await
     }
 
-    pub async fn new_with_retries(max_duration: Duration, tplink: bool) -> DiagResult<Self> {
+    pub async fn new_with_retries(
+        max_duration: Duration,
+        configured_device: &Device,
+    ) -> DiagResult<Self> {
         // For some reason the diag device needs a very long time to become available again with in
         // the same process, on TP-Link M7350 v3. While process restart would reset it faster.
 
@@ -101,7 +104,7 @@ impl DiagDevice {
         let mut num_retries = 0;
 
         loop {
-            match Self::try_new(tplink).await {
+            match Self::try_new(configured_device).await {
                 Ok(device) => {
                     info!("Diag device initialization succeeded after {num_retries} retries");
                     return Ok(device);
@@ -125,7 +128,7 @@ impl DiagDevice {
         }
     }
 
-    async fn try_new(tplink: bool) -> DiagResult<Self> {
+    async fn try_new(configured_device: &Device) -> DiagResult<Self> {
         let diag_file = File::options()
             .read(true)
             .write(true)
@@ -134,7 +137,7 @@ impl DiagDevice {
             .map_err(DiagDeviceError::OpenDiagDeviceError)?;
         let fd = diag_file.as_raw_fd();
 
-        enable_frame_readwrite(fd, MEMORY_DEVICE_MODE, tplink)?;
+        enable_frame_readwrite(fd, MEMORY_DEVICE_MODE, configured_device)?;
         let use_mdm = determine_use_mdm(fd)?;
 
         Ok(DiagDevice {
@@ -300,34 +303,29 @@ struct DiagLoggingModeParam {
 }
 
 // Triggers the diag device's debug logging mode
-fn enable_frame_readwrite(fd: i32, mode: u32, tplink: bool) -> DiagResult<()> {
+fn enable_frame_readwrite(fd: i32, mode: u32, configured_device: &Device) -> DiagResult<()> {
     unsafe {
         if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
-            let try_params: &[DiagLoggingModeParam] = match tplink {
-                true => &[
-                    // tplink M7350 HW revision 3-8 need this mode
+            let mut try_params = vec![DiagLoggingModeParam {
+                req_mode: mode,
+                peripheral_mask: u32::MAX,
+                mode_param: 0,
+            }];
+            if configured_device == &Device::Tplink {
+                // tplink M7350 HW revision 3-8 need this mode
+                try_params.insert(
+                    0,
                     DiagLoggingModeParam {
                         req_mode: mode,
                         peripheral_mask: 0,
                         mode_param: 1,
                     },
-                    // tplink M7350 HW revision v9 requires the same parameters as orbic
-                    DiagLoggingModeParam {
-                        req_mode: mode,
-                        peripheral_mask: u32::MAX,
-                        mode_param: 0,
-                    },
-                ],
-                false => &[DiagLoggingModeParam {
-                    req_mode: mode,
-                    peripheral_mask: u32::MAX,
-                    mode_param: 0,
-                }],
-            };
+                );
+            }
 
             let mut ret = 0;
 
-            for params in try_params {
+            for params in &try_params {
                 let mut params = *params;
                 ret = libc::ioctl(
                     fd,
