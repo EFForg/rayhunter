@@ -96,16 +96,34 @@ impl Analyzer for ImsiRequestedAnalyzer {
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
         self.packet_num += 1;
-        let maybe_payload = match ie {
-            InformationElement::LTE(inner) => match &**inner {
-                LteInformationElement::NAS(payload) => Some(payload),
-                _ => None,
-            },
-            _ => None,
-        };
 
         match ie {
             InformationElement::LTE(inner) => match &**inner {
+                LteInformationElement::NAS(payload) => {
+                    match payload {
+                        NASMessage::EMMMessage(EMMMessage::EMMExtServiceRequest(_))
+                        | NASMessage::EMMMessage(EMMMessage::EMMAttachRequest(_)) => {
+                            self.transition(State::AttachRequest);
+                        }
+                        NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(_)) => {
+                            self.transition(State::IdentityRequest);
+                        }
+                        NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
+                            self.transition(State::AuthAccept);
+                        }
+                        NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_)) => {
+                            self.transition(State::Disconnect);
+                        }
+                        NASMessage::EMMMessage(EMMMessage::EMMAttachReject(_)) => {
+                            self.transition(State::Disconnect);
+                        }
+                        NASMessage::EMMMessage(EMMMessage::EMMTrackingAreaUpdateReject(_)) => {
+                            self.transition(State::Disconnect);
+                        }
+                        _ => {}
+                    }
+                },
+
                 LteInformationElement::UlCcch(rrc_payload) => {
                     match rrc_payload.message {
                         UL_CCCH_MessageType::C1(UL_CCCH_MessageType_c1::RrcConnectionRequest(_))
@@ -115,6 +133,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
                         _ => {}
                     }
                 }
+
                 LteInformationElement::DlDcch(rrc_payload) => {
                     match rrc_payload.message {
                         DL_DCCH_MessageType::C1(DL_DCCH_MessageType_c1::RrcConnectionRelease(_)) => {
@@ -127,30 +146,6 @@ impl Analyzer for ImsiRequestedAnalyzer {
             },
             _ => {},
         };
-        if let Some(payload) = maybe_payload {
-            match payload {
-                NASMessage::EMMMessage(EMMMessage::EMMExtServiceRequest(_))
-                | NASMessage::EMMMessage(EMMMessage::EMMAttachRequest(_)) => {
-                    self.transition(State::AttachRequest);
-                }
-                NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(_)) => {
-                    self.transition(State::IdentityRequest);
-                }
-                NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
-                    self.transition(State::AuthAccept);
-                }
-                NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_)) => {
-                    self.transition(State::Disconnect);
-                }
-                NASMessage::EMMMessage(EMMMessage::EMMAttachReject(_)) => {
-                    self.transition(State::Disconnect);
-                }
-                NASMessage::EMMMessage(EMMMessage::EMMTrackingAreaUpdateReject(_)) => {
-                    self.transition(State::Disconnect);
-                }
-                _ => {}
-            }
-        }
 
         if self.state == State::IdentityRequest {
             self.timeout_counter += 1;
