@@ -362,7 +362,7 @@ async fn adb_serial_cmd(adb_device: &mut ADBUSBDevice, command: &str) -> Result<
 
 /// Sends an AT command to the usb device over the serial port
 ///
-/// First establish a USB handle and context by calling `open_orbic(<T>)
+/// First establish a USB handle and context by calling `open_orbic()`
 pub async fn send_serial_cmd(interface: &Interface, command: &str) -> Result<()> {
     let mut data = String::new();
     data.push_str("\r\n");
