@@ -207,12 +207,14 @@ async fn main() {
         // instead of relying on the QMDL extension, can we check if a file is
         // QMDL by inspecting the contents?
         if name_str.ends_with(".qmdl") {
+            info!("**** Beginning analysis of {}", name_str);
             analyze_qmdl(path_str, args.show_skipped).await;
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
         } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
+            info!("**** Beginning analysis of {}", name_str);
             analyze_pcap(path_str, args.show_skipped).await;
         }
     }
