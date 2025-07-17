@@ -5,10 +5,11 @@ use pycrate_rs::nas::emm::EMMMessage;
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
+use log::debug;
 
-use telcom_parser::lte_rrc::{UL_CCCH_MessageType, UL_CCCH_MessageType_c1};
+use telcom_parser::lte_rrc::{DL_DCCH_MessageType, DL_DCCH_MessageType_c1, UL_CCCH_MessageType, UL_CCCH_MessageType_c1};
 
-const PACKET_THRESHHOLD: usize = 20;
+const TIMEOUT_THRESHHOLD: usize = 40;
 
 #[derive(PartialEq, Debug)]
 pub enum State {
@@ -44,17 +45,10 @@ impl ImsiRequestedAnalyzer {
 
     fn transition(&mut self, next_state: State) {
         match (&self.state, &next_state) {
-            /*
-            // Valid transitions
-            (State::AttachRequest, State::IdentityRequest) |
-            (State::IdentityRequest, State::AuthAccept) |
-            (State::Disconnect, State::AttachRequest) |
-            (State::AttachRequest, State::Disconnect) => {
-                self.state = next_state;
-            }
-            */
-            // Reset on successful auth
-            (_, State::AuthAccept) | (State::AuthAccept, State::Disconnect) => {
+           
+            // Reset timeout on successful auth 
+            (_, State::AuthAccept) => {
+                debug!("reset timeout counter at {} due to auth accept (frame {})", self.timeout_counter, self.packet_num);
                 self.timeout_counter = 0;
             }
 
@@ -62,7 +56,7 @@ impl ImsiRequestedAnalyzer {
             (current, State::IdentityRequest) if *current != State::AttachRequest => {
                 self.flag = Some( Event {
                     event_type: EventType::QualitativeWarning { severity: Severity::High },
-                    message: "Identity requested without Attach Request".to_string(),
+                    message: format!("Identity requested without Attach Request (frame {})", self.packet_num).to_string(),
                 });
             }
 
@@ -70,13 +64,15 @@ impl ImsiRequestedAnalyzer {
             (State::IdentityRequest, State::Disconnect) => {
                 self.flag = Some( Event {
                     event_type: EventType::Informational,
-                    message: "Disconnected after Identity Request without Auth Accept".to_string(),
+                    message: format!("Disconnected after Identity Request without Auth Accept (frame {})", self.packet_num).to_string(),
                 });
+                println!("reset timeout counter at {}/{} due to disconnect", self.packet_num, self.timeout_counter);
+                self.timeout_counter = 0;
             }
 
             // All other transitions proceeed
             _ => {
-                //println!("Transition from {:?} to {:?}", self.state, next_state);
+                debug!("Transition from {:?} to {:?} at {}", self.state, next_state, self.packet_num);
             }
         }
         self.state = next_state;
@@ -108,12 +104,28 @@ impl Analyzer for ImsiRequestedAnalyzer {
             _ => None,
         };
 
-        let maybe_rrc_payload = match ie {
+        match ie {
             InformationElement::LTE(inner) => match &**inner {
-                LteInformationElement::UlCcch(rrc_payload) => Some(rrc_payload),
-                _ => None,
+                LteInformationElement::UlCcch(rrc_payload) => {
+                    match rrc_payload.message {
+                        UL_CCCH_MessageType::C1(UL_CCCH_MessageType_c1::RrcConnectionRequest(_))
+                        | UL_CCCH_MessageType::C1( UL_CCCH_MessageType_c1::RrcConnectionReestablishmentRequest(_),) => {
+                            self.transition(State::AttachRequest);
+                        },
+                        _ => {}
+                    }
+                }
+                LteInformationElement::DlDcch(rrc_payload) => {
+                    match rrc_payload.message {
+                        DL_DCCH_MessageType::C1(DL_DCCH_MessageType_c1::RrcConnectionRelease(_)) => {
+                            self.transition(State::Disconnect)
+                        },
+                        _ => {}
+                    }
+                }
+                _ => {},
             },
-            _ => None,
+            _ => {},
         };
         if let Some(payload) = maybe_payload {
             match payload {
@@ -136,32 +148,17 @@ impl Analyzer for ImsiRequestedAnalyzer {
                 NASMessage::EMMMessage(EMMMessage::EMMTrackingAreaUpdateReject(_)) => {
                     self.transition(State::Disconnect);
                 }
-                _ => {
-                    return None;
-                }
-            }
-        }
-
-        if let Some(rrc_payload) = maybe_rrc_payload {
-            match rrc_payload.message {
-                UL_CCCH_MessageType::C1(UL_CCCH_MessageType_c1::RrcConnectionRequest(_))
-                | UL_CCCH_MessageType::C1(
-                    UL_CCCH_MessageType_c1::RrcConnectionReestablishmentRequest(_),
-                ) => {
-                    self.transition(State::AttachRequest);
-                }
-                _ => {
-                    return None;
-                }
+                _ => {}
             }
         }
 
         if self.state == State::IdentityRequest {
             self.timeout_counter += 1;
-            if self.timeout_counter > PACKET_THRESHHOLD {
+            debug!("timeout: counter {}, packet: {}", self.timeout_counter, self.packet_num);
+            if self.timeout_counter >= TIMEOUT_THRESHHOLD {
                 self.flag = Some(Event {
-                    event_type: EventType::QualitativeWarning { severity: Severity::High},
-                    message: "Identity request happened without auth request followup".to_string(),
+                    event_type: EventType::Informational {},
+                    message: format!("Identity request happened without auth request followup (frame {})", self.packet_num).to_string(),
                 });
                 self.timeout_counter = 0;
             }
