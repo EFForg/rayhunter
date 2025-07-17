@@ -19,14 +19,17 @@ struct Args {
     #[arg(short = 'p', long)]
     path: PathBuf,
 
-    #[arg(long)]
+    #[arg(short = 'P', long)]
     pcapify: bool,
 
     #[arg(long)]
     show_skipped: bool,
 
     #[arg(short, long)]
-    verbose: bool,
+    quiet: bool,
+
+    #[arg(short, long)]
+    debug: bool,
 }
 
 #[derive(Default)]
@@ -167,10 +170,12 @@ async fn pcapify(qmdl_path: &PathBuf) {
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let level = if args.verbose {
+    let level = if args.debug {
         log::LevelFilter::Trace
-    } else {
+    } else if args.quiet {
         log::LevelFilter::Warn
+    } else {
+        log::LevelFilter::Info
     };
     simple_logger::SimpleLogger::new()
         .with_colors(true)
