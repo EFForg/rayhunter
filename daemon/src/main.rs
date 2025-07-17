@@ -13,7 +13,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::config::{parse_args, parse_config};
+use crate::config::{Display, parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
 use crate::pcap::get_pcap;
@@ -215,7 +215,7 @@ async fn run_with_config(
     if !config.debug_mode {
         let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
         maybe_ui_shutdown_tx = Some(ui_shutdown_tx);
-        let mut dev = DiagDevice::new()
+        let mut dev = DiagDevice::new(config.display == Display::Tplink)
             .await
             .map_err(RayhunterError::DiagInitError)?;
         dev.config_logs()
@@ -233,7 +233,16 @@ async fn run_with_config(
             config.analyzers.clone(),
         );
         info!("Starting UI");
-        display::update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
+
+        let display = &config.display;
+        info!("Display type {display:?}");
+        let update_ui = match display {
+            Display::Orbic => display::orbic::update_ui,
+            Display::Tplink => display::tplink::update_ui,
+            Display::Tmobile => display::tmobile::update_ui,
+            Display::Wingtech => display::wingtech::update_ui,
+        };
+        update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
 
         info!("Starting Key Input service");
         let (key_input_shutdown_tx, key_input_shutdown_rx) = oneshot::channel();

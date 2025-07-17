@@ -9,13 +9,6 @@ description = "Realtime cellular data decoding and analysis for IMSI catcher det
 name = "rayhunter"
 path = "src/lib.rs"
 
-[features]
-default = []
-orbic = []
-tmobile = []
-tplink = []
-wingtech = []
-
 [dependencies]
 bytes = "1.5.0"
 chrono = { version = "0.4.31", features = ["serde"] }

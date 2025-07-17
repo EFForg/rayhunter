@@ -10,10 +10,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   FILE_ROOTSHELL: ../../rootshell/rootshell
-  FILE_RAYHUNTER_DAEMON_ORBIC: ../../rayhunter-daemon-orbic/rayhunter-daemon
-  FILE_RAYHUNTER_DAEMON_TPLINK: ../../rayhunter-daemon-tplink/rayhunter-daemon
-  FILE_RAYHUNTER_DAEMON_TMOBILE: ../../rayhunter-daemon-tmobile/rayhunter-daemon
-  FILE_RAYHUNTER_DAEMON_WINGTECH: ../../rayhunter-daemon-wingtech/rayhunter-daemon
+  FILE_RAYHUNTER_DAEMON: ../../rayhunter-daemon/rayhunter-daemon
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
@@ -102,13 +99,6 @@ jobs:
   check_and_test:
     needs: files_changed
     if: needs.files_changed.outputs.code_changed != '0'
-    strategy:
-      matrix:
-        device:
-          - name: orbic
-          - name: tplink
-          - name: wingtech
-          - name: tmobile
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -123,13 +113,13 @@ jobs:
         npm install
         npm run build
         popd
-        NO_FIRMWARE_BIN=true cargo check --verbose --no-default-features --features=${{ matrix.device.name }}
+        NO_FIRMWARE_BIN=true cargo check --verbose
     - name: Run tests
       run: |
-        NO_FIRMWARE_BIN=true cargo test --verbose --no-default-features --features=${{ matrix.device.name }}
+        NO_FIRMWARE_BIN=true cargo test --verbose
     - name: Run clippy
       run: |
-        NO_FIRMWARE_BIN=true cargo clippy --verbose --no-default-features --features=${{ matrix.device.name }}
+        NO_FIRMWARE_BIN=true cargo clippy --verbose
 
   test_web_frontend:
     needs: files_changed
@@ -241,13 +231,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        device:
-          - name: orbic
-          - name: tplink
-          - name: wingtech
-          - name: tmobile
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -269,10 +252,10 @@ jobs:
           # what the feature selection in rayhunter-daemon is.
           #
           # https://github.com/rust-lang/cargo/issues/4463
-          cargo build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile=firmware --no-default-features --features ${{ matrix.device.name }}
+          cargo build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile=firmware
       - uses: actions/upload-artifact@v4
         with:
-          name: rayhunter-daemon-${{ matrix.device.name }}
+          name: rayhunter-daemon
           path: target/armv7-unknown-linux-musleabihf/firmware/rayhunter-daemon
           if-no-files-found: error
 
