@@ -42,7 +42,7 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
         addr,
         "/data/rayhunter/config.toml",
         crate::CONFIG_TOML
-            .replace("#display = \"orbic\"", "display = \"tmobile\"")
+            .replace("#device = \"orbic\"", "device = \"tmobile\"")
             .as_bytes(),
     )
     .await?;
