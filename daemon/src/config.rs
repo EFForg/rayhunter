@@ -11,7 +11,7 @@ pub struct Config {
     pub qmdl_store_path: String,
     pub port: u16,
     pub debug_mode: bool,
-    pub display: Display,
+    pub device: Device,
     pub ui_level: u8,
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
@@ -20,7 +20,7 @@ pub struct Config {
 
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Display {
+pub enum Device {
     Orbic,
     Tplink,
     Tmobile,
@@ -33,7 +33,7 @@ impl Default for Config {
             qmdl_store_path: "/data/rayhunter/qmdl".to_string(),
             port: 8080,
             debug_mode: false,
-            display: Display::Orbic,
+            device: Device::Orbic,
             ui_level: 1,
             colorblind_mode: false,
             key_input_mode: 0,

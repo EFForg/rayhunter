@@ -155,7 +155,7 @@ async fn tplink_run_install(
         addr,
         &format!("{sdcard_path}/config.toml"),
         crate::CONFIG_TOML
-            .replace("#display = \"orbic\"", "display = \"tplink\"")
+            .replace("#device = \"orbic\"", "device = \"tplink\"")
             .as_bytes(),
     )
     .await?;
