@@ -171,7 +171,7 @@ async fn pcapify(qmdl_path: &PathBuf) {
 async fn main() {
     let args = Args::parse();
     let level = if args.debug {
-        log::LevelFilter::Trace
+        log::LevelFilter::Debug
     } else if args.quiet {
         log::LevelFilter::Warn
     } else {
