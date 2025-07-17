@@ -115,49 +115,43 @@ impl Analyzer for ImsiRequestedAnalyzer {
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
         self.packet_num += 1;
 
-        match ie {
-            InformationElement::LTE(inner) => match &**inner {
-                LteInformationElement::NAS(payload) => match payload {
-                    NASMessage::EMMMessage(EMMMessage::EMMExtServiceRequest(_))
-                    | NASMessage::EMMMessage(EMMMessage::EMMAttachRequest(_)) => {
-                        self.transition(State::AttachRequest);
-                    }
-                    NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(_)) => {
-                        self.transition(State::IdentityRequest);
-                    }
-                    NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
-                        self.transition(State::AuthAccept);
-                    }
-                    NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_))
-                    | NASMessage::EMMMessage(EMMMessage::EMMAttachReject(_))
-                    | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMO(_))
-                    | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMT(_))
-                    | NASMessage::EMMMessage(EMMMessage::EMMTrackingAreaUpdateReject(_)) => {
-                        self.transition(State::Disconnect);
-                    }
-                    _ => {}
-                },
-
-                LteInformationElement::UlCcch(rrc_payload) => match rrc_payload.message {
-                    UL_CCCH_MessageType::C1(UL_CCCH_MessageType_c1::RrcConnectionRequest(_))
-                    | UL_CCCH_MessageType::C1(
-                        UL_CCCH_MessageType_c1::RrcConnectionReestablishmentRequest(_),
-                    ) => {
-                        self.transition(State::AttachRequest);
-                    }
-                    _ => {}
-                },
-
-                LteInformationElement::DlDcch(rrc_payload) => match rrc_payload.message {
-                    DL_DCCH_MessageType::C1(DL_DCCH_MessageType_c1::RrcConnectionRelease(_)) => {
-                        self.transition(State::Disconnect)
-                    }
-                    _ => {}
-                },
+        if let InformationElement::LTE(inner) = ie { match &**inner {
+            LteInformationElement::NAS(payload) => match payload {
+                NASMessage::EMMMessage(EMMMessage::EMMExtServiceRequest(_))
+                | NASMessage::EMMMessage(EMMMessage::EMMAttachRequest(_)) => {
+                    self.transition(State::AttachRequest);
+                }
+                NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(_)) => {
+                    self.transition(State::IdentityRequest);
+                }
+                NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
+                    self.transition(State::AuthAccept);
+                }
+                NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_))
+                | NASMessage::EMMMessage(EMMMessage::EMMAttachReject(_))
+                | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMO(_))
+                | NASMessage::EMMMessage(EMMMessage::EMMDetachRequestMT(_))
+                | NASMessage::EMMMessage(EMMMessage::EMMTrackingAreaUpdateReject(_)) => {
+                    self.transition(State::Disconnect);
+                }
                 _ => {}
             },
+
+            LteInformationElement::UlCcch(rrc_payload) => match rrc_payload.message {
+                UL_CCCH_MessageType::C1(UL_CCCH_MessageType_c1::RrcConnectionRequest(_))
+                | UL_CCCH_MessageType::C1(
+                    UL_CCCH_MessageType_c1::RrcConnectionReestablishmentRequest(_),
+                ) => {
+                    self.transition(State::AttachRequest);
+                }
+                _ => {}
+            },
+
+            LteInformationElement::DlDcch(rrc_payload) => if let DL_DCCH_MessageType::C1(DL_DCCH_MessageType_c1::RrcConnectionRelease(_)) = rrc_payload.message {
+                self.transition(State::Disconnect)
+            },
             _ => {}
-        };
+        } };
 
         if self.state == State::IdentityRequest {
             self.timeout_counter += 1;
@@ -178,6 +172,6 @@ impl Analyzer for ImsiRequestedAnalyzer {
             }
         }
 
-        return self.flag.take();
+        self.flag.take()
     }
 }
