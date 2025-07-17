@@ -3,7 +3,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Local};
-use log::warn;
+use log::{info, warn};
 use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -173,12 +173,17 @@ impl RecordingStore {
                 }
             };
 
-            let start_time = DateTime::from_timestamp_nanos(start_timestamp);
+            let Some(start_time) = DateTime::from_timestamp(start_timestamp, 0) else {
+                warn!("QMDL filename {os_filename:?} gave an invalid timestamp, skipping");
+                continue;
+            };
+
             let Ok(last_message_time) = metadata.modified() else {
                 warn!("failed to get modified time for QMDL file {os_filename:?}, skipping");
                 continue;
             };
 
+            info!("successfully recovered QMDL entry {os_filename:?}!");
             manifest_entries.push(ManifestEntry {
                 name: stem.to_string(),
                 start_time: start_time.into(),
