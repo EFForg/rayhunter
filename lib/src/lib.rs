@@ -24,4 +24,5 @@ pub enum Device {
     Tplink,
     Tmobile,
     Wingtech,
+    Pinephone,
 }

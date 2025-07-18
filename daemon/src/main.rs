@@ -241,6 +241,7 @@ async fn run_with_config(
             Device::Tplink => display::tplink::update_ui,
             Device::Tmobile => display::tmobile::update_ui,
             Device::Wingtech => display::wingtech::update_ui,
+            Device::Pinephone => display::headless::update_ui,
         };
         update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
 
