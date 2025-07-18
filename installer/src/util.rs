@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
+use nusb::Device;
 use reqwest::Client;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -131,4 +132,21 @@ pub async fn http_ok_every(
         sleep(interval).await;
     }
     Ok(())
+}
+
+/// General function to open a USB device
+pub fn open_usb_device(vid: u16, pid: u16) -> Result<Option<Device>> {
+    let devices = match nusb::list_devices() {
+        Ok(d) => d,
+        Err(_) => return Ok(None),
+    };
+    for device in devices {
+        if device.vendor_id() == vid && device.product_id() == pid {
+            match device.open() {
+                Ok(d) => return Ok(Some(d)),
+                Err(e) => bail!("device found but failed to open: {}", e),
+            }
+        }
+    }
+    Ok(None)
 }
