@@ -19,14 +19,17 @@ struct Args {
     #[arg(short = 'p', long)]
     path: PathBuf,
 
-    #[arg(long)]
+    #[arg(short = 'P', long)]
     pcapify: bool,
 
     #[arg(long)]
     show_skipped: bool,
 
     #[arg(short, long)]
-    verbose: bool,
+    quiet: bool,
+
+    #[arg(short, long)]
+    debug: bool,
 }
 
 #[derive(Default)]
@@ -141,7 +144,7 @@ async fn pcapify(qmdl_path: &PathBuf) {
     let qmdl_file_size = qmdl_file.metadata().await.unwrap().len();
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_file_size as usize));
     let mut pcap_path = qmdl_path.clone();
-    pcap_path.set_extension("pcap");
+    pcap_path.set_extension("pcapng");
     let pcap_file = &mut File::create(&pcap_path)
         .await
         .expect("failed to open pcap file");
@@ -167,10 +170,12 @@ async fn pcapify(qmdl_path: &PathBuf) {
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let level = if args.verbose {
-        log::LevelFilter::Trace
-    } else {
+    let level = if args.debug {
+        log::LevelFilter::Debug
+    } else if args.quiet {
         log::LevelFilter::Warn
+    } else {
+        log::LevelFilter::Info
     };
     simple_logger::SimpleLogger::new()
         .with_colors(true)
@@ -186,7 +191,7 @@ async fn main() {
     for analyzer in harness.get_metadata().analyzers {
         info!(
             "    - {} (v{}): {}",
-            analyzer.name, analyzer.description, analyzer.version
+            analyzer.name, analyzer.version, analyzer.description
         );
     }
 
@@ -202,12 +207,14 @@ async fn main() {
         // instead of relying on the QMDL extension, can we check if a file is
         // QMDL by inspecting the contents?
         if name_str.ends_with(".qmdl") {
+            info!("**** Beginning analysis of {name_str}");
             analyze_qmdl(path_str, args.show_skipped).await;
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
-        } else if name_str.ends_with(".pcap") {
+        } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
+            info!("**** Beginning analysis of {name_str}");
             analyze_pcap(path_str, args.show_skipped).await;
         }
     }
