@@ -125,7 +125,8 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(_)) => {
                         self.transition(State::IdentityRequest);
                     }
-                    NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
+                    NASMessage::EMMMessage(EMMMessage::EMMAttachComplete(_)) 
+                    | NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
                         self.transition(State::AuthAccept);
                     }
                     NASMessage::EMMMessage(EMMMessage::EMMServiceReject(_))
