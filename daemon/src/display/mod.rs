@@ -1,5 +1,6 @@
 mod generic_framebuffer;
 
+pub mod headless;
 pub mod orbic;
 pub mod tmobile;
 pub mod tplink;

@@ -1502,7 +1502,8 @@ dependencies = [
  "env_logger 0.11.8",
  "hyper",
  "hyper-util",
- "md5",
+ "md5 0.7.0",
+ "md5crypt",
  "nusb",
  "reqwest",
  "serde",
@@ -1743,6 +1744,21 @@ name = "md5"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
+
+[[package]]
+name = "md5"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae960838283323069879657ca3de837e9f7bbb4c7bf6ea7f1b290d5e9476d2e0"
+
+[[package]]
+name = "md5crypt"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c8db1a978f99f584f2e72601860f68bb2cea9c09f4408f5e83f805db3434fb0"
+dependencies = [
+ "md5 0.8.0",
+]
 
 [[package]]
 name = "mdns-sd"

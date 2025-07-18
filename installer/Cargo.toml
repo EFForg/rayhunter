@@ -15,6 +15,7 @@ env_logger = "0.11.8"
 hyper = "1.6.0"
 hyper-util = "0.1.11"
 md5 = "0.7.0"
+md5crypt = "1.0.0"
 nusb = "0.1.13"
 reqwest = { version = "0.12.15", features = ["json"], default-features = false }
 serde = { version = "1.0.219", features = ["derive"] }
