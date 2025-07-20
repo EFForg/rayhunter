@@ -20,7 +20,7 @@ use tokio_util::task::TaskTracker;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisWriter};
 use crate::display;
-use crate::qmdl_store::{RecordingStore, RecordingStoreError};
+use crate::qmdl_store::{EntryType, RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
 
 pub enum DiagDeviceCtrlMessage {
@@ -199,41 +199,40 @@ pub async fn delete_recording(
     }
     let mut qmdl_store = state.qmdl_store_lock.write().await;
     match qmdl_store.delete_entry(&qmdl_name).await {
-        Err(RecordingStoreError::NoSuchEntryError) => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                format!("no recording with name {qmdl_name}"),
-            ));
+        Err(RecordingStoreError::NoSuchEntryError) => Err((
+            StatusCode::BAD_REQUEST,
+            format!("no recording with name {qmdl_name}"),
+        )),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("couldn't delete recording: {e}"),
+        )),
+        Ok(entry_type) => {
+            if entry_type == EntryType::Current {
+                state
+                    .diag_device_ctrl_sender
+                    .send(DiagDeviceCtrlMessage::StopRecording)
+                    .await
+                    .map_err(|e| {
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("couldn't send stop recording message: {e}"),
+                        )
+                    })?;
+                state
+                    .ui_update_sender
+                    .send(display::DisplayState::Paused)
+                    .await
+                    .map_err(|e| {
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("couldn't send ui update message: {e}"),
+                        )
+                    })?;
+            }
+            Ok((StatusCode::ACCEPTED, "ok".to_string()))
         }
-        Err(e) => {
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't delete recording: {e}"),
-            ));
-        }
-        Ok(_) => {}
     }
-    state
-        .diag_device_ctrl_sender
-        .send(DiagDeviceCtrlMessage::StopRecording)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send stop recording message: {e}"),
-            )
-        })?;
-    state
-        .ui_update_sender
-        .send(display::DisplayState::Paused)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send ui update message: {e}"),
-            )
-        })?;
-    Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
 pub async fn delete_all_recordings(
