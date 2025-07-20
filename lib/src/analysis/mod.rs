@@ -1,4 +1,5 @@
 pub mod analyzer;
+pub mod cellular_data;
 pub mod connection_redirect_downgrade;
 pub mod imsi_provided;
 pub mod imsi_requested;

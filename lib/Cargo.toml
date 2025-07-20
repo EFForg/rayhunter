@@ -30,3 +30,4 @@ telcom-parser = { path = "../telcom-parser" }
 tokio = { version = "1.44.2", default-features = false }
 futures = { version = "0.3.30", default-features = false }
 serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.141"

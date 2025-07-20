@@ -320,6 +320,15 @@ impl LteRrcOtaPacket {
         }
     }
 
+    pub fn get_phy_cell_id(&self) -> u16 {
+        match self {
+            LteRrcOtaPacket::V0 { phy_cell_id, .. } => *phy_cell_id,
+            LteRrcOtaPacket::V5 { phy_cell_id, .. } => *phy_cell_id,
+            LteRrcOtaPacket::V8 { phy_cell_id, .. } => *phy_cell_id,
+            LteRrcOtaPacket::V25 { phy_cell_id, .. } => *phy_cell_id,
+        }
+    }
+
     pub fn get_earfcn(&self) -> u32 {
         match self {
             LteRrcOtaPacket::V0 { earfcn, .. } => *earfcn as u32,

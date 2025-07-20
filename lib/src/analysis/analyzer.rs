@@ -1,11 +1,15 @@
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::fs::File;
+use std::io::{BufWriter, Write};
+use std::path::Path;
 
 use crate::util::RuntimeMetadata;
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
 use super::{
+    cellular_data::CellularData,
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, information_element::InformationElement,
     null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
@@ -99,6 +103,7 @@ pub struct ReportMetadata {
 pub struct PacketAnalysis {
     pub timestamp: DateTime<FixedOffset>,
     pub events: Vec<Option<Event>>,
+    pub cellular_data: Option<CellularData>,
 }
 
 #[derive(Serialize, Debug)]
@@ -201,10 +206,35 @@ impl Harness {
             };
 
             let analysis_result = self.analyze_information_element(&element);
-            if analysis_result.iter().any(Option::is_some) {
+            let mut cellular_data = CellularData::from_gsmtap_and_ie(&gsmtap_msg, &element);
+            
+            // Add GPS data if available (placeholder for GPS integration)
+            // TODO: Integrate with actual GPS data source
+            if let Some(lat) = self.get_gps_latitude() {
+                if let Some(lon) = self.get_gps_longitude() {
+                    cellular_data.add_gps_location(lat, lon, None, None);
+                }
+            }
+            
+            // Perform security analysis
+            cellular_data.analyze_security();
+            
+            // Include packet analysis if we have events OR cellular data OR security threats
+            let has_security_threat = cellular_data.security_analysis.as_ref()
+                .map(|sa| sa.threat_level != super::cellular_data::ThreatLevel::None)
+                .unwrap_or(false);
+                
+            if analysis_result.iter().any(Option::is_some) || 
+               cellular_data.has_cell_identification() || 
+               has_security_threat {
                 row.analysis.push(PacketAnalysis {
                     timestamp: timestamp.to_datetime(),
                     events: analysis_result,
+                    cellular_data: if cellular_data.has_cell_identification() || has_security_threat {
+                        Some(cellular_data)
+                    } else {
+                        None
+                    },
                 });
             }
         }
@@ -249,5 +279,104 @@ impl Harness {
             analyzers,
             rayhunter,
         }
+    }
+
+    /// Placeholder for GPS latitude - replace with actual GPS integration
+    fn get_gps_latitude(&self) -> Option<f64> {
+        // TODO: Integrate with actual GPS data source
+        // For now, return None to indicate no GPS data
+        None
+    }
+
+    /// Placeholder for GPS longitude - replace with actual GPS integration
+    fn get_gps_longitude(&self) -> Option<f64> {
+        // TODO: Integrate with actual GPS data source
+        // For now, return None to indicate no GPS data
+        None
+    }
+
+    /// Export analysis results to NDJSON file with Unix timestamp
+    pub fn export_to_ndjson(&self, analysis_rows: &[AnalysisRow], output_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let timestamp = chrono::Utc::now().timestamp();
+        let filename = format!("{}/cellular_analysis_{}.ndjson", output_dir, timestamp);
+        let path = Path::new(&filename);
+        
+        // Create directory if it doesn't exist
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        
+        let file = File::create(path)?;
+        let mut writer = BufWriter::new(file);
+        
+        for row in analysis_rows {
+            for analysis in &row.analysis {
+                if let Some(cellular_data) = &analysis.cellular_data {
+                    let json_value = cellular_data.to_ndjson_format();
+                    writeln!(writer, "{}", serde_json::to_string(&json_value)?)?;
+                }
+            }
+        }
+        
+        writer.flush()?;
+        println!("NDJSON export completed: {}", filename);
+        Ok(())
+    }
+
+    /// Export security threats to separate NDJSON file
+    pub fn export_security_threats(&self, analysis_rows: &[AnalysisRow], output_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let timestamp = chrono::Utc::now().timestamp();
+        let filename = format!("{}/security_threats_{}.ndjson", output_dir, timestamp);
+        let path = Path::new(&filename);
+        
+        // Create directory if it doesn't exist
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        
+        let file = File::create(path)?;
+        let mut writer = BufWriter::new(file);
+        
+        for row in analysis_rows {
+            for analysis in &row.analysis {
+                if let Some(cellular_data) = &analysis.cellular_data {
+                    if let Some(security) = &cellular_data.security_analysis {
+                        if security.threat_level != super::cellular_data::ThreatLevel::None {
+                            let mut threat_json = serde_json::Map::new();
+                            threat_json.insert("timestamp".to_string(), serde_json::Value::Number(
+                                serde_json::Number::from(analysis.timestamp.timestamp())
+                            ));
+                            threat_json.insert("cell_id".to_string(), serde_json::Value::String(cellular_data.get_cell_id()));
+                            threat_json.insert("threat_level".to_string(), serde_json::Value::String(format!("{:?}", security.threat_level)));
+                            if let Some(attack_type) = &security.attack_type {
+                                threat_json.insert("attack_type".to_string(), serde_json::Value::String(format!("{:?}", attack_type)));
+                            }
+                            threat_json.insert("confidence".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(security.confidence as f64).unwrap()));
+                            threat_json.insert("indicators".to_string(), serde_json::Value::Array(
+                                security.indicators.iter().map(|i| serde_json::Value::String(i.clone())).collect()
+                            ));
+                            
+                            // Add GPS location if available
+                            if let Some(gps) = &cellular_data.gps_location {
+                                let mut gps_json = serde_json::Map::new();
+                                if let Some(lat) = gps.latitude {
+                                    gps_json.insert("latitude".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(lat).unwrap()));
+                                }
+                                if let Some(lon) = gps.longitude {
+                                    gps_json.insert("longitude".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(lon).unwrap()));
+                                }
+                                threat_json.insert("gps_location".to_string(), serde_json::Value::Object(gps_json));
+                            }
+                            
+                            writeln!(writer, "{}", serde_json::to_string(&serde_json::Value::Object(threat_json))?)?;
+                        }
+                    }
+                }
+            }
+        }
+        
+        writer.flush()?;
+        println!("Security threats export completed: {}", filename);
+        Ok(())
     }
 }
