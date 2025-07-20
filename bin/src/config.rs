@@ -15,6 +15,9 @@ pub struct Config {
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
     pub analyzers: AnalyzerConfig,
+    pub enable_gps: bool,
+    pub gps_log_path: String,
+    pub gps_update_interval_ms: u64,
 }
 
 impl Default for Config {
@@ -28,6 +31,9 @@ impl Default for Config {
             colorblind_mode: false,
             key_input_mode: 0,
             analyzers: AnalyzerConfig::default(),
+            enable_gps: false,
+            gps_log_path: "/data/rayhunter/gps.log".to_string(),
+            gps_update_interval_ms: 1000,
         }
     }
 }

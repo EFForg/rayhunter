@@ -11,19 +11,36 @@ use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use include_dir::{Dir, include_dir};
 use log::error;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::fs::write;
-use tokio::io::{AsyncReadExt, copy, duplex};
+use tokio::fs::{write, OpenOptions};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, copy, duplex};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{RwLock, oneshot};
 use tokio_util::compat::FuturesAsyncWriteCompatExt;
 use tokio_util::io::ReaderStream;
+use chrono::{DateTime, Utc};
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::config::Config;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
 use crate::{DiagDeviceCtrlMessage, display};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GpsLocation {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub altitude: Option<f64>,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GpsStatus {
+    pub enabled: bool,
+    pub active: bool,
+    pub last_location: Option<GpsLocation>,
+}
 
 pub struct ServerState {
     pub config_path: String,
@@ -34,6 +51,7 @@ pub struct ServerState {
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
+    pub gps_status: Arc<RwLock<GpsStatus>>,
 }
 
 pub async fn get_qmdl(
@@ -96,6 +114,87 @@ pub async fn get_config(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Config>, (StatusCode, String)> {
     Ok(Json(state.config.clone()))
+}
+
+// GPS API handlers
+pub async fn get_gps_status(
+    State(state): State<Arc<ServerState>>,
+) -> Result<Json<GpsStatus>, (StatusCode, String)> {
+    let gps_status = state.gps_status.read().await;
+    Ok(Json(gps_status.clone()))
+}
+
+pub async fn start_gps(
+    State(state): State<Arc<ServerState>>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    if !state.config.enable_gps {
+        return Err((StatusCode::SERVICE_UNAVAILABLE, "GPS is disabled in configuration".to_string()));
+    }
+
+    let mut gps_status = state.gps_status.write().await;
+    gps_status.active = true;
+    
+    Ok((StatusCode::OK, "GPS tracking started".to_string()))
+}
+
+pub async fn stop_gps(
+    State(state): State<Arc<ServerState>>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let mut gps_status = state.gps_status.write().await;
+    gps_status.active = false;
+    
+    Ok((StatusCode::OK, "GPS tracking stopped".to_string()))
+}
+
+pub async fn get_gps_location(
+    State(state): State<Arc<ServerState>>,
+) -> Result<Json<Option<GpsLocation>>, (StatusCode, String)> {
+    let gps_status = state.gps_status.read().await;
+    
+    if !gps_status.active {
+        return Ok(Json(None));
+    }
+    
+    // Mock GPS location for now - in real implementation this would interface with actual GPS hardware
+    let location = GpsLocation {
+        latitude: 37.7749,  // San Francisco coordinates as example
+        longitude: -122.4194,
+        altitude: Some(100.0),
+        timestamp: Utc::now(),
+    };
+
+    // Log the location if GPS is active
+    if let Err(e) = log_gps_location(&state.config.gps_log_path, &location).await {
+        error!("Failed to log GPS location: {}", e);
+    }
+
+    // Update the last location in status
+    drop(gps_status);
+    let mut gps_status = state.gps_status.write().await;
+    gps_status.last_location = Some(location.clone());
+    
+    Ok(Json(Some(location)))
+}
+
+async fn log_gps_location(log_path: &str, location: &GpsLocation) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let log_entry = format!(
+        "{},{},{},{}\n",
+        location.timestamp.to_rfc3339(),
+        location.latitude,
+        location.longitude,
+        location.altitude.map_or("".to_string(), |a| a.to_string())
+    );
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path)
+        .await?;
+    
+    file.write_all(log_entry.as_bytes()).await?;
+    file.flush().await?;
+
+    Ok(())
 }
 
 pub async fn set_config(
@@ -295,6 +394,11 @@ mod tests {
             analysis_status_lock: Arc::new(RwLock::new(analysis_status)),
             analysis_sender: analysis_tx,
             daemon_restart_tx: Arc::new(RwLock::new(None)),
+            gps_status: Arc::new(RwLock::new(GpsStatus {
+                enabled: false,
+                active: false,
+                last_location: None,
+            })),
         })
     }
 
