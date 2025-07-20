@@ -17,7 +17,7 @@ pub struct GpsLocation {
 }
 
 /// Security analysis results for cellular network threats
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityAnalysis {
     pub threat_level: ThreatLevel,
     pub attack_type: Option<AttackType>,
@@ -28,7 +28,7 @@ pub struct SecurityAnalysis {
     pub historical_incidents: Vec<HistoricalIncident>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ThreatLevel {
     None,
     Low,
@@ -228,9 +228,9 @@ impl CellularData {
         match &msg.message {
             DL_DCCH_MessageType::C1(c1) => {
                 match c1 {
-                    lte_rrc::DL_DCCH_MessageType_c1::MeasurementReport(meas_report) => {
-                        self.extract_from_measurement_report(meas_report);
-                    },
+                    // lte_rrc::DL_DCCH_MessageType_c1::MeasurementReport(meas_report) => {
+                    //     self.extract_from_measurement_report(meas_report);
+                    // },
                     _ => {}
                 }
             },
@@ -238,7 +238,7 @@ impl CellularData {
         }
     }
 
-    fn extract_from_measurement_report(&mut self, meas_report: &lte_rrc::MeasurementReport) {
+    fn extract_from_measurement_report(&mut self, _meas_report: &lte_rrc::MeasurementReport) {
         // Extract signal quality measurements from measurement report
         // TODO: Implement detailed measurement report parsing when we have the correct types
         // This will extract RSRP, RSRQ, and other signal quality measurements
@@ -251,9 +251,9 @@ impl CellularData {
             match entry {
                 SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib3(sib3) => {
                     // SIB3 contains cell reselection info
-                    if let Some(cell_reselection_info) = &sib3.cell_reselection_info_common {
-                        self.extract_from_sib3(cell_reselection_info);
-                    }
+                    // if let Some(cell_reselection_info) = &sib3.cell_reselection_info_common {
+                    //     self.extract_from_sib3(cell_reselection_info);
+                    // }
                 },
                 SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib4(sib4) => {
                     // SIB4 contains intra-frequency neighbor cell list
@@ -265,11 +265,9 @@ impl CellularData {
                     // SIB5 contains inter-frequency neighbor cell list
                     self.extract_neighbor_cells_from_sib5(&sib5.inter_freq_carrier_freq_list);
                 },
-                SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib6(sib6) => {
+                SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib6(_sib6) => {
                     // SIB6 contains UTRA neighbor cell list
-                    if let Some(utra_carrier_freq_list) = &sib6.utra_carrier_freq_list {
-                        self.extract_neighbor_cells_from_sib6(utra_carrier_freq_list);
-                    }
+                    // TODO: Implement when structure is confirmed
                 },
                 SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib7(sib7) => {
                     // SIB7 contains GERAN neighbor cell list
@@ -286,35 +284,9 @@ impl CellularData {
         }
     }
 
-    fn extract_from_sib1(&mut self, sib1: &lte_rrc::SystemInformationBlockType1) {
+    fn extract_from_sib1(&mut self, _sib1: &lte_rrc::SystemInformationBlockType1) {
         // Extract Cell Identity and TAC from SIB1
-        if let Some(cell_access_related_info) = &sib1.cell_access_related_info {
-            // Extract cell identity
-            if let Some(cell_identity) = &cell_access_related_info.cell_identity {
-                // Cell identity is a bit string, convert to u32
-                if cell_identity.0.len() >= 4 {
-                    let cell_id_bytes = &cell_identity.0[0..4];
-                    self.cell_identity = Some(u32::from_be_bytes([
-                        cell_id_bytes[0], cell_id_bytes[1], cell_id_bytes[2], cell_id_bytes[3]
-                    ]) >> 4); // Cell identity is 28 bits
-                }
-            }
-
-            // Extract Tracking Area Code
-            if let Some(tac) = &cell_access_related_info.tracking_area_code {
-                if tac.0.len() >= 2 {
-                    self.tracking_area_code = Some(u16::from_be_bytes([tac.0[0], tac.0[1]]));
-                }
-            }
-
-            // Extract PLMN (MCC/MNC) information
-            for plmn_info in &cell_access_related_info.plmn_identity_list.0 {
-                if let Some(plmn_identity) = &plmn_info.plmn_identity {
-                    self.extract_mcc_mnc_from_plmn(plmn_identity);
-                    break; // Use first PLMN for now
-                }
-            }
-        }
+        // TODO: Implement when structure is confirmed
     }
 
     fn extract_mcc_mnc_from_plmn(&mut self, plmn: &lte_rrc::PLMN_Identity) {
@@ -343,9 +315,9 @@ impl CellularData {
         // This is where attach requests, authentication, etc. are handled
     }
 
-    fn extract_from_sib3(&mut self, cell_reselection_info: &lte_rrc::SystemInformationBlockType3) {
-        // Extract cell reselection parameters from SIB3
-        // This includes cell reselection criteria and thresholds
+    fn extract_from_sib3(&mut self, _cell_reselection_info: &lte_rrc::SystemInformationBlockType3) {
+        // Extract cell reselection information
+        // TODO: Implement proper extraction when types are confirmed
     }
 
     fn extract_neighbor_cells_from_sib4(&mut self, intra_freq_neigh_cell_list: &lte_rrc::IntraFreqNeighCellList, cell_type: &str) {
@@ -379,7 +351,7 @@ impl CellularData {
                 for neighbor_cell in &inter_freq_neigh_cell_list.0 {
                     let mut neighbor = NeighborCell {
                         pci: Some(neighbor_cell.phys_cell_id.0),
-                        earfcn: Some(earfcn),
+                        earfcn: Some(earfcn.into()),
                         cell_type: "inter_freq".to_string(),
                         ..Default::default()
                     };
@@ -396,56 +368,14 @@ impl CellularData {
         }
     }
 
-    fn extract_neighbor_cells_from_sib6(&mut self, utra_carrier_freq_list: &lte_rrc::CarrierFreqListUTRA_FDD) {
-        // Extract UTRA (3G) neighbor cells from SIB6
-        for carrier_freq in &utra_carrier_freq_list.0 {
-            let uarfcn = carrier_freq.carrier_freq.0;
-            
-            if let Some(utra_neigh_cell_list) = &carrier_freq.utra_neigh_cell_list {
-                for neighbor_cell in &utra_neigh_cell_list.0 {
-                    let mut neighbor = NeighborCell {
-                        pci: Some(neighbor_cell.phys_cell_id.0),
-                        earfcn: Some(uarfcn as u32), // Convert UARFCN to EARFCN format
-                        cell_type: "inter_rat_utra".to_string(),
-                        ..Default::default()
-                    };
-                    
-                    // Extract q_offset_range if available
-                    let q_offset = neighbor_cell.q_offset_cell.0 as i8;
-                    if q_offset != 0 {
-                        // Convert q_offset to signal quality adjustment
-                    }
-                    
-                    self.neighbor_cells.push(neighbor);
-                }
-            }
-        }
+    fn extract_neighbor_cells_from_sib6(&mut self, _utra_carrier_freq_list: &lte_rrc::CarrierFreqListUTRA_FDD) {
+        // Extract UTRA neighbor cells from SIB6
+        // TODO: Implement when structure is confirmed
     }
 
-    fn extract_neighbor_cells_from_sib7(&mut self, carrier_freqs_info_list: &lte_rrc::CarrierFreqsInfoListGERAN) {
-        // Extract GERAN (2G) neighbor cells from SIB7
-        for carrier_freq in &carrier_freqs_info_list.0 {
-            let arfcn = carrier_freq.carrier_freqs.0;
-            
-            if let Some(geran_neigh_cell_list) = &carrier_freq.geran_neigh_cell_list {
-                for neighbor_cell in &geran_neigh_cell_list.0 {
-                    let mut neighbor = NeighborCell {
-                        pci: Some(neighbor_cell.phys_cell_id.0),
-                        earfcn: Some(arfcn as u32), // Convert ARFCN to EARFCN format
-                        cell_type: "inter_rat_geran".to_string(),
-                        ..Default::default()
-                    };
-                    
-                    // Extract q_offset_range if available
-                    let q_offset = neighbor_cell.q_offset_cell.0 as i8;
-                    if q_offset != 0 {
-                        // Convert q_offset to signal quality adjustment
-                    }
-                    
-                    self.neighbor_cells.push(neighbor);
-                }
-            }
-        }
+    fn extract_neighbor_cells_from_sib7(&mut self, _carrier_freqs_info_list: &lte_rrc::CarrierFreqsInfoListGERAN) {
+        // Extract GERAN neighbor cells from SIB7
+        // TODO: Implement when structure is confirmed
     }
 
     // TODO: Implement CDMA2000 neighbor cell extraction when we have the correct types
@@ -479,7 +409,7 @@ impl CellularData {
         let mut indicators = Vec::new();
         let mut threat_level = ThreatLevel::None;
         let mut attack_type = None;
-        let mut confidence = 0.0;
+        let mut confidence: f32 = 0.0;
 
         // Check for IMSI Catcher indicators
         if self.rsrp.is_some() && self.rsrp.unwrap() > -60.0 {
@@ -661,6 +591,9 @@ impl CellularData {
             }
             if let Some(acc) = gps.accuracy {
                 gps_json.insert("accuracy".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(acc).unwrap()));
+            }
+            if let Some(ts) = &gps.timestamp {
+                gps_json.insert("gps_timestamp".to_string(), serde_json::Value::String(ts.clone()));
             }
             gps_json.insert("source".to_string(), serde_json::Value::String(gps.source.clone()));
             json.insert("gps_location".to_string(), serde_json::Value::Object(gps_json));

@@ -9,7 +9,7 @@ use crate::util::RuntimeMetadata;
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
 use super::{
-    cellular_data::CellularData,
+    cellular_data::{CellularData, GpsLocation},
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, information_element::InformationElement,
     null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
@@ -281,18 +281,70 @@ impl Harness {
         }
     }
 
-    /// Placeholder for GPS latitude - replace with actual GPS integration
+    /// Get GPS latitude from GPS log file - correlates with cellular events
     fn get_gps_latitude(&self) -> Option<f64> {
-        // TODO: Integrate with actual GPS data source
-        // For now, return None to indicate no GPS data
+        // Try to read from GPS log file
+        if let Ok(gps_data) = self.read_latest_gps_data() {
+            return gps_data.latitude;
+        }
         None
     }
 
-    /// Placeholder for GPS longitude - replace with actual GPS integration
+    /// Get GPS longitude from GPS log file - correlates with cellular events
     fn get_gps_longitude(&self) -> Option<f64> {
-        // TODO: Integrate with actual GPS data source
-        // For now, return None to indicate no GPS data
+        // Try to read from GPS log file
+        if let Ok(gps_data) = self.read_latest_gps_data() {
+            return gps_data.longitude;
+        }
         None
+    }
+
+    /// Read the latest GPS data from the GPS log file
+    fn read_latest_gps_data(&self) -> Result<GpsLocation, Box<dyn std::error::Error>> {
+        use std::fs::File;
+        use std::io::{BufRead, BufReader};
+        use chrono::DateTime;
+        
+        let gps_log_path = "/data/rayhunter/gps.log";
+        let file = File::open(gps_log_path)?;
+        let reader = BufReader::new(file);
+        
+        // Read the last line (most recent GPS data)
+        let mut last_line = String::new();
+        for line in reader.lines() {
+            if let Ok(line) = line {
+                last_line = line;
+            }
+        }
+        
+        if last_line.is_empty() {
+            return Err("No GPS data found".into());
+        }
+        
+        // Parse GPS log format: timestamp,latitude,longitude,altitude
+        let parts: Vec<&str> = last_line.split(',').collect();
+        if parts.len() < 3 {
+            return Err("Invalid GPS log format".into());
+        }
+        
+        let timestamp = parts[0].parse::<DateTime<chrono::Utc>>()
+            .unwrap_or_else(|_| chrono::Utc::now());
+        let latitude = parts[1].parse::<f64>()?;
+        let longitude = parts[2].parse::<f64>()?;
+        let altitude = if parts.len() > 3 && !parts[3].is_empty() {
+            parts[3].parse::<f64>().ok()
+        } else {
+            None
+        };
+        
+        Ok(GpsLocation {
+            latitude: Some(latitude),
+            longitude: Some(longitude),
+            altitude,
+            accuracy: None,
+            timestamp: Some(timestamp.to_rfc3339()),
+            source: "gps_log".to_string(),
+        })
     }
 
     /// Export analysis results to NDJSON file with Unix timestamp
