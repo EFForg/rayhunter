@@ -29,7 +29,7 @@ if curl -s -o /dev/null -w "%{http_code}" https://github.com/drinkingc0ffee/rayh
     echo "   - Enhanced GPS integration with timestamp correlation"
     echo "   - Complete NDJSON export with SCAT compatibility"
     echo "   - All EFF suspicious cell algorithms integrated"
-    echo "   - Deployment automation for ARM devices"
+    echo "   - Enhanced configuration management"
     echo "   - Comprehensive documentation"
     echo ""
     echo "🔗 Fork URL: https://github.com/drinkingc0ffee/rayhunter"

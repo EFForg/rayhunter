@@ -29,11 +29,10 @@
 - **GPS correlation** in all exports
 - **Comprehensive neighbor cell data** with signal quality
 
-### 🔧 **Deployment Automation**
-- **ARM hard float** cross-compilation support
-- **Automated deployment** to ARM devices
+### 🔧 **Enhanced Configuration**
 - **GPS API integration** with REST endpoints
 - **Enhanced configuration** management
+- **Improved build system** compatibility
 
 ## 📋 **What's Enhanced from Original**
 
@@ -45,7 +44,7 @@
 | **Data Export** | ❌ Basic | ✅ NDJSON with GPS |
 | **Neighbor Cells** | ❌ Limited | ✅ SIB4-SIB7 extraction |
 | **Signal Quality** | ❌ Basic | ✅ Complete measurements |
-| **Deployment** | ❌ Manual | ✅ Automated ARM deployment |
+| **Configuration** | ❌ Basic | ✅ Enhanced with GPS options |
 
 ## 🏷️ **Version: v0.4.5**
 
@@ -65,7 +64,7 @@ rayhunter-enhanced/
 │   ├── server.rs             # GPS API endpoints
 │   ├── config.rs             # Enhanced configuration
 │   └── daemon.rs             # GPS integration
-├── deploy_v0.4.5.sh          # ARM deployment automation
+├── doc/gps-api.md            # GPS API documentation
 ├── NDJSON_COMPARISON.md      # Complete feature comparison
 └── DEPLOYMENT_STATUS.md      # Deployment documentation
 ```
@@ -77,9 +76,9 @@ rayhunter-enhanced/
 ./build_macos.sh
 ```
 
-### **2. Deploy to Device:**
+### **2. Build and Run:**
 ```bash
-./deploy_v0.4.5.sh
+cargo build --release
 ```
 
 ### **3. Access Web Interface:**
@@ -129,7 +128,7 @@ http://localhost:8080
 - **12 files** enhanced with new capabilities
 - **100% SCAT compatibility** maintained
 - **Real-time GPS correlation** added
-- **Automated ARM deployment** implemented
+- **Enhanced configuration** management
 
 ## 🤝 **Contributing**
 
