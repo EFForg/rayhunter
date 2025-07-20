@@ -175,7 +175,7 @@
 - **Comprehensive neighbor cell data** from SIB4-SIB7
 
 ### **📁 Output Files:**
-1. **`cellular_analysis_{timestamp}.ndjson`** - Complete cellular data with GPS
-2. **`security_threats_{timestamp}.ndjson`** - Security threats only
+1. **`cellular_analysis_{timestamp}.ndjson`** - Complete cellular data with GPS correlation
+2. **`security_threats_{timestamp}.ndjson`** - Security threats with location tracking
 
 **The NDJSON output contains EVERYTHING that SCAT provides PLUS all EFF suspicious cell algorithms PLUS enhanced GPS correlation and security analysis!** 
