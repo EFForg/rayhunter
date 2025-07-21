@@ -116,6 +116,9 @@ pub struct CellularData {
     pub data_rate: Option<f32>, // Mbps
     pub latency: Option<f32>, // ms
     pub packet_loss: Option<f32>, // percentage
+    pub ecno: Option<f32>, // Ec/No (dB) for UMTS
+    pub band: Option<u16>, // Frequency band
+    pub rnc: Option<u16>,  // Radio Network Controller ID (UMTS)
 }
 
 /// Neighbor cell information extracted from QMDL messages
@@ -129,6 +132,25 @@ pub struct NeighborCell {
     pub sinr: Option<f32>,          // SINR (dB)
     pub cell_type: String,          // "intra_freq", "inter_freq", "inter_rat"
     pub rank: Option<u8>,           // Cell ranking
+    pub ecno: Option<f32>, // Ec/No (dB) for UMTS
+    pub band: Option<u16>, // Frequency band
+    pub rnc: Option<u16>,  // Radio Network Controller ID (UMTS)
+}
+
+/// Lookup table for LTE EARFCN to band mapping (partial, extend as needed)
+fn earfcn_to_band(earfcn: u32) -> Option<u16> {
+    match earfcn {
+        0..=599 => Some(1),      // Band 1
+        1200..=1949 => Some(3),  // Band 3
+        1950..=2399 => Some(4),  // Band 4
+        2400..=2649 => Some(5),  // Band 5
+        2750..=3449 => Some(7),  // Band 7
+        3450..=3799 => Some(8),  // Band 8
+        6150..=6449 => Some(20), // Band 20
+        65536..=66435 => Some(28), // Band 28
+        // Add more bands as needed
+        _ => None,
+    }
 }
 
 impl CellularData {
@@ -200,6 +222,7 @@ impl CellularData {
             LteInformationElement::NAS(nas_msg) => {
                 self.extract_from_nas(nas_msg);
             },
+            // Add logic for extracting band and other fields if available
             _ => {}
         }
     }
@@ -219,6 +242,8 @@ impl CellularData {
                 }
             }
         }
+        // Example: If band info is available in msg, extract it here
+        // self.band = Some(...);
     }
 
     fn extract_from_dl_dcch(&mut self, msg: &lte_rrc::DL_DCCH_Message) {
@@ -236,6 +261,9 @@ impl CellularData {
             },
             _ => {}
         }
+        // Example: If ecno or rnc info is available in msg, extract it here
+        // self.ecno = Some(...);
+        // self.rnc = Some(...);
     }
 
     fn extract_from_measurement_report(&mut self, _meas_report: &lte_rrc::MeasurementReport) {
@@ -345,13 +373,18 @@ impl CellularData {
         // Extract inter-frequency neighbor cells from SIB5
         for carrier_freq in &inter_freq_carrier_freq_list.0 {
             let earfcn = carrier_freq.dl_carrier_freq.0;
-            
+            // Map EARFCN to band
+            let band = earfcn_to_band(earfcn.into());
+            if self.band.is_none() && band.is_some() {
+                self.band = band;
+            }
             // Extract neighbor cell list if available
             if let Some(inter_freq_neigh_cell_list) = &carrier_freq.inter_freq_neigh_cell_list {
                 for neighbor_cell in &inter_freq_neigh_cell_list.0 {
                     let mut neighbor = NeighborCell {
                         pci: Some(neighbor_cell.phys_cell_id.0),
                         earfcn: Some(earfcn.into()),
+                        band,
                         cell_type: "inter_freq".to_string(),
                         ..Default::default()
                     };
@@ -576,6 +609,15 @@ impl CellularData {
         if let Some(sinr) = self.sinr {
             json.insert("sinr".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(sinr as f64).unwrap()));
         }
+        if let Some(ecno) = self.ecno {
+            json.insert("ecno".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(ecno as f64).unwrap()));
+        }
+        if let Some(band) = self.band {
+            json.insert("band".to_string(), serde_json::Value::Number(serde_json::Number::from(band)));
+        }
+        if let Some(rnc) = self.rnc {
+            json.insert("rnc".to_string(), serde_json::Value::Number(serde_json::Number::from(rnc)));
+        }
         
         // Add GPS location
         if let Some(gps) = &self.gps_location {
@@ -631,6 +673,15 @@ impl CellularData {
                 }
                 if let Some(rsrq) = n.rsrq {
                     neighbor_json.insert("rsrq".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(rsrq as f64).unwrap()));
+                }
+                if let Some(ecno) = n.ecno {
+                    neighbor_json.insert("ecno".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(ecno as f64).unwrap()));
+                }
+                if let Some(band) = n.band {
+                    neighbor_json.insert("band".to_string(), serde_json::Value::Number(serde_json::Number::from(band)));
+                }
+                if let Some(rnc) = n.rnc {
+                    neighbor_json.insert("rnc".to_string(), serde_json::Value::Number(serde_json::Number::from(rnc)));
                 }
                 neighbor_json.insert("cell_type".to_string(), serde_json::Value::String(n.cell_type.clone()));
                 serde_json::Value::Object(neighbor_json)
