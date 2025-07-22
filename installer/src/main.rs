@@ -77,7 +77,7 @@ enum UtilSubCommand {
     /// Send a serial command to the Orbic.
     Serial(Serial),
     /// Start an ADB shell
-    Shell(NoArgs),
+    Shell,
     /// Root the Tmobile and launch adb.
     TmobileStartAdb(TmobileArgs),
     /// Root the Tmobile and launch telnetd.
@@ -89,9 +89,9 @@ enum UtilSubCommand {
     /// Root the Wingtech and launch adb.
     WingtechStartAdb(WingtechArgs),
     /// Unlock the Pinephone's modem and start adb.
-    PinephoneStartAdb(NoArgs),
+    PinephoneStartAdb,
     /// Lock the Pinephone's modem and stop adb.
-    PinephoneStopAdb(NoArgs),
+    PinephoneStopAdb,
     /// Send a file to the TP-Link device over telnet.
     ///
     /// Before running this utility, you need to make telnet accessible with `installer util
@@ -162,9 +162,6 @@ struct Serial {
     command: Vec<String>,
 }
 
-#[derive(Parser, Debug)]
-struct NoArgs {}
-
 async fn run() -> Result<(), Error> {
     env_logger::Builder::from_env(Env::default().default_filter_or("off")).init();
     let Args { command } = Args::parse();
@@ -195,7 +192,7 @@ async fn run() -> Result<(), Error> {
                     }
                 }
             }
-            UtilSubCommand::Shell(_) => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
+            UtilSubCommand::Shell => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
             UtilSubCommand::TmobileStartTelnet(args) => wingtech::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Tmobile TMOHS1")?,
             UtilSubCommand::TmobileStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Tmobile TMOHS1")?,
             UtilSubCommand::TplinkStartTelnet(options) => {
@@ -209,8 +206,8 @@ async fn run() -> Result<(), Error> {
             }
             UtilSubCommand::WingtechStartTelnet(args) => wingtech::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Wingtech CT2MHS01")?,
             UtilSubCommand::WingtechStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Wingtech CT2MHS01")?,
-            UtilSubCommand::PinephoneStartAdb(_) => pinephone::start_adb().await.context("\nFailed to start adb on the PinePhone's modem")?,
-            UtilSubCommand::PinephoneStopAdb(_) => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
+            UtilSubCommand::PinephoneStartAdb => pinephone::start_adb().await.context("\nFailed to start adb on the PinePhone's modem")?,
+            UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
         }
     }
 
