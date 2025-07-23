@@ -283,7 +283,6 @@ async fn run_with_config(
         config,
         qmdl_store_lock: qmdl_store_lock.clone(),
         diag_device_ctrl_sender: diag_tx,
-        ui_update_sender: ui_update_tx,
         analysis_status_lock,
         analysis_sender: analysis_tx,
         daemon_restart_tx: Arc::new(RwLock::new(Some(daemon_restart_tx))),

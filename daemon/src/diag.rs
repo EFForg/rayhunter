@@ -15,6 +15,7 @@ use rayhunter::qmdl::QmdlWriter;
 use tokio::fs::File;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::oneshot;
 use tokio_util::io::ReaderStream;
 use tokio_util::task::TaskTracker;
 
@@ -26,6 +27,13 @@ use crate::server::ServerState;
 pub enum DiagDeviceCtrlMessage {
     StopRecording,
     StartRecording,
+    DeleteEntry {
+        name: String,
+        response_tx: oneshot::Sender<Result<EntryType, RecordingStoreError>>,
+    },
+    DeleteAllEntries {
+        response_tx: oneshot::Sender<Result<(), RecordingStoreError>>,
+    },
     Exit,
 }
 
@@ -95,6 +103,63 @@ pub fn run_diag_read_thread(
 
                             if let Err(e) = ui_update_sender.send(display::DisplayState::Paused).await {
                                 warn!("couldn't send ui update message: {e}");
+                            }
+                        },
+                        Some(DiagDeviceCtrlMessage::DeleteEntry { name: entry_name, response_tx }) => {
+                            let mut qmdl_store = qmdl_store_lock.write().await;
+                            let delete_result = qmdl_store.delete_entry(&entry_name).await;
+
+                            match &delete_result {
+                                Ok(EntryType::Current) => {
+                                    // We deleted the current entry, so stop recording
+                                    if let Some(analysis_writer) = maybe_analysis_writer {
+                                        analysis_writer.close().await.expect("failed to close analysis writer");
+                                    }
+
+                                    maybe_analysis_writer = None;
+                                    maybe_qmdl_writer = None;
+
+                                    if let Err(e) = ui_update_sender.send(display::DisplayState::Paused).await {
+                                        warn!("couldn't send ui update message: {e}");
+                                    }
+                                },
+                                Ok(EntryType::Past) => {
+                                    // We deleted a past entry, no need to stop recording
+                                },
+                                Err(e) => {
+                                    error!("couldn't delete entry {entry_name}: {e}");
+                                }
+                            }
+
+                            // Send the result back to the caller
+                            if response_tx.send(delete_result).is_err() {
+                                warn!("Failed to send delete entry response");
+                            }
+                        },
+                        Some(DiagDeviceCtrlMessage::DeleteAllEntries { response_tx }) => {
+                            // First stop recording if we have one active
+                            if maybe_qmdl_writer.is_some() {
+                                if let Some(analysis_writer) = maybe_analysis_writer {
+                                    analysis_writer.close().await.expect("failed to close analysis writer");
+                                }
+                                maybe_analysis_writer = None;
+                                maybe_qmdl_writer = None;
+
+                                if let Err(e) = ui_update_sender.send(display::DisplayState::Paused).await {
+                                    warn!("couldn't send ui update message: {e}");
+                                }
+                            }
+
+                            // Now delete all entries
+                            let mut qmdl_store = qmdl_store_lock.write().await;
+                            let delete_result = qmdl_store.delete_all_entries().await;
+
+                            if let Err(ref e) = delete_result {
+                                error!("couldn't delete all entries: {e}");
+                            }
+
+                            if response_tx.send(delete_result).is_err() {
+                                warn!("Failed to send delete all entries response");
                             }
                         },
                         // None means all the Senders have been dropped, so it's
@@ -197,8 +262,31 @@ pub async fn delete_recording(
     if state.config.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
-    let mut qmdl_store = state.qmdl_store_lock.write().await;
-    match qmdl_store.delete_entry(&qmdl_name).await {
+
+    let (response_tx, response_rx) = oneshot::channel();
+
+    state
+        .diag_device_ctrl_sender
+        .send(DiagDeviceCtrlMessage::DeleteEntry {
+            name: qmdl_name.clone(),
+            response_tx,
+        })
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("couldn't send delete recording message: {e}"),
+            )
+        })?;
+
+    // Wait for the response from the diag device thread
+    match response_rx.await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to receive delete response: {e}"),
+        )
+    })? {
+        Ok(_) => Ok((StatusCode::ACCEPTED, "ok".to_string())),
         Err(RecordingStoreError::NoSuchEntryError) => Err((
             StatusCode::BAD_REQUEST,
             format!("no recording with name {qmdl_name}"),
@@ -207,31 +295,6 @@ pub async fn delete_recording(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("couldn't delete recording: {e}"),
         )),
-        Ok(entry_type) => {
-            if entry_type == EntryType::Current {
-                state
-                    .diag_device_ctrl_sender
-                    .send(DiagDeviceCtrlMessage::StopRecording)
-                    .await
-                    .map_err(|e| {
-                        (
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            format!("couldn't send stop recording message: {e}"),
-                        )
-                    })?;
-                state
-                    .ui_update_sender
-                    .send(display::DisplayState::Paused)
-                    .await
-                    .map_err(|e| {
-                        (
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            format!("couldn't send ui update message: {e}"),
-                        )
-                    })?;
-            }
-            Ok((StatusCode::ACCEPTED, "ok".to_string()))
-        }
     }
 }
 
@@ -241,34 +304,33 @@ pub async fn delete_all_recordings(
     if state.config.debug_mode {
         return Err((StatusCode::FORBIDDEN, "server is in debug mode".to_string()));
     }
+
+    let (response_tx, response_rx) = oneshot::channel();
+
     state
         .diag_device_ctrl_sender
-        .send(DiagDeviceCtrlMessage::StopRecording)
+        .send(DiagDeviceCtrlMessage::DeleteAllEntries { response_tx })
         .await
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send stop recording message: {e}"),
+                format!("couldn't send delete all recordings message: {e}"),
             )
         })?;
-    let mut qmdl_store = state.qmdl_store_lock.write().await;
-    qmdl_store.delete_all_entries().await.map_err(|e| {
+
+    // Wait for the response from the diag device thread
+    match response_rx.await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("couldn't delete all recordings: {e}"),
+            format!("failed to receive delete all response: {e}"),
         )
-    })?;
-    state
-        .ui_update_sender
-        .send(display::DisplayState::Paused)
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("couldn't send ui update message: {e}"),
-            )
-        })?;
-    Ok((StatusCode::ACCEPTED, "ok".to_string()))
+    })? {
+        Ok(_) => Ok((StatusCode::ACCEPTED, "ok".to_string())),
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("couldn't delete all recordings: {e}"),
+        )),
+    }
 }
 
 pub async fn get_analysis_report(
