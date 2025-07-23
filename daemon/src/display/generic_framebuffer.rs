@@ -179,9 +179,7 @@ pub fn update_ui(
             }
 
             match display_level {
-                2 => {
-                    fb.draw_gif(img.unwrap());
-                }
+                2 => fb.draw_gif(img.unwrap()),
                 3 => fb.draw_img(img.unwrap()),
                 128 => {
                     fb.draw_line(Color::Cyan, 128);
@@ -190,12 +188,11 @@ pub fn update_ui(
                     fb.draw_line(Color::Pink, 50);
                     fb.draw_line(Color::Cyan, 25);
                 }
-                _ => {
-                    // this branch id for ui_level 1, which is also the default if an
-                    // unknown value is used
-                    fb.draw_line(display_color, 2);
-                }
+                // this branch id for ui_level 1, which is also the default if an
+                // unknown value is used
+                _ => {}
             };
+            fb.draw_line(display_color, 2);
             sleep(Duration::from_millis(1000));
         }
     });
