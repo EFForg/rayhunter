@@ -2,6 +2,8 @@ use std::borrow::Cow;
 
 use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1};
 
+use crate::analysis::util::unpack;
+
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
 
@@ -50,8 +52,7 @@ impl Analyzer for IncompleteSibAnalyzer {
                 message: format!(
                     "SIB1 scheduling info list was malformed (packet {})",
                     self.packet_num
-                )
-                .to_string(),
+                ),
             });
         }
         None
