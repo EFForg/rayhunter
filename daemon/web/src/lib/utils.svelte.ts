@@ -7,6 +7,7 @@ export interface AnalyzerConfig {
     lte_sib6_and_7_downgrade: boolean;
     null_cipher: boolean;
     nas_null_cipher: boolean;
+    incomplete_sib: boolean;
 }
 
 export interface Config {
