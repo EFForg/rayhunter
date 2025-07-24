@@ -18,7 +18,7 @@ libc = "0.2.150"
 log = "0.4.20"
 nix = { version = "0.29.0", features = ["feature"] }
 pcap-file-tokio = "0.1.0"
-pycrate-rs = { git = "https://github.com/wgreenberg/pycrate-rs" }
+pycrate-rs = { git = "https://github.com/EFForg/pycrate-rs" }
 thiserror = "1.0.50"
 telcom-parser = { path = "../telcom-parser" }
 tokio = { version = "1.44.2", default-features = false, features = ["time", "rt", "macros"] }
