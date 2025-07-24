@@ -195,7 +195,7 @@
                                 NAS Null Cipher Heuristic
                             </label>
                         </div>
-                        j
+
                         <div class="flex items-center">
                             <input
                                 id="incomplete_sib"
