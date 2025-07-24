@@ -2227,7 +2227,7 @@ dependencies = [
 [[package]]
 name = "pycrate-rs"
 version = "0.1.0"
-source = "git+https://github.com/wgreenberg/pycrate-rs#9e72e40bee9c3c09205ad871cf681628b443de7c"
+source = "git+https://github.com/EFForg/pycrate-rs#9e72e40bee9c3c09205ad871cf681628b443de7c"
 dependencies = [
  "clap",
  "deku",
