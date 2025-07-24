@@ -37,3 +37,20 @@ installer util shell reboot
 ```
 
 See `/data/usb/boot_hsusb_composition` for a list of USB modes and Android USB gadget settings.
+
+
+### How do I disable the WiFi hotspot on the Orbic RC400L?
+
+To disable both WiFi bands:
+
+```sh
+adb shell
+/bin/rootshell -c "sed -i 's/<wlan><Feature><state>1<\/state>/<wlan><Feature><state>0<\/state>/g' /usrdata/data/usr/wlan/wlan_conf_6174.xml && reboot"
+```
+
+To re-enable WiFi:
+
+```sh
+adb shell
+/bin/rootshell -c "sed -i 's/<wlan><Feature><state>0<\/state>/<wlan><Feature><state>1<\/state>/g' /usrdata/data/usr/wlan/wlan_conf_6174.xml && reboot"
+```
