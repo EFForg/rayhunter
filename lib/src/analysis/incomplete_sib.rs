@@ -37,19 +37,10 @@ impl Analyzer for IncompleteSibAnalyzer {
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
         self.packet_num += 1;
 
-        let sch_msg = match ie {
-            InformationElement::LTE(lte_ie) => match &**lte_ie {
-                LteInformationElement::BcchDlSch(sch_msg) => sch_msg,
-                _ => return None,
-            },
-            _ => return None,
-        };
-        let BCCH_DL_SCH_MessageType::C1(BCCH_DL_SCH_MessageType_c1::SystemInformationBlockType1(
-            sib1,
-        )) = &sch_msg.message
-        else {
-            return None;
-        };
+        unpack!(InformationElement::LTE(lte_ie) = ie);
+        unpack!(LteInformationElement::BcchDlSch(sch_msg) = &**lte_ie);
+        unpack!(BCCH_DL_SCH_MessageType::C1(c1) = &sch_msg.message);
+        unpack!(BCCH_DL_SCH_MessageType_c1::SystemInformationBlockType1(sib1) = c1);
 
         if sib1.scheduling_info_list.0.len() < 2 {
             return Some(Event {
