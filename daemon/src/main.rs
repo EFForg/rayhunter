@@ -182,7 +182,7 @@ fn run_shutdown_thread(
     })
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), RayhunterError> {
     env_logger::init();
 

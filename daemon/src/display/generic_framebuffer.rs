@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use image::{AnimationDecoder, DynamicImage, codecs::gif::GifDecoder, imageops::FilterType};
 use std::io::Cursor;
 use std::time::Duration;
@@ -10,8 +11,6 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::oneshot;
 use tokio::sync::oneshot::error::TryRecvError;
 use tokio_util::task::TaskTracker;
-
-use std::thread::sleep;
 
 use include_dir::{Dir, include_dir};
 
@@ -65,15 +64,13 @@ impl Color {
     }
 }
 
+#[async_trait]
 pub trait GenericFramebuffer: Send + 'static {
     fn dimensions(&self) -> Dimensions;
 
-    fn write_buffer(
-        &mut self,
-        buffer: &[(u8, u8, u8)], // rgb, row-wise, left-to-right, top-to-bottom
-    );
+    async fn write_buffer(&mut self, buffer: Vec<(u8, u8, u8)>); // rgb, row-wise, left-to-right, top-to-bottom
 
-    fn write_dynamic_image(&mut self, img: DynamicImage) {
+    async fn write_dynamic_image(&mut self, img: DynamicImage) {
         let dimensions = self.dimensions();
         let mut width = img.width();
         let mut height = img.height();
@@ -94,28 +91,35 @@ pub trait GenericFramebuffer: Send + 'static {
             }
         }
 
-        self.write_buffer(&buf);
+        self.write_buffer(buf).await
     }
 
-    fn draw_gif(&mut self, img_buffer: &[u8]) {
-        // this is dumb and i'm sure there's a better way to loop this
+    async fn draw_gif(&mut self, img_buffer: &[u8]) {
         let cursor = Cursor::new(img_buffer);
-        let decoder = GifDecoder::new(cursor).unwrap();
-        for maybe_frame in decoder.into_frames() {
-            let frame = maybe_frame.unwrap();
-            let (numerator, _) = frame.delay().numer_denom_ms();
-            let img = DynamicImage::from(frame.into_buffer());
-            self.write_dynamic_image(img);
-            std::thread::sleep(Duration::from_millis(numerator as u64));
+        if let Ok(decoder) = GifDecoder::new(cursor) {
+            let frames: Vec<_> = decoder
+                .into_frames()
+                .filter_map(|f| f.ok())
+                .map(|frame| {
+                    let (numerator, _) = frame.delay().numer_denom_ms();
+                    let img = DynamicImage::from(frame.into_buffer());
+                    (img, numerator as u64)
+                })
+                .collect();
+
+            for (img, delay_ms) in frames {
+                self.write_dynamic_image(img).await;
+                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+            }
         }
     }
 
-    fn draw_img(&mut self, img_buffer: &[u8]) {
+    async fn draw_img(&mut self, img_buffer: &[u8]) {
         let img = image::load_from_memory(img_buffer).unwrap();
-        self.write_dynamic_image(img);
+        self.write_dynamic_image(img).await
     }
 
-    fn draw_line(&mut self, color: Color, height: u32) {
+    async fn draw_line(&mut self, color: Color, height: u32) {
         let width = self.dimensions().width;
         let px_num = height * width;
         let mut buffer = Vec::new();
@@ -123,7 +127,7 @@ pub trait GenericFramebuffer: Send + 'static {
             buffer.push(color.rgb());
         }
 
-        self.write_buffer(&buffer);
+        self.write_buffer(buffer).await
     }
 }
 
@@ -143,7 +147,7 @@ pub fn update_ui(
     let colorblind_mode = config.colorblind_mode;
     let mut display_color = Color::from_state(DisplayState::Recording, colorblind_mode);
 
-    task_tracker.spawn_blocking(move || {
+    task_tracker.spawn(async move {
         // this feels wrong, is there a more rusty way to do this?
         let mut img: Option<&[u8]> = None;
         if display_level == 2 {
@@ -179,21 +183,21 @@ pub fn update_ui(
             }
 
             match display_level {
-                2 => fb.draw_gif(img.unwrap()),
-                3 => fb.draw_img(img.unwrap()),
+                2 => fb.draw_gif(img.unwrap()).await,
+                3 => fb.draw_img(img.unwrap()).await,
                 128 => {
-                    fb.draw_line(Color::Cyan, 128);
-                    fb.draw_line(Color::Pink, 102);
-                    fb.draw_line(Color::White, 76);
-                    fb.draw_line(Color::Pink, 50);
-                    fb.draw_line(Color::Cyan, 25);
+                    fb.draw_line(Color::Cyan, 128).await;
+                    fb.draw_line(Color::Pink, 102).await;
+                    fb.draw_line(Color::White, 76).await;
+                    fb.draw_line(Color::Pink, 50).await;
+                    fb.draw_line(Color::Cyan, 25).await;
                 }
                 // this branch id for ui_level 1, which is also the default if an
                 // unknown value is used
                 _ => {}
             };
-            fb.draw_line(display_color, 2);
-            sleep(Duration::from_millis(1000));
+            fb.draw_line(display_color, 2).await;
+            tokio::time::sleep(Duration::from_millis(1000)).await;
         }
     });
 }

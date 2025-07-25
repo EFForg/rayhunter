@@ -7,7 +7,7 @@ edition = "2024"
 rayhunter = { path = "../lib" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
-tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt-multi-thread"] }
+tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt"] }
 axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json"] }
 thiserror = "1.0.52"
 libc = "0.2.150"
@@ -24,3 +24,4 @@ image = { version =  "0.25.1", default-features = false, features = ["png", "gif
 tempfile = "3.10.1"
 async_zip = { version = "0.0.17", features = ["tokio"] }
 anyhow = "1.0.98"
+async-trait = "0.1.88"
