@@ -7,8 +7,6 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tokio_util::task::TaskTracker;
 
-use std::fs::write;
-use std::thread::sleep;
 use std::time::Duration;
 
 use crate::config;
@@ -18,12 +16,12 @@ macro_rules! led {
     ($l:expr) => {{ format!("/sys/class/leds/led:{}/blink", $l) }};
 }
 
-fn start_blinking(path: String) {
-    write(&path, "1").ok();
+async fn start_blinking(path: String) {
+    tokio::fs::write(&path, "1").await.ok();
 }
 
-fn stop_blinking(path: String) {
-    write(&path, "0").ok();
+async fn stop_blinking(path: String) {
+    tokio::fs::write(&path, "0").await.ok();
 }
 
 pub fn update_ui(
@@ -37,7 +35,7 @@ pub fn update_ui(
         info!("Invisible mode, not spawning UI.");
         invisible = true;
     }
-    task_tracker.spawn_blocking(move || {
+    task_tracker.spawn(async move {
         let mut state = DisplayState::Recording;
         let mut last_state = DisplayState::Paused;
 
@@ -56,28 +54,28 @@ pub fn update_ui(
                 Err(e) => error!("error receiving ui update message: {e}"),
             };
             if invisible || state == last_state {
-                sleep(Duration::from_secs(1));
+                tokio::time::sleep(Duration::from_secs(1)).await;
                 continue;
             }
             match state {
                 DisplayState::Paused => {
-                    stop_blinking(led!("signal_blue"));
-                    stop_blinking(led!("signal_red"));
-                    start_blinking(led!("wlan_white"));
+                    stop_blinking(led!("signal_blue")).await;
+                    stop_blinking(led!("signal_red")).await;
+                    start_blinking(led!("wlan_white")).await;
                 }
                 DisplayState::Recording => {
-                    stop_blinking(led!("wlan_white"));
-                    stop_blinking(led!("signal_red"));
-                    start_blinking(led!("signal_blue"));
+                    stop_blinking(led!("wlan_white")).await;
+                    stop_blinking(led!("signal_red")).await;
+                    start_blinking(led!("signal_blue")).await;
                 }
                 DisplayState::WarningDetected => {
-                    stop_blinking(led!("wlan_white"));
-                    stop_blinking(led!("signal_blue"));
-                    start_blinking(led!("signal_red"));
+                    stop_blinking(led!("wlan_white")).await;
+                    stop_blinking(led!("signal_blue")).await;
+                    start_blinking(led!("signal_red")).await;
                 }
             }
             last_state = state;
-            sleep(Duration::from_secs(1));
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
 }

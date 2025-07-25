@@ -1,6 +1,7 @@
-use std::fs::File;
-use std::io::Write;
+use async_trait::async_trait;
 use std::os::fd::AsRawFd;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncWriteExt;
 
 use crate::config;
 use crate::display::DisplayState;
@@ -24,6 +25,7 @@ struct fb_fillrect {
     rop: u32,
 }
 
+#[async_trait]
 impl GenericFramebuffer for Framebuffer {
     fn dimensions(&self) -> Dimensions {
         // TODO actually poll for this, maybe w/ fbset?
@@ -33,12 +35,12 @@ impl GenericFramebuffer for Framebuffer {
         }
     }
 
-    fn write_buffer(&mut self, buffer: &[(u8, u8, u8)]) {
+    async fn write_buffer(&mut self, buffer: Vec<(u8, u8, u8)>) {
         // for how to write to the buffer, consult M7350v5_en_gpl/bootable/recovery/recovery_color_oled.c
         let dimensions = self.dimensions();
         let width = dimensions.width;
         let height = buffer.len() as u32 / width;
-        let mut f = File::options().write(true).open(FB_PATH).unwrap();
+        let mut f = OpenOptions::new().write(true).open(FB_PATH).await.unwrap();
         let mut arg = fb_fillrect {
             dx: 0,
             dy: 0,
@@ -50,15 +52,16 @@ impl GenericFramebuffer for Framebuffer {
 
         let mut raw_buffer = Vec::new();
         for (r, g, b) in buffer {
-            let mut rgb565: u16 = (*r as u16 & 0b11111000) << 8;
-            rgb565 |= (*g as u16 & 0b11111100) << 3;
-            rgb565 |= (*b as u16) >> 3;
+            let mut rgb565: u16 = (r as u16 & 0b11111000) << 8;
+            rgb565 |= (g as u16 & 0b11111100) << 3;
+            rgb565 |= (b as u16) >> 3;
             // note: big-endian!
             raw_buffer.extend(rgb565.to_be_bytes());
         }
 
-        f.write_all(&raw_buffer).unwrap();
+        f.write_all(&raw_buffer).await.unwrap();
 
+        // ioctl is a synchronous operation, but it's fast enough that it shouldn't block
         unsafe {
             let res = libc::ioctl(
                 f.as_raw_fd(),

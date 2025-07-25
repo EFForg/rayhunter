@@ -10,8 +10,6 @@ use tokio::sync::oneshot;
 use tokio::sync::oneshot::error::TryRecvError;
 use tokio_util::task::TaskTracker;
 
-use std::fs;
-use std::thread::sleep;
 use std::time::Duration;
 
 pub const OLED_PATH: &str = "/sys/class/display/oled/oled_buffer";
@@ -122,7 +120,7 @@ pub fn update_ui(
         info!("Invisible mode, not spawning UI.");
     }
 
-    task_tracker.spawn_blocking(move || {
+    task_tracker.spawn(async move {
         let mut pixels = STATUS_SMILING;
 
         loop {
@@ -148,12 +146,12 @@ pub fn update_ui(
             // we write the status every second because it may have been overwritten through menu
             // navigation.
             if display_level != 0 {
-                if let Err(e) = fs::write(OLED_PATH, pixels) {
+                if let Err(e) = tokio::fs::write(OLED_PATH, pixels).await {
                     error!("failed to write to display: {e}");
                 }
             }
 
-            sleep(Duration::from_millis(1000));
+            tokio::time::sleep(Duration::from_millis(1000)).await;
         }
     });
 }
