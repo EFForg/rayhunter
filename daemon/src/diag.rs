@@ -88,7 +88,7 @@ pub fn run_diag_read_thread(
                                             entry.name.to_string(),
                                     ))
                                     .await {
-                                        warn!("couldn't send analysis message: {e}");
+                                        error!("couldn't send analysis message: {e}");
                                     }
                             }
                             if let Err(e) = qmdl_store.close_current_entry().await {
@@ -102,7 +102,7 @@ pub fn run_diag_read_thread(
                             maybe_analysis_writer = None;
 
                             if let Err(e) = ui_update_sender.send(display::DisplayState::Paused).await {
-                                warn!("couldn't send ui update message: {e}");
+                                error!("couldn't send ui update message: {e}");
                             }
                         },
                         Some(DiagDeviceCtrlMessage::DeleteEntry { name: entry_name, response_tx }) => {
@@ -120,7 +120,7 @@ pub fn run_diag_read_thread(
                                     maybe_qmdl_writer = None;
 
                                     if let Err(e) = ui_update_sender.send(display::DisplayState::Paused).await {
-                                        warn!("couldn't send ui update message: {e}");
+                                        error!("couldn't send ui update message: {e}");
                                     }
                                 },
                                 Ok(EntryType::Past) => {
@@ -133,7 +133,7 @@ pub fn run_diag_read_thread(
 
                             // Send the result back to the caller
                             if response_tx.send(delete_result).is_err() {
-                                warn!("Failed to send delete entry response");
+                                error!("Failed to send delete entry response, receiver dropped");
                             }
                         },
                         Some(DiagDeviceCtrlMessage::DeleteAllEntries { response_tx }) => {
@@ -146,7 +146,7 @@ pub fn run_diag_read_thread(
                                 maybe_qmdl_writer = None;
 
                                 if let Err(e) = ui_update_sender.send(display::DisplayState::Paused).await {
-                                    warn!("couldn't send ui update message: {e}");
+                                    error!("couldn't send ui update message: {e}");
                                 }
                             }
 
@@ -159,7 +159,7 @@ pub fn run_diag_read_thread(
                             }
 
                             if response_tx.send(delete_result).is_err() {
-                                warn!("Failed to send delete all entries response");
+                                error!("Failed to send delete all entries response, receiver dropped");
                             }
                         },
                         // None means all the Senders have been dropped, so it's
