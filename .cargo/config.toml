@@ -36,6 +36,11 @@ lto = "fat"
 opt-level = "z"
 strip = "debuginfo"
 
+[profile.firmware-devel]
+inherits = "release"
+opt-level = "s"
+lto = false
+
 # optimizations to reduce the binary size of firmware binaries
 [profile.firmware]
 inherits = "release"
