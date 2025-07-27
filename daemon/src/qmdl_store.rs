@@ -56,12 +56,6 @@ pub struct ManifestEntry {
     pub arch: Option<String>,
 }
 
-#[derive(PartialEq, Eq)]
-pub enum EntryType {
-    Current,
-    Past,
-}
-
 impl ManifestEntry {
     fn new() -> Self {
         let now = Local::now();
@@ -347,23 +341,31 @@ impl RecordingStore {
         Some((entry_index, &self.manifest.entries[entry_index]))
     }
 
-    pub async fn delete_entry(&mut self, name: &str) -> Result<EntryType, RecordingStoreError> {
+    pub fn is_current_entry(&self, name: &str) -> bool {
+        match self.current_entry {
+            Some(idx) => match self.manifest.entries.get(idx) {
+                Some(entry) => entry.name == name,
+                None => false,
+            },
+            None => false,
+        }
+    }
+
+    pub async fn delete_entry(&mut self, name: &str) -> Result<(), RecordingStoreError> {
         let entry_to_delete_idx = self
             .manifest
             .entries
             .iter()
             .position(|entry| entry.name == name)
             .ok_or(RecordingStoreError::NoSuchEntryError)?;
-        let is_current = match self.current_entry {
+        match self.current_entry {
             Some(current_entry) if current_entry == entry_to_delete_idx => {
                 self.close_current_entry().await?;
-                EntryType::Current
             }
             Some(current_entry) => {
                 self.current_entry = Some(current_entry - 1);
-                EntryType::Past
             }
-            None => EntryType::Past,
+            None => {}
         };
         let entry_to_delete = self.manifest.entries.remove(entry_to_delete_idx);
         self.write_manifest().await?;
@@ -375,7 +377,7 @@ impl RecordingStore {
         remove_file_if_exists(&analysis_filepath)
             .await
             .map_err(RecordingStoreError::DeleteFileError)?;
-        Ok(is_current)
+        Ok(())
     }
 
     pub async fn delete_all_entries(&mut self) -> Result<(), RecordingStoreError> {

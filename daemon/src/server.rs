@@ -18,18 +18,17 @@ use tokio::sync::{RwLock, oneshot};
 use tokio_util::compat::FuturesAsyncWriteCompatExt;
 use tokio_util::io::ReaderStream;
 
+use crate::DiagDeviceCtrlMessage;
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::config::Config;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
-use crate::{DiagDeviceCtrlMessage, display};
 
 pub struct ServerState {
     pub config_path: String,
     pub config: Config,
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
-    pub ui_update_sender: Sender<display::DisplayState>,
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
@@ -293,7 +292,6 @@ mod tests {
         store_lock: Arc<RwLock<crate::qmdl_store::RecordingStore>>,
     ) -> Arc<ServerState> {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let (ui_tx, _ui_rx) = tokio::sync::mpsc::channel(1);
         let (analysis_tx, _analysis_rx) = tokio::sync::mpsc::channel(1);
 
         let analysis_status = {
@@ -306,7 +304,6 @@ mod tests {
             config: Config::default(),
             qmdl_store_lock: store_lock,
             diag_device_ctrl_sender: tx,
-            ui_update_sender: ui_tx,
             analysis_status_lock: Arc::new(RwLock::new(analysis_status)),
             analysis_sender: analysis_tx,
             daemon_restart_tx: Arc::new(RwLock::new(None)),
