@@ -206,12 +206,14 @@ pub enum LogBody {
         msg: Vec<u8>,
     },
     #[deku(id = "0xb063")]
-    LteMacDl {
+    LteMac {
+        #[deku(ctx = "log_type")]
+        direction: LteMacMessageDirection,
         version: u8,
         #[deku(pad_bytes_after = "2")]
         num_subpacket: u8,
         #[deku(count = "num_subpacket")]
-        subpackets: Vec<LteMacDlSubpacket>,
+        subpackets: Vec<LteMacSubpacket>,
     },
     #[deku(id = "0x713a")]
     UmtsNasOtaMessage {
@@ -228,12 +230,21 @@ pub enum LogBody {
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-pub struct LteMacDlSubpacket {
+pub struct LteMacSubpacket {
     pub id: u8,
     pub version: u8,
     pub size: u16,
     #[deku(count = "size - 4")]
     pub data: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
+#[deku(ctx = "log_type: u16", id = "log_type")]
+pub enum LteMacMessageDirection {
+    #[deku(id_pat = "0xb063")]
+    Downlink,
+    #[deku(id_pat = "0xb064")]
+    Uplink,
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
