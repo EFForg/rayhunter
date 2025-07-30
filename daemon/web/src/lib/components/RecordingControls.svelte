@@ -20,7 +20,7 @@
     }
 
     const recording_button_classes =
-        'text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1';
+        'text-white font-bold py-2 px-2 sm:px-4 rounded-md flex flex-row gap-1';
     const stop_recording_classes = `${recording_button_classes} bg-red-500 opacity-50 cursor-not-allowed`;
     const start_recording_classes = `${recording_button_classes} bg-blue-500 opacity-50 cursor-not-allowed`;
 </script>
