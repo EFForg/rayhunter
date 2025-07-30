@@ -13,16 +13,13 @@ pub enum GsmtapParserError {
 }
 
 pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapParserError> {
-    if let Message::Log {
-        timestamp, body, ..
-    } = msg
-    {
-        match log_to_gsmtap(body)? {
-            Some(msg) => Ok(Some((timestamp, msg))),
-            None => Ok(None),
-        }
-    } else {
-        Ok(None)
+    let Message::Log { timestamp, body, .. } = msg else {
+        return Ok(None);
+    };
+
+    match log_to_gsmtap(body)? {
+        Some(msg) => Ok(Some((timestamp, msg))),
+        None => Ok(None),
     }
 }
 
