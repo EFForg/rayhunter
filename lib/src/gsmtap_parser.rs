@@ -1,6 +1,7 @@
 use crate::diag::*;
 use crate::gsmtap::*;
 
+use deku::DekuContainerWrite;
 use log::error;
 use thiserror::Error;
 
@@ -148,7 +149,16 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 header,
                 payload: msg,
             }))
-        }
+        },
+        LogBody::LteMacDl { subpackets, .. } => {
+            let mut header = GsmtapHeader::new(GsmtapType::LteMac);
+            header.uplink = false;
+            let mut payload = Vec::new();
+            for packet in subpackets {
+                payload.extend(packet.to_bytes().unwrap());
+            }
+            Ok(Some(GsmtapMessage { header, payload }))
+        },
         _ => {
             error!("gsmtap_sink: ignoring unhandled log type: {value:?}");
             Ok(None)
