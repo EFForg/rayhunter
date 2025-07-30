@@ -18,7 +18,7 @@
 </script>
 
 <button
-    class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex flex-row"
+    class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-2 sm:px-4 rounded-md flex flex-row"
     onclick={confirmDelete}
     aria-label="delete"
 >

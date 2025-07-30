@@ -16,7 +16,7 @@
 
 <button
     class="flex flex-row {full_button
-        ? 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md'
+        ? 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-2 sm:px-4 rounded-md'
         : 'text-blue-600 underline'}"
     onclick={download}
 >
