@@ -210,6 +210,14 @@ pub enum LogBody {
         #[deku(count = "hdr_len.saturating_sub(8)")]
         msg: Vec<u8>,
     },
+    #[deku(id = "0xb063")]
+    LteMacDl {
+        version: u8,
+        #[deku(pad_bytes_after = "2")]
+        num_subpacket: u8,
+        #[deku(count = "num_subpacket")]
+        subpackets: Vec<LteMacDlSubpacket>,
+    },
     #[deku(id = "0x713a")]
     UmtsNasOtaMessage {
         is_uplink: u8,
@@ -222,6 +230,15 @@ pub enum LogBody {
         #[deku(count = "hdr_len")]
         msg: Vec<u8>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
+pub struct LteMacDlSubpacket {
+    pub id: u8,
+    pub version: u8,
+    pub size: u16,
+    #[deku(count = "size - 4")]
+    pub data: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]

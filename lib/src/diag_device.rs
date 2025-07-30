@@ -40,22 +40,25 @@ pub enum DiagDeviceError {
     ParseMessagesContainerError(deku::DekuError),
 }
 
-pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
+pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 13] = [
     // Layer 2:
-    log_codes::LOG_GPRS_MAC_SIGNALLING_MESSAGE_C, // 0x5226
+    log_codes::LOG_GPRS_MAC_SIGNALLING_MESSAGE_C,
     // Layer 3:
-    log_codes::LOG_GSM_RR_SIGNALING_MESSAGE_C, // 0x512f
-    log_codes::WCDMA_SIGNALLING_MESSAGE,       // 0x412f
-    log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C,      // 0xb0c0
-    log_codes::LOG_NR_RRC_OTA_MSG_LOG_C,       // 0xb821
+    log_codes::LOG_GSM_RR_SIGNALING_MESSAGE_C,
+    log_codes::WCDMA_SIGNALLING_MESSAGE,
+    log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C,
+    log_codes::LOG_NR_RRC_OTA_MSG_LOG_C,
     // NAS:
-    log_codes::LOG_UMTS_NAS_OTA_MESSAGE_LOG_PACKET_C, // 0x713a
-    log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C,      // 0xb0e2
-    log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C,     // 0xb0e3
-    log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C,      // 0xb0ec
-    log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C,     // 0xb0ed
+    log_codes::LOG_UMTS_NAS_OTA_MESSAGE_LOG_PACKET_C,
+    log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C,
+    log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C,
+    log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C,
+    log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C,
+    // MAC
+    log_codes::LOG_LTE_MAC_DL,
+    log_codes::LOG_LTE_MAC_UL,
     // User IP traffic:
-    log_codes::LOG_DATA_PROTOCOL_LOGGING_C, // 0x11eb
+    log_codes::LOG_DATA_PROTOCOL_LOGGING_C,
 ];
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
