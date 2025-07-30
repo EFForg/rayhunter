@@ -150,9 +150,9 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 payload: msg,
             }))
         },
-        LogBody::LteMacDl { subpackets, .. } => {
+        LogBody::LteMac { direction, subpackets, .. } => {
             let mut header = GsmtapHeader::new(GsmtapType::LteMac);
-            header.uplink = false;
+            header.uplink = matches!(direction, LteMacMessageDirection::Uplink);
             let mut payload = Vec::new();
             for packet in subpackets {
                 payload.extend(packet.to_bytes().unwrap());
