@@ -36,6 +36,9 @@ pub const LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C: u32 = 0xb0e3;
 pub const LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C: u32 = 0xb0ec;
 pub const LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C: u32 = 0xb0ed;
 
+pub const LOG_LTE_MAC_DL: u32 = 0xb063;
+pub const LOG_LTE_MAC_UL: u32 = 0xb064;
+
 pub const LTE_BCCH_BCH_V0: u32 = 1;
 pub const LTE_BCCH_DL_SCH_V0: u32 = 2;
 pub const LTE_MCCH_V0: u32 = 3;
