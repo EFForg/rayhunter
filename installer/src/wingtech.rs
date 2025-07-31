@@ -75,7 +75,7 @@ pub async fn run_command(admin_ip: &str, admin_password: &str, cmd: &str) -> Res
         .context("login did not return a token in response")?;
 
     let command = client.post(&qcmap_web_cgi_endpoint)
-        .body(format!("page=setFWMacFilter&cmd=add&mode=0&mac=50:5A:CA:B5:05||{cmd}&key=50:5A:CA:B5:05:AC&token={token}"))
+        .body(format!("page=setFWMacFilter&cmd=del&mode=0&mac=50:5A:CA:B5:05||{cmd}&key=50:5A:CA:B5:05:AC&token={token}"))
         .send()
         .await?;
     if command.status() != 200 {
@@ -135,7 +135,7 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
     telnet_send_command(addr, "update-rc.d rayhunter_daemon defaults", "exit code 0").await?;
 
     println!("Rebooting device and waiting 30 seconds for it to start up.");
-    telnet_send_command(addr, "reboot", "exit code 0").await?;
+    telnet_send_command(addr, "shutdown -r -t 1 now", "exit code 0").await?;
     sleep(Duration::from_secs(30)).await;
 
     echo!("Testing rayhunter ... ");

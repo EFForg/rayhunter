@@ -67,3 +67,38 @@ WT_HARDWARE_VERSION=89323_1_20
 ```
 
 Please consider sharing the contents of your device's /etc/wt_version file here.
+
+## Troubleshooting
+
+### My hotspot won't turn on after rebooting when installing over WiFi
+
+Reinsert the battery and turn the device back on, Rayhunter should be installed and running. Sometimes the Wingtech hotspot gets stuck off and ignores the power button after a reboot until the battery is reseated.
+
+You do not need to run the installer again.
+
+You'll likely see the following messages, where the installer is stuck at `Testing rayhunter ... `.
+
+```sh
+Starting telnet ... ok
+Connecting via telnet to 192.168.1.1 ... ok
+Sending file /data/rayhunter/config.toml ... ok
+Sending file /data/rayhunter/rayhunter-daemon ... ok
+Sending file /etc/init.d/rayhunter_daemon ... ok
+Rebooting device and waiting 30 seconds for it to start up.
+Testing rayhunter ...
+```
+
+If you eventually see:
+
+```sh
+Testing rayhunter ...
+Failed to install rayhunter on the Wingtech CT2MHS01
+
+Caused by:
+    0: error sending request for url (http://192.168.1.1:8080/index.html)
+    1: client error (Connect)
+    2: tcp connect error: Network is unreachable (os error 101)
+    3: Network is unreachable (os error 101)
+```
+
+Make sure your computer is connected to the hotspot's wifi network.
