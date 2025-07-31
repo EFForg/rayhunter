@@ -25,15 +25,15 @@ If you want to use a non-Verizon SIM card you will probably need an unlocked dev
 Make sure USB tethering is also enabled in the Orbic's UI, and then run the following commands:
 
 ```sh
-installer util shell "echo 9 > /usrdata/mode.cfg"
-installer util shell reboot
+./installer util shell "echo 9 > /usrdata/mode.cfg"
+./installer util shell reboot
 ```
 
 To disable tethering again:
 
 ```sh
-installer util shell "echo 3 > /usrdata/mode.cfg"
-installer util shell reboot
+./installer util shell "echo 3 > /usrdata/mode.cfg"
+./installer util shell reboot
 ```
 
 See `/data/usb/boot_hsusb_composition` for a list of USB modes and Android USB gadget settings.
