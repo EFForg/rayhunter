@@ -1,3 +1,6 @@
+#[cfg(target_os = "windows")]
+use std::io::stdin;
+
 use std::io::{ErrorKind, Write};
 use std::path::Path;
 use std::time::Duration;
@@ -30,6 +33,13 @@ On macOS or windows this might be caused by another program using the Orbic.
 Please close any program that might be using your Orbic.
 If you have adb installed you may need to kill the adb daemon"#;
 
+#[cfg(target_os = "windows")]
+const WINDOWS_WARNING: &str = r#""WINDOWS IS NOT FULLY SUPPORTED
+
+THIS MAY BRICK YOUR DEVICE
+
+PLEASE INSTALL FROM MACOS OR LINUX INSTEAD IF POSSIBLE"#;
+
 const VENDOR_ID: u16 = 0x05c6;
 const PRODUCT_ID: u16 = 0xf601;
 
@@ -41,7 +51,25 @@ const RNDIS_INTERFACE: u8 = 0;
 #[cfg(not(target_os = "windows"))]
 const RNDIS_INTERFACE: u8 = 1;
 
+#[cfg(target_os = "windows")]
+async fn confirm() -> Result<bool> {
+    println!("{}", WINDOWS_WARNING);
+    echo!("Do you wish to proceed? Enter 'yes' to install> ");
+    let mut input = String::new();
+    stdin().read_line(&mut input)?;
+    Ok(input.trim() == "yes")
+}
+
 pub async fn install() -> Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        let confirmation = confirm().await?;
+        if confirmation != true {
+            println!("Install aborted. Your device has not been modified.");
+            return Ok(());
+        }
+    }
+
     let mut adb_device = force_debug_mode().await?;
     echo!("Installing rootshell... ");
     setup_rootshell(&mut adb_device).await?;
