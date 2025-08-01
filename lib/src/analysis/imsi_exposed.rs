@@ -1,4 +1,4 @@
-use crate::analysis::analyzer::{Analyzer, Event, EventType, Severity};
+use crate::analysis::analyzer::{Analyzer, Event, EventType};
 use crate::analysis::information_element::{InformationElement, LteInformationElement};
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
@@ -9,11 +9,19 @@ use pycrate_rs::nas::generated::emm::emm_service_reject::EMMCauseEMMCause as Ser
 use pycrate_rs::nas::generated::emm::emm_tracking_area_update_reject::EMMCauseEMMCause as TAURejectEMMCause;
 use std::borrow::Cow;
 
-pub struct ImsiExposedAnalyzer;
+pub struct ImsiExposedAnalyzer {
+    packet_num: usize,
+}
+
+impl Default for ImsiExposedAnalyzer{
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ImsiExposedAnalyzer {
     pub fn new() -> Self {
-        ImsiExposedAnalyzer
+        Self { packet_num: 0 }
     }
 
     fn is_imsi_exposing_nas(&self, nas_msg: &NASMessage) -> bool {
@@ -79,6 +87,10 @@ impl Analyzer for ImsiExposedAnalyzer {
     fn get_name(&self) -> Cow<str> {
         "IMSI-Exposed Message Detector".into()
     }
+    
+    fn get_version(&self) -> u32 {
+        1
+    }
 
     fn get_description(&self) -> Cow<str> {
         "Catches any and all messages that may expose IMSI. Can be quite noisy. \
@@ -89,6 +101,8 @@ impl Analyzer for ImsiExposedAnalyzer {
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
+        self.packet_num += 1;
+
         let lte_ie = match ie {
             InformationElement::LTE(inner) => inner,
             _ => return None,
@@ -112,11 +126,9 @@ impl Analyzer for ImsiExposedAnalyzer {
                     };
 
                     Some(Event {
-                        event_type: EventType::QualitativeWarning {
-                            severity: Severity::Medium,
-                        },
+                        event_type: EventType::Informational{},
                         message: format!(
-                            "IMSI-exposing NAS message detected: {message_type}. This may indicate the presence of an IMSI catcher."
+                            "DIAGNOSTIC: {message_type} received at packet {}.", self.packet_num
                         ),
                     })
                 } else {
@@ -125,11 +137,5 @@ impl Analyzer for ImsiExposedAnalyzer {
             }
             _ => None,
         }
-    }
-}
-
-impl Default for ImsiExposedAnalyzer {
-    fn default() -> Self {
-        Self::new()
     }
 }

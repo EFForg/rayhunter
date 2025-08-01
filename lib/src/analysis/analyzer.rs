@@ -36,7 +36,7 @@ impl Default for AnalyzerConfig {
             null_cipher: true,
             nas_null_cipher: true,
             incomplete_sib: true,
-            imsi_exposed: false,
+            imsi_exposed: true,
         }
     }
 }
