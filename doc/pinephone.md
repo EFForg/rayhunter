@@ -35,12 +35,14 @@ The modem is fully capable of running Rayhunter, but lacks both a screen and a n
 Note that the Quectel EG25-G does not support LTE band 48 (CBRS 3500MHz), used in the US for unlicensed 4G/5G connectivity.
 
 ## Installing
+Download and extract the installer *on a shell on the PinePhone itself*. Unlike other Rayhunter installers, this has to be run on the device itself. Then run:
+
 ```sh
 ./installer pinephone
 ```
 
-## Accessing rayhunter
-Because the modem does not have its own display or network interface, rayhunter is only accessible on the pinephone by forwarding tcp over adb.
+## Accessing Rayhunter
+Because the modem does not have its own display or network interface, Rayhunter is only accessible on the pinephone by forwarding tcp over adb.
 
 ```sh
 adb forward tcp:8080 tcp:8080
