@@ -203,7 +203,7 @@
                                 bind:checked={config.analyzers.incomplete_sib}
                                 class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                             />
-                            <label for="nas_null_cipher" class="ml-2 block text-sm text-gray-700">
+                            <label for="incomplete_sib" class="ml-2 block text-sm text-gray-700">
                                 Incomplete SIB Heuristic
                             </label>
                         </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { ManifestEntry } from '$lib/manifest.svelte';
+    import { AnalysisManager } from '$lib/analysisManager.svelte';
     import DownloadLink from '$lib/components/DownloadLink.svelte';
     import DeleteButton from '$lib/components/DeleteButton.svelte';
     import AnalysisStatus from './AnalysisStatus.svelte';
@@ -8,10 +9,12 @@
         entry,
         current,
         i,
+        manager,
     }: {
         entry: ManifestEntry;
         current: boolean;
         i: number;
+        manager: AnalysisManager;
     } = $props();
 
     // passing `undefined` as the locale uses the browser default
@@ -59,6 +62,6 @@
 </tr>
 <tr class="{alternating_row_color} border-b {analysis_visible ? '' : 'hidden'}">
     <td class="border-t border-dashed p-2" colspan="9">
-        <AnalysisView {entry} />
+        <AnalysisView {entry} {manager} {current} />
     </td>
 </tr>
