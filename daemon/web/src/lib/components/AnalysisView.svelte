@@ -1,11 +1,17 @@
 <script lang="ts">
     import { type ReportMetadata } from '$lib/analysis.svelte';
     import type { ManifestEntry } from '$lib/manifest.svelte';
+    import { AnalysisManager } from '$lib/analysisManager.svelte';
     import AnalysisTable from './AnalysisTable.svelte';
+    import ReAnalyzeButton from './ReAnalyzeButton.svelte';
     let {
         entry,
+        manager,
+        current,
     }: {
         entry: ManifestEntry;
+        manager: AnalysisManager;
+        current: boolean;
     } = $props();
 </script>
 
@@ -17,6 +23,11 @@
     {:else}
         {@const metadata: ReportMetadata = entry.analysis_report.metadata}
         <div class="flex flex-col gap-2">
+            {#if !current}
+                <div class="flex flex-row justify-end items-center">
+                    <ReAnalyzeButton {entry} {manager} />
+                </div>
+            {/if}
             {#if entry.analysis_report.rows.length > 0}
                 <AnalysisTable report={entry.analysis_report} />
             {:else}

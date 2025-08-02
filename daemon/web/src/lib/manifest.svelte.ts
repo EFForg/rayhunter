@@ -102,4 +102,8 @@ export class ManifestEntry {
     get_delete_url(): string {
         return `/api/delete-recording/${this.name}`;
     }
+
+    get_reanalyze_url(): string {
+        return `/api/analysis/${this.name}`;
+    }
 }

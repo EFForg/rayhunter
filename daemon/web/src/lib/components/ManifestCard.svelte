@@ -1,5 +1,6 @@
 <script lang="ts">
     import { ManifestEntry } from '$lib/manifest.svelte';
+    import { AnalysisManager } from '$lib/analysisManager.svelte';
     import DownloadLink from '$lib/components/DownloadLink.svelte';
     import DeleteButton from '$lib/components/DeleteButton.svelte';
     import AnalysisStatus from './AnalysisStatus.svelte';
@@ -9,10 +10,12 @@
         entry,
         current,
         server_is_recording,
+        manager,
     }: {
         entry: ManifestEntry;
         current: boolean;
         server_is_recording: boolean;
+        manager: AnalysisManager;
     } = $props();
 
     // passing `undefined` as the locale uses the browser default
@@ -92,6 +95,6 @@
         {/if}
     </div>
     <div class="border-b {analysis_visible ? '' : 'hidden'}">
-        <AnalysisView {entry} />
+        <AnalysisView {entry} {manager} {current} />
     </div>
 </div>

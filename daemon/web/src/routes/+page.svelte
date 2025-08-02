@@ -87,7 +87,12 @@
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">
             {#if current_entry}
-                <Card entry={current_entry} current={true} server_is_recording={!!current_entry} />
+                <Card
+                    entry={current_entry}
+                    current={true}
+                    server_is_recording={!!current_entry}
+                    {manager}
+                />
             {:else}
                 <div
                     class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
@@ -124,7 +129,7 @@
         </div>
         <div class="flex flex-col gap-2">
             <span class="text-xl">History</span>
-            <ManifestTable {entries} server_is_recording={!!current_entry} />
+            <ManifestTable {entries} server_is_recording={!!current_entry} {manager} />
         </div>
         <DeleteAllButton />
         <ConfigForm />

@@ -23,11 +23,9 @@ export type AnalysisResult = {
 };
 
 export class AnalysisManager {
-    public status: Map<string, AnalysisStatus> = new Map();
-    public reports: Map<string, AnalysisReport | string> = new Map();
-
-    public async run_analysis(name: string) {
-        await req('POST', `/api/analysis/${name}`);
+    public status: Map<string, AnalysisStatus> = $state(new Map());
+    public reports: Map<string, AnalysisReport | string> = $state(new Map());
+    public set_queued_status(name: string) {
         this.status.set(name, AnalysisStatus.Queued);
         this.reports.delete(name);
     }
