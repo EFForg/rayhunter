@@ -78,10 +78,10 @@
                 'N/A'}</span
         >
     </div>
-    <div class="flex flex-row justify-between lg:justify-end gap-1 mt-2 overflow-x-scroll">
-        <DownloadLink url={entry.get_pcap_url()} text="pcap" full_button />
-        <DownloadLink url={entry.get_qmdl_url()} text="qmdl" full_button />
-        <DownloadLink url={entry.get_zip_url()} text="zip" full_button />
+    <div class="flex flex-row justify-between lg:justify-end gap-3 mt-2 overflow-x-scroll">
+        <DownloadLink url={entry.get_pcap_url()} text="pcap" />
+        <DownloadLink url={entry.get_qmdl_url()} text="qmdl" />
+        <DownloadLink url={entry.get_zip_url()} text="zip" />
         {#if current}
             <RecordingControls {server_is_recording} />
         {:else}
