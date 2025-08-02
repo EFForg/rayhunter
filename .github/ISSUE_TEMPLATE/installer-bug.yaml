@@ -1,0 +1,47 @@
+name: Installer Issue
+description: File an bug related to an installer issue.
+labels: ["bug", "installer"]
+body:
+  - type: input
+    attributes:
+      label: Rayhunter Version
+      placeholder: 'v0.5.0'
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Device
+      description: |
+        What device are you trying to install Rayhunter on?
+      options:
+        - Orbic RC400L
+        - Tplink HW7350
+        - Tplink HW7310
+        - Tmobile TMOHS1
+        - Wingtech CT2MHS0
+        - Pinephone
+        - Other / I'm not sure
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Installer OS
+      description: What operating system are running the installer from
+      multiple: false
+      options:
+        - Linux
+        - macOS
+        - Windows
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Describe the Issue
+      description: |
+        Please describe the issue you're having installing Rayhunter.
+        Include the logs outputed by the installer program. If the installer
+        is crashing, please try running the installer with `RUST_BACKTRACE=1`
+        environment variable set so we can see exactly where the installer is
+        crashing.
+    validations:
+      required: true
