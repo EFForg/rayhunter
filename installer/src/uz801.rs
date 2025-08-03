@@ -84,7 +84,7 @@ async fn wait_for_adb() -> Result<ADBUSBDevice> {
     let mut attempts = 0;
 
     // Wait a bit for the reboot to start
-    sleep(Duration::from_secs(5)).await;
+    sleep(Duration::from_secs(10)).await;
 
     loop {
         if attempts >= MAX_ATTEMPTS {
@@ -132,10 +132,14 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
     // Remount system as writable
     adb_device.shell_command(&["mount", "-o", "remount,rw", "/system"], &mut buf)?;
 
-    // Install rayhunter daemon binary
+    // Install rayhunter daemon binary with verification
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
-    let mut daemon_data = rayhunter_daemon_bin.as_slice();
-    adb_device.push(&mut daemon_data, &"/data/rayhunter/rayhunter-daemon")?;
+    install_file_with_verification(
+        adb_device,
+        "/data/rayhunter/rayhunter-daemon",
+        rayhunter_daemon_bin,
+    )
+    .await?;
 
     // Install config file
     let config_content = crate::CONFIG_TOML.replace("#device = \"orbic\"", "device = \"uz801\"");
@@ -150,6 +154,75 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
     )?;
 
     Ok(())
+}
+
+async fn install_file_with_verification(
+    adb_device: &mut ADBUSBDevice,
+    dest_path: &str,
+    file_data: &[u8],
+) -> Result<()> {
+    const MAX_RETRIES: u32 = 5;
+    let expected_size = file_data.len();
+
+    println!("Installing {} ({} bytes)...", dest_path, expected_size);
+
+    for attempt in 1..=MAX_RETRIES {
+        // Push the file
+        let mut data_copy = file_data;
+        match adb_device.push(&mut data_copy, &dest_path) {
+            Ok(_) => {
+                // Verify the file size
+                let mut buf = Vec::<u8>::new();
+                if let Ok(_) = adb_device.shell_command(&["ls", "-l", dest_path], &mut buf) {
+                    let output = String::from_utf8_lossy(&buf);
+
+                    // Parse the file size from ls output
+                    if let Some(size_str) = output.split_whitespace().nth(3) {
+                        if let Ok(actual_size) = size_str.parse::<usize>() {
+                            if actual_size == expected_size {
+                                println!(
+                                    "Successfully installed {} (verified {} bytes)",
+                                    dest_path, actual_size
+                                );
+                                return Ok(());
+                            } else {
+                                println!(
+                                    "Size mismatch on attempt {}: expected {}, got {}",
+                                    attempt, expected_size, actual_size
+                                );
+
+                                // Remove the incomplete file before retry
+                                let mut buf = Vec::<u8>::new();
+                                adb_device
+                                    .shell_command(&["rm", "-f", dest_path], &mut buf)
+                                    .ok();
+
+                                if attempt < MAX_RETRIES {
+                                    println!("Retrying file transfer...");
+                                    sleep(Duration::from_secs(1)).await;
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                println!("Push failed on attempt {}: {}", attempt, e);
+                if attempt < MAX_RETRIES {
+                    sleep(Duration::from_secs(1)).await;
+                    continue;
+                }
+                return Err(e.into());
+            }
+        }
+    }
+
+    anyhow::bail!(
+        "Failed to install {} after {} attempts - size verification failed",
+        dest_path,
+        MAX_RETRIES
+    )
 }
 
 async fn modify_startup_script(adb_device: &mut ADBUSBDevice) -> Result<()> {
@@ -217,7 +290,9 @@ async fn test_rayhunter(admin_ip: &str) -> Result<()> {
         }
 
         failures += 1;
-        sleep(Duration::from_secs(3)).await;
+        // modified from 3 because MifiService has to set up the
+        // network routing and it takes a bit longer
+        sleep(Duration::from_secs(5)).await;
     }
 
     anyhow::bail!("timeout reached! failed to reach rayhunter, something went wrong :(")
