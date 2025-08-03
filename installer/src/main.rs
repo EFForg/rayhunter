@@ -180,7 +180,7 @@ async fn run() -> Result<(), Error> {
 
     match command {
         Command::Tmobile(args) => tmobile::install(args).await.context("Failed to install rayhunter on the Tmobile TMOHS1. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
-        Command::Uz801(args) => uz801::install(args).await.context("Failed to install rayhunter on the Uz801. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
+        Command::Uz801(args) => uz801::install(args).await.context("Failed to install rayhunter on the Uz801. Make sure your computer is connected to the hotspot using USB.")?,
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,

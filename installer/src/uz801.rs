@@ -93,7 +93,7 @@ async fn wait_for_adb() -> Result<ADBUSBDevice> {
 
         // UZ801 USB vendor and product IDs.
         // TODO: Research if other variants use different IDs.
-        match ADBUSBDevice::new(0x05c6, 0x9025) {
+        match ADBUSBDevice::new(0x05c6, 0x90b6) {
             Ok(mut device) => {
                 // Test ADB connection
                 if test_adb_connection(&mut device).await.is_ok() {
@@ -128,6 +128,9 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
     // Create rayhunter directory
     let mut buf = Vec::<u8>::new();
     adb_device.shell_command(&["mkdir", "-p", "/data/rayhunter"], &mut buf)?;
+
+    // Remount system as writable
+    adb_device.shell_command(&["mount", "-o", "remount,rw", "/system"], &mut buf)?;
 
     // Install rayhunter daemon binary
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
