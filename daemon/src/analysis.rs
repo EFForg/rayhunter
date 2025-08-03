@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::{future, pin};
+use std::{cmp, future, pin};
 
 use axum::Json;
 use axum::{
@@ -8,7 +8,7 @@ use axum::{
 };
 use futures::TryStreamExt;
 use log::{error, info};
-use rayhunter::analysis::analyzer::{AnalyzerConfig, Harness};
+use rayhunter::analysis::analyzer::{AnalyzerConfig, EventType, Harness};
 use rayhunter::diag::{DataType, MessagesContainer};
 use rayhunter::qmdl::QmdlReader;
 use serde::Serialize;
@@ -47,15 +47,19 @@ impl AnalysisWriter {
 
     // Runs the analysis harness on the given container, serializing the results
     // to the analysis file, returning the whether any warnings were detected
-    pub async fn analyze(&mut self, container: MessagesContainer) -> Result<bool, std::io::Error> {
-        let mut warning_detected = false;
+    pub async fn analyze(
+        &mut self,
+        container: MessagesContainer,
+    ) -> Result<EventType, std::io::Error> {
+        let mut max_type = EventType::Informational;
+
         for row in self.harness.analyze_qmdl_messages(container) {
             if !row.is_empty() {
                 self.write(&row).await?;
             }
-            warning_detected |= row.contains_warnings();
+            max_type = cmp::max(max_type, row.get_max_event_type());
         }
-        Ok(warning_detected)
+        Ok(max_type)
     }
 
     async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
