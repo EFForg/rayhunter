@@ -116,13 +116,13 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
     // Install rayhunter daemon binary
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
     let mut daemon_data = rayhunter_daemon_bin.as_slice();
-    adb_device.push(&mut daemon_data, "/data/rayhunter/rayhunter-daemon")?;
+    adb_device.push(&mut daemon_data, &"/data/rayhunter/rayhunter-daemon")?;
     
     // Install config file
     let config_content = crate::CONFIG_TOML
         .replace("#device = \"orbic\"", "device = \"uz801\"");
     let mut config_data = config_content.as_bytes();
-    adb_device.push(&mut config_data, "/data/rayhunter/config.toml")?;
+    adb_device.push(&mut config_data, &"/data/rayhunter/config.toml")?;
     
     // Make daemon executable
     let mut buf = Vec::<u8>::new();
@@ -134,7 +134,7 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
 async fn modify_startup_script(adb_device: &mut ADBUSBDevice) -> Result<()> {
     // Pull the existing startup script
     let mut script_content = Vec::<u8>::new();
-    adb_device.pull("/system/bin/initmifiservice.sh", &mut script_content)?;
+    adb_device.pull(&"/system/bin/initmifiservice.sh", &mut script_content)?;
     
     // Convert to string and add our line
     let mut script_str = String::from_utf8_lossy(&script_content).into_owned();
@@ -147,7 +147,7 @@ async fn modify_startup_script(adb_device: &mut ADBUSBDevice) -> Result<()> {
     
     // Push the modified script back
     let mut modified_script = script_str.as_bytes();
-    adb_device.push(&mut modified_script, "/system/bin/initmifiservice.sh")?;
+    adb_device.push(&mut modified_script, &"/system/bin/initmifiservice.sh")?;
     
     // Make sure it's executable
     let mut buf = Vec::<u8>::new();
