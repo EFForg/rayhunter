@@ -1,3 +1,4 @@
+import { add_error } from './action_errors.svelte';
 import { Manifest } from './manifest.svelte';
 import type { SystemStats } from './systemStats';
 
@@ -28,6 +29,23 @@ export async function req(method: string, url: string): Promise<string> {
         return body;
     } else {
         throw new Error(body);
+    }
+}
+
+// A wrapper around req that reports errors to the UI
+export async function user_action_req(
+    method: string,
+    url: string,
+    error_msg: string
+): Promise<string | undefined> {
+    try {
+        return await req(method, url);
+    } catch (error) {
+        if (error instanceof Error) {
+            console.log('beeeo');
+            add_error(error, error_msg);
+        }
+        return undefined;
     }
 }
 

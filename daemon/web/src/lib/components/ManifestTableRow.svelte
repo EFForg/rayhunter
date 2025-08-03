@@ -60,6 +60,7 @@
             <DeleteButton
                 prompt={`Are you sure you want to delete entry ${entry.name}?`}
                 url={entry.get_delete_url()}
+                name={entry.name}
             />
         </td>
     {/if}

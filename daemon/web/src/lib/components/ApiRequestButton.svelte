@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { req } from '$lib/utils.svelte';
+    import { user_action_req } from '$lib/utils.svelte';
 
     let {
         url,
@@ -11,6 +11,7 @@
         icon,
         onclick,
         ariaLabel,
+        errorMessage,
     }: {
         url: string;
         method?: string;
@@ -21,6 +22,7 @@
         icon?: any; // Svelte snippet
         onclick?: () => void | Promise<void>;
         ariaLabel?: string;
+        errorMessage?: string;
     } = $props();
 
     let is_requesting = $state(false);
@@ -46,7 +48,11 @@
 
         is_requesting = true;
         try {
-            await req(method, url);
+            await user_action_req(
+                method,
+                url,
+                errorMessage ? errorMessage : 'Error performing action'
+            );
             if (onclick) {
                 await onclick();
             }
