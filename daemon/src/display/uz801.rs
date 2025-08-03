@@ -1,6 +1,6 @@
 /// Display module for Uz801, light LEDs on the front of the device.
-/// DisplayState::Recording => Signal LED is solid blue (wifi LED).
-/// DisplayState::Paused => Green LED is solid.
+/// DisplayState::Recording => Green LED is solid.
+/// DisplayState::Paused => Signal LED is solid blue (wifi LED).
 /// DisplayState::WarningDetected => Signal LED is solid red.
 use log::{error, info};
 use tokio::sync::mpsc;
