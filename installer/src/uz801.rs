@@ -15,11 +15,7 @@ use tokio::time::sleep;
 use crate::Uz801Args as Args;
 use crate::util::echo;
 
-pub async fn install(
-    Args {
-        admin_ip,
-    }: Args,
-) -> Result<()> {
+pub async fn install(Args { admin_ip }: Args) -> Result<()> {
     run_install(admin_ip).await
 }
 
@@ -56,19 +52,22 @@ pub async fn activate_usb_debug(admin_ip: &str) -> Result<()> {
     let url = format!("http://{}/ajax", admin_ip);
     let referer = format!("http://{}/usbdebug.html", admin_ip);
     let origin = format!("http://{}", admin_ip);
-    
+
     let _handle = tokio::spawn(async move {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
             .build()
             .unwrap();
-            
+
         let _response = client
             .post(&url)
             .header("Accept", "application/json, text/javascript, */*; q=0.01")
             .header("Accept-Encoding", "gzip, deflate")
             .header("Referer", &referer)
-            .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+            .header(
+                "Content-Type",
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
             .header("X-Requested-With", "XMLHttpRequest")
             .header("Origin", &origin)
             .header("Connection", "keep-alive")

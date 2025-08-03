@@ -124,7 +124,7 @@ struct TmobileArgs {
 struct Uz801Args {
     /// IP address for Uz801 admin interface, if custom.
     #[arg(long, default_value = "192.168.100.1")]
-    admin_ip: String
+    admin_ip: String,
 }
 
 #[derive(Parser, Debug)]
