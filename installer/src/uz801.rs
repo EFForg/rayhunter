@@ -6,10 +6,10 @@
 /// 3. Use ADB to install rayhunter files
 /// 4. Modify startup script to launch rayhunter on boot
 use std::time::Duration;
+use std::io::Write;
 
 use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
 use anyhow::Result;
-use std::io::ErrorKind;
 use tokio::time::sleep;
 
 use crate::Uz801Args as Args;
