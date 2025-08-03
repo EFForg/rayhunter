@@ -8,7 +8,7 @@ use telcom_parser::lte_rrc::{
     SecurityModeCommandCriticalExtensions, SecurityModeCommandCriticalExtensions_c1,
 };
 
-use super::analyzer::{Analyzer, Event, EventType, Severity};
+use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 
 pub struct NullCipherAnalyzer {}
@@ -153,9 +153,7 @@ impl Analyzer for NullCipherAnalyzer {
         };
         if null_cipher_detected {
             return Some(Event {
-                event_type: EventType::QualitativeWarning {
-                    severity: Severity::High,
-                },
+                event_type: EventType::High,
                 message: "Cell suggested use of null cipher".to_string(),
             });
         }

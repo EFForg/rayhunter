@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use super::analyzer::{Analyzer, Event, EventType, Severity};
+use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use telcom_parser::lte_rrc::{
     DL_DCCH_MessageType, DL_DCCH_MessageType_c1, RRCConnectionReleaseCriticalExtensions,
@@ -36,9 +36,7 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
         {
             match carrier_info {
                 RedirectedCarrierInfo::Geran(_carrier_freqs_geran) => Some(Event {
-                    event_type: EventType::QualitativeWarning {
-                        severity: Severity::High,
-                    },
+                    event_type: EventType::High,
                     message: "Detected 2G downgrade".to_owned(),
                 }),
                 _ => Some(Event {

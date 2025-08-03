@@ -1,7 +1,7 @@
 /// Display module for Tmobile TMOHS1, blink LEDs on the front of the device.
 /// DisplayState::Recording => Signal LED slowly blinks blue.
 /// DisplayState::Paused => WiFi LED blinks white.
-/// DisplayState::WarningDetected => Signal LED slowly blinks red.
+/// DisplayState::WarningDetected { .. } => Signal LED slowly blinks red.
 use log::{error, info};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -68,7 +68,7 @@ pub fn update_ui(
                     stop_blinking(led!("signal_red")).await;
                     start_blinking(led!("signal_blue")).await;
                 }
-                DisplayState::WarningDetected => {
+                DisplayState::WarningDetected { .. } => {
                     stop_blinking(led!("wlan_white")).await;
                     stop_blinking(led!("signal_blue")).await;
                     start_blinking(led!("signal_red")).await;

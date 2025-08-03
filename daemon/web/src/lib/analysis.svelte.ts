@@ -21,17 +21,7 @@ export class ReportMetadata {
     constructor(ndjson: any) {
         this.analyzers = ndjson.analyzers;
         this.rayhunter = ndjson.rayhunter;
-        if (ndjson.report_version === undefined) {
-            this.report_version = 1;
-            // we consider our legacy (unversioned) heuristics to be v0 --
-            // this'll let us clearly differentiate some known false-positive
-            // results from the pre-versioned era from v1 heuristics
-            this.analyzers.forEach((analyzer) => {
-                analyzer.version = 0;
-            });
-        } else {
-            this.report_version = ndjson.report_version;
-        }
+        this.report_version = ndjson.report_version || 2; // Default to v2
     }
 }
 
@@ -64,77 +54,22 @@ export type PacketAnalysis = {
     events: Event[];
 };
 
-export type Event = QualitativeWarning | InformationalEvent | null;
-export enum EventType {
-    Informational,
-    Warning,
-}
+export type EventType = 'Informational' | 'Low' | 'Medium' | 'High';
 
-export type QualitativeWarning = {
-    type: EventType.Warning;
-    severity: Severity;
+export type Event = {
+    event_type: EventType;
     message: string;
-};
-
-export enum Severity {
-    Low,
-    Medium,
-    High,
-}
-
-export type InformationalEvent = {
-    type: EventType.Informational;
-    message: string;
-};
+} | null;
 
 function get_event(event_json: any): Event {
-    if (event_json.event_type.type === 'Informational') {
-        return {
-            type: EventType.Informational,
-            message: event_json.message,
-        };
-    } else {
-        return {
-            type: EventType.Warning,
-            severity:
-                event_json.event_type.severity === 'High'
-                    ? Severity.High
-                    : event_json.event_type.severity === 'Medium'
-                      ? Severity.Medium
-                      : Severity.Low,
-            message: event_json.message,
-        };
+    if (!['Informational', 'Low', 'Medium', 'High'].includes(event_json.event_type)) {
+        throw `Invalid/unhandled event type: ${event_json.event_type}`;
     }
+
+    return event_json;
 }
 
-function get_v1_rows(row_jsons: any[]): AnalysisRow[] {
-    const rows: AnalysisRow[] = [];
-    for (const row_json of row_jsons) {
-        for (const reason of row_json.skipped_message_reasons) {
-            rows.push({
-                type: AnalysisRowType.Skipped,
-                reason,
-            });
-        }
-        for (const analysis_json of row_json.analysis) {
-            const events: Event[] = analysis_json.events.map((event_json: any): Event | null => {
-                if (event_json === null) {
-                    return null;
-                } else {
-                    return get_event(event_json);
-                }
-            });
-            rows.push({
-                type: AnalysisRowType.Analysis,
-                packet_timestamp: new Date(analysis_json.timestamp),
-                events,
-            });
-        }
-    }
-    return rows;
-}
-
-function get_v2_rows(row_jsons: any[]): AnalysisRow[] {
+function get_rows(row_jsons: any[]): AnalysisRow[] {
     const rows: AnalysisRow[] = [];
     for (const row_json of row_jsons) {
         if (row_json.skipped_message_reason) {
@@ -170,7 +105,7 @@ function get_report_stats(rows: AnalysisRow[]): ReportStatistics {
         } else {
             for (const event of row.events) {
                 if (event !== null) {
-                    if (event.type === EventType.Informational) {
+                    if (event.event_type === 'Informational') {
                         num_informational_logs++;
                     } else {
                         num_warnings++;
@@ -188,12 +123,7 @@ function get_report_stats(rows: AnalysisRow[]): ReportStatistics {
 
 export function parse_finished_report(report_json: NewlineDeliminatedJson): AnalysisReport {
     const metadata = new ReportMetadata(report_json[0]);
-    let rows;
-    if (metadata.report_version === 1) {
-        rows = get_v1_rows(report_json.slice(1));
-    } else {
-        rows = get_v2_rows(report_json.slice(1));
-    }
+    const rows = get_rows(report_json.slice(1));
     const statistics = get_report_stats(rows);
     return {
         statistics,
