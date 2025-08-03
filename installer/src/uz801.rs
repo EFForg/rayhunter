@@ -1,3 +1,4 @@
+use std::io::Write;
 /// Installer for the Uz801 hotspot.
 ///
 /// Installation process:
@@ -6,7 +7,6 @@
 /// 3. Use ADB to install rayhunter files
 /// 4. Modify startup script to launch rayhunter on boot
 use std::time::Duration;
-use std::io::Write;
 
 use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
 use anyhow::Result;

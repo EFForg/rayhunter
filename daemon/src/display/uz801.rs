@@ -54,11 +54,13 @@ pub fn update_ui(
                 Err(mpsc::error::TryRecvError::Empty) => {}
                 Err(e) => error!("error receiving ui update message: {e}"),
             };
-            
+
             // Update LEDs if state changed or if 5 seconds have passed since last update
             let now = std::time::Instant::now();
-            let should_update = !invisible && (state != last_state || now.duration_since(last_update) >= Duration::from_secs(5));
-            
+            let should_update = !invisible
+                && (state != last_state
+                    || now.duration_since(last_update) >= Duration::from_secs(5));
+
             if should_update {
                 match state {
                     DisplayState::Paused => {
@@ -80,7 +82,7 @@ pub fn update_ui(
                 last_state = state;
                 last_update = now;
             }
-            
+
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
