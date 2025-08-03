@@ -70,7 +70,6 @@ pub async fn activate_usb_debug(admin_ip: &str) -> Result<()> {
             )
             .header("X-Requested-With", "XMLHttpRequest")
             .header("Origin", &origin)
-            .header("Connection", "keep-alive")
             .body(r#"{"funcNo":2001}"#)
             .send()
             .await;
@@ -92,8 +91,9 @@ async fn wait_for_adb() -> Result<ADBUSBDevice> {
             anyhow::bail!("Timeout waiting for ADB connection after USB debug activation");
         }
 
+        // UZ801 USB vendor and product IDs.
+        // TODO: Research if other variants use different IDs.
         match ADBUSBDevice::new(0x05c6, 0x9025) {
-            // Common Qualcomm ADB VID/PID
             Ok(mut device) => {
                 // Test ADB connection
                 if test_adb_connection(&mut device).await.is_ok() {
