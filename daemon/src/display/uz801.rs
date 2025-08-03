@@ -38,6 +38,7 @@ pub fn update_ui(
     task_tracker.spawn(async move {
         let mut state = DisplayState::Recording;
         let mut last_state = DisplayState::Paused;
+        let mut last_update = std::time::Instant::now();
 
         loop {
             match ui_shutdown_rx.try_recv() {
@@ -53,28 +54,33 @@ pub fn update_ui(
                 Err(mpsc::error::TryRecvError::Empty) => {}
                 Err(e) => error!("error receiving ui update message: {e}"),
             };
-            if invisible || state == last_state {
-                tokio::time::sleep(Duration::from_secs(1)).await;
-                continue;
+            
+            // Update LEDs if state changed or if 5 seconds have passed since last update
+            let now = std::time::Instant::now();
+            let should_update = !invisible && (state != last_state || now.duration_since(last_update) >= Duration::from_secs(5));
+            
+            if should_update {
+                match state {
+                    DisplayState::Paused => {
+                        led_off(led!("red")).await;
+                        led_off(led!("green")).await;
+                        led_on(led!("wifi")).await;
+                    }
+                    DisplayState::Recording => {
+                        led_off(led!("red")).await;
+                        led_off(led!("wifi")).await;
+                        led_on(led!("green")).await;
+                    }
+                    DisplayState::WarningDetected => {
+                        led_off(led!("green")).await;
+                        led_off(led!("wifi")).await;
+                        led_on(led!("red")).await;
+                    }
+                }
+                last_state = state;
+                last_update = now;
             }
-            match state {
-                DisplayState::Paused => {
-                    led_off(led!("red")).await;
-                    led_off(led!("green")).await;
-                    led_on(led!("wifi")).await;
-                }
-                DisplayState::Recording => {
-                    led_off(led!("red")).await;
-                    led_off(led!("wifi")).await;
-                    led_on(led!("green")).await;
-                }
-                DisplayState::WarningDetected => {
-                    led_off(led!("green")).await;
-                    led_off(led!("wifi")).await;
-                    led_on(led!("red")).await;
-                }
-            }
-            last_state = state;
+            
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
