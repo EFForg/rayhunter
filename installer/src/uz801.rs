@@ -18,7 +18,6 @@ use crate::util::echo;
 pub async fn install(
     Args {
         admin_ip,
-        admin_password: _, // Not used for Uz801
     }: Args,
 ) -> Result<()> {
     run_install(admin_ip).await
