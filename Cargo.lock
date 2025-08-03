@@ -2721,6 +2721,7 @@ dependencies = [
  "pcap-file-tokio",
  "pycrate-rs",
  "serde",
+ "serde_json",
  "telcom-parser",
  "thiserror 1.0.69",
  "tokio",

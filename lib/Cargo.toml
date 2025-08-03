@@ -21,7 +21,10 @@ pcap-file-tokio = "0.1.0"
 pycrate-rs = { git = "https://github.com/EFForg/pycrate-rs" }
 thiserror = "1.0.50"
 telcom-parser = { path = "../telcom-parser" }
-tokio = { version = "1.44.2", default-features = false, features = ["time", "rt", "macros"] }
+tokio = { version = "1.44.2", default-features = false, features = ["time", "rt", "macros", "fs"] }
 futures = { version = "0.3.30", default-features = false }
 serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0"
 num_enum = "0.7.4"
+
+[dev-dependencies]

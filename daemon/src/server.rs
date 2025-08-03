@@ -21,6 +21,7 @@ use tokio_util::io::ReaderStream;
 use crate::DiagDeviceCtrlMessage;
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::config::Config;
+use crate::display::DisplayState;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
 
@@ -32,6 +33,7 @@ pub struct ServerState {
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
+    pub ui_update_sender: Option<Sender<DisplayState>>,
 }
 
 pub async fn get_qmdl(
@@ -242,6 +244,29 @@ pub async fn get_zip(
     Ok((headers, body).into_response())
 }
 
+pub async fn debug_set_display_state(
+    State(state): State<Arc<ServerState>>,
+    Json(display_state): Json<DisplayState>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    if let Some(ui_sender) = &state.ui_update_sender {
+        ui_sender.send(display_state).await.map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "failed to send display state update".to_string(),
+            )
+        })?;
+        Ok((
+            StatusCode::OK,
+            "display state updated successfully".to_string(),
+        ))
+    } else {
+        Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "display system not available".to_string(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -307,6 +332,7 @@ mod tests {
             analysis_status_lock: Arc::new(RwLock::new(analysis_status)),
             analysis_sender: analysis_tx,
             daemon_restart_tx: Arc::new(RwLock::new(None)),
+            ui_update_sender: None,
         })
     }
 

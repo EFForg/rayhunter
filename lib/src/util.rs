@@ -1,10 +1,10 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[cfg(target_family = "unix")]
 use nix::sys::utsname::uname;
 
 /// Expose binary and system information.
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct RuntimeMetadata {
     /// The cargo package version from this library's cargo.toml, e.g., "1.2.3".
     pub rayhunter_version: String,

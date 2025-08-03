@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use super::analyzer::{Analyzer, Event, EventType, Severity};
+use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use telcom_parser::lte_rrc::{
     BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1, CellReselectionPriority,
@@ -61,9 +61,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                                 && p == 0
                             {
                                 return Some(Event {
-                                    event_type: EventType::QualitativeWarning {
-                                        severity: Severity::High,
-                                    },
+                                    event_type: EventType::High,
                                     message:
                                         "LTE cell advertised a 3G cell for priority 0 reselection"
                                             .to_string(),
@@ -78,9 +76,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                                 && p == 0
                             {
                                 return Some(Event {
-                                    event_type: EventType::QualitativeWarning {
-                                        severity: Severity::High,
-                                    },
+                                    event_type: EventType::High,
                                     message:
                                         "LTE cell advertised a 3G cell for priority 0 reselection"
                                             .to_string(),
@@ -101,9 +97,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             && p == 0
                         {
                             return Some(Event {
-                                event_type: EventType::QualitativeWarning {
-                                    severity: Severity::High,
-                                },
+                                event_type: EventType::High,
                                 message: "LTE cell advertised a 2G cell for priority 0 reselection"
                                     .to_string(),
                             });

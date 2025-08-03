@@ -73,7 +73,7 @@ pub fn update_ui(
                         led_off(led!("wifi")).await;
                         led_on(led!("green")).await;
                     }
-                    DisplayState::WarningDetected => {
+                    DisplayState::WarningDetected { .. } => {
                         led_off(led!("green")).await;
                         led_off(led!("wifi")).await;
                         led_on(led!("red")).await;

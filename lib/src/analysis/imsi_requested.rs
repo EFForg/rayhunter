@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 
-use super::analyzer::{Analyzer, Event, EventType, Severity};
+use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use log::debug;
 
@@ -59,9 +59,7 @@ impl ImsiRequestedAnalyzer {
             // Unexpected IMSI without AttachRequest
             (current, State::IdentityRequest) if *current != State::AttachRequest => {
                 self.flag = Some(Event {
-                    event_type: EventType::QualitativeWarning {
-                        severity: Severity::High,
-                    },
+                    event_type: EventType::High,
                     message: format!(
                         "Identity requested without Attach Request (frame {})",
                         self.packet_num
@@ -73,9 +71,7 @@ impl ImsiRequestedAnalyzer {
             // IMSI to Disconnect without AuthAccept
             (State::IdentityRequest, State::Disconnect) => {
                 self.flag = Some(Event {
-                    event_type: EventType::QualitativeWarning {
-                        severity: Severity::High,
-                    },
+                    event_type: EventType::High,
                     message: format!(
                         "Disconnected after Identity Request without Auth Accept (frame {})",
                         self.packet_num
