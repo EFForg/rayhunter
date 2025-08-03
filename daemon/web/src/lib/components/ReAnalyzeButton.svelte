@@ -35,6 +35,7 @@
     variant="blue"
     onclick={handleReAnalyze}
     ariaLabel="re-analyze"
+    errorMessage="Error re-analyzing recoding"
 >
     {#snippet icon()}
         <svg style="width:20px;height:20px" viewBox="0 0 24 24">

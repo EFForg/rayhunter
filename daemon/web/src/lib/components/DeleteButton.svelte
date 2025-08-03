@@ -1,18 +1,20 @@
 <script lang="ts">
-    import { req } from '$lib/utils.svelte';
+    import { user_action_req } from '$lib/utils.svelte';
     let {
         text,
         url,
         prompt,
+        name,
     }: {
         text?: string;
         url: string;
         prompt: string;
+        name: string;
     } = $props();
 
     function confirmDelete() {
         if (window.confirm(prompt)) {
-            req('POST', url);
+            user_action_req('POST', url, 'Unable to delete recording ' + name);
         }
     }
 </script>
