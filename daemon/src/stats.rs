@@ -49,7 +49,7 @@ impl DiskStats {
         }
         df_cmd.arg(qmdl_path);
         let stdout = get_cmd_output(df_cmd).await?;
-        
+
         if matches!(device, Device::Uz801) {
             // Handle Uz801 format:
             // Filesystem               Size     Used     Free   Blksize
@@ -61,10 +61,22 @@ impl DiskStats {
             let data_line = lines[1];
             let mut parts = data_line.split_whitespace();
             Ok(Self {
-                partition: parts.next().ok_or("error parsing df output: missing filesystem")?.to_string(),
-                total_size: parts.next().ok_or("error parsing df output: missing size")?.to_string(),
-                used_size: parts.next().ok_or("error parsing df output: missing used")?.to_string(),
-                available_size: parts.next().ok_or("error parsing df output: missing free")?.to_string(),
+                partition: parts
+                    .next()
+                    .ok_or("error parsing df output: missing filesystem")?
+                    .to_string(),
+                total_size: parts
+                    .next()
+                    .ok_or("error parsing df output: missing size")?
+                    .to_string(),
+                used_size: parts
+                    .next()
+                    .ok_or("error parsing df output: missing used")?
+                    .to_string(),
+                available_size: parts
+                    .next()
+                    .ok_or("error parsing df output: missing free")?
+                    .to_string(),
                 used_percent: "N/A".to_string(), // Uz801 df doesn't provide percentage
                 mounted_on: qmdl_path.to_string(), // Use the path we queried
             })
@@ -116,10 +128,10 @@ impl MemoryStats {
             let meminfo_content = tokio::fs::read_to_string("/proc/meminfo")
                 .await
                 .map_err(|e| format!("error reading /proc/meminfo: {}", e))?;
-            
+
             let mut mem_total_kb = None;
             let mut mem_free_kb = None;
-            
+
             for line in meminfo_content.lines() {
                 if let Some(value_str) = line.strip_prefix("MemTotal:") {
                     if let Some(kb_str) = value_str.trim().strip_suffix(" kB") {
@@ -131,11 +143,11 @@ impl MemoryStats {
                     }
                 }
             }
-            
+
             let total = mem_total_kb.ok_or("error parsing MemTotal from /proc/meminfo")?;
             let free = mem_free_kb.ok_or("error parsing MemFree from /proc/meminfo")?;
             let used = total - free;
-            
+
             Ok(Self {
                 total: humanize_kb(total),
                 used: humanize_kb(used),

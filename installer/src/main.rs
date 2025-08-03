@@ -6,8 +6,8 @@ mod orbic;
 mod pinephone;
 mod tmobile;
 mod tplink;
-mod uz801;
 mod util;
+mod uz801;
 mod wingtech;
 
 pub static CONFIG_TOML: &str = include_str!("../../dist/config.toml.in");
