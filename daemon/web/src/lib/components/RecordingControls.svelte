@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { req } from '$lib/utils.svelte';
+    import { user_action_req } from '$lib/utils.svelte';
     let {
         server_is_recording,
     }: {
@@ -10,12 +10,12 @@
     let waiting_for_server = $derived(client_set_recording !== server_is_recording);
 
     async function start_recording() {
-        await req('POST', '/api/start-recording');
+        await user_action_req('POST', '/api/start-recording', 'Unable to start recoding');
         client_set_recording = true;
     }
 
     async function stop_recording() {
-        await req('POST', '/api/stop-recording');
+        await user_action_req('POST', '/api/stop-recording', 'Unable to stop recoring');
         client_set_recording = false;
     }
 
