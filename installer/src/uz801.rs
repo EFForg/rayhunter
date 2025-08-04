@@ -49,9 +49,9 @@ async fn run_install(admin_ip: String) -> Result<()> {
 }
 
 pub async fn activate_usb_debug(admin_ip: &str) -> Result<()> {
-    let url = format!("http://{}/ajax", admin_ip);
-    let referer = format!("http://{}/usbdebug.html", admin_ip);
-    let origin = format!("http://{}", admin_ip);
+    let url = format!("http://{admin_ip}/ajax");
+    let referer = format!("http://{admin_ip}/usbdebug.html");
+    let origin = format!("http://{admin_ip}");
 
     let _handle = tokio::spawn(async move {
         let client = reqwest::Client::builder()
@@ -277,7 +277,7 @@ async fn test_rayhunter(admin_ip: &str) -> Result<()> {
     let client = reqwest::Client::new();
 
     while failures < MAX_FAILURES {
-        let url = format!("http://{}:8080/index.html", admin_ip);
+        let url = format!("http://{admin_ip}:8080/index.html");
 
         if let Ok(response) = client.get(&url).send().await {
             if response.status().is_success() {
