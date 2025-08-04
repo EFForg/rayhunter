@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::path::Path;
 /// Installer for the Uz801 hotspot.
 ///
 /// Installation process:
@@ -9,7 +10,8 @@ use std::io::Write;
 use std::time::Duration;
 
 use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
+use md5::compute as md5_compute;
 use tokio::time::sleep;
 
 use crate::Uz801Args as Args;
@@ -36,14 +38,13 @@ async fn run_install(admin_ip: String) -> Result<()> {
     modify_startup_script(&mut adb_device).await?;
     println!("ok");
 
-    echo!("Starting rayhunter daemon... ");
-    start_rayhunter(&mut adb_device).await?;
+    echo!("Rebooting the device... ");
+    let _ = adb_device.reboot(adb_client::RebootType::System);
     println!("ok");
 
-    echo!("Testing rayhunter... ");
-    test_rayhunter(&admin_ip).await?;
-    println!("ok");
-    println!("rayhunter is running at http://{admin_ip}:8080");
+    println!("Installation complete!");
+    println!("Please wait for the device to reboot (light will turn green)");
+    println!("Then access rayhunter at: http://{admin_ip}:8080");
 
     Ok(())
 }
@@ -134,12 +135,11 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
 
     // Install rayhunter daemon binary with verification
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
-    install_file_with_verification(
+    install_file(
         adb_device,
         "/data/rayhunter/rayhunter-daemon",
         rayhunter_daemon_bin,
-    )
-    .await?;
+    )?;
 
     // Install config file
     let config_content = crate::CONFIG_TOML.replace("#device = \"orbic\"", "device = \"uz801\"");
@@ -156,73 +156,53 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
     Ok(())
 }
 
-async fn install_file_with_verification(
-    adb_device: &mut ADBUSBDevice,
-    dest_path: &str,
-    file_data: &[u8],
-) -> Result<()> {
-    const MAX_RETRIES: u32 = 5;
-    let expected_size = file_data.len();
-
-    println!("Installing {} ({} bytes)...", dest_path, expected_size);
-
+/// Transfer a file to the device's filesystem with adb push.
+/// Validates the file sends successfully to /data/local/tmp
+/// before overwriting the destination.
+fn install_file(adb_device: &mut ADBUSBDevice, dest: &str, payload: &[u8]) -> Result<()> {
+    const MAX_RETRIES: u32 = 3;
+    
+    let file_name = Path::new(dest)
+        .file_name()
+        .ok_or_else(|| anyhow!("{dest} does not have a file name"))?
+        .to_str()
+        .ok_or_else(|| anyhow!("{dest}'s file name is not UTF8"))?
+        .to_owned();
+    let push_tmp_path = format!("/data/local/tmp/{file_name}");
+    let file_hash = md5_compute(payload);
+    
     for attempt in 1..=MAX_RETRIES {
         // Push the file
-        let mut data_copy = file_data;
-        match adb_device.push(&mut data_copy, &dest_path) {
-            Ok(_) => {
-                // Verify the file size
-                let mut buf = Vec::<u8>::new();
-                if let Ok(_) = adb_device.shell_command(&["ls", "-l", dest_path], &mut buf) {
-                    let output = String::from_utf8_lossy(&buf);
-
-                    // Parse the file size from ls output
-                    if let Some(size_str) = output.split_whitespace().nth(3) {
-                        if let Ok(actual_size) = size_str.parse::<usize>() {
-                            if actual_size == expected_size {
-                                println!(
-                                    "Successfully installed {} (verified {} bytes)",
-                                    dest_path, actual_size
-                                );
-                                return Ok(());
-                            } else {
-                                println!(
-                                    "Size mismatch on attempt {}: expected {}, got {}",
-                                    attempt, expected_size, actual_size
-                                );
-
-                                // Remove the incomplete file before retry
-                                let mut buf = Vec::<u8>::new();
-                                adb_device
-                                    .shell_command(&["rm", "-f", dest_path], &mut buf)
-                                    .ok();
-
-                                if attempt < MAX_RETRIES {
-                                    println!("Retrying file transfer...");
-                                    sleep(Duration::from_secs(1)).await;
-                                    continue;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                println!("Push failed on attempt {}: {}", attempt, e);
-                if attempt < MAX_RETRIES {
-                    sleep(Duration::from_secs(1)).await;
-                    continue;
-                }
+        let mut payload_copy = payload;
+        if let Err(e) = adb_device.push(&mut payload_copy, &push_tmp_path) {
+            if attempt == MAX_RETRIES {
                 return Err(e.into());
             }
+            continue;
+        }
+
+        // Verify with md5sum
+        let mut buf = Vec::<u8>::new();
+        if let Ok(_) = adb_device.shell_command(&["busybox", "md5sum", &push_tmp_path], &mut buf) {
+            let output = String::from_utf8_lossy(&buf);
+            if output.contains(&format!("{file_hash:x}")) {
+                // Verification successful, move to final destination
+                let mut buf = Vec::<u8>::new();
+                adb_device.shell_command(&["mv", &push_tmp_path, dest], &mut buf)?;
+                println!("ok");
+                return Ok(());
+            }
+        }
+        
+        // Verification failed, clean up and retry
+        if attempt < MAX_RETRIES {
+            println!("MD5 verification failed on attempt {}, retrying...", attempt);
+            let mut buf = Vec::<u8>::new();
+            adb_device.shell_command(&["rm", "-f", &push_tmp_path], &mut buf).ok();
         }
     }
-
-    anyhow::bail!(
-        "Failed to install {} after {} attempts - size verification failed",
-        dest_path,
-        MAX_RETRIES
-    )
+    
+    anyhow::bail!("MD5 verification failed for {dest} after {MAX_RETRIES} attempts")
 }
 
 async fn modify_startup_script(adb_device: &mut ADBUSBDevice) -> Result<()> {
@@ -251,49 +231,4 @@ async fn modify_startup_script(adb_device: &mut ADBUSBDevice) -> Result<()> {
     )?;
 
     Ok(())
-}
-
-async fn start_rayhunter(adb_device: &mut ADBUSBDevice) -> Result<()> {
-    let mut buf = Vec::<u8>::new();
-    adb_device.shell_command(
-        &[
-            "/data/rayhunter/rayhunter-daemon",
-            "/data/rayhunter/config.toml",
-            "&",
-        ],
-        &mut buf,
-    )?;
-
-    // Give it a moment to start
-    sleep(Duration::from_secs(3)).await;
-
-    Ok(())
-}
-
-async fn test_rayhunter(admin_ip: &str) -> Result<()> {
-    const MAX_FAILURES: u32 = 10;
-    let mut failures = 0;
-
-    let client = reqwest::Client::new();
-
-    while failures < MAX_FAILURES {
-        let url = format!("http://{admin_ip}:8080/index.html");
-
-        if let Ok(response) = client.get(&url).send().await {
-            if response.status().is_success() {
-                if let Ok(body) = response.text().await {
-                    if body.contains("html") {
-                        return Ok(());
-                    }
-                }
-            }
-        }
-
-        failures += 1;
-        // modified from 3 because MifiService has to set up the
-        // network routing and it takes a bit longer
-        sleep(Duration::from_secs(5)).await;
-    }
-
-    anyhow::bail!("timeout reached! failed to reach rayhunter, something went wrong :(")
 }
