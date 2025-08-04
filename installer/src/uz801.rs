@@ -183,7 +183,7 @@ fn install_file(adb_device: &mut ADBUSBDevice, dest: &str, payload: &[u8]) -> Re
 
         // Verify with md5sum
         let mut buf = Vec::<u8>::new();
-        if let Ok(_) = adb_device.shell_command(&["busybox", "md5sum", &push_tmp_path], &mut buf) {
+        if adb_device.shell_command(&["busybox", "md5sum", &push_tmp_path], &mut buf).is_ok() {
             let output = String::from_utf8_lossy(&buf);
             if output.contains(&format!("{file_hash:x}")) {
                 // Verification successful, move to final destination
