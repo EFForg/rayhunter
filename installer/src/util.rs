@@ -71,8 +71,13 @@ pub async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) 
         sleep(Duration::from_millis(100)).await;
         let mut addr = addr;
         addr.set_port(8081);
-        let mut stream = TcpStream::connect(addr).await?;
-        stream.write_all(payload).await?;
+
+        {
+            let mut stream = TcpStream::connect(addr).await?;
+            stream.write_all(payload).await?;
+            // ensure that stream is dropped before we wait for nc to terminate!
+        }
+
         handle.await??;
     }
     let checksum = md5::compute(payload);
