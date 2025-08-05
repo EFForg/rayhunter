@@ -25,4 +25,5 @@ pub enum Device {
     Tmobile,
     Wingtech,
     Pinephone,
+    Uz801,
 }

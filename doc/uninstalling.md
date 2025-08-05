@@ -22,3 +22,18 @@ Your device is now Rayhunter-free, and should no longer be in a rooted ADB-enabl
 4. `update-rc.d rayhunter_daemon remove`
 5. (hardware revision v4.0+ only) In `Settings > NAT Settings > Port Triggers` in TP-Link's admin UI, remove any leftover port triggers.
 
+## UZ801
+
+0. (Optional): Back up the qmdl folder with all of the captures:
+`adb pull /data/rayhunter/qmdl .`
+1. Run `adb shell` to get a root shell on the device
+2. Delete the /data/rayhunter folder: `rm -rf /data/rayhunter`
+3. Modify the initmifiservice.sh script to remove the rayhunter 
+startup line:
+```sh
+mount -o remount,rw /system
+busybox vi /system/bin/initmifiservice.sh
+```
+Then type 999G (shift+g), then type dd. Then press the colon key (:) and type wq. Finally, press Enter.
+4. Lastly, run `setprop persist.sys.usb.config rndis`.
+5. Type `reboot` to reboot the device.

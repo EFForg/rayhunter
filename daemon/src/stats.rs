@@ -7,7 +7,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use log::error;
-use rayhunter::util::RuntimeMetadata;
+use rayhunter::{Device, util::RuntimeMetadata};
 use serde::Serialize;
 use tokio::process::Command;
 
@@ -19,10 +19,10 @@ pub struct SystemStats {
 }
 
 impl SystemStats {
-    pub async fn new(qmdl_path: &str) -> Result<Self, String> {
+    pub async fn new(qmdl_path: &str, device: &Device) -> Result<Self, String> {
         Ok(Self {
-            disk_stats: DiskStats::new(qmdl_path).await?,
-            memory_stats: MemoryStats::new().await?,
+            disk_stats: DiskStats::new(qmdl_path, device).await?,
+            memory_stats: MemoryStats::new(device).await?,
             runtime_metadata: RuntimeMetadata::new(),
         })
     }
@@ -40,13 +40,22 @@ pub struct DiskStats {
 
 impl DiskStats {
     // runs "df -h <qmdl_path>" to get storage statistics for the partition containing
-    // the QMDL file
-    pub async fn new(qmdl_path: &str) -> Result<Self, String> {
-        let mut df_cmd = Command::new("df");
+    // the QMDL file.
+    pub async fn new(qmdl_path: &str, device: &Device) -> Result<Self, String> {
+        // Uz801 needs to be told to use the busybox df specifically
+        let mut df_cmd: Command;
+        if matches!(device, Device::Uz801) {
+            df_cmd = Command::new("busybox");
+            df_cmd.arg("df");
+        } else {
+            df_cmd = Command::new("df");
+        }
         df_cmd.arg("-h");
         df_cmd.arg(qmdl_path);
         let stdout = get_cmd_output(df_cmd).await?;
-        let mut parts = stdout.split_whitespace().skip(7).to_owned();
+
+        // Handle standard df -h format
+        let mut parts = stdout.split_whitespace().skip(7);
         Ok(Self {
             partition: parts.next().ok_or("error parsing df output")?.to_string(),
             total_size: parts.next().ok_or("error parsing df output")?.to_string(),
@@ -83,9 +92,16 @@ async fn get_cmd_output(mut cmd: Command) -> Result<String, String> {
 }
 
 impl MemoryStats {
-    // runs "free -k" and parses the output to retrieve memory stats
-    pub async fn new() -> Result<Self, String> {
-        let mut free_cmd = Command::new("free");
+    // runs "free -k" and parses the output to retrieve memory stats for most devices,
+    pub async fn new(device: &Device) -> Result<Self, String> {
+        // Use busybox for Uz801
+        let mut free_cmd: Command;
+        if matches!(device, Device::Uz801) {
+            free_cmd = Command::new("busybox");
+            free_cmd.arg("free");
+        } else {
+            free_cmd = Command::new("free");
+        }
         free_cmd.arg("-k");
         let stdout = get_cmd_output(free_cmd).await?;
         let mut numbers = stdout
@@ -111,7 +127,7 @@ pub async fn get_system_stats(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<SystemStats>, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
-    match SystemStats::new(qmdl_store.path.to_str().unwrap()).await {
+    match SystemStats::new(qmdl_store.path.to_str().unwrap(), &state.config.device).await {
         Ok(stats) => Ok(Json(stats)),
         Err(err) => {
             error!("error getting system stats: {err}");

@@ -7,6 +7,7 @@ mod pinephone;
 mod tmobile;
 mod tplink;
 mod util;
+mod uz801;
 mod wingtech;
 
 pub static CONFIG_TOML: &str = include_str!("../../dist/config.toml.in");
@@ -27,6 +28,8 @@ enum Command {
     Orbic(InstallOrbic),
     /// Install rayhunter on the TMobile TMOHS1.
     Tmobile(TmobileArgs),
+    /// Install rayhunter on the Uz801.
+    Uz801(Uz801Args),
     /// Install rayhunter on a PinePhone's Quectel modem.
     Pinephone(InstallPinephone),
     /// Install rayhunter on the TP-Link M7350.
@@ -82,6 +85,8 @@ enum UtilSubCommand {
     TmobileStartAdb(TmobileArgs),
     /// Root the Tmobile and launch telnetd.
     TmobileStartTelnet(TmobileArgs),
+    /// Root the Uz801 and launch adb.
+    Uz801StartAdb(Uz801Args),
     /// Root the tplink and launch telnetd.
     TplinkStartTelnet(TplinkStartTelnet),
     /// Root the Wingtech and launch telnetd.
@@ -113,6 +118,13 @@ struct TmobileArgs {
     /// Web portal admin password.
     #[arg(long)]
     admin_password: String,
+}
+
+#[derive(Parser, Debug)]
+struct Uz801Args {
+    /// IP address for Uz801 admin interface, if custom.
+    #[arg(long, default_value = "192.168.100.1")]
+    admin_ip: String,
 }
 
 #[derive(Parser, Debug)]
@@ -168,6 +180,7 @@ async fn run() -> Result<(), Error> {
 
     match command {
         Command::Tmobile(args) => tmobile::install(args).await.context("Failed to install rayhunter on the Tmobile TMOHS1. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
+        Command::Uz801(args) => uz801::install(args).await.context("Failed to install rayhunter on the Uz801. Make sure your computer is connected to the hotspot using USB.")?,
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
@@ -195,6 +208,7 @@ async fn run() -> Result<(), Error> {
             UtilSubCommand::Shell => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
             UtilSubCommand::TmobileStartTelnet(args) => wingtech::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Tmobile TMOHS1")?,
             UtilSubCommand::TmobileStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Tmobile TMOHS1")?,
+            UtilSubCommand::Uz801StartAdb(args) => uz801::activate_usb_debug(&args.admin_ip).await.context("\nFailed to activate USB debug on the Uz801")?,
             UtilSubCommand::TplinkStartTelnet(options) => {
                 tplink::start_telnet(&options.admin_ip).await?;
             }
