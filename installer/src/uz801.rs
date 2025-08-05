@@ -161,7 +161,7 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
 /// before overwriting the destination.
 fn install_file(adb_device: &mut ADBUSBDevice, dest: &str, payload: &[u8]) -> Result<()> {
     const MAX_RETRIES: u32 = 3;
-    
+
     let file_name = Path::new(dest)
         .file_name()
         .ok_or_else(|| anyhow!("{dest} does not have a file name"))?
@@ -170,7 +170,7 @@ fn install_file(adb_device: &mut ADBUSBDevice, dest: &str, payload: &[u8]) -> Re
         .to_owned();
     let push_tmp_path = format!("/data/local/tmp/{file_name}");
     let file_hash = md5_compute(payload);
-    
+
     for attempt in 1..=MAX_RETRIES {
         // Push the file
         let mut payload_copy = payload;
@@ -183,7 +183,10 @@ fn install_file(adb_device: &mut ADBUSBDevice, dest: &str, payload: &[u8]) -> Re
 
         // Verify with md5sum
         let mut buf = Vec::<u8>::new();
-        if adb_device.shell_command(&["busybox", "md5sum", &push_tmp_path], &mut buf).is_ok() {
+        if adb_device
+            .shell_command(&["busybox", "md5sum", &push_tmp_path], &mut buf)
+            .is_ok()
+        {
             let output = String::from_utf8_lossy(&buf);
             if output.contains(&format!("{file_hash:x}")) {
                 // Verification successful, move to final destination
@@ -193,15 +196,20 @@ fn install_file(adb_device: &mut ADBUSBDevice, dest: &str, payload: &[u8]) -> Re
                 return Ok(());
             }
         }
-        
+
         // Verification failed, clean up and retry
         if attempt < MAX_RETRIES {
-            println!("MD5 verification failed on attempt {}, retrying...", attempt);
+            println!(
+                "MD5 verification failed on attempt {}, retrying...",
+                attempt
+            );
             let mut buf = Vec::<u8>::new();
-            adb_device.shell_command(&["rm", "-f", &push_tmp_path], &mut buf).ok();
+            adb_device
+                .shell_command(&["rm", "-f", &push_tmp_path], &mut buf)
+                .ok();
         }
     }
-    
+
     anyhow::bail!("MD5 verification failed for {dest} after {MAX_RETRIES} attempts")
 }
 
