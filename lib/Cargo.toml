@@ -1,7 +1,7 @@
 [package]
 name = "rayhunter"
-version = "0.4.0"
-edition = "2021"
+version = "0.5.1"
+edition = "2024"
 description = "Realtime cellular data decoding and analysis for IMSI catcher detection"
 
 
@@ -9,24 +9,19 @@ description = "Realtime cellular data decoding and analysis for IMSI catcher det
 name = "rayhunter"
 path = "src/lib.rs"
 
-[features]
-default = []
-orbic = []
-tplink = []
-wingtech = []
-
 [dependencies]
 bytes = "1.5.0"
-chrono = "0.4.31"
+chrono = { version = "0.4.31", features = ["serde"] }
 crc = "3.0.1"
 deku = { version = "0.18.0", features = ["logging"] }
 libc = "0.2.150"
 log = "0.4.20"
 nix = { version = "0.29.0", features = ["feature"] }
 pcap-file-tokio = "0.1.0"
-pycrate-rs = { git = "https://github.com/wgreenberg/pycrate-rs" }
+pycrate-rs = { git = "https://github.com/EFForg/pycrate-rs" }
 thiserror = "1.0.50"
 telcom-parser = { path = "../telcom-parser" }
-tokio = { version = "1.44.2", default-features = false }
+tokio = { version = "1.44.2", default-features = false, features = ["time", "rt", "macros"] }
 futures = { version = "0.3.30", default-features = false }
 serde = { version = "1.0.197", features = ["derive"] }
+num_enum = "0.7.4"

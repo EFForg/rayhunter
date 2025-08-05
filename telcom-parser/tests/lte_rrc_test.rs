@@ -1,4 +1,4 @@
-use asn1_codecs::{uper::UperCodec, PerCodecData};
+use asn1_codecs::{PerCodecData, uper::UperCodec};
 use telcom_parser::lte_rrc::BCCH_DL_SCH_Message;
 
 fn hex_to_bin(hex: &str) -> Vec<u8> {

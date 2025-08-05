@@ -18,7 +18,7 @@ pub enum InformationElementError {
     UnsupportedGsmtapType(GsmtapType),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum InformationElement {
     GSM,
     UMTS,
@@ -28,7 +28,7 @@ pub enum InformationElement {
     FiveG,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum LteInformationElement {
     DlCcch(lte_rrc::DL_CCCH_Message),
     // This element of the enum is substantially larger than the others,
@@ -86,7 +86,7 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
                     _ => {
                         return Err(InformationElementError::UnsupportedGsmtapType(
                             gsmtap_msg.header.gsmtap_type,
-                        ))
+                        ));
                     }
                 };
                 Ok(InformationElement::LTE(Box::new(lte)))

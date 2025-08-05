@@ -333,7 +333,6 @@ checksum = "021e862c184ae977658b36c4500f7feac3221ca5da43e3f25bd04ab6c79a29b5"
 dependencies = [
  "axum-core",
  "bytes",
- "form_urlencoded",
  "futures-util",
  "http",
  "http-body",
@@ -350,13 +349,11 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_path_to_error",
- "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tower",
  "tower-layer",
  "tower-service",
- "tracing",
 ]
 
 [[package]]
@@ -376,7 +373,6 @@ dependencies = [
  "sync_wrapper",
  "tower-layer",
  "tower-service",
- "tracing",
 ]
 
 [[package]]
@@ -1733,7 +1729,7 @@ dependencies = [
 
 [[package]]
 name = "installer"
-version = "0.4.0"
+version = "0.5.1"
 dependencies = [
  "adb_client",
  "aes",
@@ -1746,7 +1742,8 @@ dependencies = [
  "env_logger 0.11.8",
  "hyper",
  "hyper-util",
- "md5",
+ "md5 0.7.0",
+ "md5crypt",
  "nusb",
  "reqwest",
  "serde",
@@ -1999,6 +1996,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
+name = "md5"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae960838283323069879657ca3de837e9f7bbb4c7bf6ea7f1b290d5e9476d2e0"
+
+[[package]]
+name = "md5crypt"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c8db1a978f99f584f2e72601860f68bb2cea9c09f4408f5e83f805db3434fb0"
+dependencies = [
+ "md5 0.8.0",
+]
+
+[[package]]
 name = "mdns-sd"
 version = "0.13.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2023,16 +2035,6 @@ name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
-
-[[package]]
-name = "mime_guess"
-version = "2.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
-dependencies = [
- "mime",
- "unicase",
-]
 
 [[package]]
 name = "minimal-lexical"
@@ -2192,6 +2194,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_enum"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a973b4e44ce6cad84ce69d797acf9a044532e4184c4f267913d1b546a0727b7a"
+dependencies = [
+ "num_enum_derive",
+ "rustversion",
+]
+
+[[package]]
+name = "num_enum_derive"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77e878c846a8abae00dd069496dbe8751b16ac1c3d6bd2a7283a938e8228f90d"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "num_threads"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2269,29 +2293,6 @@ name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f38d5652c16fde515bb1ecef450ab0f6a219d619a7274976324d5e377f7dceba"
-
-[[package]]
-name = "parking_lot"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1bf18183cf54e8d6059647fc3063646a1801cf30896933ec2311622cc4b9a27"
-dependencies = [
- "lock_api",
- "parking_lot_core",
-]
-
-[[package]]
-name = "parking_lot_core"
-version = "0.9.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e401f977ab385c9e4e3ab30627d6f26d00e2c73eef317493c4ec6d468726cf8"
-dependencies = [
- "cfg-if",
- "libc",
- "redox_syscall",
- "smallvec",
- "windows-targets 0.52.6",
-]
 
 [[package]]
 name = "paste"
@@ -2549,7 +2550,7 @@ dependencies = [
 [[package]]
 name = "pycrate-rs"
 version = "0.1.0"
-source = "git+https://github.com/wgreenberg/pycrate-rs#9e72e40bee9c3c09205ad871cf681628b443de7c"
+source = "git+https://github.com/EFForg/pycrate-rs#9e72e40bee9c3c09205ad871cf681628b443de7c"
 dependencies = [
  "clap",
  "deku",
@@ -2706,7 +2707,7 @@ dependencies = [
 
 [[package]]
 name = "rayhunter"
-version = "0.4.0"
+version = "0.5.1"
 dependencies = [
  "bytes",
  "chrono",
@@ -2716,6 +2717,7 @@ dependencies = [
  "libc",
  "log",
  "nix",
+ "num_enum",
  "pcap-file-tokio",
  "pycrate-rs",
  "serde",
@@ -2725,14 +2727,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "rayhunter-check"
+version = "0.5.1"
+dependencies = [
+ "clap",
+ "futures",
+ "log",
+ "pcap-file-tokio",
+ "rayhunter",
+ "simple_logger",
+ "tokio",
+ "walkdir",
+]
+
+[[package]]
 name = "rayhunter-daemon"
-version = "0.4.0"
+version = "0.5.1"
 dependencies = [
  "anyhow",
+ "async-trait",
  "async_zip",
  "axum",
  "chrono",
- "clap",
  "env_logger 0.11.8",
  "futures",
  "futures-macro",
@@ -2740,13 +2756,11 @@ dependencies = [
  "include_dir",
  "libc",
  "log",
- "mime_guess",
  "rayhunter",
  "reqwest",
  "rustls-rustcrypto",
  "serde",
  "serde_json",
- "simple_logger",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -2773,15 +2787,6 @@ checksum = "1465873a3dfdaa8ae7cb14b4383657caab0b3e8a0aa9ae8e04b044854c8dfce2"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
-]
-
-[[package]]
-name = "redox_syscall"
-version = "0.5.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "928fca9cf2aa042393a8325b9ead81d2f0df4cb12e1e24cef072922ccd99c5af"
-dependencies = [
- "bitflags 2.9.1",
 ]
 
 [[package]]
@@ -2882,7 +2887,7 @@ dependencies = [
 
 [[package]]
 name = "rootshell"
-version = "0.4.0"
+version = "0.5.1"
 dependencies = [
  "nix",
 ]
@@ -3044,6 +3049,15 @@ name = "ryu"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
+
+[[package]]
+name = "same-file"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
+dependencies = [
+ "winapi-util",
+]
 
 [[package]]
 name = "scopeguard"
@@ -3350,7 +3364,7 @@ checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
 
 [[package]]
 name = "telcom-parser"
-version = "0.4.0"
+version = "0.5.1"
 dependencies = [
  "asn1-codecs",
  "asn1-compiler",
@@ -3487,7 +3501,6 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
- "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",
@@ -3623,7 +3636,6 @@ dependencies = [
  "tokio",
  "tower-layer",
  "tower-service",
- "tracing",
 ]
 
 [[package]]
@@ -3662,7 +3674,6 @@ version = "0.1.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "784e0ac535deb450455cbfa28a6f0df145ea1bb7ae51b821cf5e7927fdcfbdd0"
 dependencies = [
- "log",
  "pin-project-lite",
  "tracing-core",
 ]
@@ -3687,12 +3698,6 @@ name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
-
-[[package]]
-name = "unicase"
-version = "2.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75b844d17643ee918803943289730bec8aac480150456169e647ed0b576ba539"
 
 [[package]]
 name = "unicode-ident"
@@ -3767,6 +3772,16 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "walkdir"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
+dependencies = [
+ "same-file",
+ "winapi-util",
+]
 
 [[package]]
 name = "want"

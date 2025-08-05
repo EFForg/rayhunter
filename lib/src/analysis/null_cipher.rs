@@ -127,6 +127,10 @@ impl Analyzer for NullCipherAnalyzer {
         Cow::from("Tests whether the cell suggests using a null cipher (EEA0)")
     }
 
+    fn get_version(&self) -> u32 {
+        1
+    }
+
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
         let dcch_msg = match ie {
             InformationElement::LTE(lte_ie) => match &**lte_ie {

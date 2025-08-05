@@ -1,0 +1,9 @@
+# Files that are distributed onto the Rayhunter device always have to have
+# Unix-style line endings, even if the installer is built on Windows with
+# autocrlf enabled.
+# Using CRLF for the init scripts will make them fail to execute on TP-Link.
+# See https://github.com/EFForg/rayhunter/issues/489
+
+dist/config.toml.in eol=lf
+dist/scripts/misc-daemon eol=lf
+dist/scripts/rayhunter_daemon eol=lf

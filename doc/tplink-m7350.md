@@ -1,6 +1,8 @@
 # TP-Link M7350
 
-The TP-Link M7350 is **supported by Rayhunter since 0.3.0**. TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
+Supported in Rayhunter since version 0.3.0.
+
+The TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
 
 ## Hardware versions
 
@@ -26,7 +28,7 @@ You can get your TP-Link M7350 from:
 
 ## Installation & Usage
 
-Follow the [release installation guide](./installing-from-release.md). Substitute `./installer orbic` for `./installer tplink` in other documentation. The Rayhunter UI will be available at [http://192.168.0.1:8080](http://192.168.0.1:8080).
+Follow the [release installation guide](./installing-from-release.md). Substitute `./installer orbic` for `./installer tplink` in other documentation. The Rayhunter UI will be available at <http://192.168.0.1:8080>.
 
 ## Obtaining a shell
 
@@ -59,7 +61,7 @@ add two port triggers. You can look at `Settings > NAT Settings > Port
 Triggers` in TP-Link's admin UI to see them.
 
 1. One port trigger "rayhunter-root" to launch the telnet shell. This is only needed for installation, and can be removed after upgrade. You can reinstall it using `./installer util tplink-start-telnet`.
-2. One port trigger "rayhunter-daemon" to auto-start rayhunter on boot. If you remove this, rayhunter will have to be started manually from shell.
+2. One port trigger "rayhunter-daemon" to auto-start Rayhunter on boot. If you remove this, Rayhunter will have to be started manually from shell.
 
 ## Other links
 

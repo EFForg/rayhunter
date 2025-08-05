@@ -1,9 +1,9 @@
 use crate::diag::{
-    build_log_mask_request, DataType, DiagParsingError, LogConfigRequest, LogConfigResponse,
-    Message, MessagesContainer, Request, RequestContainer, ResponsePayload, CRC_CCITT,
+    CRC_CCITT, DataType, DiagParsingError, LogConfigRequest, LogConfigResponse, Message,
+    MessagesContainer, Request, RequestContainer, ResponsePayload, build_log_mask_request,
 };
 use crate::hdlc::hdlc_encapsulate;
-use crate::log_codes;
+use crate::{Device, log_codes};
 
 use deku::prelude::*;
 use futures::TryStream;
@@ -86,11 +86,14 @@ pub struct DiagDevice {
 }
 
 impl DiagDevice {
-    pub async fn new() -> DiagResult<Self> {
-        Self::new_with_retries(Duration::from_secs(30)).await
+    pub async fn new(configured_device: &Device) -> DiagResult<Self> {
+        Self::new_with_retries(Duration::from_secs(30), configured_device).await
     }
 
-    pub async fn new_with_retries(max_duration: Duration) -> DiagResult<Self> {
+    pub async fn new_with_retries(
+        max_duration: Duration,
+        configured_device: &Device,
+    ) -> DiagResult<Self> {
         // For some reason the diag device needs a very long time to become available again with in
         // the same process, on TP-Link M7350 v3. While process restart would reset it faster.
 
@@ -101,7 +104,7 @@ impl DiagDevice {
         let mut num_retries = 0;
 
         loop {
-            match Self::try_new().await {
+            match Self::try_new(configured_device).await {
                 Ok(device) => {
                     info!("Diag device initialization succeeded after {num_retries} retries");
                     return Ok(device);
@@ -125,7 +128,7 @@ impl DiagDevice {
         }
     }
 
-    async fn try_new() -> DiagResult<Self> {
+    async fn try_new(configured_device: &Device) -> DiagResult<Self> {
         let diag_file = File::options()
             .read(true)
             .write(true)
@@ -134,7 +137,7 @@ impl DiagDevice {
             .map_err(DiagDeviceError::OpenDiagDeviceError)?;
         let fd = diag_file.as_raw_fd();
 
-        enable_frame_readwrite(fd, MEMORY_DEVICE_MODE)?;
+        enable_frame_readwrite(fd, MEMORY_DEVICE_MODE, configured_device)?;
         let use_mdm = determine_use_mdm(fd)?;
 
         Ok(DiagDevice {
@@ -293,41 +296,42 @@ impl DiagDevice {
 // TPLINK M7350 v5 source code can be downloaded at https://www.tp-link.com/de/support/gpl-code/?app=omada
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-struct diag_logging_mode_param_t {
+struct DiagLoggingModeParam {
     req_mode: u32,
     peripheral_mask: u32,
     mode_param: u8,
 }
 
 // Triggers the diag device's debug logging mode
-fn enable_frame_readwrite(fd: i32, mode: u32) -> DiagResult<()> {
+fn enable_frame_readwrite(fd: i32, mode: u32, configured_device: &Device) -> DiagResult<()> {
     unsafe {
         if libc::ioctl(fd, DIAG_IOCTL_SWITCH_LOGGING, mode, 0, 0, 0) < 0 {
-            let try_params: &[diag_logging_mode_param_t] = &[
+            let mut try_params = vec![DiagLoggingModeParam {
+                req_mode: mode,
+                peripheral_mask: u32::MAX,
+                mode_param: 0,
+            }];
+            if configured_device == &Device::Tplink {
                 // tplink M7350 HW revision 3-8 need this mode
-                #[cfg(feature = "tplink")]
-                diag_logging_mode_param_t {
-                    req_mode: mode,
-                    peripheral_mask: 0,
-                    mode_param: 1,
-                },
-                // tplink M7350 HW revision v9 requires the same parameters as orbic
-                diag_logging_mode_param_t {
-                    req_mode: mode,
-                    peripheral_mask: u32::MAX,
-                    mode_param: 0,
-                },
-            ];
+                try_params.insert(
+                    0,
+                    DiagLoggingModeParam {
+                        req_mode: mode,
+                        peripheral_mask: 0,
+                        mode_param: 1,
+                    },
+                );
+            }
 
             let mut ret = 0;
 
-            for params in try_params {
+            for params in &try_params {
                 let mut params = *params;
                 ret = libc::ioctl(
                     fd,
                     DIAG_IOCTL_SWITCH_LOGGING,
-                    &mut params as *mut diag_logging_mode_param_t,
-                    std::mem::size_of::<diag_logging_mode_param_t>(),
+                    &mut params as *mut DiagLoggingModeParam,
+                    std::mem::size_of::<DiagLoggingModeParam>(),
                     0,
                     0,
                     0,

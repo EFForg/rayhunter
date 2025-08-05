@@ -70,7 +70,7 @@ function setup_rootshell {
 function setup_rayhunter {
 	write-host "installing rayhunter..."
 	_serial "AT+SYSCMD=mkdir -p /data/rayhunter" | Out-Host
-	_adb_push "config.toml.example" "/tmp/config.toml" | Out-Null
+	_adb_push "config.toml.in" "/tmp/config.toml" | Out-Null
 	_serial "AT+SYSCMD=mv /tmp/config.toml /data/rayhunter" | Out-Host
 	_adb_push "rayhunter-daemon-orbic/rayhunter-daemon" "/tmp/rayhunter-daemon" | Out-Null
 	_serial "AT+SYSCMD=mv /tmp/rayhunter-daemon /data/rayhunter" | Out-Host

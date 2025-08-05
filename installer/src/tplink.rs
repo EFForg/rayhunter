@@ -154,11 +154,13 @@ async fn tplink_run_install(
     telnet_send_file(
         addr,
         &format!("{sdcard_path}/config.toml"),
-        crate::CONFIG_TOML.as_bytes(),
+        crate::CONFIG_TOML
+            .replace("#device = \"orbic\"", "device = \"tplink\"")
+            .as_bytes(),
     )
     .await?;
 
-    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON_TPLINK"));
+    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
     telnet_send_file(
         addr,
