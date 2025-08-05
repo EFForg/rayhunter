@@ -199,9 +199,7 @@ fn install_file(adb_device: &mut ADBUSBDevice, dest: &str, payload: &[u8]) -> Re
 
         // Verification failed, clean up and retry
         if attempt < MAX_RETRIES {
-            println!(
-                "MD5 verification failed on attempt {attempt}, retrying..."
-            );
+            println!("MD5 verification failed on attempt {attempt}, retrying...");
             let mut buf = Vec::<u8>::new();
             adb_device
                 .shell_command(&["rm", "-f", &push_tmp_path], &mut buf)
