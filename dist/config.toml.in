@@ -22,8 +22,8 @@ ui_level = 1
 # 1 = double-tapping the power button starts/stops recordings
 key_input_mode = 0
 
-# If set, attempts to send a notification to the ntify topic when a new warning is triggered
-# ntfy_topic =
+# If set, attempts to send a notification to the url when a new warning is triggered
+# ntfy_url =
 
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics

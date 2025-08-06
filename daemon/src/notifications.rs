@@ -8,8 +8,6 @@ use log::error;
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tokio_util::task::TaskTracker;
 
-static NTFY_BASE_URL: &str = "https://ntfy.sh/";
-
 pub struct Notification {
     message_type: String,
     message: String,
@@ -35,19 +33,15 @@ struct NotificationStatus {
 }
 
 pub struct NotificationService {
-    channel_name: Option<String>,
+    url: Option<String>,
     tx: mpsc::Sender<Notification>,
     rx: mpsc::Receiver<Notification>,
 }
 
 impl NotificationService {
-    pub fn new(channel_name: Option<String>) -> Self {
+    pub fn new(url: Option<String>) -> Self {
         let (tx, rx) = mpsc::channel(10);
-        Self {
-            channel_name,
-            tx,
-            rx,
-        }
+        Self { url, tx, rx }
     }
 
     pub fn new_handler(&self) -> mpsc::Sender<Notification> {
@@ -81,12 +75,11 @@ pub fn run_notification_worker(
                                     failed_since_last_success: 0,
                                 });
                             // Ignore if we're in the debounce period
-                            if let Some(debounce) = notification.debounce {
-                                if let Some(last_sent) = status.last_sent {
-                                    if last_sent.elapsed() < debounce {
-                                        continue;
-                                    }
-                                }
+                            if let Some(debounce) = notification.debounce
+                                && let Some(last_sent) = status.last_sent
+                                && last_sent.elapsed() < debounce
+                            {
+                                continue;
                             }
                             status.message = notification.message;
                             status.needs_sending = true;
@@ -117,7 +110,7 @@ pub fn run_notification_worker(
                     }
 
                     match http_client
-                        .post(format!("{NTFY_BASE_URL}{channel_name}"))
+                        .post(&url)
                         .body(notification.message.clone())
                         .send()
                         .await
