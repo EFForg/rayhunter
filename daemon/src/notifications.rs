@@ -54,9 +54,9 @@ pub fn run_notification_worker(
     mut notification_service: NotificationService,
 ) {
     task_tracker.spawn(async move {
-        let channel_name = notification_service.channel_name.unwrap_or("".into());
-
-        if !channel_name.is_empty() {
+        if let Some(url) = notification_service.url
+            && !url.is_empty()
+        {
             let mut notification_statuses = HashMap::new();
             let http_client = reqwest::Client::new();
 
