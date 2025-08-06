@@ -206,7 +206,7 @@ impl DiagTask {
                 notification_channel
                     .send(Notification::new(
                         "heuristic-warning".to_string(),
-                        "New warning triggered!".to_string(),
+                        "Rayhunter has emitted a warning!".to_string(),
                         Some(Duration::from_secs(60 * 5)),
                     ))
                     .await
