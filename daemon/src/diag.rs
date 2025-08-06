@@ -1,6 +1,7 @@
 use std::ops::DerefMut;
 use std::pin::pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -21,6 +22,7 @@ use tokio_util::task::TaskTracker;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisWriter};
 use crate::display;
+use crate::notifications::Notification;
 use crate::qmdl_store::{RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
 
@@ -162,6 +164,7 @@ impl DiagTask {
         &mut self,
         qmdl_store: &mut RecordingStore,
         container: MessagesContainer,
+        notification_channel: &tokio::sync::mpsc::Sender<Notification>,
     ) {
         if container.data_type != DataType::UserSpace {
             debug!("skipping non-userspace diag messages...");
@@ -200,6 +203,14 @@ impl DiagTask {
                     .send(display::DisplayState::WarningDetected)
                     .await
                     .expect("couldn't send ui update message: {}");
+                notification_channel
+                    .send(Notification::new(
+                        "heuristic-warning".to_string(),
+                        "Rayhunter has emitted a warning!".to_string(),
+                        Some(Duration::from_secs(60 * 5)),
+                    ))
+                    .await
+                    .expect("Failed to send to notification channel");
             }
         } else {
             debug!("no qmdl_writer set, continuing...");
@@ -217,6 +228,7 @@ pub fn run_diag_read_thread(
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
     analyzer_config: AnalyzerConfig,
+    notification_channel: tokio::sync::mpsc::Sender<Notification>,
 ) {
     task_tracker.spawn(async move {
         let mut diag_stream = pin!(dev.as_stream().into_stream());
@@ -225,6 +237,7 @@ pub fn run_diag_read_thread(
             .send(DiagDeviceCtrlMessage::StartRecording)
             .await
             .unwrap();
+
         loop {
             tokio::select! {
                 msg = qmdl_file_rx.recv() => {
@@ -264,7 +277,7 @@ pub fn run_diag_read_thread(
                     match maybe_container.unwrap() {
                         Ok(container) => {
                             let mut qmdl_store = qmdl_store_lock.write().await;
-                            diag_task.process_container(qmdl_store.deref_mut(), container).await
+                            diag_task.process_container(qmdl_store.deref_mut(), container, &notification_channel).await
                         },
                         Err(err) => {
                             error!("error reading diag device: {err}");

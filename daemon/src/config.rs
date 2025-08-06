@@ -16,6 +16,7 @@ pub struct Config {
     pub ui_level: u8,
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
+    pub ntfy_url: Option<String>,
     pub analyzers: AnalyzerConfig,
 }
 
@@ -30,6 +31,7 @@ impl Default for Config {
             colorblind_mode: false,
             key_input_mode: 0,
             analyzers: AnalyzerConfig::default(),
+            ntfy_url: None,
         }
     }
 }
