@@ -43,9 +43,13 @@
         >{(entry.last_message_time && date_formatter.format(entry.last_message_time)) || 'N/A'}</td
     >
     <td class="p-2">{entry.get_readable_qmdl_size()}</td>
-    <td class="p-2"><DownloadLink url={entry.get_pcap_url()} text="pcap" /></td>
-    <td class="p-2"><DownloadLink url={entry.get_qmdl_url()} text="qmdl" /></td>
-    <td class="p-2"><DownloadLink url={entry.get_zip_url()} text="zip" /></td>
+    <td class="p-2">
+        <div class="flex flex-row gap-2">
+            <DownloadLink url={entry.get_pcap_url()} text="pcap" />
+            <DownloadLink url={entry.get_qmdl_url()} text="qmdl" />
+            <DownloadLink url={entry.get_zip_url()} text="zip" />
+        </div>
+    </td>
     <td class="p-2"
         ><AnalysisStatus onclick={toggle_analysis_visibility} {entry} {analysis_visible} /></td
     >
