@@ -1,4 +1,4 @@
-use anyhow::{Context, Error, bail};
+use anyhow::{Context, Error};
 use clap::{Parser, Subcommand};
 use env_logger::Env;
 
@@ -64,7 +64,11 @@ struct InstallTpLink {
 }
 
 #[derive(Parser, Debug)]
-struct InstallOrbic {}
+struct InstallOrbic {
+    /// su password for privileged operations (default: oelinux123)
+    #[arg(long, default_value = "oelinux123")]
+    su_password: String,
+}
 
 #[derive(Parser, Debug)]
 struct InstallPinephone {}
@@ -77,8 +81,6 @@ struct Util {
 
 #[derive(Subcommand, Debug)]
 enum UtilSubCommand {
-    /// Send a serial command to the Orbic.
-    Serial(Serial),
     /// Start an ADB shell
     Shell,
     /// Root the Tmobile and launch adb.
@@ -167,13 +169,6 @@ struct WingtechArgs {
     admin_password: String,
 }
 
-#[derive(Parser, Debug)]
-struct Serial {
-    #[arg(long)]
-    root: bool,
-    command: Vec<String>,
-}
-
 async fn run() -> Result<(), Error> {
     env_logger::Builder::from_env(Env::default().default_filter_or("off")).init();
     let Args { command } = Args::parse();
@@ -184,27 +179,9 @@ async fn run() -> Result<(), Error> {
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
-        Command::Orbic(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
+        Command::Orbic(args) => orbic::install(args).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
         Command::Util(subcommand) => match subcommand.command {
-            UtilSubCommand::Serial(serial_cmd) => {
-                if serial_cmd.root {
-                    if !serial_cmd.command.is_empty() {
-                        eprintln!("You cannot use --root and specify a command at the same time");
-                        std::process::exit(64);
-                    }
-                    orbic::enable_command_mode()?;
-                } else if serial_cmd.command.is_empty() {
-                    eprintln!("Command cannot be an empty string");
-                    std::process::exit(64);
-                } else {
-                    let cmd = serial_cmd.command.join(" ");
-                    match orbic::open_orbic()? {
-                        Some(interface) => orbic::send_serial_cmd(&interface, &cmd).await?,
-                        None => bail!(orbic::ORBIC_NOT_FOUND),
-                    }
-                }
-            }
             UtilSubCommand::Shell => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
             UtilSubCommand::TmobileStartTelnet(args) => wingtech::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Tmobile TMOHS1")?,
             UtilSubCommand::TmobileStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Tmobile TMOHS1")?,

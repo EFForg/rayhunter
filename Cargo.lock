@@ -2536,13 +2536,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57397d16646700483b67d2dd6511d79318f9d057fdbd21a4066aeac8b41d310a"
 
 [[package]]
-name = "rootshell"
-version = "0.5.1"
-dependencies = [
- "nix",
-]
-
-[[package]]
 name = "rsa"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -9,7 +9,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  FILE_ROOTSHELL: ../../rootshell/rootshell
   FILE_RAYHUNTER_DAEMON: ../../rayhunter-daemon/rayhunter-daemon
   RUSTFLAGS: "-Dwarnings"
 
@@ -25,7 +24,6 @@ jobs:
       web_changed: ${{ steps.files_changed.outputs.web_count }}
       docs_changed: ${{ steps.files_changed.outputs.docs_count }}
       installer_changed: ${{ steps.files_changed.outputs.installer_count }}
-      rootshell_changed: ${{ steps.files_changed.outputs.rootshell_count }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,14 +42,12 @@ jobs:
             echo web_count=forced >> "$GITHUB_OUTPUT"
             echo docs_count=forced >> "$GITHUB_OUTPUT"
             echo installer_count=forced >> "$GITHUB_OUTPUT"
-            echo rootshell_count=forced >> "$GITHUB_OUTPUT"
           else
-            echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^installer -e ^check -e ^lib -e ^rootshell -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
+            echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^installer -e ^check -e ^lib -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^lib -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon/web | wc -l)" >> "$GITHUB_OUTPUT"
             echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -e ^book.toml -e ^doc | wc -l)" >> "$GITHUB_OUTPUT"
             echo "installer_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "rootshell_count=$(git diff --name-only $lcommit...HEAD | grep -e ^rootshell | wc -l)" >> "$GITHUB_OUTPUT"
           fi
 
   mdbook_test:
@@ -201,27 +197,6 @@ jobs:
           path: target/${{ matrix.platform.target }}/release/rayhunter-check${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
           if-no-files-found: error
 
-  build_rootshell:
-    if: needs.files_changed.outputs.rootshell_changed != '0'
-    needs:
-      - check_and_test
-      - files_changed
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: armv7-unknown-linux-musleabihf
-      - uses: Swatinem/rust-cache@v2
-      - name: Build rootshell (armv7)
-        run: cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --profile=firmware
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rootshell
-          path: target/armv7-unknown-linux-musleabihf/firmware/rootshell
-          if-no-files-found: error
 
   build_rayhunter:
     if: needs.files_changed.outputs.daemon_changed != '0'
@@ -266,7 +241,6 @@ jobs:
       packages: write
     needs:
       - build_rayhunter
-      - build_rootshell
       - files_changed
       - windows_installer_check_and_test
     strategy:
@@ -311,7 +285,6 @@ jobs:
       packages: write
     needs:
       - build_rayhunter_check
-      - build_rootshell
       - build_rayhunter
       - build_rust_installer
     runs-on: ubuntu-latest
@@ -338,7 +311,7 @@ jobs:
           dest="rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}"
           mkdir "$dest"
           mv installer-$platform/installer* "$dest"/installer
-          cp -r rayhunter-daemon rootshell/rootshell dist/* installer/install.ps1 "$dest"/
+          cp -r rayhunter-daemon dist/* installer/install.ps1 "$dest"/
           zip -r "$dest.zip" "$dest"
           sha256sum "$dest.zip" > "$dest.zip.sha256"
 
