@@ -156,3 +156,9 @@ pub async fn get_qmdl_manifest(
         current_entry,
     }))
 }
+
+pub async fn get_log() -> Result<String, (StatusCode, String)> {
+    tokio::fs::read_to_string("/data/rayhunter/rayhunter.log")
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+}
