@@ -37,10 +37,10 @@ impl NullCipherAnalyzer {
                     Some(&rat.security_algorithm_config)
                 }
             };
-            if let Some(security_config) = maybe_security_config {
-                if security_config.ciphering_algorithm.0 == CipheringAlgorithm_r12::EEA0 {
-                    return true;
-                }
+            if let Some(security_config) = maybe_security_config
+                && security_config.ciphering_algorithm.0 == CipheringAlgorithm_r12::EEA0
+            {
+                return true;
             }
         }
         // Use map/flatten to dig into a long chain of nested Option types
@@ -62,10 +62,10 @@ impl NullCipherAnalyzer {
                 .as_ref()
                 .and_then(|scg| scg.mobility_control_info_scg_r12.as_ref())
                 .and_then(|mci| mci.ciphering_algorithm_scg_r12.as_ref());
-            if let Some(cipher) = maybe_cipher {
-                if cipher.0 == CipheringAlgorithm_r12::EEA0 {
-                    return true;
-                }
+            if let Some(cipher) = maybe_cipher
+                && cipher.0 == CipheringAlgorithm_r12::EEA0
+            {
+                return true;
             }
         }
 
@@ -90,10 +90,10 @@ impl NullCipherAnalyzer {
                 Some(&to_5gc.security_algorithm_config_r15)
             }
         };
-        if let Some(security_algorithm) = maybe_security_algorithm {
-            if security_algorithm.ciphering_algorithm.0 == CipheringAlgorithm_r12::EEA0 {
-                return true;
-            }
+        if let Some(security_algorithm) = maybe_security_algorithm
+            && security_algorithm.ciphering_algorithm.0 == CipheringAlgorithm_r12::EEA0
+        {
+            return true;
         }
         false
     }
@@ -119,11 +119,11 @@ impl NullCipherAnalyzer {
 }
 
 impl Analyzer for NullCipherAnalyzer {
-    fn get_name(&self) -> Cow<str> {
+    fn get_name(&self) -> Cow<'_, str> {
         Cow::from("Null Cipher")
     }
 
-    fn get_description(&self) -> Cow<str> {
+    fn get_description(&self) -> Cow<'_, str> {
         Cow::from("Tests whether the cell suggests using a null cipher (EEA0)")
     }
 

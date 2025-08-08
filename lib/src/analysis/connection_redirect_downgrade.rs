@@ -14,11 +14,11 @@ pub struct ConnectionRedirect2GDowngradeAnalyzer {}
 
 // TODO: keep track of SIB state to compare LTE reselection blocks w/ 2g/3g ones
 impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
-    fn get_name(&self) -> Cow<str> {
+    fn get_name(&self) -> Cow<'_, str> {
         Cow::from("Connection Release/Redirected Carrier 2G Downgrade")
     }
 
-    fn get_description(&self) -> Cow<str> {
+    fn get_description(&self) -> Cow<'_, str> {
         Cow::from("Tests if a cell releases our connection and redirects us to a 2G cell.")
     }
 

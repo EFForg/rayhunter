@@ -24,11 +24,11 @@ impl IncompleteSibAnalyzer {
 }
 
 impl Analyzer for IncompleteSibAnalyzer {
-    fn get_name(&self) -> Cow<str> {
+    fn get_name(&self) -> Cow<'_, str> {
         Cow::from("Incomplete SIB")
     }
 
-    fn get_description(&self) -> Cow<str> {
+    fn get_description(&self) -> Cow<'_, str> {
         Cow::from("Tests whether a SIB1 message contains a full chain of followup sibs")
     }
 

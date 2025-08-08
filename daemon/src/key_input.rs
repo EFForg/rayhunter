@@ -61,11 +61,11 @@ pub fn run_key_input_thread(
 
             // On orbic it was observed that pressing the power button can trigger many successive
             // events. Drop events that are too close together.
-            if let Some(last_time) = last_event_time {
-                if now.duration_since(last_time) < Duration::from_millis(50) {
-                    last_event_time = Some(now);
-                    continue;
-                }
+            if let Some(last_time) = last_event_time
+                && now.duration_since(last_time) < Duration::from_millis(50)
+            {
+                last_event_time = Some(now);
+                continue;
             }
             last_event_time = Some(now);
 

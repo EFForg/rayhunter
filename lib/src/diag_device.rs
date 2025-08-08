@@ -198,10 +198,10 @@ impl DiagDevice {
                 return Err(DiagDeviceError::DeviceWriteFailed(err));
             }
         }
-        if let Err(err) = self.file.flush().await {
-            if err.kind() != ErrorKind::WriteZero {
-                return Err(DiagDeviceError::DeviceWriteFailed(err));
-            }
+        if let Err(err) = self.file.flush().await
+            && err.kind() != ErrorKind::WriteZero
+        {
+            return Err(DiagDeviceError::DeviceWriteFailed(err));
         }
         Ok(())
     }
