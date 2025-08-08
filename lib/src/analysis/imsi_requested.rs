@@ -98,11 +98,11 @@ impl ImsiRequestedAnalyzer {
 }
 
 impl Analyzer for ImsiRequestedAnalyzer {
-    fn get_name(&self) -> Cow<str> {
+    fn get_name(&self) -> Cow<'_, str> {
         Cow::from("Identity (IMSI or IMEI) requested in suspicious manner")
     }
 
-    fn get_description(&self) -> Cow<str> {
+    fn get_description(&self) -> Cow<'_, str> {
         Cow::from(
             "Tests whether the ME sends an Identity Request NAS message without either an associated attach request or auth accept message",
         )

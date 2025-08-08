@@ -174,10 +174,9 @@ pub async fn test_rayhunter(adb_device: &mut ADBUSBDevice) -> Result<()> {
         if let Ok(output) = adb_command(
             adb_device,
             &["wget", "-O", "-", "http://localhost:8080/index.html"],
-        ) {
-            if output.contains("html") {
-                return Ok(());
-            }
+        ) && output.contains("html")
+        {
+            return Ok(());
         }
         failures += 1;
         sleep(Duration::from_secs(3)).await;
@@ -297,14 +296,12 @@ async fn adb_echo_test(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
         Ok::<(ADBUSBDevice, Vec<u8>), RustADBError>((adb_device, buf))
     });
     sleep(Duration::from_secs(1)).await;
-    if thread.is_finished() {
-        if let Ok(Ok((dev, buf))) = thread.join() {
-            if let Ok(s) = std::str::from_utf8(&buf) {
-                if s.contains(test_echo) {
-                    return Ok(dev);
-                }
-            }
-        }
+    if thread.is_finished()
+        && let Ok(Ok((dev, buf))) = thread.join()
+        && let Ok(s) = std::str::from_utf8(&buf)
+        && s.contains(test_echo)
+    {
+        return Ok(dev);
     }
     //  I'd like to kill the background thread here if that was possible.
     bail!("Could not communicate with the Orbic. Try disconnecting and reconnecting.");
@@ -317,10 +314,11 @@ async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
     loop {
         let mut watcher = nusb::watch_devices()?;
         while let Some(event) = watcher.next().await {
-            if let HotplugEvent::Connected(dev) = event {
-                if dev.vendor_id() == vendor_id && dev.product_id() == product_id {
-                    return Ok(());
-                }
+            if let HotplugEvent::Connected(dev) = event
+                && dev.vendor_id() == vendor_id
+                && dev.product_id() == product_id
+            {
+                return Ok(());
             }
         }
     }

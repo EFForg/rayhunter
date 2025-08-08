@@ -76,14 +76,14 @@ pub struct Event {
 /// many hours at a time with dozens of [Analyzers](Analyzer) working in parallel.
 pub trait Analyzer {
     /// Returns a user-friendly, concise name for your heuristic.
-    fn get_name(&self) -> Cow<str>;
+    fn get_name(&self) -> Cow<'_, str>;
 
     /// Returns a user-friendly description of what your heuristic looks for,
     /// the types of [Events](Event) it may return, as well as possible false-positive
     /// conditions that may trigger an [Event]. If different [Events](Event) have
     /// different false-positive conditions, consider including them in its
     /// `message` field.
-    fn get_description(&self) -> Cow<str>;
+    fn get_description(&self) -> Cow<'_, str>;
 
     /// Analyze a single [InformationElement], possibly returning an [Event] if your
     /// heuristic deems it relevant. Again, be mindful of any state your

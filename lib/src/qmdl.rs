@@ -77,16 +77,16 @@ where
     pub async fn get_next_messages_container(
         &mut self,
     ) -> Result<Option<MessagesContainer>, std::io::Error> {
-        if let Some(max_bytes) = self.max_bytes {
-            if self.bytes_read >= max_bytes {
-                if self.bytes_read > max_bytes {
-                    error!(
-                        "warning: {} bytes read, but max_bytes was {}",
-                        self.bytes_read, max_bytes
-                    );
-                }
-                return Ok(None);
+        if let Some(max_bytes) = self.max_bytes
+            && self.bytes_read >= max_bytes
+        {
+            if self.bytes_read > max_bytes {
+                error!(
+                    "warning: {} bytes read, but max_bytes was {}",
+                    self.bytes_read, max_bytes
+                );
             }
+            return Ok(None);
         }
 
         let mut buf = Vec::new();

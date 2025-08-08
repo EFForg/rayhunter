@@ -145,10 +145,10 @@ pub fn update_ui(
 
             // we write the status every second because it may have been overwritten through menu
             // navigation.
-            if display_level != 0 {
-                if let Err(e) = tokio::fs::write(OLED_PATH, pixels).await {
-                    error!("failed to write to display: {e}");
-                }
+            if display_level != 0
+                && let Err(e) = tokio::fs::write(OLED_PATH, pixels).await
+            {
+                error!("failed to write to display: {e}");
             }
 
             tokio::time::sleep(Duration::from_millis(1000)).await;

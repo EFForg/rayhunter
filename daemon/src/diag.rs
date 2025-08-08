@@ -94,16 +94,15 @@ impl DiagTask {
     /// Stop recording
     async fn stop(&mut self, qmdl_store: &mut RecordingStore) {
         self.stop_current_recording().await;
-        if let Some((_, entry)) = qmdl_store.get_current_entry() {
-            if let Err(e) = self
+        if let Some((_, entry)) = qmdl_store.get_current_entry()
+            && let Err(e) = self
                 .analysis_sender
                 .send(AnalysisCtrlMessage::RecordingFinished(
                     entry.name.to_string(),
                 ))
                 .await
-            {
-                warn!("couldn't send analysis message: {e}");
-            }
+        {
+            warn!("couldn't send analysis message: {e}");
         }
         if let Err(e) = qmdl_store.close_current_entry().await {
             error!("couldn't close current entry: {e}");
