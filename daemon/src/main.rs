@@ -39,6 +39,7 @@ use log::{error, info};
 use qmdl_store::RecordingStoreError;
 use rayhunter::Device;
 use rayhunter::diag_device::DiagDevice;
+use stats::get_log;
 use tokio::net::TcpListener;
 use tokio::select;
 use tokio::sync::mpsc::{self, Sender};
@@ -55,6 +56,7 @@ fn get_router() -> AppRouter {
         .route("/api/zip/{name}", get(get_zip))
         .route("/api/system-stats", get(get_system_stats))
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
+        .route("/api/log", get(get_log))
         .route("/api/start-recording", post(start_recording))
         .route("/api/stop-recording", post(stop_recording))
         .route("/api/delete-recording/{name}", post(delete_recording))
