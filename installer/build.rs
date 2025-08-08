@@ -8,7 +8,6 @@ fn main() {
         env!("CARGO_MANIFEST_DIR"),
         "/../target/armv7-unknown-linux-musleabihf/firmware/"
     ));
-    set_binary_var(include_dir, "FILE_ROOTSHELL", "rootshell");
     set_binary_var(include_dir, "FILE_RAYHUNTER_DAEMON", "rayhunter-daemon");
 }
 
