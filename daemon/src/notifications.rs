@@ -128,6 +128,7 @@ pub fn run_notification_worker(
                         Err(e) => {
                             error!("Failed to send notification to ntfy: {e}");
                             notification.failed_since_last_success += 1;
+                            notification.last_attempt = Some(Instant::now());
                         }
                     }
                 }
@@ -135,7 +136,7 @@ pub fn run_notification_worker(
                 tokio::time::sleep(Duration::from_secs(2)).await;
             }
         }
-        // If there's no channel name we'll just discard the notifications
+        // If there's no url to send to we'll just discard the notifications
         else {
             loop {
                 if notification_service.rx.recv().await.is_none() {
