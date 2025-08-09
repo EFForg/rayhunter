@@ -236,7 +236,6 @@ pub fn run_diag_read_thread(
             .send(DiagDeviceCtrlMessage::StartRecording)
             .await
             .unwrap();
-
         loop {
             tokio::select! {
                 msg = qmdl_file_rx.recv() => {
