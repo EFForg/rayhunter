@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use env_logger::Env;
 
 mod orbic;
+mod orbic_network;
 mod pinephone;
 mod tmobile;
 mod tplink;
@@ -26,6 +27,10 @@ struct Args {
 enum Command {
     /// Install rayhunter on the Orbic Orbic RC400L.
     Orbic(InstallOrbic),
+    /// Install rayhunter on the Orbic RC400L or Moxee Hotspot via network.
+    ///
+    /// This is an experimental installer for Orbic that does not require USB drivers on Windows.
+    OrbicNetwork(OrbicNetworkArgs),
     /// Install rayhunter on the TMobile TMOHS1.
     Tmobile(TmobileArgs),
     /// Install rayhunter on the Uz801.
@@ -67,6 +72,13 @@ struct InstallTpLink {
 struct InstallOrbic {}
 
 #[derive(Parser, Debug)]
+struct OrbicNetworkArgs {
+    /// IP address for Orbic admin interface, if custom.
+    #[arg(long, default_value = "192.168.1.1")]
+    admin_ip: String,
+}
+
+#[derive(Parser, Debug)]
 struct InstallPinephone {}
 
 #[derive(Parser, Debug)]
@@ -97,6 +109,8 @@ enum UtilSubCommand {
     PinephoneStartAdb,
     /// Lock the Pinephone's modem and stop adb.
     PinephoneStopAdb,
+    /// Root the Orbic and launch telnetd.
+    OrbicStartTelnet(OrbicNetworkArgs),
     /// Send a file to the TP-Link device over telnet.
     ///
     /// Before running this utility, you need to make telnet accessible with `installer util
@@ -185,6 +199,7 @@ async fn run() -> Result<(), Error> {
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
         Command::Orbic(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
+        Command::OrbicNetwork(args) => orbic_network::install(args.admin_ip).await.context("\nFailed to install rayhunter on the Orbic RC400L via network exploit")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
         Command::Util(subcommand) => match subcommand.command {
             UtilSubCommand::Serial(serial_cmd) => {
@@ -222,6 +237,7 @@ async fn run() -> Result<(), Error> {
             UtilSubCommand::WingtechStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Wingtech CT2MHS01")?,
             UtilSubCommand::PinephoneStartAdb => pinephone::start_adb().await.context("\nFailed to start adb on the PinePhone's modem")?,
             UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
+            UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip).await.context("\\nFailed to start telnet on the Orbic RC400L")?,
         }
     }
 
