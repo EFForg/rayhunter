@@ -138,7 +138,9 @@ pub fn run_notification_worker(
         // If there's no channel name we'll just discard the notifications
         else {
             loop {
-                notification_service.rx.recv().await;
+                if notification_service.rx.recv().await.is_none() {
+                    break;
+                }
             }
         }
     });
