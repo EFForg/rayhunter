@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { req } from '$lib/utils.svelte';
     import { user_action_req } from '$lib/utils.svelte';
 
     let {

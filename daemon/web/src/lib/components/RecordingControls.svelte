@@ -1,6 +1,5 @@
 <script lang="ts">
     import ApiRequestButton from './ApiRequestButton.svelte';
-    import { user_action_req } from '$lib/utils.svelte';
     let {
         server_is_recording,
     }: {
