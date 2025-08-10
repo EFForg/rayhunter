@@ -40,6 +40,7 @@ export async function user_action_req(
         return await req(method, url);
     } catch (error) {
         if (error instanceof Error) {
+            console.log('beeeo');
             add_error(error, error_msg);
         }
         return undefined;

@@ -20,4 +20,5 @@ export function add_error(e: Error, msg: string): void {
     }
     const action_error = new ActionError(msg, e);
     action_errors.unshift(action_error);
+    console.log(action_errors.length);
 }
