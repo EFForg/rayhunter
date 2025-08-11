@@ -43,6 +43,7 @@ pub struct DiagTask {
     ui_update_sender: Sender<display::DisplayState>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
     analyzer_config: AnalyzerConfig,
+    notification_channel: tokio::sync::mpsc::Sender<Notification>,
     state: DiagState,
 }
 
@@ -59,11 +60,13 @@ impl DiagTask {
         ui_update_sender: Sender<display::DisplayState>,
         analysis_sender: Sender<AnalysisCtrlMessage>,
         analyzer_config: AnalyzerConfig,
+        notification_channel: tokio::sync::mpsc::Sender<Notification>,
     ) -> Self {
         Self {
             ui_update_sender,
             analysis_sender,
             analyzer_config,
+            notification_channel,
             state: DiagState::Stopped,
         }
     }
@@ -163,7 +166,6 @@ impl DiagTask {
         &mut self,
         qmdl_store: &mut RecordingStore,
         container: MessagesContainer,
-        notification_channel: &tokio::sync::mpsc::Sender<Notification>,
     ) {
         if container.data_type != DataType::UserSpace {
             debug!("skipping non-userspace diag messages...");
@@ -202,7 +204,7 @@ impl DiagTask {
                     .send(display::DisplayState::WarningDetected)
                     .await
                     .expect("couldn't send ui update message: {}");
-                notification_channel
+                self.notification_channel
                     .send(Notification::new(
                         "heuristic-warning".to_string(),
                         "Rayhunter has emitted a warning!".to_string(),
@@ -231,7 +233,7 @@ pub fn run_diag_read_thread(
 ) {
     task_tracker.spawn(async move {
         let mut diag_stream = pin!(dev.as_stream().into_stream());
-        let mut diag_task = DiagTask::new(ui_update_sender, analysis_sender, analyzer_config);
+        let mut diag_task = DiagTask::new(ui_update_sender, analysis_sender, analyzer_config, notification_channel);
         qmdl_file_tx
             .send(DiagDeviceCtrlMessage::StartRecording)
             .await
@@ -275,7 +277,7 @@ pub fn run_diag_read_thread(
                     match maybe_container.unwrap() {
                         Ok(container) => {
                             let mut qmdl_store = qmdl_store_lock.write().await;
-                            diag_task.process_container(qmdl_store.deref_mut(), container, &notification_channel).await
+                            diag_task.process_container(qmdl_store.deref_mut(), container).await
                         },
                         Err(err) => {
                             error!("error reading diag device: {err}");
