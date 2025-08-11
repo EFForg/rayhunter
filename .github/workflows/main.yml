@@ -337,7 +337,12 @@ jobs:
           platform="${{ matrix.platform }}"
           dest="rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}"
           mkdir "$dest"
-          mv installer-$platform/installer* "$dest"/installer
+          # Handle installer with proper extension for Windows
+          if [ "$platform" = "windows-x86_64" ]; then
+            mv installer-$platform/installer.exe "$dest"/installer.exe
+          else
+            mv installer-$platform/installer "$dest"/installer
+          fi
           cp -r rayhunter-daemon rootshell/rootshell dist/* installer/install.ps1 "$dest"/
           zip -r "$dest.zip" "$dest"
           sha256sum "$dest.zip" > "$dest.zip.sha256"
