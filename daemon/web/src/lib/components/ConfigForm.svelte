@@ -111,6 +111,18 @@
                     </select>
                 </div>
 
+                <div>
+                    <label for="ntfy_url" class="block text-sm font-medium text-gray-700 mb-1">
+                        ntfy URL for Sending Notifications
+                    </label>
+                    <input
+                        id="ntfy_url"
+                        type="url"
+                        bind:value={config.ntfy_url}
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                    />
+                </div>
+
                 <div class="space-y-3">
                     <div class="flex items-center">
                         <input
