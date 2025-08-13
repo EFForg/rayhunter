@@ -36,10 +36,14 @@ rustup target add x86_64-pc-windows-gnu
 Now you can root your device and install Rayhunter by running:
 
 ```sh
-cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features orbic
+# Profile can be changed to 'firmware-devel' when building for development.
+# Build time will decrease at the expense of binary size.
+cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware
 
 cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --profile firmware
 
+# Replace 'orbic' with your device type if different.
+# A list possible values can be found with 'cargo run --bin installer help'.
 cargo run --bin installer orbic
 ```
 
