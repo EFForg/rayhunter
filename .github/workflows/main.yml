@@ -178,10 +178,10 @@ jobs:
             os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
           - name: macos-arm
-            os: macos-latest
+            os: ubuntu-latest
             target: aarch64-apple-darwin
           - name: macos-intel
-            os: macos-latest
+            os: ubuntu-latest
             target: x86_64-apple-darwin
           - name: windows-x86_64
             os: windows-latest
@@ -193,8 +193,17 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
-      - name: Build rayhunter-check
+      - name: Install cargo-zigbuild
+        if: startsWith(matrix.platform.target, 'aarch64-apple') || startsWith(matrix.platform.target, 'x86_64-apple')
+        run: |
+          pip3 install ziglang
+          cargo install cargo-zigbuild
+      - name: Build rayhunter-check (native)
+        if: "!startsWith(matrix.platform.target, 'aarch64-apple') && !startsWith(matrix.platform.target, 'x86_64-apple')"
         run: cargo build --bin rayhunter-check --release --target ${{ matrix.platform.target }}
+      - name: Build rayhunter-check (cross-compile macOS)
+        if: startsWith(matrix.platform.target, 'aarch64-apple') || startsWith(matrix.platform.target, 'x86_64-apple')
+        run: cargo zigbuild --bin rayhunter-check --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-check-${{ matrix.platform.name }}
@@ -282,10 +291,10 @@ jobs:
             os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
           - name: macos-arm
-            os: macos-latest
+            os: ubuntu-latest
             target: aarch64-apple-darwin
           - name: macos-intel
-            os: macos-latest
+            os: ubuntu-latest
             target: x86_64-apple-darwin
           - name: windows-x86_64
             os: windows-latest
@@ -298,7 +307,17 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --package installer --bin installer --release --target ${{ matrix.platform.target }}
+      - name: Install cargo-zigbuild
+        if: startsWith(matrix.platform.target, 'aarch64-apple') || startsWith(matrix.platform.target, 'x86_64-apple')
+        run: |
+          pip3 install ziglang
+          cargo install cargo-zigbuild
+      - name: Build installer (native)
+        if: "!startsWith(matrix.platform.target, 'aarch64-apple') && !startsWith(matrix.platform.target, 'x86_64-apple')"
+        run: cargo build --package installer --bin installer --release --target ${{ matrix.platform.target }}
+      - name: Build installer (cross-compile macOS)
+        if: startsWith(matrix.platform.target, 'aarch64-apple') || startsWith(matrix.platform.target, 'x86_64-apple')
+        run: cargo zigbuild --package installer --bin installer --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform.name }}
