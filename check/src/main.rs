@@ -65,10 +65,10 @@ impl Report {
                 EventType::Informational => {
                     info!("{}: INFO - {} {}", self.file_path, timestamp, event.message,);
                 }
-                EventType::QualitativeWarning { severity } => {
+                EventType::Low | EventType::Medium | EventType::High => {
                     warn!(
                         "{}: WARNING (Severity: {:?}) - {} {}",
-                        self.file_path, severity, timestamp, event.message,
+                        self.file_path, event.event_type, timestamp, event.message,
                     );
                     self.warnings += 1;
                 }

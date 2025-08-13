@@ -18,7 +18,9 @@ use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-use crate::server::{ServerState, get_config, get_qmdl, get_zip, serve_static, set_config};
+use crate::server::{
+    ServerState, debug_set_display_state, get_config, get_qmdl, get_zip, serve_static, set_config,
+};
 use crate::stats::{get_qmdl_manifest, get_system_stats};
 
 use analysis::{
@@ -60,6 +62,7 @@ fn get_router() -> AppRouter {
         .route("/api/analysis/{name}", post(start_analysis))
         .route("/api/config", get(get_config))
         .route("/api/config", post(set_config))
+        .route("/api/debug/display-state", post(debug_set_display_state))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/{*path}", get(serve_static))
 }
@@ -289,6 +292,7 @@ async fn run_with_config(
         analysis_status_lock,
         analysis_sender: analysis_tx,
         daemon_restart_tx: Arc::new(RwLock::new(Some(daemon_restart_tx))),
+        ui_update_sender: Some(ui_update_tx),
     });
     run_server(&task_tracker, state, server_shutdown_rx).await;
 

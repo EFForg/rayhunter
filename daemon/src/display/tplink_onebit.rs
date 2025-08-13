@@ -136,7 +136,7 @@ pub fn update_ui(
             match ui_update_rx.try_recv() {
                 Ok(DisplayState::Paused) => pixels = STATUS_PAUSED,
                 Ok(DisplayState::Recording) => pixels = STATUS_SMILING,
-                Ok(DisplayState::WarningDetected) => pixels = STATUS_WARNING,
+                Ok(DisplayState::WarningDetected { .. }) => pixels = STATUS_WARNING,
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
                 Err(e) => {
                     error!("error receiving framebuffer update message: {e}");
