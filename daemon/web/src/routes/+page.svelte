@@ -9,22 +9,33 @@
     import DeleteAllButton from '$lib/components/DeleteAllButton.svelte';
     import RecordingControls from '$lib/components//RecordingControls.svelte';
     import ConfigForm from '$lib/components/ConfigForm.svelte';
+    import ActionErrors from '$lib/components/ActionErrors.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
     let entries: ManifestEntry[] = $state([]);
     let current_entry: ManifestEntry | undefined = $state(undefined);
     let system_stats: SystemStats | undefined = $state(undefined);
+    let update_error: string | undefined = $state(undefined);
     $effect(() => {
         const interval = setInterval(async () => {
-            await manager.update();
-            let new_manifest = await get_manifest();
-            await new_manifest.set_analysis_status(manager);
-            entries = new_manifest.entries;
-            current_entry = new_manifest.current_entry;
+            try {
+                await manager.update();
+                let new_manifest = await get_manifest();
+                await new_manifest.set_analysis_status(manager);
+                entries = new_manifest.entries;
+                current_entry = new_manifest.current_entry;
 
-            system_stats = await get_system_stats();
-            loaded = true;
+                system_stats = await get_system_stats();
+                update_error = undefined;
+                loaded = true;
+            } catch (error) {
+                if (error instanceof Error) {
+                    update_error = error.message;
+                } else {
+                    update_error = '';
+                }
+            }
         }, 1000);
 
         return () => clearInterval(interval);
@@ -84,6 +95,41 @@
     </div>
 </div>
 <div class="m-4 xl:mx-8 flex flex-col gap-4">
+    {#if update_error !== undefined}
+        <div
+            class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
+        >
+            <span class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600">
+                <svg
+                    class="w-8 h-8 text-red-600"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
+                        clip-rule="evenodd"
+                    />
+                </svg>
+                Connection Error
+            </span>
+            <span
+                >This webpage is not currently receiving updates from your Rayhunter device. This
+                could be do loss of connection or some issue with your device.</span
+            >
+            {#if update_error}
+                <details>
+                    <summary>Error</summary>
+                    <code>{update_error}</code>
+                </details>
+            {/if}
+        </div>
+    {/if}
+    <ActionErrors />
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">
             {#if current_entry}

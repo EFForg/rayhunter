@@ -1,6 +1,5 @@
 <script lang="ts">
     import ApiRequestButton from './ApiRequestButton.svelte';
-
     let {
         server_is_recording,
     }: {
@@ -10,7 +9,12 @@
 
 <div>
     {#if server_is_recording}
-        <ApiRequestButton url="/api/stop-recording" label="Stop" variant="red">
+        <ApiRequestButton
+            url="/api/stop-recording"
+            label="Stop"
+            variant="red"
+            errorMessage="Error stoppping recording"
+        >
             {#snippet icon()}
                 <svg
                     class="w-6 h-6 text-white"
@@ -28,7 +32,12 @@
             {/snippet}
         </ApiRequestButton>
     {:else}
-        <ApiRequestButton url="/api/start-recording" label="Start" variant="blue">
+        <ApiRequestButton
+            url="/api/start-recording"
+            label="Start"
+            variant="blue"
+            errorMessage="Error starting recording"
+        >
             {#snippet icon()}
                 <svg
                     class="w-6 h-6 text-white"
