@@ -171,14 +171,13 @@ async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
 
     // Remount filesystem as read-write to allow modifications
     // This is really only necessary for the Moxee Hotspot
-    if telnet_send_command(addr, "mount -o remount,rw /dev/ubi0_0 /", "", false)
-        .await
-        .is_err()
-    {
-        telnet_send_command(addr, "mount -o remount,rw /", "", false)
-            .await
-            .context("Failed to remount filesystem as read-write")?;
-    }
+    telnet_send_command(
+        addr,
+        "mount -o remount,rw /dev/ubi0_0 /",
+        "exit code 0",
+        false,
+    )
+    .await?;
 
     telnet_send_command(addr, "mkdir -p /data/rayhunter", "exit code 0", false).await?;
 
