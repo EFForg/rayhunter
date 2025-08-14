@@ -22,22 +22,32 @@ pub async fn telnet_send_command(
     addr: SocketAddr,
     command: &str,
     expected_output: &str,
+    wait_for_prompt: bool,
 ) -> Result<()> {
     let stream = TcpStream::connect(addr).await?;
     let (mut reader, mut writer) = stream.into_split();
-    loop {
-        let mut next_byte = 0;
-        reader
-            .read_exact(std::slice::from_mut(&mut next_byte))
-            .await?;
-        if next_byte == b'#' {
-            break;
+
+    if wait_for_prompt {
+        // Wait for initial '#' prompt from telnetd
+        loop {
+            let mut next_byte = 0;
+            reader
+                .read_exact(std::slice::from_mut(&mut next_byte))
+                .await?;
+            if next_byte == b'#' {
+                break;
+            }
         }
     }
+
     writer.write_all(command.as_bytes()).await?;
-    writer.write_all(b"; echo exit code $?\r\n").await?;
+    // by quoting the 'exit' here, we ensure that we do not read our own command line back as
+    // "output" before we even hit enter, but the actual result of executing the echo.
+    writer
+        .write_all(b"; echo command done, 'exit' code $?\r\n")
+        .await?;
     let mut read_buf = Vec::new();
-    let _ = timeout(Duration::from_secs(5), async {
+    let _ = timeout(Duration::from_secs(10), async {
         let mut buf = [0; 4096];
         loop {
             let Ok(bytes_read) = reader.read(&mut buf).await else {
@@ -48,7 +58,12 @@ pub async fn telnet_send_command(
                 continue;
             }
             read_buf.extend(bytes);
-            if read_buf.ends_with(b"/ # ") {
+
+            // when we see this string we know the command is done and can terminate.
+            // even if we sent command; exit, certain "telnet-like" shells (like nc contraptions)
+            // may not terminate the connection appropriately on their own.
+            let response = String::from_utf8_lossy(&read_buf);
+            if response.contains("command done, exit code ") {
                 break;
             }
         }
@@ -61,12 +76,23 @@ pub async fn telnet_send_command(
     Ok(())
 }
 
-pub async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) -> Result<()> {
+pub async fn telnet_send_file(
+    addr: SocketAddr,
+    filename: &str,
+    payload: &[u8],
+    wait_for_prompt: bool,
+) -> Result<()> {
     echo!("Sending file {filename} ... ");
     {
         let filename = filename.to_owned();
         let handle = tokio::spawn(async move {
-            telnet_send_command(addr, &format!("nc -l -p 8081 >{filename}.tmp"), "").await
+            telnet_send_command(
+                addr,
+                &format!("nc -l -p 8081 >{filename}.tmp"),
+                "",
+                wait_for_prompt,
+            )
+            .await
         });
         sleep(Duration::from_millis(100)).await;
         let mut addr = addr;
@@ -85,12 +111,14 @@ pub async fn telnet_send_file(addr: SocketAddr, filename: &str, payload: &[u8]) 
         addr,
         &format!("md5sum {filename}.tmp"),
         &format!("{checksum:x}  {filename}.tmp"),
+        wait_for_prompt,
     )
     .await?;
     telnet_send_command(
         addr,
         &format!("mv {filename}.tmp {filename}"),
         "exit code 0",
+        wait_for_prompt,
     )
     .await?;
     println!("ok");
@@ -105,7 +133,7 @@ pub async fn send_file(admin_ip: &str, local_path: &str, remote_path: &str) -> R
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23"))
         .with_context(|| format!("Invalid IP address: {admin_ip}"))?;
 
-    telnet_send_file(addr, remote_path, &file_content)
+    telnet_send_file(addr, remote_path, &file_content, true)
         .await
         .with_context(|| format!("Failed to send file {local_path} to {remote_path}"))?;
 

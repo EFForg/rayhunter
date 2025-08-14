@@ -8,7 +8,7 @@ The Wingtech CT2MHS01 hotspot is a Qualcomm mdm9650-based device with a screen a
 
 There are likely variants of the device for all three ITU regions.
 
-According to FCC ID 2APXW-CT2MHS01 Test Report No. [I20N02441-RF-LTE](https://apps.fcc.gov/eas/GetApplicationAttachment.html?id=4957451), the ITU Region 2 American version of the device supports the following LTE bands:
+According to FCC ID 2APXW-CT2MHS01 Test Report No. [I20N02441-RF-LTE](https://fcc.report/FCC-ID/2APXW-CT2MHS01/4957451), the ITU Region 2 American version of the device supports the following LTE bands:
 
 | Band | Frequency        |
 | ---- | ---------------- |

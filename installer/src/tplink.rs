@@ -106,13 +106,13 @@ async fn tplink_run_install(
 
     if !skip_sdcard {
         if sdcard_path.is_empty() {
-            if telnet_send_command(addr, "ls /media/card", "exit code 0")
+            if telnet_send_command(addr, "ls /media/card", "exit code 0", true)
                 .await
                 .is_ok()
             {
                 // TP-Link hardware less than v9.0
                 sdcard_path = "/media/card".to_owned();
-            } else if telnet_send_command(addr, "ls /media/sdcard", "exit code 0")
+            } else if telnet_send_command(addr, "ls /media/sdcard", "exit code 0", true)
                 .await
                 .is_ok()
             {
@@ -130,11 +130,12 @@ async fn tplink_run_install(
             addr,
             &format!("mount | grep -q {sdcard_path}"),
             "exit code 0",
+            true,
         )
         .await
         .is_err()
         {
-            telnet_send_command(addr, &format!("mount /dev/mmcblk0p1 {sdcard_path}"), "exit code 0").await.context("Rayhunter needs a FAT-formatted SD card to function for more than a few minutes. Insert one and rerun this installer, or pass --skip-sdcard")?;
+            telnet_send_command(addr, &format!("mount /dev/mmcblk0p1 {sdcard_path}"), "exit code 0", true).await.context("Rayhunter needs a FAT-formatted SD card to function for more than a few minutes. Insert one and rerun this installer, or pass --skip-sdcard")?;
         } else {
             println!("sdcard already mounted");
         }
@@ -142,12 +143,13 @@ async fn tplink_run_install(
 
     // there is too little space on the internal flash to store anything, but the initrd script
     // expects things to be at this location
-    telnet_send_command(addr, "rm -rf /data/rayhunter", "exit code 0").await?;
-    telnet_send_command(addr, "mkdir -p /data", "exit code 0").await?;
+    telnet_send_command(addr, "rm -rf /data/rayhunter", "exit code 0", true).await?;
+    telnet_send_command(addr, "mkdir -p /data", "exit code 0", true).await?;
     telnet_send_command(
         addr,
         &format!("ln -sf {sdcard_path} /data/rayhunter"),
         "exit code 0",
+        true,
     )
     .await?;
 
@@ -157,6 +159,7 @@ async fn tplink_run_install(
         crate::CONFIG_TOML
             .replace("#device = \"orbic\"", "device = \"tplink\"")
             .as_bytes(),
+        true,
     )
     .await?;
 
@@ -166,6 +169,7 @@ async fn tplink_run_install(
         addr,
         &format!("{sdcard_path}/rayhunter-daemon"),
         rayhunter_daemon_bin,
+        true,
     )
     .await?;
 
@@ -173,6 +177,7 @@ async fn tplink_run_install(
         addr,
         "/etc/init.d/rayhunter_daemon",
         get_rayhunter_daemon(&sdcard_path).as_bytes(),
+        true,
     )
     .await?;
 
@@ -180,12 +185,14 @@ async fn tplink_run_install(
         addr,
         &format!("chmod ugo+x {sdcard_path}/rayhunter-daemon"),
         "exit code 0",
+        true,
     )
     .await?;
     telnet_send_command(
         addr,
         "chmod 755 /etc/init.d/rayhunter_daemon",
         "exit code 0",
+        true,
     )
     .await?;
 
@@ -193,14 +200,20 @@ async fn tplink_run_install(
     // startup script. tplink v9 does not have update-rc.d, and it was reported that *sometimes* it
     // is unreliable on other hardware revisions too.
     if is_v3 {
-        telnet_send_command(addr, "update-rc.d rayhunter_daemon defaults", "exit code 0").await?;
+        telnet_send_command(
+            addr,
+            "update-rc.d rayhunter_daemon defaults",
+            "exit code 0",
+            true,
+        )
+        .await?;
     }
 
     println!(
         "Done. Rebooting device. After it's started up again, check out the web interface at http://{admin_ip}:8080"
     );
 
-    telnet_send_command(addr, "reboot", "exit code 0").await?;
+    telnet_send_command(addr, "reboot", "exit code 0", true).await?;
 
     Ok(())
 }
@@ -278,7 +291,7 @@ async fn tplink_launch_telnet_v5(admin_ip: &str) -> Result<(), Error> {
 
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
 
-    while telnet_send_command(addr, "true", "exit code 0")
+    while telnet_send_command(addr, "true", "exit code 0", true)
         .await
         .is_err()
     {

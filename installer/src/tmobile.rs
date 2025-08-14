@@ -33,10 +33,10 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
 
     echo!("Connecting via telnet to {admin_ip} ... ");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
-    telnet_send_command(addr, "mkdir -p /data/rayhunter", "exit code 0").await?;
+    telnet_send_command(addr, "mkdir -p /data/rayhunter", "exit code 0", true).await?;
     println!("ok");
 
-    telnet_send_command(addr, "mount -o remount,rw /", "exit code 0").await?;
+    telnet_send_command(addr, "mount -o remount,rw /", "exit code 0", true).await?;
 
     telnet_send_file(
         addr,
@@ -44,6 +44,7 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
         crate::CONFIG_TOML
             .replace("#device = \"orbic\"", "device = \"tmobile\"")
             .as_bytes(),
+        true,
     )
     .await?;
 
@@ -52,36 +53,47 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
         addr,
         "/data/rayhunter/rayhunter-daemon",
         rayhunter_daemon_bin,
+        true,
     )
     .await?;
     telnet_send_command(
         addr,
         "chmod 755 /data/rayhunter/rayhunter-daemon",
         "exit code 0",
+        true,
     )
     .await?;
     telnet_send_file(
         addr,
         "/etc/init.d/misc-daemon",
         include_bytes!("../../dist/scripts/misc-daemon"),
+        true,
     )
     .await?;
-    telnet_send_command(addr, "chmod 755 /etc/init.d/misc-daemon", "exit code 0").await?;
+    telnet_send_command(
+        addr,
+        "chmod 755 /etc/init.d/misc-daemon",
+        "exit code 0",
+        true,
+    )
+    .await?;
     telnet_send_file(
         addr,
         "/etc/init.d/rayhunter_daemon",
         crate::RAYHUNTER_DAEMON_INIT.as_bytes(),
+        true,
     )
     .await?;
     telnet_send_command(
         addr,
         "chmod 755 /etc/init.d/rayhunter_daemon",
         "exit code 0",
+        true,
     )
     .await?;
 
     println!("Rebooting device and waiting 30 seconds for it to start up.");
-    telnet_send_command(addr, "reboot", "exit code 0").await?;
+    telnet_send_command(addr, "reboot", "exit code 0", true).await?;
     sleep(Duration::from_secs(30)).await;
 
     echo!("Testing rayhunter ... ");
