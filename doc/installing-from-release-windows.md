@@ -4,7 +4,7 @@ Windows support in Rayhunter's installer is a work-in-progress. Depending on the
 
 ## TP-Link
 
-1. Insert a FAT-formatted SD card into the device. We don't need much storage, a few 100 MB will suffice.
+1. Insert a FAT-formatted SD card. This will be used to store all recordings.
 2. Connect the device via WiFi or USB Tethering -- you should be able to view the TP-Link admin page on <http://192.168.0.1>.
 3. Download the latest release (must be at least 0.3.0) for windows-x86_64, and unpack the zipfile.
 4. Open PowerShell or CMD in that extracted folder, the installer: `./installer tplink`
