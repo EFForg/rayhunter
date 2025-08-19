@@ -106,21 +106,29 @@ async fn tplink_run_install(
 
     if !skip_sdcard {
         if sdcard_path.is_empty() {
-            if telnet_send_command(addr, "ls /media/card", "exit code 0", true)
-                .await
-                .is_ok()
-            {
+            let try_paths = [
                 // TP-Link hardware less than v9.0
-                sdcard_path = "/media/card".to_owned();
-            } else if telnet_send_command(addr, "ls /media/sdcard", "exit code 0", true)
-                .await
-                .is_ok()
-            {
+                "/media/card",
                 // TP-Link hardware v9.0
-                sdcard_path = "/media/sdcard".to_owned();
-            } else {
+                "/media/sdcard",
+            ];
+            for path in try_paths {
+                if telnet_send_command(addr, &format!("ls {path}"), "exit code 0", true)
+                    .await
+                    .is_ok()
+                {
+                    sdcard_path = path.to_owned();
+                    break;
+                }
+            }
+
+            if sdcard_path.is_empty() {
                 anyhow::bail!(
-                    "unable to determine sdcard path. this is a bug. please file an issue with your hardware version."
+                    "Unable to determine sdcard path. Rayhunter needs a FAT-formatted SD card to function.\n\n\
+                    In case you already did, this is a bug. Please file an issue with your hardware version.\n\n\
+                    The installer has tried to find an empty folder to mount to on these paths: {try_paths:?}\n\
+                    ...but none of them exist.\n\n\
+                    At this point, you may 'telnet {admin_ip}' and poke around in the device to figure out what went wrong yourself."
                 );
             }
         }
