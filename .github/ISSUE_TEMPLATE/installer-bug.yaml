@@ -15,8 +15,8 @@ body:
         What device are you trying to install Rayhunter on?
       options:
         - Orbic RC400L
-        - Tplink HW7350
-        - Tplink HW7310
+        - Tplink M7350
+        - Tplink M7310
         - Tmobile TMOHS1
         - Wingtech CT2MHS0
         - Pinephone
