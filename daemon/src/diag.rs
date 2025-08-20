@@ -208,7 +208,7 @@ impl DiagTask {
                 self.notification_channel
                     .send(Notification::new(
                         "heuristic-warning".to_string(),
-                        "Rayhunter has emitted a warning!".to_string(),
+                        format!("Rayhunter has detected a {:?} severity event", max_type),
                         Some(Duration::from_secs(60 * 5)),
                     ))
                     .await
