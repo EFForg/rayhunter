@@ -15,6 +15,8 @@ use tokio_util::task::TaskTracker;
 
 use include_dir::{Dir, include_dir};
 
+const REFRESH_RATE: u64 = 100; //how often in milliseconds to refresh the display
+
 #[derive(Copy, Clone)]
 pub struct Dimensions {
     pub height: u32,
@@ -39,6 +41,7 @@ pub enum Color {
     Cyan,
     Yellow,
     Pink,
+    Orange,
 }
 
 impl Color {
@@ -52,6 +55,7 @@ impl Color {
             Color::Cyan => (0, 0xff, 0xff),
             Color::Yellow => (0xff, 0xff, 0),
             Color::Pink => (0xfe, 0x24, 0xff),
+            Color::Orange => (0xff, 0xa5, 0),
         }
     }
 }
@@ -82,7 +86,9 @@ fn display_style_from_state(state: DisplayState, colorblind_mode: bool) -> (Colo
                         Color::Green
                     }
                 }
-                _ => Color::Red,
+                EventType::Low => Color::Yellow,
+                EventType::Medium => Color::Orange,
+                EventType::High => Color::Red,
             };
 
             (color, pattern)
@@ -241,7 +247,7 @@ pub fn update_ui(
             };
             let (color, pattern) = display_style;
             fb.draw_patterned_line(color, 2, pattern).await;
-            tokio::time::sleep(Duration::from_millis(1000)).await;
+            tokio::time::sleep(Duration::from_millis(REFRESH_RATE)).await;
         }
     });
 }
