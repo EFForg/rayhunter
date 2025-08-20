@@ -71,27 +71,18 @@ fn display_style_from_state(state: DisplayState, colorblind_mode: bool) -> (Colo
             }
         }
         DisplayState::WarningDetected { event_type } => {
-            let pattern = match event_type {
-                EventType::Informational => LinePattern::Solid,
-                EventType::Low => LinePattern::Dotted,
-                EventType::Medium => LinePattern::Dashed,
-                EventType::High => LinePattern::Solid,
-            };
-
-            let color = match event_type {
+            match event_type {
                 EventType::Informational => {
                     if colorblind_mode {
-                        Color::Blue
+                        (Color::Blue, LinePattern::Solid)
                     } else {
-                        Color::Green
+                        (Color::Green, LinePattern::Solid)
                     }
                 }
-                EventType::Low => Color::Yellow,
-                EventType::Medium => Color::Orange,
-                EventType::High => Color::Red,
-            };
-
-            (color, pattern)
+                EventType::Low => (Color::Yellow, LinePattern::Dotted),
+                EventType::Medium => (Color::Orange, LinePattern::Dashed),
+                EventType::High => (Color::Red, LinePattern::Solid),
+            }
         }
     }
 }
