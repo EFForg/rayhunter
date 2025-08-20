@@ -11,6 +11,12 @@ Windows support in Rayhunter's installer is a work-in-progress. Depending on the
 
 ## Orbic
 
+<div class=warning><strong>
+
+[The Windows installer is known to be buggy](https://github.com/EFForg/rayhunter/issues/366). Consider using the [Network-based installer](./orbic.md#the-network-installer).
+
+</strong></div>
+
 1. Connect the device to your computer using the provided USB cable.
 1. Install the [Zadig WinUSB driver installer](https://zadig.akeo.ie/).
 1. Open Zadig, click options->show all devices 
