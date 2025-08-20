@@ -178,7 +178,7 @@ impl Harness {
             harness.add_analyzer(Box::new(IncompleteSibAnalyzer::new()))
         }
 
-        if analyzer_config.incomplete_sib {
+        if analyzer_config.test_analyzer {
             harness.add_analyzer(Box::new(TestAnalyzer::new()))
         }
 
