@@ -47,29 +47,35 @@
                     {#each report.rows as row}
                         {#if row.type === AnalysisRowType.Analysis}
                             {@const parsed_date = new Date(row.packet_timestamp)}
-                            {#each row.events.filter((e) => e !== null) as event, i}
-                                {@const analyzer = analyzers[i]}
-                                <tr class="even:bg-gray-200 odd:bg-white">
-                                    {#if event.type === EventType.Warning}
-                                        {@const severity = ['Low', 'Medium', 'High'][
-                                            event.severity
-                                        ]}
-                                        {@const severity_class = [
-                                            'bg-red-200',
-                                            'bg-red-400',
-                                            'bg-red-600',
-                                        ][event.severity]}
-                                        <td class="p-2">{date_formatter.format(parsed_date)}</td>
-                                        <td class="p-2">{analyzer.name} v{analyzer.version}</td>
-                                        <td class="p-2">{event.message}</td>
-                                        <td class="p-2 {severity_class} text-center">{severity}</td>
-                                    {:else if event.type === EventType.Informational}
-                                        <td class="p-2">{date_formatter.format(parsed_date)}</td>
-                                        <td class="p-2">{analyzer.name} v{analyzer.version}</td>
-                                        <td class="p-2">{event.message}</td>
-                                        <td class="p-2">Info</td>
-                                    {/if}
-                                </tr>
+                            {#each row.events as event, analyzerIndex}
+                                {#if event !== null}
+                                    {@const analyzer = analyzers[analyzerIndex]}
+                                    <tr class="even:bg-gray-200 odd:bg-white">
+                                        {#if event.type === EventType.Warning}
+                                            {@const severity = ['Low', 'Medium', 'High'][
+                                                event.severity
+                                            ]}
+                                            {@const severity_class = [
+                                                'bg-red-200',
+                                                'bg-red-400',
+                                                'bg-red-600',
+                                            ][event.severity]}
+                                            <td class="p-2">{date_formatter.format(parsed_date)}</td
+                                            >
+                                            <td class="p-2">{analyzer.name} v{analyzer.version}</td>
+                                            <td class="p-2">{event.message}</td>
+                                            <td class="p-2 {severity_class} text-center"
+                                                >{severity}</td
+                                            >
+                                        {:else if event.type === EventType.Informational}
+                                            <td class="p-2">{date_formatter.format(parsed_date)}</td
+                                            >
+                                            <td class="p-2">{analyzer.name} v{analyzer.version}</td>
+                                            <td class="p-2">{event.message}</td>
+                                            <td class="p-2">Info</td>
+                                        {/if}
+                                    </tr>
+                                {/if}
                             {/each}
                         {/if}
                     {/each}
