@@ -12,6 +12,7 @@ use super::{
     imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
     information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
     null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
+    test_analyzer::TestAnalyzer,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -23,6 +24,7 @@ pub struct AnalyzerConfig {
     pub null_cipher: bool,
     pub nas_null_cipher: bool,
     pub incomplete_sib: bool,
+    pub test_analyzer: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -34,6 +36,7 @@ impl Default for AnalyzerConfig {
             null_cipher: true,
             nas_null_cipher: true,
             incomplete_sib: true,
+            test_analyzer: false,
         }
     }
 }
@@ -173,6 +176,10 @@ impl Harness {
 
         if analyzer_config.incomplete_sib {
             harness.add_analyzer(Box::new(IncompleteSibAnalyzer::new()))
+        }
+
+        if analyzer_config.incomplete_sib {
+            harness.add_analyzer(Box::new(TestAnalyzer::new()))
         }
 
         harness

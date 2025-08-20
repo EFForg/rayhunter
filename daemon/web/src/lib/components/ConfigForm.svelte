@@ -219,6 +219,18 @@
                                 Incomplete SIB Heuristic
                             </label>
                         </div>
+
+                        <div class="flex items-center">
+                            <input
+                                id="test_analyzer"
+                                type="checkbox"
+                                bind:checked={config.analyzers.test_analyzer}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label for="test_analyzer" class="ml-2 block text-sm text-gray-700">
+                                Test Heuristic (noisey!)
+                            </label>
+                        </div>
                     </div>
                 </div>
 
