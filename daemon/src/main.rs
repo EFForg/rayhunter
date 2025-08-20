@@ -4,6 +4,7 @@ mod diag;
 mod display;
 mod error;
 mod key_input;
+mod notifications;
 mod pcap;
 mod qmdl_store;
 mod server;
@@ -16,6 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::config::{parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
+use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
 use crate::server::{ServerState, get_config, get_qmdl, get_zip, serve_static, set_config};
@@ -186,6 +188,10 @@ fn run_shutdown_thread(
 async fn main() -> Result<(), RayhunterError> {
     env_logger::init();
 
+    rustls_rustcrypto::provider()
+        .install_default()
+        .expect("Couldn't install rustcrypto provider");
+
     let args = parse_args();
 
     loop {
@@ -213,6 +219,9 @@ async fn run_with_config(
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
     let mut maybe_ui_shutdown_tx = None;
     let mut maybe_key_input_shutdown_tx = None;
+
+    let notification_service = NotificationService::new(config.ntfy_url.clone());
+
     if !config.debug_mode {
         let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
         maybe_ui_shutdown_tx = Some(ui_shutdown_tx);
@@ -234,6 +243,7 @@ async fn run_with_config(
             qmdl_store_lock.clone(),
             analysis_tx.clone(),
             config.analyzers.clone(),
+            notification_service.new_handler(),
         );
         info!("Starting UI");
 
@@ -281,6 +291,7 @@ async fn run_with_config(
         qmdl_store_lock.clone(),
         analysis_tx.clone(),
     );
+    run_notification_worker(&task_tracker, notification_service);
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),
         config,

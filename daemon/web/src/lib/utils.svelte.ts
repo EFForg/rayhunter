@@ -14,6 +14,7 @@ export interface Config {
     ui_level: number;
     colorblind_mode: boolean;
     key_input_mode: number;
+    ntfy_url: string;
     analyzers: AnalyzerConfig;
 }
 

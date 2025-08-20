@@ -1,6 +1,7 @@
 use std::ops::DerefMut;
 use std::pin::pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -21,6 +22,7 @@ use tokio_util::task::TaskTracker;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisWriter};
 use crate::display;
+use crate::notifications::Notification;
 use crate::qmdl_store::{RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
 
@@ -41,6 +43,7 @@ pub struct DiagTask {
     ui_update_sender: Sender<display::DisplayState>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
     analyzer_config: AnalyzerConfig,
+    notification_channel: tokio::sync::mpsc::Sender<Notification>,
     state: DiagState,
 }
 
@@ -57,11 +60,13 @@ impl DiagTask {
         ui_update_sender: Sender<display::DisplayState>,
         analysis_sender: Sender<AnalysisCtrlMessage>,
         analyzer_config: AnalyzerConfig,
+        notification_channel: tokio::sync::mpsc::Sender<Notification>,
     ) -> Self {
         Self {
             ui_update_sender,
             analysis_sender,
             analyzer_config,
+            notification_channel,
             state: DiagState::Stopped,
         }
     }
@@ -199,6 +204,14 @@ impl DiagTask {
                     .send(display::DisplayState::WarningDetected)
                     .await
                     .expect("couldn't send ui update message: {}");
+                self.notification_channel
+                    .send(Notification::new(
+                        "heuristic-warning".to_string(),
+                        "Rayhunter has emitted a warning!".to_string(),
+                        Some(Duration::from_secs(60 * 5)),
+                    ))
+                    .await
+                    .expect("Failed to send to notification channel");
             }
         } else {
             debug!("no qmdl_writer set, continuing...");
@@ -216,10 +229,11 @@ pub fn run_diag_read_thread(
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
     analyzer_config: AnalyzerConfig,
+    notification_channel: tokio::sync::mpsc::Sender<Notification>,
 ) {
     task_tracker.spawn(async move {
         let mut diag_stream = pin!(dev.as_stream().into_stream());
-        let mut diag_task = DiagTask::new(ui_update_sender, analysis_sender, analyzer_config);
+        let mut diag_task = DiagTask::new(ui_update_sender, analysis_sender, analyzer_config, notification_channel);
         qmdl_file_tx
             .send(DiagDeviceCtrlMessage::StartRecording)
             .await
