@@ -6,4 +6,5 @@ pub mod information_element;
 pub mod nas_null_cipher;
 pub mod null_cipher;
 pub mod priority_2g_downgrade;
+pub mod test_analyzer;
 pub mod util;
