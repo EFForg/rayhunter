@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1};
 
-use super::analyzer::{Analyzer, Event, EventType, Severity};
+use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use deku::bitvec::*;
 
@@ -63,9 +63,7 @@ impl Analyzer for TestAnalyzer {
             let mnc_string: String = format!("{}{}{}", mnc.0[0].0, mnc.0[1].0, mnc.0[2].0);
 
             return Some(Event {
-                event_type: EventType::QualitativeWarning {
-                    severity: Severity::Low,
-                },
+                event_type: EventType::Low,
                 message: format!(
                     "SIB1 received (packet {}) CID: {}, PLMN: {}-{}",
                     self.packet_num, cid, mcc_string, mnc_string
