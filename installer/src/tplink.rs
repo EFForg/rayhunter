@@ -125,7 +125,7 @@ async fn tplink_run_install(
             if sdcard_path.is_empty() {
                 anyhow::bail!(
                     "Unable to determine sdcard path. Rayhunter needs a FAT-formatted SD card to function.\n\n\
-                    In case you already did, this is a bug. Please file an issue with your hardware version.\n\n\
+                    If you already inserted a FAT formatted SD card, this is a bug. Please file an issue with your hardware version.\n\n\
                     The installer has tried to find an empty folder to mount to on these paths: {try_paths:?}\n\
                     ...but none of them exist.\n\n\
                     At this point, you may 'telnet {admin_ip}' and poke around in the device to figure out what went wrong yourself."
