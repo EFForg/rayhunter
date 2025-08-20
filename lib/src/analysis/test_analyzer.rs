@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use telcom_parser::lte_rrc::{
-    BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1, PLMN_IdentityInfo,
+    BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1, 
 };
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
@@ -55,14 +55,14 @@ impl Analyzer for TestAnalyzer {
                 .load::<u32>();
             let plmn = &sib1.cell_access_related_info.plmn_identity_list.0;
             let mcc_string: String;
-            let mnc_string: String;
+            
             if let Some(mcc) = &plmn[0].plmn_identity.mcc {
                 mcc_string = format!("{}{}{}", mcc.0[0].0, mcc.0[1].0, mcc.0[2].0);
             } else {
                 mcc_string = "nomcc".to_string();
             }
             let mnc = &plmn[0].plmn_identity.mnc;
-            mnc_string = format!("{}{}{}", mnc.0[0].0, mnc.0[1].0, mnc.0[2].0);
+            let mnc_string: String = format!("{}{}{}", mnc.0[0].0, mnc.0[1].0, mnc.0[2].0);
 
             return Some(Event {
                 event_type: EventType::QualitativeWarning {
