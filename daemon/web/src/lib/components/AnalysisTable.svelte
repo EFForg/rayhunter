@@ -52,8 +52,8 @@
                                     {@const analyzer = analyzers[analyzerIndex]}
                                     {@const event_type_class = {
                                         Informational: '',
-                                        Low: 'bg-red-200',
-                                        Medium: 'bg-red-400',
+                                        Low: 'bg-yellow-200',
+                                        Medium: 'bg-orange-400',
                                         High: 'bg-red-600',
                                     }[event.event_type]}
                                     <tr class="even:bg-gray-200 odd:bg-white">
