@@ -1,8 +1,6 @@
 use std::borrow::Cow;
 
-use telcom_parser::lte_rrc::{
-    BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1, 
-};
+use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1};
 
 use super::analyzer::{Analyzer, Event, EventType, Severity};
 use super::information_element::{InformationElement, LteInformationElement};
@@ -55,7 +53,7 @@ impl Analyzer for TestAnalyzer {
                 .load::<u32>();
             let plmn = &sib1.cell_access_related_info.plmn_identity_list.0;
             let mcc_string: String;
-            
+
             if let Some(mcc) = &plmn[0].plmn_identity.mcc {
                 mcc_string = format!("{}{}{}", mcc.0[0].0, mcc.0[1].0, mcc.0[2].0);
             } else {
