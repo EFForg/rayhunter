@@ -225,7 +225,6 @@ impl DiagTask {
                         .await
                         .expect("couldn't send ui update message: {}");
                 }
-
             }
         } else {
             debug!("no qmdl_writer set, continuing...");
