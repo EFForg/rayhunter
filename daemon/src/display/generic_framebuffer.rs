@@ -15,7 +15,7 @@ use tokio_util::task::TaskTracker;
 
 use include_dir::{Dir, include_dir};
 
-const REFRESH_RATE: u64 = 100; //how often in milliseconds to refresh the display
+const REFRESH_RATE: u64 = 1000; //how often in milliseconds to refresh the display
 
 #[derive(Copy, Clone)]
 pub struct Dimensions {
