@@ -85,7 +85,7 @@ impl ImsiRequestedAnalyzer {
                     message: format!(
                         "Disconnected after Identity Request without Auth Accept (frame {})",
                         self.packet_num
-                    )
+                    ),
                 });
             }
 
