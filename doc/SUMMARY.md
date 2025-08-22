@@ -10,6 +10,7 @@
 - [Uninstalling](./uninstalling.md)
 - [Using Rayhunter](./using-rayhunter.md)
   - [Rayhunter's heuristics](./heuristics.md)
+  - [Re-analyzing recordings](./reanalyzing.md)
   - [How we analyze a capture](./analyzing-a-capture.md)
 - [Supported devices](./supported-devices.md)
   - [Orbic RC400L](./orbic.md)
