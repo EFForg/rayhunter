@@ -56,15 +56,25 @@ impl ImsiRequestedAnalyzer {
                 self.timeout_counter = 0;
             }
 
+            // IMSI or IMEI requetsed after auth accept
+            (State::AuthAccept, State::IdentityRequest) => {
+                self.flag = Some(Event {
+                    event_type: EventType::High,
+                    message: format!(
+                        "Identity requested after auth request (frame {})",
+                        self.packet_num
+                    ),
+                });
+            }
+
             // Unexpected IMSI without AttachRequest
-            (current, State::IdentityRequest) if *current != State::AttachRequest => {
+            (State::Disconnect, State::IdentityRequest) => {
                 self.flag = Some(Event {
                     event_type: EventType::High,
                     message: format!(
                         "Identity requested without Attach Request (frame {})",
                         self.packet_num
-                    )
-                    .to_string(),
+                    ),
                 });
             }
 
@@ -74,6 +84,17 @@ impl ImsiRequestedAnalyzer {
                     event_type: EventType::High,
                     message: format!(
                         "Disconnected after Identity Request without Auth Accept (frame {})",
+                        self.packet_num
+                    )
+                });
+            }
+
+            // Notify on any identity reqeust (IMEI or IMSI)
+            (_, State::IdentityRequest) => {
+                self.flag = Some(Event {
+                    event_type: EventType::Informational,
+                    message: format!(
+                        "Identity Request happened but its not suspicious yet. (frame {})",
                         self.packet_num
                     )
                     .to_string(),
@@ -105,7 +126,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
     }
 
     fn get_version(&self) -> u32 {
-        2
+        3
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
