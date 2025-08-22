@@ -1,6 +1,6 @@
 # Using Rayhunter
 
-Once installed, Rayhunter will run automatically whenever your device is running. You'll see a green line on top of the device's display to indicate that it's running and recording. [The line will turn red](./faq.md#red) once a potential IMSI catcher has been found, until the device is rebooted or a new recording is started through the web UI.
+Once installed, Rayhunter will run automatically whenever your device is running. You'll see a green line on top of the device's display to indicate that it's running and recording. [The line will turn yellow dots, orange dashes, or solid red](./faq.md#red) once a potential IMSI catcher has been found, depending on the severity of the alert, until the device is rebooted or a new recording is started through the web UI.
 
 ![Rayhunter_0 5 0](./Rayhunter_0.5.0.png)
 

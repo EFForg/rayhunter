@@ -7,7 +7,7 @@ These devices have been extensively tested by the core developers and are widely
 
 | Device | Recommended region |
 | ------ | ------ |
-| [Orbic RC400L](./orbic.md) | Americas |
+| [Orbic RC400L](./orbic.md) Sometimes also branded Kajeet RC400L | Americas |
 | [TP-Link M7350](./tplink-m7350.md) | Africa, Europe, Middle East |
 
 The TP-Link M7350 also works in the Americas but is usually more expensive.

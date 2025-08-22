@@ -4,23 +4,40 @@ Rayhunter includes several analyzers to detect potential IMSI catcher activity. 
 
 ## Available Analyzers
 
-### IMSI Requested
+### IMSI Requested (v3)
 
-This analyser tests whether the eNodeB sends an IMSI Identity Request NAS message.
+This analyser tests whether the eNodeB sends an IMSI or IMEI Identity Request NAS message under suspicous .
 
-Mobile network primarily requests IMSI number from mobile device during initial network attachment or when the network cannot identify the mobile device by its temporary identification (TMSI - *Temporary Mobile Subscriber Identity* or GUTI - *Globally Unique Temporary Identifier* in 4G/5G terminology).
+Mobile networks primarily request IMSI or IMEI from a mobile device during initial network attachment or when the network cannot identify the mobile device by its temporary identification (TMSI - *Temporary Mobile Subscriber Identity* or GUTI - *Globally Unique Temporary Identifier* in 4G/5G terminology).
 
 IMSI request therefore usually happens when you first turn the device on especially after it has been off for a long time. Another possibility is, that you reboot your mobile device and your temporary ID expired. Sometimes temporary identification can expire if you have been in an area where there is absolutely no connection to your service provider or after you left your device on an airplane mode and then reconnect to the network (especially being disconnected for a long time). IMSI could also be requested when you connect to a new network (for instance for roaming), when you swap she SIM card or when your device moves to a new *Tracking Area* or *Location Area* and the network can not map the temporary identification to your device. IMSI number can also be requested after core network reboot.
 
 It should also be noted that the network periodically reassigns your device new temporary identification to enhance security and avoid tracking, but in that cases usually does not request IMSI.
 
-However, if you get this warning at a time when you have been steadily connected to towers and the device has been on for a while, this could be a sign of IMSI catcher use.
+During these events the phone will typically go on to authenticate that the network is legitimate and then establish service with the network it is connected to. 
+
+What we consider suspicious is the following chain of events:
+
+* Phone connects to a new tower. 
+* Tower asks for phones identity (IMEI or IMSI.)
+* Authentication does *NOT* happen. 
+* Tower requests phoen to disconnect. 
+
+Looking for this chain of events is much less prone to false positives than naively looking for any time the IMSI/IMEI is sent. We do still sometimes get false positives when users are in an airplane that is coming in for a landing however. This is likely do to having been disconnected for a while and then being over towers that are not able to route to your home network, but we are still researching.
+
+This is the attack used by commercial IMSI catchers used by law enforcement. 
+
+This heuristic will also alert you if any of the following happen:
+* Identity is requested after authentication.
+* Identity is requested without your phone connecting to the tower. 
+* Identity is requested and then authentication doesn't happen shortly thereafter. 
+
+This heuristic will also issue a notification every time your identity is sent to the network under non suspicious circumstances. This is for diagnostic purposes. 
 
 ### Connection Release/Redirected Carrier 2G Downgrade
 
-This analyser tests if a base station releases your device's connection and redirects your device to a 2G base station. This heuristics is useful, because many commercial IMSI catchers operate in a such way that they downgrade connection to 2G where they can intercept the communication (by performing man-in-the-middle attack).
+This analyser tests if a base station releases your device's connection and redirects your device to a 2G base station. This heuristic is useful, because some IMSI catchers may operate in a such way that they downgrade connection to 2G where they can intercept the communication (by performing man-in-the-middle attack).
 
-This heuristic is the most useful in the United States or other countries where there are no more operating 2G base stations. See [Wikipedia page on past 2G networks](https://en.wikipedia.org/wiki/2G#Past_2G_networks) for information about your country. In countries where 2G is still in service (such as most of EU), this heuristics may trigger false positives. In that case you should consider disabling it. However this heuristics has been vastly improved to reduce false positive warnings and new tests in European networks show that false positives are vastly reduced.
 
 ### LTE SIB6/7 Downgrade
 
@@ -28,9 +45,11 @@ This analyser tests if LTE base station is broadcasting a SIB type 6 and 7 messa
 
 SIB (*System Information Block*) Type 6 and 7 are specific types of broadcast messages sent by the base station (eNodeB in 4G networks) to mobile devices. They contain essential radio-related configuration parameters to help mobile device perform cell reselection.
 
-IMSI catchers exploit the fact that many SIB broadcast messages are not encrypted or authenticated. This allows them to pretend to be a legitimate cell by broadcasting fake system information in order to force mobile devices to downgrade from more secure 4G (LTE) to less secure 2G (GSM) network and then steal IMSI and/or perform man-in-the-middle attack. That is why this is also called a downgrade attack.
+This attack exploits the fact that SIB broadcast messages are not encrypted or authenticated. This allows them to pretend to be a legitimate cell by broadcasting fake system information in order to force mobile devices to downgrade from more secure 4G (LTE) to less secure 2G (GSM) network and then steal IMSI and/or perform man-in-the-middle attack. That is why this is also called a downgrade attack.
 
 SIB6 is used for cell reselecion to CDMA2000 systems which are not supported by many modern mobile phones, and SIB7 Provides the mobile device with information to perform cell reselection to GSM/EDGE networks. Therefore SIB6 messages are quite rare, while malformed SIB7 messages are much more frequent in practice. 
+
+This heuristic is the most useful in the United States or other countries where there are no more operating 2G base stations. See [Wikipedia page on past 2G networks](https://en.wikipedia.org/wiki/2G#Past_2G_networks) for information about your country. In countries where 2G is still in service (such as most of EU), this heuristics may trigger false positives. In that case you should consider disabling it. However this heuristics has been vastly improved to reduce false positive warnings and new tests in European networks show that false positives are vastly reduced.
 
 ### Null Cipher
 

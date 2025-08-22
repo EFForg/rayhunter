@@ -13,7 +13,7 @@
   - [Re-analyzing recordings](./reanalyzing.md)
   - [How we analyze a capture](./analyzing-a-capture.md)
 - [Supported devices](./supported-devices.md)
-  - [Orbic RC400L](./orbic.md)
+  - [Orbic/Kajeet RC400L](./orbic.md)
   - [TP-Link M7350](./tplink-m7350.md)
   - [TP-Link M7310](./tplink-m7310.md)
   - [Tmobile TMOHS1](./tmobile-tmohs1.md)

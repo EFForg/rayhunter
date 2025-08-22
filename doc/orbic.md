@@ -1,6 +1,8 @@
-# Orbic RC400L
+# Orbic/Kajeet RC400L
 
 The Orbic RC400L is an inexpensive LTE modem primarily designed for the US market, and the original device for which Rayhunter is developed.
+
+It is also sometimes sold under the brand Kajeet RC400L. This is the exact same hardware and can be treated the same. 
 
 You can buy an Orbic [using bezos
 bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
@@ -33,6 +35,8 @@ The drawback is that the device's admin password is required. If you have a Kaje
 2. Run `./installer orbic-network`
 3. The installer will ask you to log into the admin UI on `localhost:4000`. The password for that is the same as the WiFi password.
 4. As soon as you're logged in, the installer will continue and reboot the device.
+
+*note*: On Kajeet devices the default admin password is `$m@rt$p0tc0nf!g`, on most other orbic devices the default admin password is the same as the wifi password. If the password has been changed you can reset it by pressing the button under the back case until the unit restarts. 
 
 ## Obtaining a shell
 
