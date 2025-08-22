@@ -56,7 +56,7 @@ impl ImsiRequestedAnalyzer {
                 self.timeout_counter = 0;
             }
 
-            // IMSI or IMEI requetsed after auth accept
+            // IMSI or IMEI requested after auth accept
             (State::AuthAccept, State::IdentityRequest) => {
                 self.flag = Some(Event {
                     event_type: EventType::High,
