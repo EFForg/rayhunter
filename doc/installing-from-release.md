@@ -21,6 +21,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 4. Turn on your device by holding the power button on the front.
 
    * For the Orbic, connect the device using a USB-C cable.
+     * Or connect to the network if using the network based installer, this is especially reccomended on Windows.
    * For TP-Link, connect to its network using either WiFi or USB Tethering.
 
 5. Run the installer:
@@ -32,8 +33,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
     Then run the installer:
     ```bash
     ./installer orbic
-    # or: ./installer tplink
-    # or: ./installer wingtech
+    # or: ./installer [orbic-network|tplink|tmobile|uz801|pinephone|wingtech]
     ```
 
     The device will restart multiple times over the next few minutes.
@@ -43,6 +43,8 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 6. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter.md). You should also see a green line flash along the top of top the display on the device.
 
 ## Troubleshooting
+
+* You can test your device by enabling the test heuristic. This will be very noisy and fire an alert every time you see a new tower. Be sure to turn it off when you are done testing.  
 
 * On MacOS if you encounter an error that says "No Orbic device found," it may because you have the "Allow accessories to connect" security setting set to "Ask for approval." You may need to temporarily change it to "Always" for the script to run. Make sure to change it back to a more secure setting when you're done.
 

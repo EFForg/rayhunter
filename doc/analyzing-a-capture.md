@@ -1,3 +1,3 @@
 # How we analyze a capture
 
-TODO
+Teams of highly trained squirrles. Video coming soon!
