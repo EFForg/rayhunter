@@ -7,9 +7,10 @@
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import SystemStatsTable from '$lib/components/SystemStatsTable.svelte';
     import DeleteAllButton from '$lib/components/DeleteAllButton.svelte';
-    import RecordingControls from '$lib/components//RecordingControls.svelte';
+    import RecordingControls from '$lib/components/RecordingControls.svelte';
     import ConfigForm from '$lib/components/ConfigForm.svelte';
     import ActionErrors from '$lib/components/ActionErrors.svelte';
+    import LogView from '$lib/components/LogView.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -17,6 +18,7 @@
     let current_entry: ManifestEntry | undefined = $state(undefined);
     let system_stats: SystemStats | undefined = $state(undefined);
     let update_error: string | undefined = $state(undefined);
+    let logview_shown: boolean = $state(false);
     $effect(() => {
         const interval = setInterval(async () => {
             try {
@@ -47,10 +49,55 @@
     });
 </script>
 
+<LogView bind:shown={logview_shown} />
 <div class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center">
     <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
     <img src="/rayhunter_text.png" alt="" class="h-10 xl:h-12" />
     <div class="flex flex-row gap-4">
+        <button onclick={() => (logview_shown = true)} class="flex flex-row gap-1 group">
+            <span class="hidden text-white group-hover:text-gray-400 lg:flex">Logs</span>
+            <svg
+                class="w-6 h-6 text-white group-hover:text-gray-400"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    d="M10 14H3"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                />
+                <path
+                    d="M10 18H3"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                />
+                <path
+                    d="M14 15L17.5 18L21 15"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+                <path
+                    d="M3 6L13.5 6M20 6L17.75 6"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                />
+                <path
+                    d="M20 10L9.5 10M3 10H5.25"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                />
+            </svg>
+        </button>
         <a
             class="flex flex-row gap-1 group"
             href="https://github.com/EFForg/rayhunter/issues"
@@ -168,9 +215,9 @@
                         </svg>
                         WARNING: Not Running
                     </span>
-                    <span
-                        >Rayhunter is not currently running and will not detect abnormal behavior!</span
-                    >
+                    <span>
+                        Rayhunter is not currently running and will not detect abnormal behavior!
+                    </span>
                     <div class="flex flex-row justify-end mt-2">
                         <RecordingControls server_is_recording={!!current_entry} />
                     </div>
