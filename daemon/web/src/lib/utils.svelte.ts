@@ -58,6 +58,10 @@ export async function get_system_stats(): Promise<SystemStats> {
     return JSON.parse(await req('GET', '/api/system-stats'));
 }
 
+export async function get_logs(): Promise<string> {
+    return await req('GET', '/api/log');
+}
+
 export async function get_config(): Promise<Config> {
     return JSON.parse(await req('GET', '/api/config'));
 }
