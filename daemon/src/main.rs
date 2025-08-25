@@ -1,4 +1,5 @@
 mod analysis;
+mod battery;
 mod config;
 mod diag;
 mod display;
