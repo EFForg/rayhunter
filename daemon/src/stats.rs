@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
-use crate::qmdl_store::ManifestEntry;
+use crate::battery::get_battery_status;
+use crate::error::RayhunterError;
 use crate::server::ServerState;
+use crate::{battery::BatteryState, qmdl_store::ManifestEntry};
 
 use axum::Json;
 use axum::extract::State;
@@ -16,6 +18,8 @@ pub struct SystemStats {
     pub disk_stats: DiskStats,
     pub memory_stats: MemoryStats,
     pub runtime_metadata: RuntimeMetadata,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub battery_status: Option<BatteryState>,
 }
 
 impl SystemStats {
@@ -24,6 +28,11 @@ impl SystemStats {
             disk_stats: DiskStats::new(qmdl_path, device).await?,
             memory_stats: MemoryStats::new(device).await?,
             runtime_metadata: RuntimeMetadata::new(),
+            battery_status: match get_battery_status(device).await {
+                Ok(status) => Some(status),
+                Err(RayhunterError::FunctionNotSupportedForDeviceError) => None,
+                Err(err) => return Err(err.to_string()),
+            },
         })
     }
 }
