@@ -29,7 +29,7 @@ procedure at `./installer orbic-network` that is supposed to eventually replace
 identically on Windows, Mac and Linux. From our testing it works much more
 reliably on Windows than `./installer orbic` does.
 
-The drawback is that the device's admin password is required. If you have a Kajeet-branded "SmartSpot" you currently have to use the USB-based `./installer orbic`, as we currently don't know of a way to get that admin password.
+The drawback is that the device's admin password is required. 
 
 1. Connect to the Orbic's network via WiFi or USB tethering
 2. Run `./installer orbic-network`
