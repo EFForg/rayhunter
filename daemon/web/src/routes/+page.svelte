@@ -20,6 +20,11 @@
     $effect(() => {
         const interval = setInterval(async () => {
             try {
+                // Don't update UI if browser tab isn't visible
+                if (document.hidden) {
+                    return;
+                }
+
                 await manager.update();
                 let new_manifest = await get_manifest();
                 await new_manifest.set_analysis_status(manager);
