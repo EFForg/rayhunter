@@ -5,21 +5,7 @@ use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1
 use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 
-pub struct IncompleteSibAnalyzer {
-    packet_num: usize,
-}
-
-impl Default for IncompleteSibAnalyzer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl IncompleteSibAnalyzer {
-    pub fn new() -> Self {
-        Self { packet_num: 0 }
-    }
-}
+pub struct IncompleteSibAnalyzer {}
 
 impl Analyzer for IncompleteSibAnalyzer {
     fn get_name(&self) -> Cow<'_, str> {
@@ -34,9 +20,11 @@ impl Analyzer for IncompleteSibAnalyzer {
         1
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
-        self.packet_num += 1;
-
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        packet_num: usize,
+    ) -> Option<Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::BcchDlSch(sch_msg) = &**lte_ie
             && let BCCH_DL_SCH_MessageType::C1(c1) = &sch_msg.message
@@ -47,7 +35,7 @@ impl Analyzer for IncompleteSibAnalyzer {
                 event_type: EventType::Medium,
                 message: format!(
                     "SIB1 scheduling info list was malformed (packet {})",
-                    self.packet_num
+                    packet_num
                 ),
             });
         }

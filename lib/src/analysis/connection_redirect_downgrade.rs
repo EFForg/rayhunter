@@ -25,7 +25,11 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
         1
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        packet_num: usize,
+    ) -> Option<Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::DlDcch(msg_cont) = &**lte_ie
             && let DL_DCCH_MessageType::C1(c1) = &msg_cont.message
@@ -37,7 +41,7 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
             match carrier_info {
                 RedirectedCarrierInfo::Geran(_carrier_freqs_geran) => Some(Event {
                     event_type: EventType::High,
-                    message: "Detected 2G downgrade".to_owned(),
+                    message: format!("Detected 2G downgrade (packet {})", packet_num),
                 }),
                 _ => Some(Event {
                     event_type: EventType::Informational,

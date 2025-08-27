@@ -6,21 +6,7 @@ use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use deku::bitvec::*;
 
-pub struct TestAnalyzer {
-    packet_num: usize,
-}
-
-impl Default for TestAnalyzer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl TestAnalyzer {
-    pub fn new() -> Self {
-        Self { packet_num: 0 }
-    }
-}
+pub struct TestAnalyzer {}
 
 impl Analyzer for TestAnalyzer {
     fn get_name(&self) -> Cow<'_, str> {
@@ -37,9 +23,11 @@ impl Analyzer for TestAnalyzer {
         1
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
-        self.packet_num += 1;
-
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        packet_num: usize,
+    ) -> Option<Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::BcchDlSch(sch_msg) = &**lte_ie
             && let BCCH_DL_SCH_MessageType::C1(c1) = &sch_msg.message
@@ -66,7 +54,7 @@ impl Analyzer for TestAnalyzer {
                 event_type: EventType::Low,
                 message: format!(
                     "SIB1 received (packet {}) CID: {}, PLMN: {}-{}",
-                    self.packet_num, cid, mcc_string, mnc_string
+                    packet_num, cid, mcc_string, mnc_string
                 ),
             });
         }
