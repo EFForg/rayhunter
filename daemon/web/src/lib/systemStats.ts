@@ -27,14 +27,6 @@ export interface MemoryStats {
 }
 
 export interface BatteryStatus {
-    level: BatteryLevel;
+    level: number;
     is_plugged_in: boolean;
-}
-
-export enum BatteryLevel {
-    VeryLow = 'VeryLow',
-    Low = 'Low',
-    Medium = 'Medium',
-    High = 'High',
-    Full = 'Full',
 }

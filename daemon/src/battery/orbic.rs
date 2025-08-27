@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-    battery::{BatteryLevel, BatteryState, is_plugged_in_from_file},
+    battery::{BatteryState, is_plugged_in_from_file},
     error::RayhunterError,
 };
 
@@ -16,11 +16,11 @@ pub async fn get_battery_state() -> Result<BatteryState, RayhunterError> {
             .chars()
             .next()
         {
-            Some('1') => Ok(BatteryLevel::VeryLow),
-            Some('2') => Ok(BatteryLevel::Low),
-            Some('3') => Ok(BatteryLevel::Medium),
-            Some('4') => Ok(BatteryLevel::High),
-            Some('5') => Ok(BatteryLevel::Full),
+            Some('1') => Ok(10),
+            Some('2') => Ok(25),
+            Some('3') => Ok(50),
+            Some('4') => Ok(75),
+            Some('5') => Ok(100),
             _ => Err(RayhunterError::BatteryLevelParseError),
         }?,
         is_plugged_in: is_plugged_in_from_file(Path::new(PLUGGED_IN_STATE_FILE)).await?,

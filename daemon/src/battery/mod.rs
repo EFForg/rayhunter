@@ -10,17 +10,8 @@ pub mod tmobile;
 pub mod wingtech;
 
 #[derive(Clone, Copy, PartialEq, Debug, Serialize)]
-pub enum BatteryLevel {
-    VeryLow,
-    Low,
-    Medium,
-    High,
-    Full,
-}
-
-#[derive(Clone, Copy, PartialEq, Debug, Serialize)]
 pub struct BatteryState {
-    level: BatteryLevel,
+    level: u8,
     is_plugged_in: bool,
 }
 
@@ -37,20 +28,13 @@ async fn is_plugged_in_from_file(path: &Path) -> Result<bool, RayhunterError> {
     }
 }
 
-async fn get_level_from_percentage_file(path: &Path) -> Result<BatteryLevel, RayhunterError> {
-    match tokio::fs::read_to_string(path)
+async fn get_level_from_percentage_file(path: &Path) -> Result<u8, RayhunterError> {
+    tokio::fs::read_to_string(path)
         .await
         .map_err(RayhunterError::TokioError)?
         .trim_end()
         .parse()
-    {
-        Ok(0..=10) => Ok(BatteryLevel::VeryLow),
-        Ok(11..=25) => Ok(BatteryLevel::Low),
-        Ok(26..=50) => Ok(BatteryLevel::Medium),
-        Ok(51..=75) => Ok(BatteryLevel::High),
-        Ok(76..=100) => Ok(BatteryLevel::Full),
-        _ => Err(RayhunterError::BatteryLevelParseError),
-    }
+        .or(Err(RayhunterError::BatteryLevelParseError))
 }
 
 pub async fn get_battery_status(device: &Device) -> Result<BatteryState, RayhunterError> {
