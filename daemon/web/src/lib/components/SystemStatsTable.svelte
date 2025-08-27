@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { BatteryLevel, type SystemStats } from '$lib/systemStats';
+    import { type SystemStats } from '$lib/systemStats';
     let {
         stats,
     }: {
@@ -8,61 +8,28 @@
 
     const table_cell_classes = 'border p-1 lg:p-2';
 
-    let battery_level = $derived.by(() => {
-        if (stats.battery_status === undefined) {
-            return 0;
-        }
-        switch (stats.battery_status.level) {
-            case BatteryLevel.Full:
-                return 100;
-            case BatteryLevel.High:
-                return 75;
-            case BatteryLevel.Medium:
-                return 50;
-            case BatteryLevel.Low:
-                return 25;
-            default:
-                return 10;
-        }
-    });
+    let battery_level = $derived(stats.battery_status ? stats.battery_status.level : 0);
     let bar_color = $derived.by(() => {
         if (stats.battery_status === undefined) {
             return '';
         }
-        switch (stats.battery_status.level) {
-            case BatteryLevel.Low:
-                return 'fill-yellow-300';
-            case BatteryLevel.VeryLow:
-                return 'fill-red-500';
-            default:
-                return 'fill-green-500';
+        if (battery_level <= 10) {
+            return 'fill-red-500';
         }
+        if (battery_level <= 25) {
+            return 'fill-yellow-300';
+        }
+        return 'fill-green-500';
     });
     let title_text = $derived.by(() => {
         if (stats.battery_status === undefined) {
             return 'Rayhunter does not yet support displaying the battery level for this device.';
         }
-        let text = '';
-        switch (stats.battery_status.level) {
-            case BatteryLevel.Full:
-                text = 'Full';
-                break;
-            case BatteryLevel.High:
-                text = 'High';
-                break;
-            case BatteryLevel.Medium:
-                text = 'Medium';
-                break;
-            case BatteryLevel.Low:
-                text = 'Low';
-                break;
-            case BatteryLevel.VeryLow:
-                text = 'Very low';
-                break;
-        }
+
+        let text = `Battery is ${stats.battery_status.level}% full`;
 
         if (stats.battery_status.is_plugged_in) {
-            text += ', plugged in';
+            text += ' and plugged in';
         }
         return text;
     });
