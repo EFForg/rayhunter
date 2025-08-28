@@ -7,21 +7,7 @@ use pycrate_rs::nas::generated::emm::emm_security_mode_command::NASSecAlgoCiphAl
 use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 
-pub struct NasNullCipherAnalyzer {
-    packet_num: usize,
-}
-
-impl Default for NasNullCipherAnalyzer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl NasNullCipherAnalyzer {
-    pub fn new() -> Self {
-        Self { packet_num: 0 }
-    }
-}
+pub struct NasNullCipherAnalyzer {}
 
 impl Analyzer for NasNullCipherAnalyzer {
     fn get_name(&self) -> Cow<'_, str> {
@@ -38,8 +24,11 @@ impl Analyzer for NasNullCipherAnalyzer {
         1
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event> {
-        self.packet_num += 1;
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        packet_num: usize,
+    ) -> Option<Event> {
         let payload = match ie {
             InformationElement::LTE(inner) => match &**inner {
                 LteInformationElement::NAS(payload) => payload,
@@ -55,7 +44,7 @@ impl Analyzer for NasNullCipherAnalyzer {
                 event_type: EventType::High,
                 message: format!(
                     "NAS Security mode command requested null cipher(packet {})",
-                    self.packet_num
+                    packet_num
                 ),
             });
         }

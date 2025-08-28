@@ -124,7 +124,11 @@ pub trait Analyzer {
     /// heuristic deems it relevant. Again, be mindful of any state your
     /// [Analyzer] updates per message, since it may be run over hundreds or
     /// thousands of them alongside many other [Analyzers](Analyzer).
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Option<Event>;
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        packet_num: usize,
+    ) -> Option<Event>;
 
     /// Returns a version number for this Analyzer. This should only ever
     /// increase in value, and do so whenever substantial changes are made to
@@ -296,6 +300,7 @@ impl<'de> Deserialize<'de> for AnalysisRow {
 
 pub struct Harness {
     analyzers: Vec<Box<dyn Analyzer + Send>>,
+    packet_num: usize,
 }
 
 impl Default for Harness {
@@ -308,6 +313,7 @@ impl Harness {
     pub fn new() -> Self {
         Self {
             analyzers: Vec::new(),
+            packet_num: 0,
         }
     }
 
@@ -328,15 +334,15 @@ impl Harness {
         }
 
         if analyzer_config.nas_null_cipher {
-            harness.add_analyzer(Box::new(NasNullCipherAnalyzer::new()))
+            harness.add_analyzer(Box::new(NasNullCipherAnalyzer {}))
         }
 
         if analyzer_config.incomplete_sib {
-            harness.add_analyzer(Box::new(IncompleteSibAnalyzer::new()))
+            harness.add_analyzer(Box::new(IncompleteSibAnalyzer {}))
         }
 
         if analyzer_config.test_analyzer {
-            harness.add_analyzer(Box::new(TestAnalyzer::new()))
+            harness.add_analyzer(Box::new(TestAnalyzer {}))
         }
 
         harness
@@ -425,9 +431,11 @@ impl Harness {
     }
 
     pub fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
+        self.packet_num += 1;
+
         self.analyzers
             .iter_mut()
-            .map(|analyzer| analyzer.analyze_information_element(ie))
+            .map(|analyzer| analyzer.analyze_information_element(ie, self.packet_num))
             .collect()
     }
 

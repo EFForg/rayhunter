@@ -49,6 +49,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
     fn analyze_information_element(
         &mut self,
         ie: &InformationElement,
+        packet_num: usize,
     ) -> Option<super::analyzer::Event> {
         let sibs = &self.unpack_system_information(ie)?.0;
         for sib in sibs {
@@ -62,9 +63,10 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             {
                                 return Some(Event {
                                     event_type: EventType::High,
-                                    message:
-                                        "LTE cell advertised a 3G cell for priority 0 reselection"
-                                            .to_string(),
+                                    message: format!(
+                                        "LTE cell advertised a 3G cell for priority 0 reselection (packet {})",
+                                        packet_num
+                                    ),
                                 });
                             }
                         }
@@ -77,9 +79,10 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             {
                                 return Some(Event {
                                     event_type: EventType::High,
-                                    message:
-                                        "LTE cell advertised a 3G cell for priority 0 reselection"
-                                            .to_string(),
+                                    message: format!(
+                                        "LTE cell advertised a 3G cell for priority 0 reselection (packet {})",
+                                        packet_num
+                                    ),
                                 });
                             }
                         }
