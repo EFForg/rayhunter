@@ -31,7 +31,10 @@ impl SystemStats {
             battery_status: match get_battery_status(device).await {
                 Ok(status) => Some(status),
                 Err(RayhunterError::FunctionNotSupportedForDeviceError) => None,
-                Err(err) => return Err(err.to_string()),
+                Err(err) => {
+                    log::error!("Failed to get battery status: {err}");
+                    None
+                }
             },
         })
     }
