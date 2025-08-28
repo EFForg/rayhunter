@@ -43,29 +43,43 @@
                 Error Completing Action {current_error.times > 1 ? `x${current_error.times}` : ''}
             </span>
             <div class="flex items-center mb-2">
-                <span>{pos + 1}/{action_errors.length}</span>
-                <button title="previous error" aria-label="previous error" onclick={prev_error}>
-                    <svg aria-hidden="true" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                        <path
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="m 15.499979,19.499979 -6.9999997,-7 6.9999997,-6.9999997"
-                        />
-                    </svg>
-                </button>
-                <button title="next error" aria-label="next error" onclick={next_error}>
-                    <svg aria-hidden="true" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                        <path
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="m 8.5000207,5.4999793 7.0000003,6.9999997 -7.0000003,7"
-                        />
-                    </svg>
-                </button>
+                {#if action_errors.length > 1}
+                    <span>{pos + 1}/{action_errors.length}</span>
+                    <button title="previous error" aria-label="previous error" onclick={prev_error}>
+                        <svg
+                            aria-hidden="true"
+                            width="24"
+                            height="24"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="m 15.499979,19.499979 -6.9999997,-7 6.9999997,-6.9999997"
+                            />
+                        </svg>
+                    </button>
+                    <button title="next error" aria-label="next error" onclick={next_error}>
+                        <svg
+                            aria-hidden="true"
+                            width="24"
+                            height="24"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="m 8.5000207,5.4999793 7.0000003,6.9999997 -7.0000003,7"
+                            />
+                        </svg>
+                    </button>
+                {/if}
                 <button title="clear errors" aria-label="clear errors" onclick={clear_errors}>
                     <svg style="width:24px;height:24px" viewBox="0 0 24 24">
                         <path
