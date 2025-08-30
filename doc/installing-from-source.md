@@ -38,13 +38,13 @@ Now you can root your device and install Rayhunter by running:
 ```sh
 # Profile can be changed to 'firmware-devel' when building for development.
 # Build time will decrease at the expense of binary size.
-cargo build --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware
+cargo build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware
 
-cargo build --bin rootshell --target armv7-unknown-linux-musleabihf --profile firmware
+cargo build -p rootshell --bin rootshell --target armv7-unknown-linux-musleabihf --profile firmware
 
 # Replace 'orbic' with your device type if different.
-# A list possible values can be found with 'cargo run --bin installer help'.
-cargo run --bin installer orbic
+# A list of possible values can be found with 'cargo run --bin installer help'.
+cargo run -p installer --bin installer orbic
 ```
 
 ### If you're on Windows or can't run the install scripts
