@@ -353,6 +353,8 @@ impl Harness {
     }
 
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {
+        self.packet_num += 1;
+
         let epoch = DateTime::parse_from_rfc3339("1980-01-06T00:00:00-00:00").unwrap();
         let mut row = AnalysisRow {
             packet_timestamp: Some(epoch + packet.timestamp),
@@ -389,6 +391,8 @@ impl Harness {
     pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> Vec<AnalysisRow> {
         let mut rows = Vec::new();
         for maybe_qmdl_message in container.into_messages() {
+            self.packet_num += 1;
+
             rows.push(AnalysisRow {
                 packet_timestamp: None,
                 skipped_message_reason: None,
@@ -431,11 +435,16 @@ impl Harness {
     }
 
     pub fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
-        self.packet_num += 1;
-
+        let packet_str = format!(" (packet {})", self.packet_num);
         self.analyzers
             .iter_mut()
-            .map(|analyzer| analyzer.analyze_information_element(ie, self.packet_num))
+            .map(|analyzer| {
+                let mut maybe_event = analyzer.analyze_information_element(ie, self.packet_num);
+                if let Some(ref mut event) = maybe_event {
+                    event.message.push_str(&packet_str);
+                }
+                maybe_event
+            })
             .collect()
     }
 

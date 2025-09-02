@@ -134,7 +134,7 @@ impl Analyzer for NullCipherAnalyzer {
     fn analyze_information_element(
         &mut self,
         ie: &InformationElement,
-        packet_num: usize,
+        _packet_num: usize,
     ) -> Option<Event> {
         let dcch_msg = match ie {
             InformationElement::LTE(lte_ie) => match &**lte_ie {
@@ -158,7 +158,7 @@ impl Analyzer for NullCipherAnalyzer {
         if null_cipher_detected {
             return Some(Event {
                 event_type: EventType::High,
-                message: format!("Cell suggested use of null cipher (packet {})", packet_num),
+                message: "Cell suggested use of null cipher".to_string(),
             });
         }
         None

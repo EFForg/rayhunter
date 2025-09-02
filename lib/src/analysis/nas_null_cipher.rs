@@ -27,7 +27,7 @@ impl Analyzer for NasNullCipherAnalyzer {
     fn analyze_information_element(
         &mut self,
         ie: &InformationElement,
-        packet_num: usize,
+        _packet_num: usize,
     ) -> Option<Event> {
         let payload = match ie {
             InformationElement::LTE(inner) => match &**inner {
@@ -42,10 +42,7 @@ impl Analyzer for NasNullCipherAnalyzer {
         {
             return Some(Event {
                 event_type: EventType::High,
-                message: format!(
-                    "NAS Security mode command requested null cipher(packet {})",
-                    packet_num
-                ),
+                message: "NAS Security mode command requested null cipher".to_string(),
             });
         }
         None

@@ -23,7 +23,7 @@ impl Analyzer for IncompleteSibAnalyzer {
     fn analyze_information_element(
         &mut self,
         ie: &InformationElement,
-        packet_num: usize,
+        _packet_num: usize,
     ) -> Option<Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::BcchDlSch(sch_msg) = &**lte_ie
@@ -33,10 +33,7 @@ impl Analyzer for IncompleteSibAnalyzer {
         {
             return Some(Event {
                 event_type: EventType::Medium,
-                message: format!(
-                    "SIB1 scheduling info list was malformed (packet {})",
-                    packet_num
-                ),
+                message: "SIB1 scheduling info list was malformed".to_string(),
             });
         }
         None
