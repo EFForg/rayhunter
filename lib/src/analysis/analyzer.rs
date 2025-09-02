@@ -434,7 +434,11 @@ impl Harness {
         rows
     }
 
-    pub fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
+    fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
+        // This method is private because incrementing packet_num is currently handled entirely by the other
+        // methods that call this one. This could be changed with some careful refactoring, but
+        // while this method is only used by other Harness methods, let's keep it private to help
+        // ensure we always bump packet_num exactly once for each processed packet.
         let packet_str = format!(" (packet {})", self.packet_num);
         self.analyzers
             .iter_mut()
