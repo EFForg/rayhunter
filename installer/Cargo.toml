@@ -26,12 +26,12 @@ tokio-stream = "0.1.17"
 
 [target.'cfg(target_os = "linux")'.dependencies.adb_client]
 git = "https://github.com/EFForg/adb_client.git"
-rev = "e511662394e4fa32865c154c40f81a3d846f700c"
+rev = "208a302367727554d7530e937ca8aee20a74fa51"
 default-features = false
 features = ["trans-nusb"]
 
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies.adb_client]
 git = "https://github.com/EFForg/adb_client.git"
-rev = "e511662394e4fa32865c154c40f81a3d846f700c"
+rev = "208a302367727554d7530e937ca8aee20a74fa51"
 default-features = false
 features = ["trans-libusb"]

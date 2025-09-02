@@ -94,7 +94,7 @@ async fn wait_for_adb() -> Result<ADBUSBDevice> {
 
         // UZ801 USB vendor and product IDs.
         // TODO: Research if other variants use different IDs.
-        match ADBUSBDevice::new(0x05c6, 0x90b6) {
+        match ADBUSBDevice::new_no_auth(0x05c6, 0x90b6) {
             Ok(mut device) => {
                 // Test ADB connection
                 if test_adb_connection(&mut device).await.is_ok() {

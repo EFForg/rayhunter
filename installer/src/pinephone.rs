@@ -22,7 +22,7 @@ pub async fn install() -> Result<()> {
     echo!("Unlocking modem ... ");
     start_adb().await?;
     sleep(Duration::from_secs(3)).await;
-    let mut adb = ADBUSBDevice::new(USB_VENDOR_ID, USB_PRODUCT_ID).unwrap();
+    let mut adb = ADBUSBDevice::new_no_auth(USB_VENDOR_ID, USB_PRODUCT_ID).unwrap();
     println!("ok");
 
     adb.run_command(&["mount", "-o", "remount,rw", "/"], "exit code 0")?;
@@ -57,7 +57,7 @@ pub async fn install() -> Result<()> {
     echo!("Unlocking modem ... ");
     start_adb().await?;
     sleep(Duration::from_secs(3)).await;
-    let mut adb = ADBUSBDevice::new(USB_VENDOR_ID, USB_PRODUCT_ID).unwrap();
+    let mut adb = ADBUSBDevice::new_no_auth(USB_VENDOR_ID, USB_PRODUCT_ID).unwrap();
     println!("ok");
 
     echo!("Testing rayhunter ... ");

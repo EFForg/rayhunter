@@ -246,7 +246,7 @@ async fn get_adb() -> Result<ADBUSBDevice> {
     const MAX_FAILURES: u32 = 10;
     let mut failures = 0;
     loop {
-        match ADBUSBDevice::new(VENDOR_ID, PRODUCT_ID) {
+        match ADBUSBDevice::new_no_auth(VENDOR_ID, PRODUCT_ID) {
             Ok(dev) => match adb_echo_test(dev).await {
                 Ok(dev) => return Ok(dev),
                 Err(e) => {
