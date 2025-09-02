@@ -26,7 +26,7 @@ impl Analyzer for TestAnalyzer {
     fn analyze_information_element(
         &mut self,
         ie: &InformationElement,
-        packet_num: usize,
+        _packet_num: usize,
     ) -> Option<Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::BcchDlSch(sch_msg) = &**lte_ie
@@ -53,8 +53,8 @@ impl Analyzer for TestAnalyzer {
             return Some(Event {
                 event_type: EventType::Low,
                 message: format!(
-                    "SIB1 received (packet {}) CID: {}, PLMN: {}-{}",
-                    packet_num, cid, mcc_string, mnc_string
+                    "SIB1 received CID: {}, PLMN: {}-{}",
+                    cid, mcc_string, mnc_string
                 ),
             });
         }

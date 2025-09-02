@@ -58,10 +58,7 @@ impl ImsiRequestedAnalyzer {
             (State::AuthAccept, State::IdentityRequest) => {
                 self.flag = Some(Event {
                     event_type: EventType::High,
-                    message: format!(
-                        "Identity requested after auth request (frame {})",
-                        packet_num
-                    ),
+                    message: "Identity requested after auth request".to_string(),
                 });
             }
 
@@ -69,10 +66,7 @@ impl ImsiRequestedAnalyzer {
             (State::Disconnect, State::IdentityRequest) => {
                 self.flag = Some(Event {
                     event_type: EventType::High,
-                    message: format!(
-                        "Identity requested without Attach Request (frame {})",
-                        packet_num
-                    ),
+                    message: "Identity requested without Attach Request".to_string(),
                 });
             }
 
@@ -80,10 +74,7 @@ impl ImsiRequestedAnalyzer {
             (State::IdentityRequest, State::Disconnect) => {
                 self.flag = Some(Event {
                     event_type: EventType::High,
-                    message: format!(
-                        "Disconnected after Identity Request without Auth Accept (frame {})",
-                        packet_num
-                    ),
+                    message: "Disconnected after Identity Request without Auth Accept".to_string(),
                 });
             }
 
@@ -91,11 +82,7 @@ impl ImsiRequestedAnalyzer {
             (_, State::IdentityRequest) => {
                 self.flag = Some(Event {
                     event_type: EventType::Informational,
-                    message: format!(
-                        "Identity Request happened but its not suspicious yet. (frame {})",
-                        packet_num
-                    )
-                    .to_string(),
+                    message: "Identity Request happened but its not suspicious yet.".to_string(),
                 });
                 self.timeout_counter = 0;
             }
@@ -187,11 +174,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
             if self.timeout_counter >= TIMEOUT_THRESHHOLD {
                 self.flag = Some(Event {
                     event_type: EventType::Informational {},
-                    message: format!(
-                        "Identity request happened without auth request followup (frame {})",
-                        packet_num
-                    )
-                    .to_string(),
+                    message: "Identity request happened without auth request followup".to_string(),
                 });
                 self.timeout_counter = 0;
             }
