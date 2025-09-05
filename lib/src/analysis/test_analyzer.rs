@@ -42,7 +42,7 @@ impl Analyzer for TestAnalyzer {
             let plmn = &sib1.cell_access_related_info.plmn_identity_list.0;
             let mcc_string: String;
 
-            // MCC are always 3 digits 
+            // MCC are always 3 digits
             if let Some(mcc) = &plmn[0].plmn_identity.mcc {
                 mcc_string = format!("{}{}{}", mcc.0[0].0, mcc.0[1].0, mcc.0[2].0);
             } else {
@@ -50,7 +50,7 @@ impl Analyzer for TestAnalyzer {
             }
             let mnc = &plmn[0].plmn_identity.mnc;
             let mnc_string: String;
-            // MNC can be 2 or 3 digits 
+            // MNC can be 2 or 3 digits
             if mnc.0.len() == 3 {
                 mnc_string = format!("{}{}{}", mnc.0[0].0, mnc.0[1].0, mnc.0[2].0);
             } else if mnc.0.len() == 2 {
