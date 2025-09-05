@@ -38,7 +38,7 @@ impl Analyzer for TestAnalyzer {
                 .cell_identity
                 .0
                 .as_bitslice()
-                .load::<u32>();
+                .load_be::<u32>();
             let plmn = &sib1.cell_access_related_info.plmn_identity_list.0;
             let mcc_string: String;
 
