@@ -21,7 +21,7 @@ What we consider suspicious is the following chain of events:
 * Phone connects to a new tower. 
 * Tower asks for phones identity (IMEI or IMSI.)
 * Authentication does *NOT* happen. 
-* Tower requests phoen to disconnect. 
+* Tower requests phone to disconnect. 
 
 Looking for this chain of events is much less prone to false positives than naively looking for any time the IMSI/IMEI is sent. We do still sometimes get false positives when users are in an airplane that is coming in for a landing however. This is likely do to having been disconnected for a while and then being over towers that are not able to route to your home network, but we are still researching.
 
