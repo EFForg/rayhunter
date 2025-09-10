@@ -5,7 +5,7 @@
 **It Depends**. Operation of Rayhunter does require the insertion of a SIM card into the device, but that sim card does not have to be actively registered with a service plan. If you want to use the device as a hotspot in addition to a research device, or get [notifications](./configuration.md), an active plan would of course be necessary.
 
 ### How can I test that my device is working?
-You can enable the `Test Heuristic` under `Analyzer Heuristic Settings` in the config section on your web dashboard. This will cause an alert to trigger every time your device sees a cell tower, you might need to reboot your device or move around a bit to get this one to trigger, but it will be very noisey once it does. People have also tested it by building IMSI catchers at home, but we don't reccomend that, since it violates FCC regulations and will probably upset your neighbors.
+You can enable the `Test Heuristic` under `Analyzer Heuristic Settings` in the config section on your web dashboard. This will cause an alert to trigger every time your device sees a cell tower, you might need to reboot your device or move around a bit to get this one to trigger, but it will be very noisey once it does. People have also tested it by building IMSI catchers at home, but we don't recommend that, since it violates FCC regulations and will probably upset your neighbors.
 
 <a name="red"></a>
 

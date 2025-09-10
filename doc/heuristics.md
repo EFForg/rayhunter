@@ -6,7 +6,7 @@ Rayhunter includes several analyzers to detect potential IMSI catcher activity. 
 
 ### IMSI Requested (v3)
 
-This analyser tests whether the eNodeB sends an IMSI or IMEI Identity Request NAS message under suspicous .
+This analyser tests whether the eNodeB sends an IMSI or IMEI Identity Request NAS message under suspicious .
 
 Mobile networks primarily request IMSI or IMEI from a mobile device during initial network attachment or when the network cannot identify the mobile device by its temporary identification (TMSI - *Temporary Mobile Subscriber Identity* or GUTI - *Globally Unique Temporary Identifier* in 4G/5G terminology).
 
@@ -75,4 +75,4 @@ On its own this might just be a misconfigured base station (though we have only 
 
 ### Test Analyzer
 
-This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisey so we do not reccomend leaving it on but if this alerts it means your Rayhunter device is working! 
+This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisey so we do not recommend leaving it on but if this alerts it means your Rayhunter device is working! 

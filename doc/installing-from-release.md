@@ -21,7 +21,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 4. Turn on your device by holding the power button on the front.
 
    * For the Orbic, connect the device using a USB-C cable.
-     * Or connect to the network if using the network based installer, this is especially reccomended on Windows.
+     * Or connect to the network if using the network based installer, this is especially recommended on Windows.
    * For TP-Link, connect to its network using either WiFi or USB Tethering.
 
 5. Run the installer:

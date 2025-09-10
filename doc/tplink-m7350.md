@@ -52,7 +52,7 @@ If your device has a one-bit (black-and-white) display, Rayhunter will instead s
 ## Power-saving mode/sleep
 
 By default the device will go to sleep after N minutes of no devices being connected. In that mode it will also turn off connections to cell phone towers.
-In order for Rayhunter to record continuously, you have to turn off this sleep mode in TP-Link's admin panel (go to **Advanced** - **Power Saving**) or keep e.g. your phone connectd on the TP-Link's WiFi.
+In order for Rayhunter to record continuously, you have to turn off this sleep mode in TP-Link's admin panel (go to **Advanced** - **Power Saving**) or keep e.g. your phone connected on the TP-Link's WiFi.
 
 ## Port triggers
 

@@ -14,7 +14,7 @@ Windows support in Rayhunter's installer is a work-in-progress. Depending on the
 
 <div class=warning><strong>
 
-[The Windows USB installer is known to be buggy](https://github.com/EFForg/rayhunter/issues/366). We strongly reccomend using the [Network-based installer](./orbic.md#the-network-installer).
+[The Windows USB installer is known to be buggy](https://github.com/EFForg/rayhunter/issues/366). We strongly recommend using the [Network-based installer](./orbic.md#the-network-installer).
 
 </strong></div>
 
