@@ -28,4 +28,4 @@ You can access this UI in one of two ways:
 
 ## Key shortcuts
 
-As of Rayhunter verion 0.3.3, you can start a new recording by double-tapping the power button. Any current recording will be stopped and a new recording will be started, resetting the red line as well. This feature is disabled by default since Rayhunter version 0.4.0 and needs to be enabled through [configuration](./configuration.md).
+As of Rayhunter version 0.3.3, you can start a new recording by double-tapping the power button. Any current recording will be stopped and a new recording will be started, resetting the red line as well. This feature is disabled by default since Rayhunter version 0.4.0 and needs to be enabled through [configuration](./configuration.md).
