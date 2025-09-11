@@ -14,6 +14,7 @@
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
+    let filter_threshold: boolean = $state(false);
     let entries: ManifestEntry[] = $state([]);
     let current_entry: ManifestEntry | undefined = $state(undefined);
     let system_stats: SystemStats | undefined = $state(undefined);
@@ -30,7 +31,10 @@
                 await manager.update();
                 let new_manifest = await get_manifest();
                 await new_manifest.set_analysis_status(manager);
-                entries = new_manifest.entries;
+                entries = filter_threshold
+                    ? new_manifest.entries.filter((e) => e.get_num_warnings())
+                    : new_manifest.entries;
+
                 current_entry = new_manifest.current_entry;
 
                 system_stats = await get_system_stats();
@@ -226,7 +230,23 @@
             <SystemStatsTable stats={system_stats!} />
         </div>
         <div class="flex flex-col gap-2">
-            <span class="text-xl">History</span>
+            <div class="flex flex-row gap-2">
+                <div class="text-xl flex-1">History</div>
+                <div class="flex flex-row items-center gap-2 px-3">
+                    <label
+                        for="filter_threshold"
+                        class="block text-md font-medium text-gray-700 mb-1"
+                    >
+                        Filter for Warnings
+                    </label>
+                    <input
+                        type="checkbox"
+                        id="filter_threshold"
+                        bind:checked={filter_threshold}
+                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                    />
+                </div>
+            </div>
             <ManifestTable {entries} server_is_recording={!!current_entry} {manager} />
         </div>
         <DeleteAllButton />
