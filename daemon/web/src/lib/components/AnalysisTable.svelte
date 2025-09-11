@@ -77,7 +77,7 @@
     <div>
         <p class="text-lg underline">Unparsed Messages</p>
         <p>
-            These are due to a limitation or bug in Rayhunter's parser, and aren't ususally a
+            These are due to a limitation or bug in Rayhunter's parser, and aren't usually a
             problem.
         </p>
         <div class="overflow-x-scroll">
