@@ -73,11 +73,6 @@ pub async fn serve_static(
     let path = path.trim_start_matches('/');
 
     match path {
-        "rayhunter_icon.png" => (
-            [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
-            include_bytes!("../web/build/rayhunter_icon.png"),
-        )
-            .into_response(),
         "rayhunter_orca_only.png" => (
             [(header::CONTENT_TYPE, HeaderValue::from_static("image/png"))],
             include_bytes!("../web/build/rayhunter_orca_only.png"),
