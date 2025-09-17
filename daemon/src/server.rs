@@ -13,10 +13,11 @@ use log::{error, warn};
 use std::sync::Arc;
 use tokio::fs::write;
 use tokio::io::{AsyncReadExt, copy, duplex};
+use tokio::sync::RwLock;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::{RwLock, oneshot};
 use tokio_util::compat::FuturesAsyncWriteCompatExt;
 use tokio_util::io::ReaderStream;
+use tokio_util::sync::CancellationToken;
 
 use crate::DiagDeviceCtrlMessage;
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
@@ -32,7 +33,7 @@ pub struct ServerState {
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
-    pub daemon_restart_tx: Arc<RwLock<Option<oneshot::Sender<()>>>>,
+    pub daemon_restart_token: CancellationToken,
     pub ui_update_sender: Option<Sender<DisplayState>>,
 }
 
@@ -128,24 +129,11 @@ pub async fn set_config(
     })?;
 
     // Trigger daemon restart after writing config
-    let mut restart_tx = state.daemon_restart_tx.write().await;
-    if let Some(sender) = restart_tx.take() {
-        sender.send(()).map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "couldn't send restart signal".to_string(),
-            )
-        })?;
-        Ok((
-            StatusCode::ACCEPTED,
-            "wrote config and triggered restart".to_string(),
-        ))
-    } else {
-        Ok((
-            StatusCode::ACCEPTED,
-            "wrote config but restart already triggered".to_string(),
-        ))
-    }
+    state.daemon_restart_token.cancel();
+    Ok((
+        StatusCode::ACCEPTED,
+        "wrote config and triggered restart".to_string(),
+    ))
 }
 
 pub async fn get_zip(
@@ -326,7 +314,7 @@ mod tests {
             diag_device_ctrl_sender: tx,
             analysis_status_lock: Arc::new(RwLock::new(analysis_status)),
             analysis_sender: analysis_tx,
-            daemon_restart_tx: Arc::new(RwLock::new(None)),
+            daemon_restart_token: CancellationToken::new(),
             ui_update_sender: None,
         })
     }
