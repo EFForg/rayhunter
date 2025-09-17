@@ -9,9 +9,7 @@ use rayhunter::analysis::analyzer::EventType;
 
 use log::{error, info};
 use tokio::sync::mpsc::Receiver;
-use tokio::sync::oneshot;
-use tokio::sync::oneshot::error::TryRecvError;
-use tokio_util::task::TaskTracker;
+use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 use include_dir::{Dir, include_dir};
 
@@ -173,7 +171,7 @@ pub fn update_ui(
     task_tracker: &TaskTracker,
     config: &config::Config,
     mut fb: impl GenericFramebuffer,
-    mut ui_shutdown_rx: oneshot::Receiver<()>,
+    shutdown_token: CancellationToken,
     mut ui_update_rx: Receiver<DisplayState>,
 ) {
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/images/");
@@ -204,13 +202,9 @@ pub fn update_ui(
             );
         }
         loop {
-            match ui_shutdown_rx.try_recv() {
-                Ok(_) => {
-                    info!("received UI shutdown");
-                    break;
-                }
-                Err(TryRecvError::Empty) => {}
-                Err(e) => panic!("error receiving shutdown message: {e}"),
+            if shutdown_token.is_cancelled() {
+                info!("received UI shutdown");
+                break;
             }
             match ui_update_rx.try_recv() {
                 Ok(state) => {

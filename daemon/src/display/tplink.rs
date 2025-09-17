@@ -1,6 +1,6 @@
 use log::info;
 use tokio::sync::mpsc::Receiver;
-use tokio::sync::oneshot;
+use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
 use crate::config;
@@ -11,7 +11,7 @@ use std::fs;
 pub fn update_ui(
     task_tracker: &TaskTracker,
     config: &config::Config,
-    ui_shutdown_rx: oneshot::Receiver<()>,
+    shutdown_token: CancellationToken,
     ui_update_rx: Receiver<DisplayState>,
 ) {
     let display_level = config.ui_level;
@@ -23,9 +23,9 @@ pub fn update_ui(
     // The alternative would be to make the entire initialization async
     if fs::exists(tplink_onebit::OLED_PATH).unwrap_or_default() {
         info!("detected one-bit display");
-        tplink_onebit::update_ui(task_tracker, config, ui_shutdown_rx, ui_update_rx)
+        tplink_onebit::update_ui(task_tracker, config, shutdown_token, ui_update_rx)
     } else {
         info!("fallback to framebuffer");
-        tplink_framebuffer::update_ui(task_tracker, config, ui_shutdown_rx, ui_update_rx)
+        tplink_framebuffer::update_ui(task_tracker, config, shutdown_token, ui_update_rx)
     }
 }
