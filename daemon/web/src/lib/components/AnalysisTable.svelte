@@ -33,7 +33,7 @@
     {#if report.statistics.num_warnings === 0 && report.statistics.num_informational_logs === 0}
         <p>Nothing to show!</p>
     {:else}
-        <div class="overflow-x-scroll">
+        <div class="overflow-x-auto">
             <table class="table-auto text-left">
                 <thead class="p-2">
                     <tr class="bg-gray-300">
@@ -80,7 +80,7 @@
             These are due to a limitation or bug in Rayhunter's parser, and aren't usually a
             problem.
         </p>
-        <div class="overflow-x-scroll">
+        <div class="overflow-x-auto">
             <table class="table-auto text-left">
                 <thead class="p-2">
                     <tr class="bg-gray-300">

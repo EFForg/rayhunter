@@ -44,7 +44,7 @@
 </script>
 
 <div
-    class="{status_row_color} {status_border_color} drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 overflow-x-scroll overflow-y-hidden"
+    class="{status_row_color} {status_border_color} drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 overflow-x-auto overflow-y-hidden"
 >
     {#if current}
         <div class="flex flex-row justify-between gap-2">
@@ -81,7 +81,7 @@
                 'N/A'}</span
         >
     </div>
-    <div class="flex flex-row justify-between lg:justify-end gap-1 mt-2 overflow-x-scroll">
+    <div class="flex flex-row justify-between lg:justify-end gap-1 mt-2 overflow-x-auto">
         <DownloadLink url={entry.get_pcap_url()} text="pcap" full_button />
         <DownloadLink url={entry.get_qmdl_url()} text="qmdl" full_button />
         <DownloadLink url={entry.get_zip_url()} text="zip" full_button />
