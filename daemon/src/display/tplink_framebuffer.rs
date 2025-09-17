@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use std::os::fd::AsRawFd;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
+use tokio_util::sync::CancellationToken;
 
 use crate::config;
 use crate::display::DisplayState;
 use crate::display::generic_framebuffer::{self, Dimensions, GenericFramebuffer};
 
 use tokio::sync::mpsc::Receiver;
-use tokio::sync::oneshot;
 use tokio_util::task::TaskTracker;
 
 const FB_PATH: &str = "/dev/fb0";
@@ -80,14 +80,14 @@ impl GenericFramebuffer for Framebuffer {
 pub fn update_ui(
     task_tracker: &TaskTracker,
     config: &config::Config,
-    ui_shutdown_rx: oneshot::Receiver<()>,
+    shutdown_token: CancellationToken,
     ui_update_rx: Receiver<DisplayState>,
 ) {
     generic_framebuffer::update_ui(
         task_tracker,
         config,
         Framebuffer,
-        ui_shutdown_rx,
+        shutdown_token,
         ui_update_rx,
     )
 }

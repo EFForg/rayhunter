@@ -4,7 +4,7 @@
 /// DisplayState::WarningDetected => Signal LED is solid red.
 use log::{error, info};
 use tokio::sync::mpsc;
-use tokio::sync::oneshot;
+use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
 use std::time::Duration;
@@ -27,7 +27,7 @@ async fn led_off(path: String) {
 pub fn update_ui(
     task_tracker: &TaskTracker,
     config: &config::Config,
-    mut ui_shutdown_rx: oneshot::Receiver<()>,
+    shutdown_token: CancellationToken,
     mut ui_update_rx: mpsc::Receiver<DisplayState>,
 ) {
     let mut invisible: bool = false;
@@ -41,13 +41,9 @@ pub fn update_ui(
         let mut last_update = std::time::Instant::now();
 
         loop {
-            match ui_shutdown_rx.try_recv() {
-                Ok(_) => {
-                    info!("received UI shutdown");
-                    break;
-                }
-                Err(oneshot::error::TryRecvError::Empty) => {}
-                Err(e) => panic!("error receiving shutdown message: {e}"),
+            if shutdown_token.is_cancelled() {
+                info!("received UI shutdown");
+                break;
             }
             match ui_update_rx.try_recv() {
                 Ok(new_state) => state = new_state,

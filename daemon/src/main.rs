@@ -46,6 +46,7 @@ use tokio::select;
 use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::{RwLock, oneshot};
 use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
 type AppRouter = Router<Arc<ServerState>>;
@@ -78,7 +79,7 @@ fn get_router() -> AppRouter {
 async fn run_server(
     task_tracker: &TaskTracker,
     state: Arc<ServerState>,
-    server_shutdown_rx: oneshot::Receiver<()>,
+    shutdown_token: CancellationToken,
 ) -> JoinHandle<()> {
     info!("spinning up server");
     let addr = SocketAddr::from(([0, 0, 0, 0], state.config.port));
@@ -88,15 +89,10 @@ async fn run_server(
     task_tracker.spawn(async move {
         info!("The orca is hunting for stingrays...");
         axum::serve(listener, app)
-            .with_graceful_shutdown(server_shutdown_signal(server_shutdown_rx))
+            .with_graceful_shutdown(shutdown_token.cancelled_owned())
             .await
             .unwrap();
     })
-}
-
-async fn server_shutdown_signal(server_shutdown_rx: oneshot::Receiver<()>) {
-    server_shutdown_rx.await.unwrap();
-    info!("Server received shutdown signal, exiting...");
 }
 
 // Loads a RecordingStore if one exists, and if not, only create one if we're
@@ -136,9 +132,7 @@ fn run_shutdown_thread(
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
     daemon_restart_rx: oneshot::Receiver<()>,
     should_restart_flag: Arc<AtomicBool>,
-    server_shutdown_tx: oneshot::Sender<()>,
-    maybe_ui_shutdown_tx: Option<oneshot::Sender<()>>,
-    maybe_key_input_shutdown_tx: Option<oneshot::Sender<()>>,
+    shutdown_token: CancellationToken,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_tx: Sender<AnalysisCtrlMessage>,
 ) -> JoinHandle<Result<(), RayhunterError>> {
@@ -169,15 +163,7 @@ fn run_shutdown_thread(
             info!("Done!");
         }
 
-        server_shutdown_tx
-            .send(())
-            .expect("couldn't send server shutdown signal");
-        if let Some(ui_shutdown_tx) = maybe_ui_shutdown_tx {
-            let _ = ui_shutdown_tx.send(());
-        }
-        if let Some(key_input_shutdown_tx) = maybe_key_input_shutdown_tx {
-            let _ = key_input_shutdown_tx.send(());
-        }
+        shutdown_token.cancel();
         diag_device_sender
             .send(DiagDeviceCtrlMessage::Exit)
             .await
@@ -223,14 +209,11 @@ async fn run_with_config(
     let (diag_tx, diag_rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
-    let mut maybe_ui_shutdown_tx = None;
-    let mut maybe_key_input_shutdown_tx = None;
+    let shutdown_token = CancellationToken::new();
 
     let notification_service = NotificationService::new(config.ntfy_url.clone());
 
     if !config.debug_mode {
-        let (ui_shutdown_tx, ui_shutdown_rx) = oneshot::channel();
-        maybe_ui_shutdown_tx = Some(ui_shutdown_tx);
         info!("Using configuration for device: {0:?}", config.device);
         let mut dev = DiagDevice::new(&config.device)
             .await
@@ -261,21 +244,18 @@ async fn run_with_config(
             Device::Pinephone => display::headless::update_ui,
             Device::Uz801 => display::uz801::update_ui,
         };
-        update_ui(&task_tracker, &config, ui_shutdown_rx, ui_update_rx);
+        update_ui(&task_tracker, &config, shutdown_token.clone(), ui_update_rx);
 
         info!("Starting Key Input service");
-        let (key_input_shutdown_tx, key_input_shutdown_rx) = oneshot::channel();
-        maybe_key_input_shutdown_tx = Some(key_input_shutdown_tx);
         key_input::run_key_input_thread(
             &task_tracker,
             &config,
             diag_tx.clone(),
-            key_input_shutdown_rx,
+            shutdown_token.clone(),
         );
     }
 
     let (daemon_restart_tx, daemon_restart_rx) = oneshot::channel::<()>();
-    let (server_shutdown_tx, server_shutdown_rx) = oneshot::channel::<()>();
     let analysis_status_lock = Arc::new(RwLock::new(analysis_status));
     run_analysis_thread(
         &task_tracker,
@@ -291,9 +271,7 @@ async fn run_with_config(
         diag_tx.clone(),
         daemon_restart_rx,
         should_restart_flag.clone(),
-        server_shutdown_tx,
-        maybe_ui_shutdown_tx,
-        maybe_key_input_shutdown_tx,
+        shutdown_token.clone(),
         qmdl_store_lock.clone(),
         analysis_tx.clone(),
     );
@@ -308,7 +286,7 @@ async fn run_with_config(
         daemon_restart_tx: Arc::new(RwLock::new(Some(daemon_restart_tx))),
         ui_update_sender: Some(ui_update_tx),
     });
-    run_server(&task_tracker, state, server_shutdown_rx).await;
+    run_server(&task_tracker, state, shutdown_token.clone()).await;
 
     task_tracker.close();
     task_tracker.wait().await;

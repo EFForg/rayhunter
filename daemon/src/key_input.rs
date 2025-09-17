@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::oneshot;
+use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
 use crate::config;
@@ -21,7 +21,7 @@ pub fn run_key_input_thread(
     task_tracker: &TaskTracker,
     config: &config::Config,
     diag_tx: Sender<DiagDeviceCtrlMessage>,
-    mut ui_shutdown_rx: oneshot::Receiver<()>,
+    cancellation_token: CancellationToken,
 ) {
     if config.key_input_mode == 0 {
         return;
@@ -43,7 +43,7 @@ pub fn run_key_input_thread(
 
         loop {
             tokio::select! {
-                _ = &mut ui_shutdown_rx => {
+               _ = cancellation_token.cancelled() => {
                     info!("received key input shutdown");
                     return;
                 }
