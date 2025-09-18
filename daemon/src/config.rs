@@ -5,6 +5,7 @@ use rayhunter::Device;
 use rayhunter::analysis::analyzer::AnalyzerConfig;
 
 use crate::error::RayhunterError;
+use crate::notifications::NotificationType;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
@@ -17,6 +18,7 @@ pub struct Config {
     pub colorblind_mode: bool,
     pub key_input_mode: u8,
     pub ntfy_url: Option<String>,
+    pub enabled_notifications: Vec<NotificationType>,
     pub analyzers: AnalyzerConfig,
 }
 
@@ -32,6 +34,7 @@ impl Default for Config {
             key_input_mode: 0,
             analyzers: AnalyzerConfig::default(),
             ntfy_url: None,
+            enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
         }
     }
 }

@@ -12,11 +12,17 @@ export interface AnalyzerConfig {
     test_analyzer: boolean;
 }
 
+export enum enabled_notifications {
+    Warning = 'Warning',
+    LowBattery = 'LowBattery',
+}
+
 export interface Config {
     ui_level: number;
     colorblind_mode: boolean;
     key_input_mode: number;
     ntfy_url: string;
+    enabled_notifications: enabled_notifications[];
     analyzers: AnalyzerConfig;
 }
 
