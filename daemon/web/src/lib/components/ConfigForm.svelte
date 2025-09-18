@@ -111,18 +111,6 @@
                     </select>
                 </div>
 
-                <div>
-                    <label for="ntfy_url" class="block text-sm font-medium text-gray-700 mb-1">
-                        ntfy URL for Sending Notifications
-                    </label>
-                    <input
-                        id="ntfy_url"
-                        type="url"
-                        bind:value={config.ntfy_url}
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
-                    />
-                </div>
-
                 <div class="space-y-3">
                     <div class="flex items-center">
                         <input
@@ -134,6 +122,56 @@
                         <label for="colorblind_mode" class="ml-2 block text-sm text-gray-700">
                             Colorblind Mode
                         </label>
+                    </div>
+                </div>
+
+                <div class="border-t pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
+                    <div>
+                        <label for="ntfy_url" class="block text-sm font-medium text-gray-700 mb-1">
+                            ntfy URL for Sending Notifications (if unset you will not receive
+                            notifications)
+                        </label>
+                        <input
+                            id="ntfy_url"
+                            type="url"
+                            bind:value={config.ntfy_url}
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="block text-sm font-medium text-gray-700 mb-1">
+                            Enabled Notification Types
+                        </div>
+                        <div class="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="enable_warning_notifications"
+                                value="Warning"
+                                bind:group={config.enabled_notifications}
+                            />
+                            <label
+                                for="enable_warning_notifications"
+                                class="ml-2 block text-sm text-gray-700"
+                            >
+                                Warnings
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="enable_lowbattery_notifications"
+                                value="LowBattery"
+                                bind:group={config.enabled_notifications}
+                            />
+                            <label
+                                for="enable_lowbattery_notifications"
+                                class="ml-2 block text-sm text-gray-700"
+                            >
+                                Low Battery
+                            </label>
+                        </div>
                     </div>
                 </div>
 
