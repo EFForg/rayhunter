@@ -14,6 +14,7 @@ mod stats;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
+use crate::battery::run_battery_notification_worker;
 use crate::config::{parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
@@ -260,7 +261,20 @@ async fn run_with_config(
         qmdl_store_lock.clone(),
         analysis_tx.clone(),
     );
-    run_notification_worker(&task_tracker, notification_service);
+
+    run_battery_notification_worker(
+        &task_tracker,
+        config.device.clone(),
+        notification_service.new_handler(),
+        shutdown_token.clone(),
+    );
+
+    run_notification_worker(
+        &task_tracker,
+        notification_service,
+        config.enabled_notifications.clone(),
+    );
+
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),
         config,

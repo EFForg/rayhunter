@@ -5,19 +5,30 @@ use std::{
 };
 
 use log::error;
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tokio_util::task::TaskTracker;
 
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub enum NotificationType {
+    Warning,
+    LowBattery,
+}
+
 pub struct Notification {
-    message_type: String,
+    notification_type: NotificationType,
     message: String,
     debounce: Option<Duration>,
 }
 
 impl Notification {
-    pub fn new(message_type: String, message: String, debounce: Option<Duration>) -> Self {
+    pub fn new(
+        notification_type: NotificationType,
+        message: String,
+        debounce: Option<Duration>,
+    ) -> Self {
         Notification {
-            message_type,
+            notification_type,
             message,
             debounce,
         }
@@ -52,6 +63,7 @@ impl NotificationService {
 pub fn run_notification_worker(
     task_tracker: &TaskTracker,
     mut notification_service: NotificationService,
+    enabled_notifications: Vec<NotificationType>,
 ) {
     task_tracker.spawn(async move {
         if let Some(url) = notification_service.url
@@ -65,8 +77,12 @@ pub fn run_notification_worker(
                 loop {
                     match notification_service.rx.try_recv() {
                         Ok(notification) => {
+                            if !enabled_notifications.contains(&notification.notification_type) {
+                                continue;
+                            }
+
                             let status = notification_statuses
-                                .entry(notification.message_type)
+                                .entry(notification.notification_type)
                                 .or_insert_with(|| NotificationStatus {
                                     message: "".to_string(),
                                     needs_sending: true,

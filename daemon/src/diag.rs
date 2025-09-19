@@ -24,7 +24,7 @@ use rayhunter::qmdl::QmdlWriter;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisWriter};
 use crate::display;
-use crate::notifications::Notification;
+use crate::notifications::{Notification, NotificationType};
 use crate::qmdl_store::{RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
 
@@ -207,7 +207,7 @@ impl DiagTask {
                 info!("a heuristic triggered on this run!");
                 self.notification_channel
                     .send(Notification::new(
-                        "heuristic-warning".to_string(),
+                        NotificationType::Warning,
                         format!("Rayhunter has detected a {:?} severity event", max_type),
                         Some(Duration::from_secs(60 * 5)),
                     ))
