@@ -104,7 +104,16 @@ async fn tplink_run_install(
     println!("Connecting via telnet to {admin_ip}");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
 
-    if !skip_sdcard {
+    if skip_sdcard {
+        sdcard_path = "/data/rayhunter-data".to_owned();
+        telnet_send_command(
+            addr,
+            &format!("mkdir -p {sdcard_path}"),
+            "exit code 0",
+            true,
+        )
+        .await?
+    } else {
         if sdcard_path.is_empty() {
             let try_paths = [
                 // TP-Link hardware less than v9.0
