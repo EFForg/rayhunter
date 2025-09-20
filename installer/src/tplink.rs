@@ -295,6 +295,16 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
 }
 
 async fn tplink_launch_telnet_v5(admin_ip: &str) -> Result<(), Error> {
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
+
+    if telnet_send_command(addr, "true", "exit code 0", true)
+        .await
+        .is_ok()
+    {
+        println!("telnet already appears to be running");
+        return Ok(());
+    }
+
     let client: HttpProxyClient =
         hyper_util::client::legacy::Client::<(), ()>::builder(TokioExecutor::new())
             .build(HttpConnector::new());
@@ -315,8 +325,6 @@ async fn tplink_launch_telnet_v5(admin_ip: &str) -> Result<(), Error> {
     println!("Please open above URL in your browser and log into the router to continue.");
 
     let handle = tokio::spawn(async move { axum::serve(listener, app).await });
-
-    let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
 
     while telnet_send_command(addr, "true", "exit code 0", true)
         .await
