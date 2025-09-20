@@ -225,7 +225,10 @@ jobs:
           if-no-files-found: error
 
   build_rayhunter:
-    if: needs.files_changed.outputs.daemon_changed != '0'
+    # build_rust_installer needs this step. so when installer_changed, we need
+    # to build this step too. if we skip this step because only the installer
+    # changed, the build_rust_installer step will be skipped too.
+    if: needs.files_changed.outputs.daemon_changed != '0' || needs.files_changed.outputs.installer_changed != '0'
     needs:
       - check_and_test
       - files_changed
