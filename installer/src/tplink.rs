@@ -315,6 +315,9 @@ async fn tplink_launch_telnet_v5(admin_ip: &str) -> Result<(), Error> {
         sleep(Duration::from_millis(1000)).await;
     }
 
+    // give the JavaScript code some additional time to run and persist the port triggers.
+    sleep(Duration::from_millis(1000)).await;
+
     handle.abort();
 
     Ok(())
