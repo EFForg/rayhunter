@@ -265,7 +265,6 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
         data.extend(br#";window.rayhunterPoll = window.setInterval(() => {
             Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 1, openPort: "2300-2400", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh)", triggerProtocol: "TCP"});
             Globals.models.PTModel.add({applicationName: "rayhunter-daemon", enableState: 1, entryId: 2, openPort: "2400-2500", openProtocol: "TCP", triggerPort: "$(/etc/init.d/rayhunter_daemon start)", triggerProtocol: "TCP"});
-            alert("Success! You can go back to the rayhunter installer.");
             window.clearInterval(window.rayhunterPoll);
         }, 1000);"#);
         response = Response::from_parts(parts, Body::from(Bytes::from(data)));
