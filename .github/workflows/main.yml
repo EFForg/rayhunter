@@ -258,7 +258,7 @@ jobs:
           # what the feature selection in rayhunter-daemon is.
           #
           # https://github.com/rust-lang/cargo/issues/4463
-          CC_armv7_unknown_linux_musleabihf=arm-linux-gnueabihf-gcc cargo build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile=firmware --no-default-features --features ring-tls
+          CC_armv7_unknown_linux_musleabihf=arm-linux-gnueabihf-gcc cargo build-daemon-firmware
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-daemon

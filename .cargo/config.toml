@@ -1,3 +1,11 @@
+[alias]
+# Build the daemon with "firmware" profile and "ring" TLS backend.
+# Requires a cross-compiler (see github actions workflows) and is very slow to build.
+build-daemon-firmware = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls"
+# Build the daemon with "firmware-devel" profile and "rustcrypto" backend.
+# Works with just the Rust toolchain, and is medium-slow to build. Binaries are slightly larger.
+build-daemon-firmware-devel = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware-devel"
+
 [target.aarch64-apple-darwin]
 linker = "rust-lld"
 rustflags = ["-C", "target-feature=+crt-static"]
