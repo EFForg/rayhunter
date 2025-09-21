@@ -36,10 +36,12 @@ rustup target add x86_64-pc-windows-gnu
 Now you can root your device and install Rayhunter by running:
 
 ```sh
-# Profile can be changed to 'firmware-devel' when building for development.
-# Build time will decrease at the expense of binary size.
-cargo build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware
+cargo build-daemon-firmware-devel
+# Alternatively, if you have a cross-compilation toolchain for C installed,
+# you can build it exactly like in CI:
+# CC_armv7_unknown_linux_musleabihf=arm-linux-gnueabihf-gcc cargo build-daemon-firmware
 
+# Build rootshell
 cargo build -p rootshell --bin rootshell --target armv7-unknown-linux-musleabihf --profile firmware
 
 # Replace 'orbic' with your device type if different.
@@ -50,7 +52,7 @@ cargo run -p installer --bin installer orbic
 ### If you're on Windows or can't run the install scripts
 
 * Root your device on Windows using the instructions here: <https://xdaforums.com/t/resetting-verizon-orbic-speed-rc400l-firmware-flash-kajeet.4334899/#post-87855183>
-* Build the web UI using `cd bin/web && npm install && npm run build`
+* Build the web UI using `cd daemon/web && npm install && npm run build`
 * Push the scripts in `scripts/` to `/etc/init.d` on device and make a directory called `/data/rayhunter` using `adb shell` (and sshell for your root shell if you followed the steps above)
 * You also need to copy `config.toml.in` to `/data/rayhunter/config.toml`. Uncomment the `device` line and set the value to your device type if necessary.
 * Then run `./make.sh`, which will build the binary, push it over adb, and restart the device. Once it's restarted, Rayhunter should be running!
