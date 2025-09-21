@@ -71,7 +71,7 @@ pub fn run_battery_notification_worker(
                 error!("Failed to get battery status: {e}");
                 true
             }
-            Ok(status) => status.level < LOW_BATTERY_LEVEL,
+            Ok(status) => status.level <= LOW_BATTERY_LEVEL,
         };
 
         loop {
