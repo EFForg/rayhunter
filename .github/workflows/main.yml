@@ -239,6 +239,8 @@ jobs:
         with:
           targets: armv7-unknown-linux-musleabihf
       - uses: Swatinem/rust-cache@v2
+      - name: Install ARM cross-compilation toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf
       - name: Build rayhunter-daemon (armv7)
         run: |
           pushd daemon/web
@@ -253,7 +255,7 @@ jobs:
           # what the feature selection in rayhunter-daemon is.
           #
           # https://github.com/rust-lang/cargo/issues/4463
-          cargo build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile=firmware
+          CC_armv7_unknown_linux_musleabihf=arm-linux-gnueabihf-gcc cargo build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile=firmware --no-default-features --features ring-tls
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-daemon
