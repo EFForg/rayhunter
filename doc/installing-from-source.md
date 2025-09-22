@@ -36,9 +36,14 @@ rustup target add x86_64-pc-windows-gnu
 Now you can root your device and install Rayhunter by running:
 
 ```sh
+# Build the daemon binary for local development (rustcrypto TLS backend, fast compilation)
+# WARNING: The rustcrypto library, though not known to be insecure, is less well
+# tested than its counterpart and could potentially have severe issues in
+# its cryptographic implementation. We therefore recommend using ring-tls in
+# production builds (see below)
 cargo build-daemon-firmware-devel
-# Alternatively, if you have a cross-compilation toolchain for C installed,
-# you can build it exactly like in CI:
+
+# To build it exactly like in CI (more mature ring TLS backend, slower compilation)
 # CC_armv7_unknown_linux_musleabihf=arm-linux-gnueabihf-gcc cargo build-daemon-firmware
 
 # Build rootshell
