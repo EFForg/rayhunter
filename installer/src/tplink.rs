@@ -40,6 +40,7 @@ struct V3RootResponse {
 
 pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
     let client = reqwest::Client::new();
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
 
     println!("Launching telnet on the device");
 
@@ -85,7 +86,16 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
             anyhow::bail!("Bad result code when trying to reset the language: {result}");
         }
 
-        println!("Detected hardware revision v3");
+        // Final check. On v6, all of the above steps succeed, but telnet may still not be launched.
+        sleep(Duration::from_millis(1000)).await;
+        if telnet_send_command(addr, "true", "exit code 0", true)
+            .await
+            .is_err()
+        {
+            continue;
+        }
+
+        println!("Detected hardware revision v3, successfully opened telnet");
         return Ok(true);
     }
 
