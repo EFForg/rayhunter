@@ -260,6 +260,34 @@ jobs:
           path: target/armv7-unknown-linux-musleabihf/firmware/rayhunter-daemon
           if-no-files-found: error
 
+  build_rayhunter_mips:
+    if: needs.files_changed.outputs.daemon_changed != '0'
+    needs:
+      - check_and_test
+      - files_changed
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+      - uses: Swatinem/rust-cache@v2
+      - name: Build rayhunter-daemon (MIPS)
+        run: |
+          pushd daemon/web
+          npm install
+          npm run build
+          popd
+          cross +nightly build -p rayhunter-daemon --bin rayhunter-daemon --target mips-unknown-linux-musl --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rayhunter-daemon-mips
+          path: target/mips-unknown-linux-musl/release/rayhunter-daemon
+          if-no-files-found: error
+
   build_rust_installer:
     if: needs.files_changed.outputs.installer_changed != '0'
     permissions:
