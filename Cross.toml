@@ -1,0 +1,7 @@
+[build]
+pre-build = []
+
+[target.mips-unknown-linux-musl]
+image = "ghcr.io/cross-rs/mips-unknown-linux-musl:latest"
+# Build std from source since MIPS is Tier 3
+build-std = ["std", "panic_abort"]
