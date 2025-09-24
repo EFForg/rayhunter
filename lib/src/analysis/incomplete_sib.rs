@@ -17,7 +17,7 @@ impl Analyzer for IncompleteSibAnalyzer {
     }
 
     fn get_version(&self) -> u32 {
-        1
+        2
     }
 
     fn analyze_information_element(
@@ -32,7 +32,7 @@ impl Analyzer for IncompleteSibAnalyzer {
             && sib1.scheduling_info_list.0.len() < 2
         {
             return Some(Event {
-                event_type: EventType::Medium,
+                event_type: EventType::Informational,
                 message: "SIB1 scheduling info list was malformed".to_string(),
             });
         }
