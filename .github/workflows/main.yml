@@ -105,6 +105,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@1.89.0
+      with:
+        components: rustfmt, clippy
     - uses: Swatinem/rust-cache@v2
     - name: Check formatting
       run: cargo fmt --all --check
