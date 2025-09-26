@@ -13,6 +13,7 @@ use crate::{
 
 pub mod orbic;
 pub mod tmobile;
+pub mod tplink;
 pub mod wingtech;
 
 const LOW_BATTERY_LEVEL: u8 = 10;
@@ -50,6 +51,7 @@ pub async fn get_battery_status(device: &Device) -> Result<BatteryState, Rayhunt
         Device::Orbic => orbic::get_battery_state().await?,
         Device::Wingtech => wingtech::get_battery_state().await?,
         Device::Tmobile => tmobile::get_battery_state().await?,
+        Device::Tplink => tplink::get_battery_state().await?,
         _ => return Err(RayhunterError::FunctionNotSupportedForDeviceError),
     })
 }
