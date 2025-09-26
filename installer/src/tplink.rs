@@ -99,7 +99,7 @@ pub async fn start_telnet(admin_ip: &str) -> Result<bool, Error> {
         return Ok(true);
     }
 
-    println!("Got a 404 trying to run exploit for hardware revision v3, trying v5 exploit");
+    println!("This doesn't look like a v3 device, trying web-based exploit");
     tplink_launch_telnet_v5(admin_ip).await?;
 
     Ok(false)
