@@ -4,3 +4,4 @@
 - [ ] Added or updated any documentation as needed to support the changes in this PR.
 - [ ] Code has been linted and run through `cargo fmt`
 - [ ] If any new functionality has been added, unit tests were also added
+- [ ] [./CONTRIBUTING.md](../CONTRIBUTING.md) has been read
