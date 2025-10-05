@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use env_logger::Env;
 
 mod orbic;
+mod orbic_auth;
 mod orbic_network;
 mod pinephone;
 mod tmobile;
@@ -76,6 +77,14 @@ struct OrbicNetworkArgs {
     /// IP address for Orbic admin interface, if custom.
     #[arg(long, default_value = "192.168.1.1")]
     admin_ip: String,
+
+    /// Admin username for authentication.
+    #[arg(long, default_value = "admin")]
+    admin_username: String,
+
+    /// Admin password for authentication.
+    #[arg(long)]
+    admin_password: String,
 }
 
 #[derive(Parser, Debug)]
@@ -199,7 +208,7 @@ async fn run() -> Result<(), Error> {
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
         Command::Orbic(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
-        Command::OrbicNetwork(args) => orbic_network::install(args.admin_ip).await.context("\nFailed to install rayhunter on the Orbic RC400L via network exploit")?,
+        Command::OrbicNetwork(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password).await.context("\nFailed to install rayhunter on the Orbic RC400L via network exploit")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
         Command::Util(subcommand) => match subcommand.command {
             UtilSubCommand::Serial(serial_cmd) => {
@@ -237,7 +246,7 @@ async fn run() -> Result<(), Error> {
             UtilSubCommand::WingtechStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Wingtech CT2MHS01")?,
             UtilSubCommand::PinephoneStartAdb => pinephone::start_adb().await.context("\nFailed to start adb on the PinePhone's modem")?,
             UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
-            UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip).await.context("\\nFailed to start telnet on the Orbic RC400L")?,
+            UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip, &args.admin_username, &args.admin_password).await.context("\\nFailed to start telnet on the Orbic RC400L")?,
         }
     }
 

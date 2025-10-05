@@ -18,12 +18,11 @@ macro_rules! echo {
 }
 pub(crate) use echo;
 
-pub async fn telnet_send_command(
+pub async fn telnet_send_command_with_output(
     addr: SocketAddr,
     command: &str,
-    expected_output: &str,
     wait_for_prompt: bool,
-) -> Result<()> {
+) -> Result<String> {
     let stream = TcpStream::connect(addr).await?;
     let (mut reader, mut writer) = stream.into_split();
 
@@ -69,9 +68,19 @@ pub async fn telnet_send_command(
         }
     })
     .await;
-    let string = String::from_utf8_lossy(&read_buf);
-    if !string.contains(expected_output) {
-        bail!("{expected_output:?} not found in: {string}");
+    let string = String::from_utf8_lossy(&read_buf).to_string();
+    Ok(string)
+}
+
+pub async fn telnet_send_command(
+    addr: SocketAddr,
+    command: &str,
+    expected_output: &str,
+    wait_for_prompt: bool,
+) -> Result<()> {
+    let output = telnet_send_command_with_output(addr, command, wait_for_prompt).await?;
+    if !output.contains(expected_output) {
+        bail!("{expected_output:?} not found in: {output}");
     }
     Ok(())
 }
@@ -83,17 +92,18 @@ pub async fn telnet_send_file(
     wait_for_prompt: bool,
 ) -> Result<()> {
     echo!("Sending file {filename} ... ");
-    {
+    let nc_output = {
         let filename = filename.to_owned();
         let handle = tokio::spawn(async move {
-            telnet_send_command(
+            telnet_send_command_with_output(
                 addr,
                 &format!("nc -l -p 8081 >{filename}.tmp"),
-                "",
                 wait_for_prompt,
             )
             .await
         });
+        // wait for nc to become available. if the installer fails with connection refused, this
+        // likely is not high enough.
         sleep(Duration::from_millis(100)).await;
         let mut addr = addr;
         addr.set_port(8081);
@@ -101,11 +111,22 @@ pub async fn telnet_send_file(
         {
             let mut stream = TcpStream::connect(addr).await?;
             stream.write_all(payload).await?;
-            // ensure that stream is dropped before we wait for nc to terminate!
+
+            // if the orbic is sluggish, we need for nc to write the data to disk before
+            // terminating the connection. if we terminate the connection while there is unflushed
+            // data, that data will just not be written from nc's buffer into OS disk buffer. the
+            // symptom is mismatched md5 hashes.
+            //
+            // this is NOT fixed by calling fsync or similar, we're talking about dropped
+            // application buffers here.
+            sleep(Duration::from_millis(1000)).await;
+
+            // ensure that stream is dropped before we wait for nc to terminate.
         }
 
-        handle.await??;
-    }
+        handle.await??
+    };
+
     let checksum = md5::compute(payload);
     telnet_send_command(
         addr,
@@ -113,7 +134,15 @@ pub async fn telnet_send_file(
         &format!("{checksum:x}  {filename}.tmp"),
         wait_for_prompt,
     )
-    .await?;
+    .await
+    .with_context(|| {
+        format!(
+            "File transfer failed. nc command output: '{}'. Expected checksum: {:x}",
+            nc_output.trim(),
+            checksum
+        )
+    })?;
+
     telnet_send_command(
         addr,
         &format!("mv {filename}.tmp {filename}"),
@@ -121,6 +150,7 @@ pub async fn telnet_send_file(
         wait_for_prompt,
     )
     .await?;
+
     println!("ok");
     Ok(())
 }

