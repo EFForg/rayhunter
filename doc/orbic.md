@@ -32,11 +32,14 @@ reliably on Windows than `./installer orbic` does.
 The drawback is that the device's admin password is required. 
 
 1. Connect to the Orbic's network via WiFi or USB tethering
-2. Run `./installer orbic-network`
-3. The installer will ask you to log into the admin UI on `localhost:4000`. The password for that is the same as the WiFi password.
-4. As soon as you're logged in, the installer will continue and reboot the device.
+2. Run `./installer orbic-network --admin-password 'mypassword'`
 
-*note*: On Kajeet devices the default admin password is `$m@rt$p0tc0nf!g`, on most other orbic devices the default admin password is the same as the wifi password. If the password has been changed you can reset it by pressing the button under the back case until the unit restarts. 
+   * On Verizon Orbic, the password is the WiFi password.
+   * On Kajeet/Smartspot devices, the default password is `$m@rt$p0tc0nf!g`
+   * On Moxee-brand devices, check under the battery for the password.
+   * You can reset the password by pressing the button under the back case until the unit restarts.
+
+3. The installer will eventually reboot the device, at which point the device is up and running.
 
 ## Obtaining a shell
 

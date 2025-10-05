@@ -30,11 +30,10 @@ According to [FCC ID 2APQU-K779HSDL](https://fcc.report/FCC-ID/2APQU-K779HSDL), 
 Connect to the hotspot's network using WiFi or USB tethering and run:
 
 ```sh
-./installer orbic-network
+./installer orbic-network --admin-password 'mypassword'
 ```
 
-The installation will ask you to log into the admin UI using a custom URL. The
-password for that is under the battery.
+The password (in place of `mypassword`) is under the battery.
 
 ## Obtaining a shell
 
