@@ -65,7 +65,8 @@ If you have any questions [feel free to open a discussion or chat with us on Mat
 This one is for maintainers of Rayhunter.
 
 1. Make a PR changing the versions in `Cargo.toml` and other files.
-   This could be automated better but right now it's manual.
+   This could be automated better but right now it's manual. You can do this easily with sed:
+   `sed -i "" -E 's/x.x.x/y.y.y/g' */Cargo.toml`
 
 2. Merge PR and make a tag.
 
