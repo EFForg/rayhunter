@@ -4,6 +4,16 @@ Supported in Rayhunter since version 0.3.0.
 
 The TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
 
+## Supported Bands
+
+| Technology | Bands |
+| ---------- | ----- |
+| 4G LTE | B1/B3/B7/B8/B20 (2100/1800/2600/900/800 MHz) |
+| 3G | B1/B8 (2100/900 MHz) |
+| 2G | 850/900/1800/1900 MHz |
+
+*Source: [TP-Link Official Product Page](https://www.tp-link.com/baltic/service-provider/lte-3g/m7350/)*
+
 ## Hardware versions
 
 The TP-Link comes in many different *hardware versions*. Support for installation varies:
