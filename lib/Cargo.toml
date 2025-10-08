@@ -1,6 +1,6 @@
 [package]
 name = "rayhunter"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2024"
 description = "Realtime cellular data decoding and analysis for IMSI catcher detection"
 
