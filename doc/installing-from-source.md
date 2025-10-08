@@ -51,7 +51,8 @@ cargo build -p rootshell --bin rootshell --target armv7-unknown-linux-musleabihf
 
 # Replace 'orbic' with your device type if different.
 # A list of possible values can be found with 'cargo run --bin installer help'.
-cargo run -p installer --bin installer orbic
+# Use FILE_RAYHUNTER_DAEMON to specify the daemon binary path when using development builds:
+FILE_RAYHUNTER_DAEMON=$PWD/target/armv7-unknown-linux-musleabihf/firmware-devel/rayhunter-daemon cargo run -p installer --bin installer orbic
 ```
 
 ### If you're on Windows or can't run the install scripts
