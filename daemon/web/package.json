@@ -20,6 +20,7 @@
         "@sveltejs/kit": "^2.13.0",
         "@sveltejs/vite-plugin-svelte": "^6.2.1",
         "@types/eslint": "^9.6.0",
+        "@types/node": "^24.7.0",
         "autoprefixer": "^10.4.20",
         "eslint": "^9.7.0",
         "eslint-config-prettier": "^9.1.0",
