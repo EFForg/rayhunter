@@ -8,7 +8,7 @@ Once in a rootshell, run:
 
 ```shell
 echo 3 > /usrdata/mode.cfg
-rm -rf /data/rayhunter /etc/init.d/rayhunter-daemon /bin/rootshell.sh
+rm -rf /data/rayhunter /etc/init.d/rayhunter_daemon /bin/rootshell
 reboot
 ```
 
