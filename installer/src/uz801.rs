@@ -54,6 +54,21 @@ pub async fn activate_usb_debug(admin_ip: &str) -> Result<()> {
     let referer = format!("http://{admin_ip}/usbdebug.html");
     let origin = format!("http://{admin_ip}");
 
+    // Check if device is online
+    echo!("Checking if device is online... ");
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()?;
+
+    match client.get(&origin).send().await {
+        Ok(response) if response.status().is_success() => println!("ok"),
+        Ok(response) => anyhow::bail!(
+            "Device at {admin_ip} returned error status: {}",
+            response.status()
+        ),
+        Err(e) => anyhow::bail!("Failed to reach device at {admin_ip}: {}", e),
+    }
+
     let _handle = tokio::spawn(async move {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
