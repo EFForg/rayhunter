@@ -63,11 +63,10 @@ pub async fn activate_usb_debug(admin_ip: &str) -> Result<()> {
     match client.get(&origin).send().await {
         Ok(response) if response.status().is_success() => println!("ok"),
         Ok(response) => anyhow::bail!(
-            "Device at {admin_ip} returned error status: {}", 
+            "Device at {admin_ip} returned error status: {}",
             response.status()
         ),
-        Err(e) => anyhow::bail!(
-            "Failed to reach device at {admin_ip}: {}", e),
+        Err(e) => anyhow::bail!("Failed to reach device at {admin_ip}: {}", e),
     }
 
     let _handle = tokio::spawn(async move {
