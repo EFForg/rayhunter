@@ -1,5 +1,6 @@
 #!/bin/bash -e
 pushd daemon/web
+    [[ -d node_modules ]] || npm install
     npm run build
 popd
 cargo build-daemon-firmware-devel
