@@ -295,7 +295,7 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
         var rayhunterSleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
         var rayhunterPoll = window.setInterval(async () => {
-            Globals.models.PTModel.add({applicationName: "rayhunter-daemon", enableState: 1, entryId: 1, openPort: "2401", openProtocol: "TCP", triggerPort: "$(/etc/init.d/rayhunter_daemon start)", triggerProtocol: "TCP"});
+            Globals.models.PTModel.add({applicationName: "rayhunter-daemon", enableState: 1, entryId: 1, openPort: "2401", openProtocol: "TCP", triggerPort: "$(/etc/init.d/rayhunter_daemon start &)", triggerProtocol: "TCP"});
             console.log("rayhunter: first request succeeded, stopping rayhunter poll loop");
             window.clearInterval(rayhunterPoll);
 
@@ -308,7 +308,7 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
             await rayhunterSleep(1000);
 
             console.log("rayhunter: running second request");
-            Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 2, openPort: "2402", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh)", triggerProtocol: "TCP"});
+            Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 2, openPort: "2402", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh &)", triggerProtocol: "TCP"});
 
             // Do not use alert(), instead replace page with success message. Using alert() will
             // block the event loop in such a way that any background promises are blocked from
