@@ -1,10 +1,10 @@
-#! /bin/sh
+#!/bin/sh
 
 set -e
 
 case "$1" in
-start)
-    echo -n "Starting rayhunter: "
+  start)
+    printf "Starting rayhunter: "
     # Below line may be replaced by the installer with device-specific startup commands, such as mounting the SD card.
     #RAYHUNTER-PRESTART
     start-stop-daemon -S -b --make-pidfile --pidfile /tmp/rayhunter.pid \
@@ -12,7 +12,7 @@ start)
     echo "done"
     ;;
   stop)
-    echo -n "Stopping rayhunter: "
+    printf "Stopping rayhunter: "
     start-stop-daemon -K -p /tmp/rayhunter.pid
     echo "done"
     ;;
