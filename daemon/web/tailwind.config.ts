@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import { breakpoints } from './src/theme';
 
 export default {
     content: ['./src/**/*.{html,js,svelte,ts}'],
@@ -10,6 +11,7 @@ export default {
                 'rayhunter-dark-blue': '#3f3da0',
                 'rayhunter-green': '#94ea18',
             },
+            screens: breakpoints,
         },
     },
 

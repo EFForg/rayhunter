@@ -8,6 +8,8 @@ declare global {
         // interface PageState {}
         // interface Platform {}
     }
+
+    type Breakpoint = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 export {};
