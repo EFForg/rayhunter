@@ -16,19 +16,19 @@ use walkdir::WalkDir;
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    #[arg(short = 'p', long)]
+    #[arg(short = 'p', long, help = "A file or directory of packet captures")]
     path: PathBuf,
 
-    #[arg(short = 'P', long)]
+    #[arg(short = 'P', long, help = "Convert qmdl files to pcap before analysis")]
     pcapify: bool,
 
-    #[arg(long)]
+    #[arg(long, help = "Show why some packets were skipped during analysis")]
     show_skipped: bool,
 
-    #[arg(short, long)]
+    #[arg(short, long, help = "Only print warnings/errors to stdout")]
     quiet: bool,
 
-    #[arg(short, long)]
+    #[arg(short, long, help = "Show debug messages")]
     debug: bool,
 }
 
