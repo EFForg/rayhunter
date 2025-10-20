@@ -1,17 +1,39 @@
-use clap::Parser;
+use chrono::{DateTime, FixedOffset};
+use clap::{Parser, ValueEnum};
 use futures::TryStreamExt;
 use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
-    analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness},
+    analysis::analyzer::{AnalysisRow, AnalyzerConfig, Event, EventType, Harness, ReportMetadata},
     diag::DataType,
     gsmtap_parser,
     pcap::GsmtapPcapWriter,
     qmdl::QmdlReader,
 };
-use std::{collections::HashMap, future, path::PathBuf, pin::pin};
-use tokio::fs::File;
+use serde::Serialize;
+use serde_json::json;
+use std::{collections::HashMap, future, path::{Path, PathBuf}, pin::pin};
+use tokio::fs::{File, OpenOptions};
+use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
+
+#[derive(ValueEnum, Clone, Debug, Default)]
+enum ReportFormat {
+    /// Log detections to stdout
+    #[default]
+    Log,
+    /// Write a newline-delimited JSON file for each report
+    Ndjson,
+}
+
+impl std::fmt::Display for ReportFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReportFormat::Log => write!(f, "log"),
+            ReportFormat::Ndjson => write!(f, "ndjson"),
+        }
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -21,6 +43,14 @@ struct Args {
 
     #[arg(short = 'P', long, help = "Convert qmdl files to pcap before analysis")]
     pcapify: bool,
+
+    #[arg(
+        short = 'r',
+        long,
+        help = "Generate a report for each capture analyzed",
+        default_value_t = ReportFormat::default()
+    )]
+    report: ReportFormat,
 
     #[arg(long, help = "Show why some packets were skipped during analysis")]
     show_skipped: bool,
@@ -32,35 +62,35 @@ struct Args {
     debug: bool,
 }
 
-#[derive(Default)]
-struct Report {
+#[derive(Default, Debug, Clone, Serialize)]
+struct Summary {
     skipped_reasons: HashMap<String, u32>,
     total_messages: u32,
-    warnings: u32,
     skipped: u32,
+}
+
+#[derive(Default)]
+struct LogReport {
+    show_skipped: bool,
+    warnings: u32,
     file_path: String,
 }
 
-impl Report {
-    fn new(file_path: &str) -> Self {
-        Report {
+impl LogReport {
+    fn new(file_path: &str, show_skipped: bool) -> Self {
+        LogReport {
             file_path: file_path.to_string(),
+            show_skipped,
             ..Default::default()
         }
     }
 
-    fn process_row(&mut self, row: AnalysisRow) {
-        self.total_messages += 1;
-        if let Some(reason) = row.skipped_message_reason {
-            *self.skipped_reasons.entry(reason).or_insert(0) += 1;
-            self.skipped += 1;
-            return;
-        }
-        for maybe_event in row.events {
-            let Some(event) = maybe_event else { continue };
-            let Some(timestamp) = row.packet_timestamp else {
-                continue;
-            };
+    fn on_row(
+        &mut self,
+        timestamp: DateTime<FixedOffset>,
+        events: Vec<Event>,
+    ) {
+        for event in events {
             match event.event_type {
                 EventType::Informational => {
                     info!("{}: INFO - {} {}", self.file_path, timestamp, event.message,);
@@ -76,27 +106,137 @@ impl Report {
         }
     }
 
-    fn print_summary(&self, show_skipped: bool) {
-        if show_skipped && self.skipped > 0 {
+    fn on_finish(&self, summary: &Summary) {
+        if self.show_skipped && summary.skipped > 0 {
             info!("{}: messages skipped:", self.file_path);
-            for (reason, count) in self.skipped_reasons.iter() {
+            for (reason, count) in summary.skipped_reasons.iter() {
                 info!("    - {count}: \"{reason}\"");
             }
         }
         info!(
             "{}: {} messages analyzed, {} warnings, {} messages skipped",
-            self.file_path, self.total_messages, self.warnings, self.skipped
+            self.file_path, summary.total_messages, self.warnings, summary.skipped
         );
     }
 }
 
-async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
+struct NdjsonReport {
+    writer: BufWriter<File>,
+}
+
+// The `njson` report has the same output format as the daemon analysis report.
+// See also: [Newline Delimited JSON](https://docs.mulesoft.com/dataweave/latest/dataweave-formats-ndjson)
+impl NdjsonReport {
+    async fn new(
+        file_path: &str,
+        metadata: &ReportMetadata,
+    ) -> std::io::Result<Self> {
+        let mut report_path = PathBuf::from(file_path);
+        report_path.set_extension("ndjson");
+        let writer = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(&report_path)
+            .await
+            .map(BufWriter::new)?;
+
+        let mut r = NdjsonReport {
+            writer,
+        };
+
+        // The first wrote of the ndjson report is the analysis metadata
+        r.write(metadata).await?;
+
+        Ok(r)
+    }
+
+    async fn write<T: Serialize>(&mut self, value: &T) -> std::io::Result<()> {
+        let mut value_str = serde_json::to_string(value).unwrap();
+        value_str.push('\n');
+        self.writer.write_all(value_str.as_bytes()).await
+    }
+
+    async fn on_row(
+        &mut self,
+        timestamp: DateTime<FixedOffset>,
+        events: Vec<Event>,
+    ) {
+        let value = json!({
+            "packet_timestamp": timestamp.to_rfc3339(),
+            "events": events,
+            "skipped_message_reason": "TODO",
+        });
+
+        self.write(&value).await.expect("failed to write ndjson row");
+    }
+
+    async fn on_finish(&mut self, _summary: &Summary) {
+        self.writer.flush().await.expect("failed to flush ndjson report");
+    }
+}
+
+enum ReportDest {
+    Log(LogReport),
+    Ndjson(NdjsonReport),
+}
+
+struct Report {
+    show_skipped: bool,
+    summ: Summary,
+    dest: ReportDest,
+}
+
+impl Report {
+    fn new(show_skipped: bool, dest: ReportDest) -> Self {
+        Report {
+            show_skipped,
+            summ: Summary::default(),
+            dest,
+        }
+    }
+
+    async fn process_row(&mut self, row: AnalysisRow) {
+        self.summ.total_messages += 1;
+        if let Some(reason) = row.skipped_message_reason {
+            *self.summ.skipped_reasons.entry(reason).or_insert(0) += 1;
+            self.summ.skipped += 1;
+
+            if !self.show_skipped {
+                return;
+            }
+        }
+
+        if row.packet_timestamp.is_none() {
+            return;
+        }
+
+        let events = row
+            .events
+            .into_iter()
+            .flatten()
+            .collect::<Vec<Event>>();
+
+        match &mut self.dest {
+            ReportDest::Log(r) => r.on_row(row.packet_timestamp.unwrap(), events),
+            ReportDest::Ndjson(r) => r.on_row(row.packet_timestamp.unwrap(), events).await,
+        }
+    }
+
+    async fn finish(&mut self) {
+        match &mut self.dest {
+            ReportDest::Log(r) => r.on_finish(&self.summ),
+            ReportDest::Ndjson(r) => r.on_finish(&self.summ).await,
+        }
+    }
+}
+
+async fn analyze_pcap(pcap_path: &str, mut report: Report) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let pcap_file = &mut File::open(&pcap_path).await.expect("failed to open file");
     let mut pcap_reader = PcapNgReader::new(pcap_file)
         .await
         .expect("failed to read PCAP file");
-    let mut report = Report::new(pcap_path);
     while let Some(Ok(block)) = pcap_reader.next_block().await {
         let row = match block {
             Block::EnhancedPacket(packet) => harness.analyze_pcap_packet(packet),
@@ -105,12 +245,12 @@ async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
                 continue;
             }
         };
-        report.process_row(row);
+        report.process_row(row).await;
     }
-    report.print_summary(show_skipped);
+    report.finish().await;
 }
 
-async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
+async fn analyze_qmdl(qmdl_path: &str, mut report: Report) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
     let file_size = qmdl_file
@@ -124,17 +264,16 @@ async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
             .as_stream()
             .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
     );
-    let mut report = Report::new(qmdl_path);
     while let Some(container) = qmdl_stream
         .try_next()
         .await
         .expect("failed getting QMDL container")
     {
         for row in harness.analyze_qmdl_messages(container) {
-            report.process_row(row);
+            report.process_row(row).await;
         }
     }
-    report.print_summary(show_skipped);
+    report.finish().await;
 }
 
 async fn pcapify(qmdl_path: &PathBuf) {
@@ -206,16 +345,32 @@ async fn main() {
         let path_str = path.to_str().unwrap();
         // instead of relying on the QMDL extension, can we check if a file is
         // QMDL by inspecting the contents?
+
+        let dest = match args.report {
+            ReportFormat::Log => {
+                let r = LogReport::new(path_str, args.show_skipped);
+                ReportDest::Log(r)
+            }
+            ReportFormat::Ndjson => {
+                let metadata = harness.get_metadata();
+                let ndjson_report = NdjsonReport::new(path_str, &metadata)
+                    .await
+                    .expect("failed to create ndjson report");
+                ReportDest::Ndjson(ndjson_report)
+            }
+        };
+        let report = Report::new(args.show_skipped, dest);
+
         if name_str.ends_with(".qmdl") {
             info!("**** Beginning analysis of {name_str}");
-            analyze_qmdl(path_str, args.show_skipped).await;
+            analyze_qmdl(path_str, report).await;
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
         } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
             info!("**** Beginning analysis of {name_str}");
-            analyze_pcap(path_str, args.show_skipped).await;
+            analyze_pcap(path_str, report).await;
         }
     }
 }
