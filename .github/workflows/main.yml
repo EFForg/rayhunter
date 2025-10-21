@@ -205,7 +205,7 @@ jobs:
           if-no-files-found: error
 
   build_rootshell:
-    if: needs.files_changed.outputs.rootshell_changed != '0'
+    if: needs.files_changed.outputs.rootshell_changed != '0' || needs.files_changed.outputs.installer_changed != '0'
     needs:
       - check_and_test
       - files_changed
