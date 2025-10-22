@@ -47,4 +47,4 @@ After running through the installation procedure, you can obtain a root shell
 by running `adb shell` or `./installer util shell`. Then, inside of that shell
 you can run `/bin/rootshell` to obtain "fakeroot."
 
-If you are using the network installer, there will not be a rootshell and ADB will not be enabled by the installer. Instead you can use `./installer util orbic-start-telnet` and connect to the hotspot using `nc 192.168.1.1 23`. On Windows you might not have `nc` and will have to use WSL for that.
+If you are using the network installer, there will not be a rootshell and ADB will not be enabled by the installer. Instead you can use `./installer util orbic-start-telnet` and connect to the hotspot using `nc 192.168.1.1 24`. On Windows you might not have `nc` and will have to use WSL for that.
