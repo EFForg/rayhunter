@@ -122,8 +122,12 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
 pub async fn start_telnet(
     admin_ip: &str,
     admin_username: &str,
-    admin_password: &str,
+    admin_password: Option<&str>,
 ) -> Result<()> {
+    let Some(admin_password) = admin_password else {
+        anyhow::bail!("--admin-password is required");
+    };
+
     echo!("Logging in and starting telnet... ");
     login_and_exploit(admin_ip, admin_username, admin_password).await?;
     println!("done");
@@ -134,8 +138,22 @@ pub async fn start_telnet(
 pub async fn install(
     admin_ip: String,
     admin_username: String,
-    admin_password: String,
+    admin_password: Option<String>,
 ) -> Result<()> {
+    let Some(admin_password) = admin_password else {
+        eprintln!(
+            "As of version 0.8.0, the orbic installer has been rewritten and now requires an --admin-password parameter."
+        );
+        eprintln!(
+            "Refer to the official documentation at https://efforg.github.io/rayhunter/ for how to find the right value."
+        );
+        eprintln!();
+        eprintln!(
+            "If you are following a tutorial that does not include this parameter, the tutorial is likely outdated. You can run ./installer orbic-usb to access the old installer, however we recommend against it."
+        );
+        anyhow::bail!("exiting");
+    };
+
     echo!("Logging in and starting telnet... ");
     login_and_exploit(&admin_ip, &admin_username, &admin_password).await?;
     println!("done");
