@@ -61,6 +61,10 @@ async fn confirm() -> Result<bool> {
 }
 
 pub async fn install() -> Result<()> {
+    println!(
+        "WARNING: The orbic USB installer is likely to go away in a future version of Rayhunter. Consider using ./installer orbic instead."
+    );
+
     #[cfg(target_os = "windows")]
     {
         let confirmation = confirm().await?;
@@ -84,6 +88,10 @@ pub async fn install() -> Result<()> {
 }
 
 pub async fn shell() -> Result<()> {
+    println!(
+        "WARNING: The orbic USB installer is likely to go away in a future version of Rayhunter. Consider using ./installer util orbic-start-telnet instead."
+    );
+
     println!("opening shell");
     let mut adb_device = get_adb().await?;
     adb_device.shell(&mut std::io::stdin(), Box::new(std::io::stdout()))?;

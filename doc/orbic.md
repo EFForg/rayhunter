@@ -21,6 +21,22 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 | Wifi 5Ghz | a/ac/ax |
 | Wifi 6 | 🮱 |
 
+## Two kinds of installers
+
+The orbic's installation routine underwent many different changes:
+
+1. The ADB-based shellscript prior to version 0.3.0
+2. The Rust-based, ADB-based installer since version 0.3.0
+3. Then, starting with 0.6.0, an alternative installer `./installer
+   orbic-network` that is supposed to work more reliably, can run over the
+   Orbic's WiFi connection and without the need to manually install USB drivers
+   on Windows.
+4. Starting with 0.8.0, `orbic-network` has been renamed to `orbic`, and the
+   old `./installer orbic` is now called `./installer orbic-usb`.
+   
+It's possible that many tutorials out there still refer to some of the old
+installation routines.
+
 ## The Network Installer
 
 Since Rayhunter 0.6.0 there is an alternative, experimental installation
@@ -43,8 +59,11 @@ The drawback is that the device's admin password is required.
 
 ## Obtaining a shell
 
-After running through the installation procedure, you can obtain a root shell
-by running `adb shell` or `./installer util shell`. Then, inside of that shell
-you can run `/bin/rootshell` to obtain "fakeroot."
+After running the installer, there will not be a rootshell and ADB will not be
+enabled. Instead you can use `./installer util orbic-start-telnet` and connect
+to the hotspot using `nc 192.168.1.1 24`. On Windows you might not have `nc`
+and will have to use WSL for that.
 
-If you are using the network installer, there will not be a rootshell and ADB will not be enabled by the installer. Instead you can use `./installer util orbic-start-telnet` and connect to the hotspot using `nc 192.168.1.1 24`. On Windows you might not have `nc` and will have to use WSL for that.
+If you are using an installer prior to 0.7.0 or `orbic-usb` explicitly, you can
+obtain a root shell by running `adb shell` or `./installer util shell`. Then,
+inside of that shell you can run `/bin/rootshell` to obtain "fakeroot."
