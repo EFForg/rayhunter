@@ -26,12 +26,11 @@ struct Args {
 // of the manufacturer's capitalisation.
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Install rayhunter on the Orbic Orbic RC400L.
-    Orbic(InstallOrbic),
+    /// Install rayhunter on the Orbic RC400L using the legacy USB+ADB-based installer.
+    OrbicUsb(InstallOrbic),
     /// Install rayhunter on the Orbic RC400L or Moxee Hotspot via network.
-    ///
-    /// This is an experimental installer for Orbic that does not require USB drivers on Windows.
-    OrbicNetwork(OrbicNetworkArgs),
+    #[clap(alias = "orbic-network")]
+    Orbic(OrbicNetworkArgs),
     /// Install rayhunter on the TMobile TMOHS1.
     Tmobile(TmobileArgs),
     /// Install rayhunter on the Uz801.
@@ -84,7 +83,7 @@ struct OrbicNetworkArgs {
 
     /// Admin password for authentication.
     #[arg(long)]
-    admin_password: String,
+    admin_password: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -207,8 +206,8 @@ async fn run() -> Result<(), Error> {
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
-        Command::Orbic(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
-        Command::OrbicNetwork(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password).await.context("\nFailed to install rayhunter on the Orbic RC400L via network exploit")?,
+        Command::OrbicUsb(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
+        Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
         Command::Util(subcommand) => match subcommand.command {
             UtilSubCommand::Serial(serial_cmd) => {
@@ -246,7 +245,7 @@ async fn run() -> Result<(), Error> {
             UtilSubCommand::WingtechStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Wingtech CT2MHS01")?,
             UtilSubCommand::PinephoneStartAdb => pinephone::start_adb().await.context("\nFailed to start adb on the PinePhone's modem")?,
             UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
-            UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip, &args.admin_username, &args.admin_password).await.context("\\nFailed to start telnet on the Orbic RC400L")?,
+            UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\\nFailed to start telnet on the Orbic RC400L")?,
         }
     }
 
