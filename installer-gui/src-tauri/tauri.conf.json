@@ -1,7 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "installer-gui",
-  "version": "0.1.0",
+  "productName": "Rayhunter Installer",
   "identifier": "com.rayhunter-installer.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -12,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "installer-gui",
+        "title": "Rayhunter Installer",
         "width": 800,
         "height": 600
       }
@@ -23,7 +22,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app", "appimage", "deb", "msi", "nsis", "rpm"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
