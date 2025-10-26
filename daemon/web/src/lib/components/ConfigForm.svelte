@@ -266,7 +266,7 @@
                                 class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                             />
                             <label for="test_analyzer" class="ml-2 block text-sm text-gray-700">
-                                Test Heuristic (noisey!)
+                                Test Heuristic (noisy!)
                             </label>
                         </div>
                     </div>
