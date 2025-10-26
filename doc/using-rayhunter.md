@@ -14,7 +14,7 @@ You can access this UI in one of two ways:
   network and visit <http://192.168.1.1:8080> (orbic)
   or <http://192.168.0.1:8080> (tplink).
 
-  Click past your browser warning you about the connection not being secure, Rayhunter doesn't have HTTPS yet.
+  Click past your browser warning you about the connection not being secure; Rayhunter doesn't have HTTPS yet.
 
   On the **Orbic**, you can find the WiFi network password by going to the Orbic's menu > 2.4 GHz WIFI Info > Enter > find the 8-character password next to the lock 🔒 icon.
   On the **TP-Link**, you can find the WiFi network password by going to the TP-Link's menu > Advanced > Wireless > Basic Settings.
