@@ -75,4 +75,4 @@ On its own this might just be a misconfigured base station (though we have only 
 
 ### Test Analyzer
 
-This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisey so we do not recommend leaving it on but if this alerts it means your Rayhunter device is working! 
+This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisy so we do not recommend leaving it on but if this alerts it means your Rayhunter device is working! 
