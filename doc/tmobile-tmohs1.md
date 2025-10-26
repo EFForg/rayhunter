@@ -37,7 +37,7 @@ According to FCC ID 2APXW-TMOHS1 Test Report No. I20Z61602-WMD02 ([part 1](https
 |   71 | 600 MHz (USDD)   |
 
 ## Installing
-Connect to the TMOHS1's network over wifi or usb tethering.
+Connect to the TMOHS1's network over WiFi or USB tethering.
 
 The device will not accept web requests until after the default password is changed.
 If you have not previously logged in, log in using the default password printed under the battery and change the admin password.

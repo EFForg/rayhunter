@@ -16,7 +16,7 @@ using the `rayhunter-check` CLI tool. That tool contains the same heuristics as
 Rayhunter and will also work on traffic data captured with other tools, such as
 QCSuper.
 
-Since, 0.6.1, `rayhunter-check` is included in the release zipfile.
+Since 0.6.1, `rayhunter-check` is included in the release zipfile.
 
 You can build `rayhunter-check` from source with the following command:
 `cargo build --bin rayhunter-check` 

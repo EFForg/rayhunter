@@ -29,7 +29,7 @@ Wingtechs are abundant on ebay and can also be found on Amazon:
 - <https://www.amazon.com/AT-Turbo-Hotspot-256-Black/dp/B09YWLXVWT>
 
 ## Installing
-Connect to the Wingtech's network over wifi or usb tethering, then run the installer:
+Connect to the Wingtech's network over WiFi or USB tethering, then run the installer:
 
 ```sh
 ./installer wingtech --admin-password 12345678  # replace with your own password
@@ -101,4 +101,4 @@ Caused by:
     3: Network is unreachable (os error 101)
 ```
 
-Make sure your computer is connected to the hotspot's wifi network.
+Make sure your computer is connected to the hotspot's WiFi network.
