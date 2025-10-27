@@ -231,7 +231,7 @@ impl Report {
 
         let packed = OutputRow {
             packet_timestamp: row.packet_timestamp.unwrap(),
-            events: events,
+            events,
             skipped_message_reason: row.skipped_message_reason.clone(),
         };
 
