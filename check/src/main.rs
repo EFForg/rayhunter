@@ -12,7 +12,12 @@ use rayhunter::{
 };
 use serde::Serialize;
 use serde_json::json;
-use std::{collections::HashMap, future, path::{Path, PathBuf}, pin::pin};
+use std::{
+    collections::HashMap,
+    future,
+    path::{Path, PathBuf},
+    pin::pin,
+};
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
@@ -85,11 +90,7 @@ impl LogReport {
         }
     }
 
-    fn on_row(
-        &mut self,
-        timestamp: DateTime<FixedOffset>,
-        events: Vec<Event>,
-    ) {
+    fn on_row(&mut self, timestamp: DateTime<FixedOffset>, events: Vec<Event>) {
         for event in events {
             match event.event_type {
                 EventType::Informational => {
@@ -127,10 +128,7 @@ struct NdjsonReport {
 // The `njson` report has the same output format as the daemon analysis report.
 // See also: [Newline Delimited JSON](https://docs.mulesoft.com/dataweave/latest/dataweave-formats-ndjson)
 impl NdjsonReport {
-    async fn new(
-        file_path: &str,
-        metadata: &ReportMetadata,
-    ) -> std::io::Result<Self> {
+    async fn new(file_path: &str, metadata: &ReportMetadata) -> std::io::Result<Self> {
         let mut report_path = PathBuf::from(file_path);
         report_path.set_extension("ndjson");
         let writer = OpenOptions::new()
@@ -141,9 +139,7 @@ impl NdjsonReport {
             .await
             .map(BufWriter::new)?;
 
-        let mut r = NdjsonReport {
-            writer,
-        };
+        let mut r = NdjsonReport { writer };
 
         // The first wrote of the ndjson report is the analysis metadata
         r.write(metadata).await?;
@@ -157,22 +153,23 @@ impl NdjsonReport {
         self.writer.write_all(value_str.as_bytes()).await
     }
 
-    async fn on_row(
-        &mut self,
-        timestamp: DateTime<FixedOffset>,
-        events: Vec<Event>,
-    ) {
+    async fn on_row(&mut self, timestamp: DateTime<FixedOffset>, events: Vec<Event>) {
         let value = json!({
             "packet_timestamp": timestamp.to_rfc3339(),
             "events": events,
             "skipped_message_reason": "TODO",
         });
 
-        self.write(&value).await.expect("failed to write ndjson row");
+        self.write(&value)
+            .await
+            .expect("failed to write ndjson row");
     }
 
     async fn on_finish(&mut self, _summary: &Summary) {
-        self.writer.flush().await.expect("failed to flush ndjson report");
+        self.writer
+            .flush()
+            .await
+            .expect("failed to flush ndjson report");
     }
 }
 
@@ -211,11 +208,11 @@ impl Report {
             return;
         }
 
-        let events = row
-            .events
-            .into_iter()
-            .flatten()
-            .collect::<Vec<Event>>();
+        let events = row.events.into_iter().flatten().collect::<Vec<Event>>();
+
+        if events.is_empty() {
+            return;
+        }
 
         match &mut self.dest {
             ReportDest::Log(r) => r.on_row(row.packet_timestamp.unwrap(), events),
