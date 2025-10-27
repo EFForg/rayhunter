@@ -11,11 +11,10 @@ use rayhunter::{
     qmdl::QmdlReader,
 };
 use serde::Serialize;
-use serde_json::json;
 use std::{
     collections::HashMap,
     future,
-    path::{Path, PathBuf},
+    path::PathBuf,
     pin::pin,
 };
 use tokio::fs::{File, OpenOptions};
@@ -90,16 +89,16 @@ impl LogReport {
         }
     }
 
-    fn on_row(&mut self, timestamp: DateTime<FixedOffset>, events: Vec<Event>) {
-        for event in events {
+    fn on_row(&mut self, row: OutputRow) {
+        for event in row.events {
             match event.event_type {
                 EventType::Informational => {
-                    info!("{}: INFO - {} {}", self.file_path, timestamp, event.message,);
+                    info!("{}: INFO - {} {}", self.file_path, row.packet_timestamp, event.message,);
                 }
                 EventType::Low | EventType::Medium | EventType::High => {
                     warn!(
                         "{}: WARNING (Severity: {:?}) - {} {}",
-                        self.file_path, event.event_type, timestamp, event.message,
+                        self.file_path, event.event_type, row.packet_timestamp, event.message,
                     );
                     self.warnings += 1;
                 }
@@ -141,7 +140,7 @@ impl NdjsonReport {
 
         let mut r = NdjsonReport { writer };
 
-        // The first wrote of the ndjson report is the analysis metadata
+        // Analysis metadata is written to the first line of the ndjson report format
         r.write(metadata).await?;
 
         Ok(r)
@@ -153,14 +152,8 @@ impl NdjsonReport {
         self.writer.write_all(value_str.as_bytes()).await
     }
 
-    async fn on_row(&mut self, timestamp: DateTime<FixedOffset>, events: Vec<Event>) {
-        let value = json!({
-            "packet_timestamp": timestamp.to_rfc3339(),
-            "events": events,
-            "skipped_message_reason": "TODO",
-        });
-
-        self.write(&value)
+    async fn on_row(&mut self, row: OutputRow) {
+        self.write(&row)
             .await
             .expect("failed to write ndjson row");
     }
@@ -180,7 +173,7 @@ enum ReportDest {
 
 struct Report {
     show_skipped: bool,
-    summ: Summary,
+    summary: Summary,
     dest: ReportDest,
 }
 
@@ -188,16 +181,16 @@ impl Report {
     fn new(show_skipped: bool, dest: ReportDest) -> Self {
         Report {
             show_skipped,
-            summ: Summary::default(),
+            summary: Summary::default(),
             dest,
         }
     }
 
     async fn process_row(&mut self, row: AnalysisRow) {
-        self.summ.total_messages += 1;
-        if let Some(reason) = row.skipped_message_reason {
-            *self.summ.skipped_reasons.entry(reason).or_insert(0) += 1;
-            self.summ.skipped += 1;
+        self.summary.total_messages += 1;
+        if let Some(ref reason) = row.skipped_message_reason {
+            *self.summary.skipped_reasons.entry(reason.clone()).or_insert(0) += 1;
+            self.summary.skipped += 1;
 
             if !self.show_skipped {
                 return;
@@ -214,18 +207,31 @@ impl Report {
             return;
         }
 
+        let packed = OutputRow {
+            packet_timestamp: row.packet_timestamp.unwrap(),
+            events: events,
+            skipped_message_reason: row.skipped_message_reason.clone(),
+        };
+
         match &mut self.dest {
-            ReportDest::Log(r) => r.on_row(row.packet_timestamp.unwrap(), events),
-            ReportDest::Ndjson(r) => r.on_row(row.packet_timestamp.unwrap(), events).await,
+            ReportDest::Log(r) => r.on_row(packed),
+            ReportDest::Ndjson(r) => r.on_row(packed).await,
         }
     }
 
     async fn finish(&mut self) {
         match &mut self.dest {
-            ReportDest::Log(r) => r.on_finish(&self.summ),
-            ReportDest::Ndjson(r) => r.on_finish(&self.summ).await,
+            ReportDest::Log(r) => r.on_finish(&self.summary),
+            ReportDest::Ndjson(r) => r.on_finish(&self.summary).await,
         }
     }
+}
+
+#[derive(Serialize)]
+struct OutputRow {
+    packet_timestamp: DateTime<FixedOffset>,
+    events: Vec<Event>,
+    skipped_message_reason: Option<String>,
 }
 
 async fn analyze_pcap(pcap_path: &str, mut report: Report) {
