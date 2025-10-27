@@ -89,7 +89,7 @@ impl LogReport {
         }
     }
 
-    fn on_row(&mut self, row: OutputRow) {
+    fn process_row(&mut self, row: OutputRow) {
         for event in row.events {
             match event.event_type {
                 EventType::Informational => {
@@ -152,7 +152,7 @@ impl NdjsonReport {
         self.writer.write_all(value_str.as_bytes()).await
     }
 
-    async fn on_row(&mut self, row: OutputRow) {
+    async fn process_row(&mut self, row: OutputRow) {
         self.write(&row)
             .await
             .expect("failed to write ndjson row");
@@ -214,8 +214,8 @@ impl Report {
         };
 
         match &mut self.dest {
-            ReportDest::Log(r) => r.on_row(packed),
-            ReportDest::Ndjson(r) => r.on_row(packed).await,
+            ReportDest::Log(r) => r.process_row(packed),
+            ReportDest::Ndjson(r) => r.process_row(packed).await,
         }
     }
 
