@@ -11,17 +11,12 @@ use rayhunter::{
     qmdl::QmdlReader,
 };
 use serde::Serialize;
-use std::{
-    collections::HashMap,
-    future,
-    path::PathBuf,
-    pin::pin,
-};
+use std::{collections::HashMap, future, path::PathBuf, pin::pin};
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
 
-#[derive(ValueEnum, Clone, Debug, Default)]
+#[derive(ValueEnum, Copy, Clone, Debug, Default)]
 enum ReportFormat {
     /// Log detections to stdout
     #[default]
@@ -93,7 +88,10 @@ impl LogReport {
         for event in row.events {
             match event.event_type {
                 EventType::Informational => {
-                    info!("{}: INFO - {} {}", self.file_path, row.packet_timestamp, event.message,);
+                    info!(
+                        "{}: INFO - {} {}",
+                        self.file_path, row.packet_timestamp, event.message,
+                    );
                 }
                 EventType::Low | EventType::Medium | EventType::High => {
                     warn!(
@@ -106,7 +104,7 @@ impl LogReport {
         }
     }
 
-    fn on_finish(&self, summary: &Summary) {
+    fn finish(&self, summary: &Summary) {
         if self.show_skipped && summary.skipped > 0 {
             info!("{}: messages skipped:", self.file_path);
             for (reason, count) in summary.skipped_reasons.iter() {
@@ -153,12 +151,10 @@ impl NdjsonReport {
     }
 
     async fn process_row(&mut self, row: OutputRow) {
-        self.write(&row)
-            .await
-            .expect("failed to write ndjson row");
+        self.write(&row).await.expect("failed to write ndjson row");
     }
 
-    async fn on_finish(&mut self, _summary: &Summary) {
+    async fn finish(&mut self, _summary: &Summary) {
         self.writer
             .flush()
             .await
@@ -178,7 +174,29 @@ struct Report {
 }
 
 impl Report {
-    fn new(show_skipped: bool, dest: ReportDest) -> Self {
+    async fn build(
+        format: ReportFormat,
+        harness: &Harness,
+        show_skipped: bool,
+        path_str: &str,
+    ) -> Self {
+        let dest = match format {
+            ReportFormat::Log => {
+                let r = LogReport::new(path_str, show_skipped);
+                ReportDest::Log(r)
+            }
+            ReportFormat::Ndjson => {
+                let metadata = harness.get_metadata();
+                let ndjson_report = NdjsonReport::new(path_str, &metadata)
+                    .await
+                    .expect("failed to create ndjson report");
+                ReportDest::Ndjson(ndjson_report)
+            }
+        };
+
+        Report::new_with_dest(show_skipped, dest)
+    }
+    fn new_with_dest(show_skipped: bool, dest: ReportDest) -> Self {
         Report {
             show_skipped,
             summary: Summary::default(),
@@ -189,7 +207,11 @@ impl Report {
     async fn process_row(&mut self, row: AnalysisRow) {
         self.summary.total_messages += 1;
         if let Some(ref reason) = row.skipped_message_reason {
-            *self.summary.skipped_reasons.entry(reason.clone()).or_insert(0) += 1;
+            *self
+                .summary
+                .skipped_reasons
+                .entry(reason.clone())
+                .or_insert(0) += 1;
             self.summary.skipped += 1;
 
             if !self.show_skipped {
@@ -221,8 +243,8 @@ impl Report {
 
     async fn finish(&mut self) {
         match &mut self.dest {
-            ReportDest::Log(r) => r.on_finish(&self.summary),
-            ReportDest::Ndjson(r) => r.on_finish(&self.summary).await,
+            ReportDest::Log(r) => r.finish(&self.summary),
+            ReportDest::Ndjson(r) => r.finish(&self.summary).await,
         }
     }
 }
@@ -234,12 +256,15 @@ struct OutputRow {
     skipped_message_reason: Option<String>,
 }
 
-async fn analyze_pcap(pcap_path: &str, mut report: Report) {
+async fn analyze_pcap(pcap_path: &str, args: &Args) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let pcap_file = &mut File::open(&pcap_path).await.expect("failed to open file");
     let mut pcap_reader = PcapNgReader::new(pcap_file)
         .await
         .expect("failed to read PCAP file");
+
+    let mut report = Report::build(args.report, &harness, args.show_skipped, pcap_path).await;
+
     while let Some(Ok(block)) = pcap_reader.next_block().await {
         let row = match block {
             Block::EnhancedPacket(packet) => harness.analyze_pcap_packet(packet),
@@ -253,7 +278,7 @@ async fn analyze_pcap(pcap_path: &str, mut report: Report) {
     report.finish().await;
 }
 
-async fn analyze_qmdl(qmdl_path: &str, mut report: Report) {
+async fn analyze_qmdl(qmdl_path: &str, args: &Args) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
     let file_size = qmdl_file
@@ -267,6 +292,7 @@ async fn analyze_qmdl(qmdl_path: &str, mut report: Report) {
             .as_stream()
             .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
     );
+    let mut report = Report::build(args.report, &harness, args.show_skipped, qmdl_path).await;
     while let Some(container) = qmdl_stream
         .try_next()
         .await
@@ -349,31 +375,16 @@ async fn main() {
         // instead of relying on the QMDL extension, can we check if a file is
         // QMDL by inspecting the contents?
 
-        let dest = match args.report {
-            ReportFormat::Log => {
-                let r = LogReport::new(path_str, args.show_skipped);
-                ReportDest::Log(r)
-            }
-            ReportFormat::Ndjson => {
-                let metadata = harness.get_metadata();
-                let ndjson_report = NdjsonReport::new(path_str, &metadata)
-                    .await
-                    .expect("failed to create ndjson report");
-                ReportDest::Ndjson(ndjson_report)
-            }
-        };
-        let report = Report::new(args.show_skipped, dest);
-
         if name_str.ends_with(".qmdl") {
             info!("**** Beginning analysis of {name_str}");
-            analyze_qmdl(path_str, report).await;
+            analyze_qmdl(path_str, &args).await;
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
         } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
             info!("**** Beginning analysis of {name_str}");
-            analyze_pcap(path_str, report).await;
+            analyze_pcap(path_str, &args).await;
         }
     }
 }
