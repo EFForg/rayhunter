@@ -91,7 +91,7 @@ pub async fn telnet_send_file(
     payload: &[u8],
     wait_for_prompt: bool,
 ) -> Result<()> {
-    echo!("Sending file {filename} ... ");
+    echo!("Sending file {filename}... ");
     let nc_output = {
         let filename = filename.to_owned();
         let handle = tokio::spawn(async move {
@@ -102,14 +102,31 @@ pub async fn telnet_send_file(
             )
             .await
         });
-        // wait for nc to become available. if the installer fails with connection refused, this
-        // likely is not high enough.
-        sleep(Duration::from_millis(100)).await;
+
         let mut addr = addr;
         addr.set_port(8081);
 
+        let mut stream;
+        let mut attempts = 0;
+
+        loop {
+            // wait for nc to become available, with exponential backoff.
+            //
+            // if the installer fails with connection refused, this
+            // likely is not high enough.
+            sleep(Duration::from_millis(100 * (1 << attempts))).await;
+
+            stream = TcpStream::connect(addr).await;
+            attempts += 1;
+            if stream.is_ok() || attempts > 3 {
+                break;
+            }
+
+            echo!("attempt {attempts}... ");
+        }
+
         {
-            let mut stream = TcpStream::connect(addr).await?;
+            let mut stream = stream?;
             stream.write_all(payload).await?;
 
             // if the orbic is sluggish, we need for nc to write the data to disk before
@@ -122,6 +139,7 @@ pub async fn telnet_send_file(
             sleep(Duration::from_millis(1000)).await;
 
             // ensure that stream is dropped before we wait for nc to terminate.
+            drop(stream);
         }
 
         handle.await??
