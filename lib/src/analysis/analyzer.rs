@@ -315,14 +315,15 @@ impl TryFrom<AnalysisRow> for DetectionRow {
             return Err("No detection events in analysis row");
         }
 
-        match ar.packet_timestamp {
-            Some(timestamp) => Ok(DetectionRow {
-                packet_timestamp: timestamp,
-                events,
-                skipped_message_reason: ar.skipped_message_reason,
-            }),
-            None => Err("Missing packet timestamp"),
-        }
+        let Some(timestamp) = ar.packet_timestamp else {
+            return Err("Missing packet timestamp");
+        };
+
+        Ok(DetectionRow {
+            packet_timestamp: timestamp,
+            events,
+            skipped_message_reason: ar.skipped_message_reason,
+        })
     }
 }
 
