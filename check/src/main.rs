@@ -4,7 +4,9 @@ use futures::TryStreamExt;
 use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
-    analysis::analyzer::{AnalysisRow, AnalyzerConfig, Event, EventType, Harness, ReportMetadata},
+    analysis::analyzer::{
+        AnalysisRow, AnalyzerConfig, DetectionRow, Event, EventType, Harness, ReportMetadata,
+    },
     diag::DataType,
     gsmtap_parser,
     pcap::GsmtapPcapWriter,
@@ -84,7 +86,7 @@ impl LogReport {
         }
     }
 
-    fn process_row(&mut self, row: OutputRow) {
+    fn process_row(&mut self, row: DetectionRow) {
         for event in row.events {
             match event.event_type {
                 EventType::Informational => {
@@ -150,7 +152,7 @@ impl NdjsonReport {
         self.writer.write_all(value_str.as_bytes()).await
     }
 
-    async fn process_row(&mut self, row: OutputRow) {
+    async fn process_row(&mut self, row: DetectionRow) {
         self.write(&row).await.expect("failed to write ndjson row");
     }
 
@@ -219,25 +221,12 @@ impl Report {
             }
         }
 
-        if row.packet_timestamp.is_none() {
-            return;
-        }
-
-        let events = row.events.into_iter().flatten().collect::<Vec<Event>>();
-
-        if events.is_empty() {
-            return;
-        }
-
-        let packed = OutputRow {
-            packet_timestamp: row.packet_timestamp.unwrap(),
-            events,
-            skipped_message_reason: row.skipped_message_reason.clone(),
-        };
-
-        match &mut self.dest {
-            ReportDest::Log(r) => r.process_row(packed),
-            ReportDest::Ndjson(r) => r.process_row(packed).await,
+        let det = DetectionRow::try_from(row).ok();
+        if let Some(detection) = det {
+            match &mut self.dest {
+                ReportDest::Log(r) => r.process_row(detection),
+                ReportDest::Ndjson(r) => r.process_row(detection).await,
+            }
         }
     }
 
@@ -247,13 +236,6 @@ impl Report {
             ReportDest::Ndjson(r) => r.finish(&self.summary).await,
         }
     }
-}
-
-#[derive(Serialize)]
-struct OutputRow {
-    packet_timestamp: DateTime<FixedOffset>,
-    events: Vec<Event>,
-    skipped_message_reason: Option<String>,
 }
 
 async fn analyze_pcap(pcap_path: &str, args: &Args) {
