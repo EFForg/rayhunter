@@ -16,9 +16,11 @@
     },
     "license": "MIT",
     "dependencies": {
+        "@tailwindcss/vite": "^4.1.16",
         "@tauri-apps/api": "^2",
         "@tauri-apps/plugin-opener": "^2",
-        "@tauri-apps/plugin-shell": "^2.3.3"
+        "@tauri-apps/plugin-shell": "^2.3.3",
+        "tailwindcss": "^4.1.16"
     },
     "devDependencies": {
         "@eslint/js": "^9.38.0",
