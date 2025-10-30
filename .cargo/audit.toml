@@ -1,0 +1,10 @@
+[advisories]
+ignore = [
+    # RSA Marvin Attack in `rsa`, dragged in through rustcrypto
+    # this is only used in dev builds
+    "RUSTSEC-2023-0071",
+    # paste crate being unmaintained is not important. it's not dealing with
+    # user-input. we could get rid of this warning by disabling the image
+    # dependency in adb-client.
+    "RUSTSEC-2024-0436",
+]
