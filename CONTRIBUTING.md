@@ -10,7 +10,7 @@ Our issue tracker is [on GitHub](https://github.com/EFForg/rayhunter/issues).
 
 - Issues should be actionable. If you don't have a
   specific feature request or bug report, consider [creating a
-  discussion](https://github.com/EFForg/rayhunter/discussions) instead.
+  discussion](https://github.com/EFForg/rayhunter/discussions) or [joining our Mattermost](https://efforg.github.io/rayhunter/support-feedback-community.html) instead.
 
   Example of a good bug report:
 
