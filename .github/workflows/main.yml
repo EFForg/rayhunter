@@ -25,6 +25,7 @@ jobs:
       web_changed: ${{ steps.files_changed.outputs.web_count }}
       docs_changed: ${{ steps.files_changed.outputs.docs_count }}
       installer_changed: ${{ steps.files_changed.outputs.installer_count }}
+      installer_gui_changed: ${{ steps.files_changed.outputs.installer_gui_count }}
       rootshell_changed: ${{ steps.files_changed.outputs.rootshell_count }}
     steps:
       - uses: actions/checkout@v4
@@ -44,13 +45,15 @@ jobs:
             echo web_count=forced >> "$GITHUB_OUTPUT"
             echo docs_count=forced >> "$GITHUB_OUTPUT"
             echo installer_count=forced >> "$GITHUB_OUTPUT"
+            echo installer_gui_count=forced >> "$GITHUB_OUTPUT"
             echo rootshell_count=forced >> "$GITHUB_OUTPUT"
           else
             echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^installer -e ^check -e ^lib -e ^rootshell -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^lib -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon/web | wc -l)" >> "$GITHUB_OUTPUT"
             echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -e ^book.toml -e ^doc | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "installer_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer | wc -l)" >> "$GITHUB_OUTPUT"
+            echo "installer_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer/ | wc -l)" >> "$GITHUB_OUTPUT"
+            echo "installer_gui_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer-gui | wc -l)" >> "$GITHUB_OUTPUT"
             echo "rootshell_count=$(git diff --name-only $lcommit...HEAD | grep -e ^rootshell | wc -l)" >> "$GITHUB_OUTPUT"
           fi
 
@@ -124,7 +127,35 @@ jobs:
       run: |
         NO_FIRMWARE_BIN=true cargo clippy --verbose
 
-  test_web_frontend:
+  installer_gui_check:
+    # we test the GUI installer separately to:
+    # 1) mimic the default behavior of cargo commands for rayhunter devs where
+    #    installer-gui isn't one of the default workspace packages
+    # 2) avoid slowing down development on changes unrelated to the GUI installer
+    needs: files_changed
+    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    # we run this on macos simply because no additional OS packages need to be
+    # installed
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+    - uses: Swatinem/rust-cache@v2
+    # we don't need to run cargo fmt here because both cargo fmt and cargo
+    # fmt --all runs on all workspace packages so this is handled by
+    # check_and_test above
+    - name: Check
+      run: |
+        SKIP_INSTALLER_COPY=true cargo check --package installer-gui --verbose
+    - name: Run clippy
+      run: |
+        SKIP_INSTALLER_COPY=true cargo clippy --package installer-gui --verbose
+
+  test_daemon_frontend:
     needs: files_changed
     if: needs.files_changed.outputs.web_changed != '0'
     runs-on: ubuntu-latest
@@ -139,6 +170,21 @@ jobs:
       - run: npm run lint
       - run: npm run check
       - run: npm run test
+
+  test_installer_frontend:
+    needs: files_changed
+    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: installer-gui
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install
+      - run: npm run lint
+      - run: npm run check
 
   windows_installer_check_and_test:
     needs: files_changed
@@ -311,6 +357,145 @@ jobs:
         with:
           name: installer-${{ matrix.platform.name }}
           path: target/${{ matrix.platform.target }}/release/installer${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
+          if-no-files-found: error
+
+  build_installer_gui_linux:
+    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - build_rust_installer
+      - files_changed
+      - installer_gui_check
+      - test_installer_frontend
+    strategy:
+      matrix:
+        platform:
+          # we want to use the oldest supported version of ubuntu here to
+          # maximize compatibility with older versions of glibc
+          - name: linux-x64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - name: linux-aarch64
+            os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Install tauri dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils
+      - name: Build GUI installer
+        env:
+          INSTALLER_PATH: "${{ github.workspace }}/installer-${{ matrix.platform.name }}/installer"
+        shell: bash
+        run: |
+          cd installer-gui
+          npm install
+          chmod +x "$INSTALLER_PATH"
+          npm run tauri build -- --target ${{ matrix.platform.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-${{ matrix.platform.name }}-appimage
+          path: target/${{ matrix.platform.target }}/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-${{ matrix.platform.name }}-deb
+          path: target/${{ matrix.platform.target }}/release/bundle/deb/*.deb
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-${{ matrix.platform.name }}-rpm
+          path: target/${{ matrix.platform.target }}/release/bundle/rpm/*.rpm
+          if-no-files-found: error
+
+  build_installer_gui_macos:
+    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - build_rust_installer
+      - files_changed
+      - installer_gui_check
+      - test_installer_frontend
+    strategy:
+      matrix:
+        platform:
+          - name: macos-arm
+            target: aarch64-apple-darwin
+          - name: macos-intel
+            target: x86_64-apple-darwin
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build GUI installer
+        env:
+          INSTALLER_PATH: "${{ github.workspace }}/installer-${{ matrix.platform.name }}/installer"
+        shell: bash
+        run: |
+          cd installer-gui
+          npm install
+          chmod +x "$INSTALLER_PATH"
+          npm run tauri build -- --target ${{ matrix.platform.target }}
+          cd ..
+          mv "target/${{ matrix.platform.target }}/release/bundle/macos/"*.app .
+          zip -r "rayhunter-installer-${{ matrix.platform.name }}.app.zip" ./*.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-${{ matrix.platform.name }}-app
+          path: ./*.app.zip
+          if-no-files-found: error
+
+  build_installer_gui_windows:
+    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - build_rust_installer
+      - files_changed
+      - installer_gui_check
+      - test_installer_frontend
+    env:
+      TARGET: x86_64-pc-windows-msvc
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ env.TARGET }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build GUI installer
+        shell: bash
+        env:
+          INSTALLER_PATH: "${{ github.workspace }}/installer-windows-x86_64/installer.exe"
+        run: |
+          cd installer-gui
+          npm install
+          chmod +x "$INSTALLER_PATH"
+          npm run tauri build -- --target ${{ env.TARGET }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-msi
+          path: target/${{ env.TARGET }}/release/bundle/msi/*.msi
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-exe
+          path: target/${{ env.TARGET }}/release/bundle/nsis/*.exe
           if-no-files-found: error
 
   build_release_zip:

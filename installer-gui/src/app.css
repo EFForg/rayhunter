@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+@theme {
+    --color-rayhunter-blue: #4e4eb1;
+    --color-rayhunter-dark-blue: #3f3da0;
+    --color-rayhunter-green: #94ea18;
+}
