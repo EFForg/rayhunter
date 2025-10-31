@@ -2,6 +2,12 @@ name: Feature Request
 description: Suggest a new feature or improvement to Rayhunter
 labels: ["enhancement"]
 body:
+  - type: checkboxes
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have read [CONTRIBUTING.md](https://github.com/EFForg/rayhunter/blob/main/CONTRIBUTING.md)
+          required: true
   - type: textarea
     id: problem
     attributes:

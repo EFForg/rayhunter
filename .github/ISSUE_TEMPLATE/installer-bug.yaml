@@ -2,6 +2,12 @@ name: Installer Issue
 description: File an bug related to an installer issue.
 labels: ["bug", "installer"]
 body:
+  - type: checkboxes
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have read [CONTRIBUTING.md](https://github.com/EFForg/rayhunter/blob/main/CONTRIBUTING.md)
+          required: true
   - type: input
     attributes:
       label: Rayhunter Version
