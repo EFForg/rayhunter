@@ -14,7 +14,6 @@
         "fix": "eslint --fix .",
         "tauri": "tauri"
     },
-    "license": "MIT",
     "dependencies": {
         "@tailwindcss/vite": "^4.1.16",
         "@tauri-apps/api": "^2",
