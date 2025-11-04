@@ -41,6 +41,8 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
    ```bash
    # For Orbic:
    ./installer orbic --admin-password 'mypassword'
+   # Or install over USB if you want ADB and a root shell (not recommended for most users)
+   ./installer orbic-usb
 
    # For TP-Link:
    ./installer tplink
