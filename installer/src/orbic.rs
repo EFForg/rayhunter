@@ -62,7 +62,7 @@ async fn confirm() -> Result<bool> {
 
 pub async fn install() -> Result<()> {
     println!(
-        "WARNING: The orbic USB installer is likely to go away in a future version of Rayhunter. Consider using ./installer orbic instead."
+        "WARNING: The orbic USB installer is not recommended for most usecases. Consider using ./installer orbic instead, unless you want ADB access for other purposes."
     );
 
     #[cfg(target_os = "windows")]
