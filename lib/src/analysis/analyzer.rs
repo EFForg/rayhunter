@@ -4,6 +4,7 @@ use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
+use crate::analysis::imsi_attach::ImsiAttachAnalyzer;
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType};
 use crate::util::RuntimeMetadata;
 use crate::{diag::MessagesContainer, gsmtap_parser};
@@ -19,13 +20,14 @@ use super::{
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AnalyzerConfig {
-    pub imsi_requested: bool,
+    pub imsi_attach: bool,
     pub connection_redirect_2g_downgrade: bool,
     pub lte_sib6_and_7_downgrade: bool,
     pub null_cipher: bool,
     pub nas_null_cipher: bool,
     pub incomplete_sib: bool,
     pub test_analyzer: bool,
+    pub imsi_requested: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -38,6 +40,7 @@ impl Default for AnalyzerConfig {
             nas_null_cipher: true,
             incomplete_sib: true,
             test_analyzer: false,
+            imsi_attach: true,
         }
     }
 }
@@ -344,6 +347,10 @@ impl Harness {
 
         if analyzer_config.test_analyzer {
             harness.add_analyzer(Box::new(TestAnalyzer {}))
+        }
+
+        if analyzer_config.imsi_attach {
+            harness.add_analyzer(Box::new(ImsiAttachAnalyzer {}));
         }
 
         harness
