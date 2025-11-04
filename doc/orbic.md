@@ -37,26 +37,6 @@ The orbic's installation routine underwent many different changes:
 It's possible that many tutorials out there still refer to some of the old
 installation routines.
 
-## The Network Installer
-
-Since Rayhunter 0.6.0 there is an alternative, experimental installation
-procedure at `./installer orbic-network` that is supposed to eventually replace
-`./installer orbic`. It does not require any USB driver installation and works
-identically on Windows, Mac and Linux. From our testing it works much more
-reliably on Windows than `./installer orbic` does.
-
-The drawback is that the device's admin password is required. 
-
-1. Connect to the Orbic's network via WiFi or USB tethering
-2. Run `./installer orbic-network --admin-password 'mypassword'`
-
-   * On Verizon Orbic, the password is the WiFi password.
-   * On Kajeet/Smartspot devices, the default password is `$m@rt$p0tc0nf!g`
-   * On Moxee-brand devices, check under the battery for the password.
-   * You can reset the password by pressing the button under the back case until the unit restarts.
-
-3. The installer will eventually reboot the device, at which point the device is up and running.
-
 ## Obtaining a shell
 
 After running the installer, there will not be a rootshell and ADB will not be
