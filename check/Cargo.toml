@@ -17,4 +17,5 @@ chrono = "0.4.42"
 
 [dependencies.simple_logger]
 version = "5.0.0"
+# Log to stderr so that report output doesn't potentially collide with system logs
 features = ["stderr"]
