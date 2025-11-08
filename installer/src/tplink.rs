@@ -18,6 +18,7 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::InstallTpLink;
+use crate::output::println;
 use crate::util::{telnet_send_command, telnet_send_file};
 
 type HttpProxyClient = hyper_util::client::legacy::Client<HttpConnector, Body>;

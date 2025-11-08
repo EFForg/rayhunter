@@ -3,6 +3,14 @@ name = "installer"
 version = "0.8.0"
 edition = "2024"
 
+[lib]
+name = "installer"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "installer"
+path = "src/main.rs"
+
 [dependencies]
 aes = "0.8.4"
 anyhow = "1.0.98"
@@ -24,7 +32,7 @@ tokio = { version = "1.44.2", features = ["io-util", "macros", "rt"], default-fe
 tokio-retry2 = "0.5.7"
 tokio-stream = "0.1.17"
 
-[target.'cfg(target_os = "linux")'.dependencies.adb_client]
+[target.'cfg(all(target_os = "linux", not(target_os = "android")))'.dependencies.adb_client]
 git = "https://github.com/EFForg/adb_client.git"
 rev = "e511662394e4fa32865c154c40f81a3d846f700c"
 default-features = false

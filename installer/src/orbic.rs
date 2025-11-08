@@ -1,7 +1,7 @@
 #[cfg(target_os = "windows")]
 use std::io::stdin;
 
-use std::io::{ErrorKind, Write};
+use std::io::ErrorKind;
 use std::path::Path;
 use std::time::Duration;
 
@@ -12,7 +12,8 @@ use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
 use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
-use crate::util::{echo, open_usb_device};
+use crate::output::{print, println};
+use crate::util::open_usb_device;
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 pub const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
@@ -54,7 +55,7 @@ const RNDIS_INTERFACE: u8 = 1;
 #[cfg(target_os = "windows")]
 async fn confirm() -> Result<bool> {
     println!("{}", WINDOWS_WARNING);
-    echo!("Do you wish to proceed? Enter 'yes' to install> ");
+    print!("Do you wish to proceed? Enter 'yes' to install> ");
     let mut input = String::new();
     stdin().read_line(&mut input)?;
     Ok(input.trim() == "yes")
@@ -75,13 +76,13 @@ pub async fn install() -> Result<()> {
     }
 
     let mut adb_device = force_debug_mode().await?;
-    echo!("Installing rootshell... ");
+    print!("Installing rootshell... ");
     setup_rootshell(&mut adb_device).await?;
     println!("done");
-    echo!("Installing rayhunter... ");
+    print!("Installing rayhunter... ");
     let mut adb_device = setup_rayhunter(adb_device).await?;
     println!("done");
-    echo!("Testing rayhunter... ");
+    print!("Testing rayhunter... ");
     test_rayhunter(&mut adb_device).await?;
     println!("done");
     Ok(())
@@ -101,11 +102,11 @@ pub async fn shell() -> Result<()> {
 async fn force_debug_mode() -> Result<ADBUSBDevice> {
     println!("Forcing a switch into the debug mode to enable ADB");
     enable_command_mode()?;
-    echo!("ADB enabled, waiting for reboot... ");
+    print!("ADB enabled, waiting for reboot... ");
     let mut adb_device = get_adb().await?;
     adb_setup_serial(&mut adb_device).await?;
     println!("it's alive!");
-    echo!("Waiting for atfwd_daemon to startup... ");
+    print!("Waiting for atfwd_daemon to startup... ");
     adb_command(&mut adb_device, &["pgrep", "atfwd_daemon"])?;
     println!("done");
     Ok(adb_device)
@@ -159,7 +160,7 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/rayhunter_daemon").await?;
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/misc-daemon").await?;
     println!("done");
-    echo!("Waiting for reboot... ");
+    print!("Waiting for reboot... ");
     adb_at_syscmd(&mut adb_device, "shutdown -r -t 1 now").await?;
     // first wait for shutdown (it can take ~10s)
     tokio::time::timeout(Duration::from_secs(30), async {

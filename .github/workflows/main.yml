@@ -149,11 +149,9 @@ jobs:
     # fmt --all runs on all workspace packages so this is handled by
     # check_and_test above
     - name: Check
-      run: |
-        SKIP_INSTALLER_COPY=true cargo check --package installer-gui --verbose
+      run: NO_FIRMWARE_BIN=true cargo check --package installer-gui --verbose
     - name: Run clippy
-      run: |
-        SKIP_INSTALLER_COPY=true cargo clippy --package installer-gui --verbose
+      run: NO_FIRMWARE_BIN=true cargo clippy --package installer-gui --verbose
 
   test_daemon_frontend:
     needs: files_changed
@@ -391,13 +389,10 @@ jobs:
       - name: Install tauri dependencies
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils
       - name: Build GUI installer
-        env:
-          INSTALLER_PATH: "${{ github.workspace }}/installer-${{ matrix.platform.name }}/installer"
         shell: bash
         run: |
           cd installer-gui
           npm install
-          chmod +x "$INSTALLER_PATH"
           npm run tauri build -- --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
@@ -421,7 +416,8 @@ jobs:
       contents: read
       packages: write
     needs:
-      - build_rust_installer
+      - build_rayhunter
+      - build_rootshell
       - files_changed
       - installer_gui_check
       - test_installer_frontend
@@ -441,13 +437,10 @@ jobs:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
       - name: Build GUI installer
-        env:
-          INSTALLER_PATH: "${{ github.workspace }}/installer-${{ matrix.platform.name }}/installer"
         shell: bash
         run: |
           cd installer-gui
           npm install
-          chmod +x "$INSTALLER_PATH"
           npm run tauri build -- --target ${{ matrix.platform.target }}
           cd ..
           mv "target/${{ matrix.platform.target }}/release/bundle/macos/"*.app .
@@ -480,12 +473,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build GUI installer
         shell: bash
-        env:
-          INSTALLER_PATH: "${{ github.workspace }}/installer-windows-x86_64/installer.exe"
         run: |
           cd installer-gui
           npm install
-          chmod +x "$INSTALLER_PATH"
           npm run tauri build -- --target ${{ env.TARGET }}
       - uses: actions/upload-artifact@v4
         with:
