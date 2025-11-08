@@ -1,19 +1,29 @@
-use anyhow::{Context, Error, bail};
+use anyhow::{Context, Error};
 use clap::{Parser, Subcommand};
 use env_logger::Env;
 
+#[cfg(not(target_os = "android"))]
+use anyhow::bail;
+
+#[cfg(not(target_os = "android"))]
 mod orbic;
 mod orbic_auth;
 mod orbic_network;
+mod output;
+
+#[cfg(not(target_os = "android"))]
 mod pinephone;
 mod tmobile;
 mod tplink;
 mod util;
+#[cfg(not(target_os = "android"))]
 mod uz801;
 mod wingtech;
 
-pub static CONFIG_TOML: &str = include_str!("../../dist/config.toml.in");
-pub static RAYHUNTER_DAEMON_INIT: &str = include_str!("../../dist/scripts/rayhunter_daemon");
+use crate::output::eprintln;
+
+static CONFIG_TOML: &str = include_str!("../../dist/config.toml.in");
+static RAYHUNTER_DAEMON_INIT: &str = include_str!("../../dist/scripts/rayhunter_daemon");
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -27,6 +37,7 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Command {
     /// Install rayhunter on the Orbic RC400L using the legacy USB+ADB-based installer.
+    #[cfg(not(target_os = "android"))]
     OrbicUsb(InstallOrbic),
     /// Install rayhunter on the Orbic RC400L or Moxee Hotspot via network.
     #[clap(alias = "orbic-network")]
@@ -34,8 +45,10 @@ enum Command {
     /// Install rayhunter on the TMobile TMOHS1.
     Tmobile(TmobileArgs),
     /// Install rayhunter on the Uz801.
+    #[cfg(not(target_os = "android"))]
     Uz801(Uz801Args),
     /// Install rayhunter on a PinePhone's Quectel modem.
+    #[cfg(not(target_os = "android"))]
     Pinephone(InstallPinephone),
     /// Install rayhunter on the TP-Link M7350.
     Tplink(InstallTpLink),
@@ -98,14 +111,18 @@ struct Util {
 #[derive(Subcommand, Debug)]
 enum UtilSubCommand {
     /// Send a serial command to the Orbic.
+    #[cfg(not(target_os = "android"))]
     Serial(Serial),
     /// Start an ADB shell
+    #[cfg(not(target_os = "android"))]
     Shell,
     /// Root the Tmobile and launch adb.
+    #[cfg(not(target_os = "android"))]
     TmobileStartAdb(TmobileArgs),
     /// Root the Tmobile and launch telnetd.
     TmobileStartTelnet(TmobileArgs),
     /// Root the Uz801 and launch adb.
+    #[cfg(not(target_os = "android"))]
     Uz801StartAdb(Uz801Args),
     /// Root the tplink and launch telnetd.
     TplinkStartTelnet(TplinkStartTelnet),
@@ -114,8 +131,10 @@ enum UtilSubCommand {
     /// Root the Wingtech and launch adb.
     WingtechStartAdb(WingtechArgs),
     /// Unlock the Pinephone's modem and start adb.
+    #[cfg(not(target_os = "android"))]
     PinephoneStartAdb,
     /// Lock the Pinephone's modem and stop adb.
+    #[cfg(not(target_os = "android"))]
     PinephoneStopAdb,
     /// Root the Orbic and launch telnetd.
     OrbicStartTelnet(OrbicNetworkArgs),
@@ -196,20 +215,24 @@ struct Serial {
     command: Vec<String>,
 }
 
-async fn run() -> Result<(), Error> {
+async fn run(args: Args) -> Result<(), Error> {
     env_logger::Builder::from_env(Env::default().default_filter_or("off")).init();
-    let Args { command } = Args::parse();
 
-    match command {
+    match args.command {
         Command::Tmobile(args) => tmobile::install(args).await.context("Failed to install rayhunter on the Tmobile TMOHS1. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
+        #[cfg(not(target_os = "android"))]
         Command::Uz801(args) => uz801::install(args).await.context("Failed to install rayhunter on the Uz801. Make sure your computer is connected to the hotspot using USB.")?,
         Command::Tplink(tplink) => tplink::main_tplink(tplink).await.context("Failed to install rayhunter on the TP-Link M7350. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
+        #[cfg(not(target_os = "android"))]
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
+        #[cfg(not(target_os = "android"))]
         Command::OrbicUsb(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
         Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
-        Command::Util(subcommand) => match subcommand.command {
+        Command::Util(subcommand) => {
+            match subcommand.command {
+            #[cfg(not(target_os = "android"))]
             UtilSubCommand::Serial(serial_cmd) => {
                 if serial_cmd.root {
                     if !serial_cmd.command.is_empty() {
@@ -228,9 +251,12 @@ async fn run() -> Result<(), Error> {
                     }
                 }
             }
+            #[cfg(not(target_os = "android"))]
             UtilSubCommand::Shell => orbic::shell().await.context("\nFailed to open shell on Orbic RC400L")?,
             UtilSubCommand::TmobileStartTelnet(args) => wingtech::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Tmobile TMOHS1")?,
+            #[cfg(not(target_os = "android"))]
             UtilSubCommand::TmobileStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Tmobile TMOHS1")?,
+            #[cfg(not(target_os = "android"))]
             UtilSubCommand::Uz801StartAdb(args) => uz801::activate_usb_debug(&args.admin_ip).await.context("\nFailed to activate USB debug on the Uz801")?,
             UtilSubCommand::TplinkStartTelnet(options) => {
                 tplink::start_telnet(&options.admin_ip).await?;
@@ -243,19 +269,75 @@ async fn run() -> Result<(), Error> {
             }
             UtilSubCommand::WingtechStartTelnet(args) => wingtech::start_telnet(&args.admin_ip, &args.admin_password).await.context("\nFailed to start telnet on the Wingtech CT2MHS01")?,
             UtilSubCommand::WingtechStartAdb(args) => wingtech::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to start adb on the Wingtech CT2MHS01")?,
+            #[cfg(not(target_os = "android"))]
             UtilSubCommand::PinephoneStartAdb => pinephone::start_adb().await.context("\nFailed to start adb on the PinePhone's modem")?,
+            #[cfg(not(target_os = "android"))]
             UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
             UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\\nFailed to start telnet on the Orbic RC400L")?,
+        }
         }
     }
 
     Ok(())
 }
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() {
-    if let Err(e) = run().await {
-        eprintln!("{e:?}");
-        std::process::exit(1);
+/// Type alias for output callback function
+pub type OutputCallback = Box<dyn Fn(&str) + Send + Sync>;
+
+/// Run the installer with CLI arguments and optional output callback
+///
+/// # Arguments
+/// * `args` - Command-line arguments (including program name as `args[0]`)
+/// * `callback` - Optional function to receive stdout/stderr output
+///
+/// # Returns
+/// * `Ok(())` on success
+/// * `Err(anyhow::Error)` on failure with full error context
+///
+/// # Example
+/// ```no_run
+/// use installer;
+///
+/// // if the callback is None, stdout/stderr is going to be used
+/// let result = installer::run_with_callback(
+///     vec!["installer".to_string(), "orbic-network".to_string(), "--admin-password".to_string(), "12345".to_string()],
+///     Some(Box::new(|output| {
+///         print!("{}", output);
+///     }))
+/// );
+/// ```
+pub fn run_with_callback(args: Vec<String>, callback: Option<OutputCallback>) -> Result<(), Error> {
+    // Set up the callback if provided
+    let _guard;
+    if let Some(cb) = callback {
+        _guard = output::set_output_callback(move |s: &str| cb(s));
     }
+
+    // Create a Tokio runtime and run the installer
+
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .context("Failed to create Tokio runtime")?
+        .block_on(async {
+            // Parse arguments
+            let parsed_args = Args::try_parse_from(&args).context("Failed to parse arguments")?;
+
+            // Run the installer
+            run(parsed_args).await
+        })
+}
+
+/// Get the version of the installer
+pub fn version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
+/// Run the CLI installer
+///
+/// This function is public so the binary can call it, but library users
+/// should use the typed functions like `run_with_callback` instead.
+pub async fn main_cli() -> Result<(), Error> {
+    let args = Args::parse();
+    run(args).await
 }

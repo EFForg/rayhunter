@@ -1,29 +1,18 @@
-use anyhow::Context;
 use tauri::Emitter;
-use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandEvent;
 
 async fn run_installer(app_handle: tauri::AppHandle, args: String) -> anyhow::Result<()> {
-    let (mut rx, _child) = app_handle
-        .shell()
-        .sidecar("installer-cli")
-        .context("Error preparing Rayhunter CLI installer to be run")?
-        .args(args.split_whitespace())
-        .spawn()
-        .context("Error launching Rayhunter CLI installer")?;
-    while let Some(event) = rx.recv().await {
-        match event {
-            CommandEvent::Stdout(line_bytes) | CommandEvent::Stderr(line_bytes) => {
-                let line = String::from_utf8(line_bytes)
-                    .context("Error parsing Rayhunter CLI installer output")?;
+    tauri::async_runtime::spawn_blocking(move || {
+        installer::run_with_callback(
+            // TODO: we should split using something similar to shlex in python
+            args.split_whitespace().map(String::from).collect(),
+            Some(Box::new(move |output| {
                 app_handle
-                    .emit("installer-output", &line)
-                    .context("Error sending Rayhunter CLI installer output to GUI frontend")?;
-            }
-            _ => (),
-        };
-    }
-    Ok(())
+                    .emit("installer-output", output)
+                    .expect("Error sending Rayhunter CLI installer output to GUI frontend");
+            })),
+        )
+    })
+    .await?
 }
 
 #[tauri::command]

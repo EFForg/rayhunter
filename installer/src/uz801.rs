@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::path::Path;
 /// Installer for the Uz801 hotspot.
 ///
@@ -15,30 +14,30 @@ use md5::compute as md5_compute;
 use tokio::time::sleep;
 
 use crate::Uz801Args as Args;
-use crate::util::echo;
+use crate::output::{print, println};
 
 pub async fn install(Args { admin_ip }: Args) -> Result<()> {
     run_install(admin_ip).await
 }
 
 async fn run_install(admin_ip: String) -> Result<()> {
-    echo!("Activating USB debugging backdoor... ");
+    print!("Activating USB debugging backdoor... ");
     activate_usb_debug(&admin_ip).await?;
     println!("ok");
 
-    echo!("Waiting for device reboot and ADB connection... ");
+    print!("Waiting for device reboot and ADB connection... ");
     let mut adb_device = wait_for_adb().await?;
     println!("ok");
 
-    echo!("Installing rayhunter files... ");
+    print!("Installing rayhunter files... ");
     install_rayhunter_files(&mut adb_device).await?;
     println!("ok");
 
-    echo!("Modifying startup script... ");
+    print!("Modifying startup script... ");
     modify_startup_script(&mut adb_device).await?;
     println!("ok");
 
-    echo!("Rebooting the device... ");
+    print!("Rebooting the device... ");
     let _ = adb_device.reboot(adb_client::RebootType::System);
     println!("ok");
 
@@ -55,7 +54,7 @@ pub async fn activate_usb_debug(admin_ip: &str) -> Result<()> {
     let origin = format!("http://{admin_ip}");
 
     // Check if device is online
-    echo!("Checking if device is online... ");
+    print!("Checking if device is online... ");
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(5))
         .build()?;
