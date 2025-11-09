@@ -3,7 +3,6 @@
 [Introduction](./introduction.md)
 - [Installation](./installation.md)
   - [Installing from the latest release](./installing-from-release.md)
-    - [Installing from the latest release (Windows)](./installing-from-release-windows.md)
   - [Installing from source](./installing-from-source.md)
   - [Updating Rayhunter](./updating-rayhunter.md)
 - [Configuration](./configuration.md)
