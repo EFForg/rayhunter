@@ -7,4 +7,4 @@ So, you've got one of the [supported devices](./supported-devices.md), and are r
 
 Already have Rayhunter installed but looking to update?
 
-* [Updateing Rayhunter](./updating-rayhunter.md)
+* [Updating Rayhunter](./updating-rayhunter.md)
