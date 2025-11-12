@@ -178,6 +178,7 @@ pub fn update_ui(
     let display_level = config.ui_level;
     if display_level == 0 {
         info!("Invisible mode, not spawning UI.");
+        return;
     }
 
     let colorblind_mode = config.colorblind_mode;
