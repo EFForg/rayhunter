@@ -1,3 +1,4 @@
 /target
 /book
 .DS_Store
+installer-gui/src-tauri/gen/

@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -9,7 +8,8 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
-use crate::util::{echo, telnet_send_command, telnet_send_file};
+use crate::output::{eprintln, print, println};
+use crate::util::{telnet_send_command, telnet_send_file};
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 #[derive(Deserialize, Debug)]
@@ -128,7 +128,7 @@ pub async fn start_telnet(
         anyhow::bail!("--admin-password is required");
     };
 
-    echo!("Logging in and starting telnet... ");
+    print!("Logging in and starting telnet... ");
     login_and_exploit(admin_ip, admin_username, admin_password).await?;
     println!("done");
 
@@ -154,11 +154,11 @@ pub async fn install(
         anyhow::bail!("exiting");
     };
 
-    echo!("Logging in and starting telnet... ");
+    print!("Logging in and starting telnet... ");
     login_and_exploit(&admin_ip, &admin_username, &admin_password).await?;
     println!("done");
 
-    echo!("Waiting for telnet to become available... ");
+    print!("Waiting for telnet to become available... ");
     wait_for_telnet(&admin_ip).await?;
     println!("done");
 

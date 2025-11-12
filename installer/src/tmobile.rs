@@ -4,7 +4,6 @@
 ///   WT_INNER_VERSION=SW_Q89527AA1_V045_M11_TMO_USR_MP
 ///   WT_PRODUCTION_VERSION=TMOHS1_00.05.20
 ///   WT_HARDWARE_VERSION=89527_1_11
-use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -13,7 +12,8 @@ use anyhow::Result;
 use tokio::time::sleep;
 
 use crate::TmobileArgs as Args;
-use crate::util::{echo, http_ok_every, telnet_send_command, telnet_send_file};
+use crate::output::{print, println};
+use crate::util::{http_ok_every, telnet_send_command, telnet_send_file};
 use crate::wingtech::start_telnet;
 
 pub async fn install(
@@ -26,12 +26,12 @@ pub async fn install(
 }
 
 async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
-    echo!("Starting telnet ... ");
+    print!("Starting telnet ... ");
     start_telnet(&admin_ip, &admin_password).await?;
     sleep(Duration::from_millis(200)).await;
     println!("ok");
 
-    echo!("Connecting via telnet to {admin_ip} ... ");
+    print!("Connecting via telnet to {admin_ip} ... ");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
     telnet_send_command(addr, "mkdir -p /data/rayhunter", "exit code 0", true).await?;
     println!("ok");
@@ -96,7 +96,7 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
     telnet_send_command(addr, "reboot", "exit code 0", true).await?;
     sleep(Duration::from_secs(30)).await;
 
-    echo!("Testing rayhunter ... ");
+    print!("Testing rayhunter ... ");
     let max_failures = 10;
     http_ok_every(
         format!("http://{admin_ip}:8080/index.html"),

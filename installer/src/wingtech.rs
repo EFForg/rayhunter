@@ -4,7 +4,6 @@
 ///   WT_INNER_VERSION=SW_Q89323AA1_V057_M10_CRICKET_USR_MP
 ///   WT_PRODUCTION_VERSION=CT2MHS01_0.04.55
 ///   WT_HARDWARE_VERSION=89323_1_20
-use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -19,7 +18,8 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::WingtechArgs as Args;
-use crate::util::{echo, http_ok_every, telnet_send_command, telnet_send_file};
+use crate::output::{print, println};
+use crate::util::{http_ok_every, telnet_send_command, telnet_send_file};
 
 #[derive(Deserialize)]
 struct LoginResponse {
@@ -89,11 +89,11 @@ pub async fn run_command(admin_ip: &str, admin_password: &str, cmd: &str) -> Res
 }
 
 async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Result<()> {
-    echo!("Starting telnet ... ");
+    print!("Starting telnet ... ");
     start_telnet(&admin_ip, &admin_password).await?;
     println!("ok");
 
-    echo!("Connecting via telnet to {admin_ip} ... ");
+    print!("Connecting via telnet to {admin_ip} ... ");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
     telnet_send_command(addr, "mkdir -p /data/rayhunter", "exit code 0", true).await?;
     println!("ok");
@@ -149,7 +149,7 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
     telnet_send_command(addr, "shutdown -r -t 1 now", "exit code 0", true).await?;
     sleep(Duration::from_secs(30)).await;
 
-    echo!("Testing rayhunter ... ");
+    print!("Testing rayhunter ... ");
     let max_failures = 10;
     http_ok_every(
         format!("http://{admin_ip}:8080/index.html"),

@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
 
@@ -11,7 +10,8 @@ use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
 use tokio::time::sleep;
 
 use crate::orbic::test_rayhunter;
-use crate::util::{echo, open_usb_device};
+use crate::output::{print, println};
+use crate::util::open_usb_device;
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 const USB_VENDOR_ID: u16 = 0x2C7C;
@@ -19,7 +19,7 @@ const USB_PRODUCT_ID: u16 = 0x125;
 const USB_INTERFACE_NUMBER: u8 = 2;
 
 pub async fn install() -> Result<()> {
-    echo!("Unlocking modem ... ");
+    print!("Unlocking modem ... ");
     start_adb().await?;
     sleep(Duration::from_secs(3)).await;
     let mut adb = ADBUSBDevice::new(USB_VENDOR_ID, USB_PRODUCT_ID).unwrap();
@@ -54,13 +54,13 @@ pub async fn install() -> Result<()> {
     adb.run_command(&["shutdown -r -t 1 now"], "exit code 0")?;
     sleep(Duration::from_secs(30)).await;
 
-    echo!("Unlocking modem ... ");
+    print!("Unlocking modem ... ");
     start_adb().await?;
     sleep(Duration::from_secs(3)).await;
     let mut adb = ADBUSBDevice::new(USB_VENDOR_ID, USB_PRODUCT_ID).unwrap();
     println!("ok");
 
-    echo!("Testing rayhunter ... ");
+    print!("Testing rayhunter ... ");
     test_rayhunter(&mut adb).await?;
     println!("ok");
     println!("rayhunter is running on the modem. Use adb to access the web interface.");
@@ -198,7 +198,7 @@ impl Install for ADBUSBDevice {
     /// Transfer a file to the modem's filesystem with adb push.
     /// Validates the file sends successfully to /tmp before overwriting the destination.
     fn install_file(&mut self, dest: &str, mut payload: &[u8]) -> Result<()> {
-        echo!("Sending file {dest} ... ");
+        print!("Sending file {dest} ... ");
         let file_name = Path::new(dest)
             .file_name()
             .ok_or_else(|| anyhow!("{dest} does not have a file name"))?

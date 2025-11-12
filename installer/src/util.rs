@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -10,13 +9,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
 
-macro_rules! echo {
-    ($($arg:tt)*) => {
-        print!($($arg)*);
-        let _ = std::io::stdout().flush();
-    };
-}
-pub(crate) use echo;
+use crate::output::{print, println};
 
 pub async fn telnet_send_command_with_output(
     addr: SocketAddr,
@@ -91,7 +84,7 @@ pub async fn telnet_send_file(
     payload: &[u8],
     wait_for_prompt: bool,
 ) -> Result<()> {
-    echo!("Sending file {filename}... ");
+    print!("Sending file {filename} ... ");
     let nc_output = {
         let filename = filename.to_owned();
         let handle = tokio::spawn(async move {
@@ -122,7 +115,7 @@ pub async fn telnet_send_file(
                 break;
             }
 
-            echo!("attempt {attempts}... ");
+            print!("attempt {attempts}... ");
         }
 
         {
@@ -216,6 +209,7 @@ pub async fn http_ok_every(
 }
 
 /// General function to open a USB device
+#[cfg(not(target_os = "android"))]
 pub fn open_usb_device(vid: u16, pid: u16) -> Result<Option<Device>> {
     let devices = match nusb::list_devices() {
         Ok(d) => d,
