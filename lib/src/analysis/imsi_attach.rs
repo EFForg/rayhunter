@@ -92,7 +92,11 @@ impl Analyzer for ImsiAttachAnalyzer {
         1
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement, _packet_num: usize) -> Option<Event> {
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        _packet_num: usize,
+    ) -> Option<Event> {
         let lte_ie = match ie {
             InformationElement::LTE(inner) => inner,
             _ => return None,
@@ -102,24 +106,30 @@ impl Analyzer for ImsiAttachAnalyzer {
             LteInformationElement::NAS(nas_msg) => {
                 if self.is_imsi_exposing_nas(nas_msg) {
                     let message_type = match nas_msg {
-                        NASMessage::EMMMessage(emm_msg) => match emm_msg {
-                            EMMMessage::EMMIdentityRequest(_) => "EMM Identity Request (IMSI)",
-                            EMMMessage::EMMTrackingAreaUpdateReject(_) => {
-                                "EMM Tracking Area Update Reject"
+                        NASMessage::EMMMessage(emm_msg) => {
+                            match emm_msg {
+                                EMMMessage::EMMIdentityRequest(_) => "EMM Identity Request (IMSI)",
+                                EMMMessage::EMMTrackingAreaUpdateReject(_) => {
+                                    "EMM Tracking Area Update Reject"
+                                }
+                                EMMMessage::EMMAttachReject(reject) => {
+                                    if reject.emm_cause.inner == AttachRejectEMMCause::EPSServicesAndNonEPSServicesNotAllowed {
+                                    "EMM Attach Reject (EPS and Non EPS not allowed"
+                                } else {
+                                    "EMM Attach Reject"
+                                }
+                                }
+                                EMMMessage::EMMDetachRequestMT(_) => "EMM Detach Request (MT)",
+                                EMMMessage::EMMServiceReject(_) => "EMM Service Reject",
+                                _ => "Unknown EMM Message",
                             }
-                            EMMMessage::EMMAttachReject(_) => "EMM Attach Reject",
-                            EMMMessage::EMMDetachRequestMT(_) => "EMM Detach Request (MT)",
-                            EMMMessage::EMMServiceReject(_) => "EMM Service Reject",
-                            _ => "Unknown EMM Message",
-                        },
+                        }
                         _ => "Unknown NAS Message",
                     };
 
                     Some(Event {
                         event_type: EventType::Informational,
-                        message: format!(
-                            "IMSI-exposing NAS message detected: {message_type}."
-                        ),
+                        message: format!("IMSI-exposing NAS message detected: {message_type}."),
                     })
                 } else {
                     None
