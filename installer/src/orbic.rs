@@ -90,7 +90,7 @@ pub async fn install() -> Result<()> {
 
 pub async fn shell() -> Result<()> {
     println!(
-        "WARNING: The orbic USB installer is likely to go away in a future version of Rayhunter. Consider using ./installer util orbic-start-telnet instead."
+        "WARNING: The orbic USB installer is not recommended for most usecases. Consider using ./installer util orbic-shell instead, unless you want ADB access for other purposes."
     );
 
     println!("opening shell");
