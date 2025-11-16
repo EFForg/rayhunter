@@ -9,7 +9,7 @@ use tokio::time::sleep;
 
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
-use crate::util::{telnet_send_command, telnet_send_file};
+use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 #[derive(Deserialize, Debug)]
@@ -269,4 +269,17 @@ async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Root the Orbic device and open an interactive shell
+pub async fn shell(
+    admin_ip: &str,
+    admin_username: &str,
+    admin_password: Option<&str>,
+) -> Result<()> {
+    start_telnet(admin_ip, admin_username, admin_password).await?;
+    eprintln!(
+        "This terminal is fairly limited. The shell prompt may not be visible, but it still accepts commands."
+    );
+    interactive_shell(admin_ip, 24, false).await
 }
