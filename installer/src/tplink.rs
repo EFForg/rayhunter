@@ -19,7 +19,7 @@ use tokio::time::sleep;
 
 use crate::InstallTpLink;
 use crate::output::println;
-use crate::util::{telnet_send_command, telnet_send_file};
+use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
 
 type HttpProxyClient = hyper_util::client::legacy::Client<HttpConnector, Body>;
 
@@ -381,6 +381,12 @@ fn get_rayhunter_daemon(sdcard_path: &str) -> String {
         "#RAYHUNTER-PRESTART",
         &format!("mount /dev/mmcblk0p1 {sdcard_path} || true"),
     )
+}
+
+/// Root the TP-Link device and open an interactive shell
+pub async fn shell(admin_ip: &str) -> Result<(), Error> {
+    start_telnet(admin_ip).await?;
+    interactive_shell(admin_ip, 23, true).await
 }
 
 #[test]

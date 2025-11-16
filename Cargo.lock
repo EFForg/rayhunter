@@ -1802,6 +1802,7 @@ checksum = "65bc07b1a8bc7c85c5f2e110c476c7389b4554ba72af57d8445ea63a576b0876"
 dependencies = [
  "futures-channel",
  "futures-core",
+ "futures-executor",
  "futures-io",
  "futures-sink",
  "futures-task",
@@ -1883,6 +1884,7 @@ version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fa08315bb612088cc391249efdc3bc77536f16c91f6cf495e6fbe85b20a4a81"
 dependencies = [
+ "futures-channel",
  "futures-core",
  "futures-io",
  "futures-macro",
@@ -2455,7 +2457,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.57.0",
+ "windows-core 0.61.2",
 ]
 
 [[package]]
@@ -2711,6 +2713,7 @@ dependencies = [
  "bytes",
  "clap",
  "env_logger 0.11.8",
+ "futures",
  "hyper",
  "hyper-util",
  "md5 0.7.0",
@@ -2719,6 +2722,7 @@ dependencies = [
  "reqwest",
  "serde",
  "sha2",
+ "termios",
  "tokio",
  "tokio-retry2",
  "tokio-stream",
@@ -5970,6 +5974,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "termios"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "411c5bf740737c7918b8b1fe232dca4dc9f8e754b8ad5e20966814001ed0ac6b"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
