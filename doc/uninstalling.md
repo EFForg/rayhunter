@@ -1,23 +1,25 @@
 # Uninstalling
 
+There is no automated uninstallation routine, so this page documents the routine for some devices.
+
 ## Orbic
 
-To uninstall Rayhunter, power on your Orbic device and connect to it via USB. Then, start a rootshell on it by running `adb shell`, followed by `rootshell`.
+Run `./installer util orbic-shell --admin-password mypassword`. Refer to the
+installation instructions for how to find out the admin password.
 
-Once in a rootshell, run:
+Inside, run:
 
 ```shell
-echo 3 > /usrdata/mode.cfg
+echo 3 > /usrdata/mode.cfg  # only relevant if you previously installed via ADB installer
 rm -rf /data/rayhunter /etc/init.d/rayhunter_daemon /bin/rootshell
 reboot
 ```
 
-Your device is now Rayhunter-free, and should no longer be in a rooted ADB-enabled mode.
+Your device is now Rayhunter-free, and should no longer be rooted.
 
 ## TPLink
 
-1. Run `./installer util tplink-start-telnet`
-2. Telnet into the device `telnet 192.168.0.1`
+1. Run `./installer util tplink-shell` to obtain rootshell on the device.
 3. `rm /data/rayhunter /etc/init.d/rayhunter_daemon`
 4. `update-rc.d rayhunter_daemon remove`
 5. (hardware revision v4.0+ only) In `Settings > NAT Settings > Port Triggers` in TP-Link's admin UI, remove any leftover port triggers.
