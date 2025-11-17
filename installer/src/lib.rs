@@ -285,15 +285,6 @@ async fn run(args: Args) -> Result<(), Error> {
 pub type OutputCallback = Box<dyn Fn(&str) + Send + Sync>;
 
 /// Run the installer with CLI arguments and optional output callback
-///
-/// # Arguments
-/// * `args` - Command-line arguments (including program name as `args[0]`)
-/// * `callback` - Optional function to receive stdout/stderr output
-///
-/// # Returns
-/// * `Ok(())` on success
-/// * `Err(anyhow::Error)` on failure with full error context
-///
 /// # Example
 /// ```no_run
 /// use installer;
