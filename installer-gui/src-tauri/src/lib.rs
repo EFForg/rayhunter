@@ -4,7 +4,7 @@ async fn run_installer(app_handle: tauri::AppHandle, args: String) -> anyhow::Re
     tauri::async_runtime::spawn_blocking(move || {
         installer::run_with_callback(
             // TODO: we should split using something similar to shlex in python
-            args.split_whitespace().map(String::from).collect(),
+            args.split_whitespace(),
             Some(Box::new(move |output| {
                 app_handle
                     .emit("installer-output", output)

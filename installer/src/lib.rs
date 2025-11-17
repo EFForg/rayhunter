@@ -285,26 +285,27 @@ async fn run(args: Args) -> Result<(), Error> {
 pub type OutputCallback = Box<dyn Fn(&str) + Send + Sync>;
 
 /// Run the installer with CLI arguments and optional output callback
+///
 /// # Example
 /// ```no_run
 /// use installer;
 ///
 /// // if the callback is None, stdout/stderr is going to be used
 /// let result = installer::run_with_callback(
-///     vec!["installer".to_string(), "orbic-network".to_string(), "--admin-password".to_string(), "12345".to_string()],
+///     ["installer", "orbic-network", "--admin-password", "12345"],
 ///     Some(Box::new(|output| {
 ///         print!("{}", output);
 ///     }))
 /// );
 /// ```
-pub fn run_with_callback(args: Vec<String>, callback: Option<OutputCallback>) -> Result<(), Error> {
-    // Set up the callback if provided
+pub fn run_with_callback<'a>(
+    args: impl IntoIterator<Item = &'a str>,
+    callback: Option<OutputCallback>,
+) -> Result<(), Error> {
     let _guard;
     if let Some(cb) = callback {
         _guard = output::set_output_callback(move |s: &str| cb(s));
     }
-
-    // Create a Tokio runtime and run the installer
 
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -312,7 +313,8 @@ pub fn run_with_callback(args: Vec<String>, callback: Option<OutputCallback>) ->
         .context("Failed to create Tokio runtime")?
         .block_on(async {
             // Parse arguments
-            let parsed_args = Args::try_parse_from(&args).context("Failed to parse arguments")?;
+            let parsed_args =
+                Args::try_parse_from(args.into_iter()).context("Failed to parse arguments")?;
 
             // Run the installer
             run(parsed_args).await
