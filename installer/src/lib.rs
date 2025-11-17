@@ -292,7 +292,7 @@ pub type OutputCallback = Box<dyn Fn(&str) + Send + Sync>;
 ///
 /// // if the callback is None, stdout/stderr is going to be used
 /// let result = installer::run_with_callback(
-///     ["installer", "orbic-network", "--admin-password", "12345"],
+///     ["orbic-network", "--admin-password", "12345"],
 ///     Some(Box::new(|output| {
 ///         print!("{}", output);
 ///     }))
@@ -312,11 +312,9 @@ pub fn run_with_callback<'a>(
         .build()
         .context("Failed to create Tokio runtime")?
         .block_on(async {
-            // Parse arguments
-            let parsed_args =
-                Args::try_parse_from(args.into_iter()).context("Failed to parse arguments")?;
+            let args = std::iter::once("installer").chain(args);
+            let parsed_args = Args::try_parse_from(args).context("Failed to parse arguments")?;
 
-            // Run the installer
             run(parsed_args).await
         })
 }
