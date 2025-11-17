@@ -363,7 +363,8 @@ jobs:
       contents: read
       packages: write
     needs:
-      - build_rust_installer
+      - build_rayhunter
+      - build_rootshell
       - files_changed
       - installer_gui_check
       - test_installer_frontend
@@ -457,7 +458,8 @@ jobs:
       contents: read
       packages: write
     needs:
-      - build_rust_installer
+      - build_rayhunter
+      - build_rootshell
       - files_changed
       - installer_gui_check
       - test_installer_frontend
