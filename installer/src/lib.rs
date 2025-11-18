@@ -327,3 +327,12 @@ pub fn run_with_callback<'a>(
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
+
+/// Run the CLI installer
+///
+/// This function is public so the binary can call it, library users should use `run_with_callback`
+/// instead.
+pub async fn main_cli() -> Result<(), Error> {
+    let args = Args::parse();
+    run(args).await
+}
