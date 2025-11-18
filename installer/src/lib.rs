@@ -313,22 +313,17 @@ pub fn run_with_callback<'a>(
         .context("Failed to create Tokio runtime")?
         .block_on(async {
             let args = std::iter::once("installer").chain(args);
-            let parsed_args = Args::try_parse_from(args).context("Failed to parse arguments")?;
-
-            run(parsed_args).await
+            match Args::try_parse_from(args) {
+                Ok(parsed_args) => run(parsed_args).await,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    Ok(())
+                }
+            }
         })
 }
 
 /// Get the version of the installer
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
-}
-
-/// Run the CLI installer
-///
-/// This function is public so the binary can call it, but library users
-/// should use the typed functions like `run_with_callback` instead.
-pub async fn main_cli() -> Result<(), Error> {
-    let args = Args::parse();
-    run(args).await
 }
