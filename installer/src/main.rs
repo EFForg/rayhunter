@@ -1,7 +1,6 @@
-fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-
-    if let Err(e) = installer::run_with_callback(args.iter().map(|s| s.as_str()), None) {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
+    if let Err(e) = installer::main_cli().await {
         eprintln!("{e:?}");
         std::process::exit(1);
     }
