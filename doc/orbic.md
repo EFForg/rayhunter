@@ -40,9 +40,7 @@ installation routines.
 ## Obtaining a shell
 
 After running the installer, there will not be a rootshell and ADB will not be
-enabled. Instead you can use `./installer util orbic-start-telnet` and connect
-to the hotspot using `nc 192.168.1.1 24`. On Windows you might not have `nc`
-and will have to use WSL for that.
+enabled. Instead you can use `./installer util orbic-shell`.
 
 If you are using an installer prior to 0.7.0 or `orbic-usb` explicitly, you can
 obtain a root shell by running `adb shell` or `./installer util shell`. Then,

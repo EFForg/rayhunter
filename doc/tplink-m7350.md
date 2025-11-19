@@ -42,11 +42,10 @@ Follow the [release installation guide](./installing-from-release.md). Substitut
 
 ## Obtaining a shell
 
-Unlike on Orbic, the installer will not enable ADB. Instead, you can obtain a root shell with the following command:
+You can obtain a root shell with the following command:
 
 ```sh
-./installer util tplink-start-telnet
-telnet 192.168.0.1
+./installer util tplink-shell
 ```
 
 ## Display states
@@ -70,7 +69,7 @@ On hardware revisions starting with v4.0, the installer will modify settings to
 add two port triggers. You can look at `Settings > NAT Settings > Port
 Triggers` in TP-Link's admin UI to see them.
 
-1. One port trigger "rayhunter-root" to launch the telnet shell. This is only needed for installation, and can be removed after upgrade. You can reinstall it using `./installer util tplink-start-telnet`.
+1. One port trigger "rayhunter-root" to launch the telnet shell. This is only needed for installation, and can be removed after upgrade. You can reinstall it using `./installer util tplink-shell`.
 2. One port trigger "rayhunter-daemon" to auto-start Rayhunter on boot. If you remove this, Rayhunter will have to be started manually from shell.
 
 ## Other links

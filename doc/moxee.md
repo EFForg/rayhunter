@@ -30,7 +30,7 @@ According to [FCC ID 2APQU-K779HSDL](https://fcc.report/FCC-ID/2APQU-K779HSDL), 
 Connect to the hotspot's network using WiFi or USB tethering and run:
 
 ```sh
-./installer orbic-network --admin-password 'mypassword'
+./installer orbic --admin-password 'mypassword'
 ```
 
 The password (in place of `mypassword`) is under the battery.
@@ -38,5 +38,5 @@ The password (in place of `mypassword`) is under the battery.
 ## Obtaining a shell
 
 ```sh
-./installer util orbic-start-telnet
+./installer util orbic-shell
 ```

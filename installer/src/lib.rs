@@ -126,6 +126,8 @@ enum UtilSubCommand {
     Uz801StartAdb(Uz801Args),
     /// Root the tplink and launch telnetd.
     TplinkStartTelnet(TplinkStartTelnet),
+    /// Root the TP-Link and open an interactive shell.
+    TplinkShell(TplinkStartTelnet),
     /// Root the Wingtech and launch telnetd.
     WingtechStartTelnet(WingtechArgs),
     /// Root the Wingtech and launch adb.
@@ -138,6 +140,8 @@ enum UtilSubCommand {
     PinephoneStopAdb,
     /// Root the Orbic and launch telnetd.
     OrbicStartTelnet(OrbicNetworkArgs),
+    /// Root the Orbic and open an interactive shell.
+    OrbicShell(OrbicNetworkArgs),
     /// Send a file to the TP-Link device over telnet.
     ///
     /// Before running this utility, you need to make telnet accessible with `installer util
@@ -261,6 +265,9 @@ async fn run(args: Args) -> Result<(), Error> {
             UtilSubCommand::TplinkStartTelnet(options) => {
                 tplink::start_telnet(&options.admin_ip).await?;
             }
+            UtilSubCommand::TplinkShell(options) => {
+                tplink::shell(&options.admin_ip).await.context("\nFailed to open shell on TP-Link device")?;
+            }
             UtilSubCommand::TplinkSendFile(options) => {
                 util::send_file(&options.admin_ip, &options.local_path, &options.remote_path).await?;
             }
@@ -274,6 +281,7 @@ async fn run(args: Args) -> Result<(), Error> {
             #[cfg(not(target_os = "android"))]
             UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
             UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\\nFailed to start telnet on the Orbic RC400L")?,
+            UtilSubCommand::OrbicShell(args) => orbic_network::shell(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\nFailed to open shell on Orbic RC400L")?,
         }
         }
     }

@@ -11,6 +11,9 @@ use tokio::time::{sleep, timeout};
 
 use crate::output::{print, println};
 
+#[cfg(unix)]
+use std::os::fd::AsRawFd;
+
 pub async fn telnet_send_command_with_output(
     addr: SocketAddr,
     command: &str,
@@ -224,4 +227,85 @@ pub fn open_usb_device(vid: u16, pid: u16) -> Result<Option<Device>> {
         }
     }
     Ok(None)
+}
+
+/// Open an interactive shell to a device
+///
+/// Connects to a shell service on the device and forwards stdin/stdout bidirectionally.
+pub async fn interactive_shell(admin_ip: &str, shell_port: u16, raw_mode: bool) -> Result<()> {
+    let shell_addr = SocketAddr::from_str(&format!("{admin_ip}:{shell_port}"))?;
+    let mut stream = TcpStream::connect(shell_addr)
+        .await
+        .context("Failed to connect to shell. Make sure the device is reachable.")?;
+
+    let stdin = tokio::io::stdin();
+
+    #[cfg(unix)]
+    let raw_terminal_guard = if raw_mode {
+        Some(RawTerminal::new(stdin.as_raw_fd())?)
+    } else {
+        None
+    };
+
+    // suppress "unused variable" lint
+    #[cfg(not(unix))]
+    let _used = raw_mode;
+
+    let mut stdio = tokio::io::join(stdin, tokio::io::stdout());
+    let _ = tokio::io::copy_bidirectional(&mut stream, &mut stdio).await;
+
+    // hitting ctrl-d will not print a trailing newline on tplink at least, which messes up the
+    // next prompt
+    println!();
+
+    // The current_thread runtime in tokio will block forever until stdin receives a read error. To
+    // work around this cleanup issue we just exit directly from here.
+    //
+    // This is documented as a flaw in tokio::io::stdin()'s own docs, but the recommended
+    // workaround to spawn your own OS thread doesn't work.
+    //
+    // For some reason this only happens when the terminal is being put in raw mode (removing
+    // RawTerminal fixes it)
+    //
+    // We have to drop the RawTerminal guard before exiting, otherwise we will
+    // mess up the terminal.
+    #[cfg(unix)]
+    drop(raw_terminal_guard);
+    std::process::exit(0)
+}
+
+#[cfg(unix)]
+struct RawTerminal {
+    fd: std::os::fd::RawFd,
+    original_termios: termios::Termios,
+}
+
+#[cfg(unix)]
+impl RawTerminal {
+    fn new(fd: std::os::fd::RawFd) -> Result<Self> {
+        // put terminal in raw mode so that arrow keys, tab etc are correctly forwarded to the
+        // device's shell
+        let mut original_termios = termios::Termios::from_fd(fd)?;
+        let raw_termios = original_termios;
+
+        original_termios.c_lflag &= !(termios::ICANON | termios::ECHO | termios::ISIG);
+        original_termios.c_iflag &= !(termios::IXON | termios::ICRNL);
+        original_termios.c_oflag &= !termios::OPOST;
+        original_termios.c_cc[termios::VMIN] = 1;
+        original_termios.c_cc[termios::VTIME] = 0;
+
+        termios::tcsetattr(fd, termios::TCSANOW, &original_termios)?;
+
+        Ok(RawTerminal {
+            fd,
+            original_termios: raw_termios,
+        })
+    }
+}
+
+#[cfg(unix)]
+impl Drop for RawTerminal {
+    fn drop(&mut self) {
+        let _ = termios::tcsetattr(self.fd, termios::TCSANOW, &self.original_termios);
+    }
 }
