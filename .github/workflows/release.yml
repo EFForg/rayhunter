@@ -14,6 +14,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Ensure all Cargo.toml files have the same version defined.
         run: |
           defined_versions=$(find lib check daemon installer installer-gui rootshell telcom-parser -name Cargo.toml -exec grep ^version {} \; | sort -u | wc -l)
@@ -41,6 +43,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
       - name: Create release
         run: |
