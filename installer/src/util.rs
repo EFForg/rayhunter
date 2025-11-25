@@ -285,20 +285,18 @@ impl RawTerminal {
     fn new(fd: std::os::fd::RawFd) -> Result<Self> {
         // put terminal in raw mode so that arrow keys, tab etc are correctly forwarded to the
         // device's shell
-        let mut original_termios = termios::Termios::from_fd(fd)?;
-        let raw_termios = original_termios;
+        let original_termios = termios::Termios::from_fd(fd)?;
+        let mut new_termios = original_termios;
 
-        original_termios.c_lflag &= !(termios::ICANON | termios::ECHO | termios::ISIG);
-        original_termios.c_iflag &= !(termios::IXON | termios::ICRNL);
-        original_termios.c_oflag &= !termios::OPOST;
-        original_termios.c_cc[termios::VMIN] = 1;
-        original_termios.c_cc[termios::VTIME] = 0;
+        // set flags on the struct
+        termios::cfmakeraw(&mut new_termios);
 
-        termios::tcsetattr(fd, termios::TCSANOW, &original_termios)?;
+        // apply changes
+        termios::tcsetattr(fd, termios::TCSANOW, &new_termios)?;
 
         Ok(RawTerminal {
             fd,
-            original_termios: raw_termios,
+            original_termios,
         })
     }
 }
