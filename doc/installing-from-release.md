@@ -48,7 +48,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
    ./installer tplink
    ```
 
-   * On Verizon Orbic, the password is the WiFi password.
+   * On Verizon Orbic, the password is the 2.4 GHz WiFi password.
    * On Kajeet/Smartspot devices, the default password is `$m@rt$p0tc0nf!g`
    * On Moxee-brand devices, check under the battery for the password.
    * You can reset the password by pressing the button under the back case until the unit restarts.
