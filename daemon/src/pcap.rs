@@ -6,6 +6,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
+use chrono::Duration;
 use log::error;
 use rayhunter::diag::DataType;
 use rayhunter::gsmtap_parser;
@@ -23,6 +24,9 @@ pub async fn get_pcap(
     Path(mut qmdl_name): Path<String>,
 ) -> Result<Response, (StatusCode, String)> {
     let qmdl_store = state.qmdl_store_lock.read().await;
+    let time_correction = state.time_correction.read().await;
+    let offset_seconds = time_correction.offset_seconds();
+
     if qmdl_name.ends_with("pcapng") {
         qmdl_name = qmdl_name.trim_end_matches(".pcapng").to_string();
     }
@@ -46,7 +50,7 @@ pub async fn get_pcap(
     let (reader, writer) = duplex(1024);
 
     tokio::spawn(async move {
-        if let Err(e) = generate_pcap_data(writer, qmdl_file, qmdl_size_bytes).await {
+        if let Err(e) = generate_pcap_data(writer, qmdl_file, qmdl_size_bytes, offset_seconds).await {
             error!("failed to generate PCAP: {e:?}");
         }
     });
@@ -60,6 +64,7 @@ pub async fn generate_pcap_data<R, W>(
     writer: W,
     qmdl_file: R,
     qmdl_size_bytes: usize,
+    offset_seconds: i64,
 ) -> Result<(), Error>
 where
     W: AsyncWrite + Unpin + Send,
@@ -67,6 +72,8 @@ where
 {
     let mut pcap_writer = GsmtapPcapWriter::new(writer).await?;
     pcap_writer.write_iface_header().await?;
+
+    let time_offset = Duration::seconds(offset_seconds);
 
     let mut reader = QmdlReader::new(qmdl_file, Some(qmdl_size_bytes));
     while let Some(container) = reader.get_next_messages_container().await? {
@@ -79,8 +86,11 @@ where
                 Ok(msg) => {
                     let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
                     if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
+                        // Apply time correction to the timestamp
+                        let datetime = timestamp.to_datetime();
+                        let corrected_datetime = datetime + time_offset;
                         pcap_writer
-                            .write_gsmtap_message(gsmtap_msg, timestamp)
+                            .write_gsmtap_message_with_datetime(gsmtap_msg, corrected_datetime)
                             .await?;
                     }
                 }

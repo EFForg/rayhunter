@@ -10,6 +10,7 @@ use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use log::{error, warn};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::fs::write;
 use tokio::io::{AsyncReadExt, copy, duplex};
@@ -25,6 +26,7 @@ use crate::config::Config;
 use crate::display::DisplayState;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
+use crate::time_correction::{TimeCorrection, TimeCorrectionState};
 
 pub struct ServerState {
     pub config_path: String,
@@ -35,6 +37,7 @@ pub struct ServerState {
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_token: CancellationToken,
     pub ui_update_sender: Option<Sender<DisplayState>>,
+    pub time_correction: TimeCorrectionState,
 }
 
 pub async fn get_qmdl(
@@ -159,6 +162,10 @@ pub async fn get_zip(
     };
 
     let qmdl_store_lock = state.qmdl_store_lock.clone();
+    let offset_seconds = {
+        let time_correction = state.time_correction.read().await;
+        time_correction.offset_seconds()
+    };
 
     let (reader, writer) = duplex(8192);
 
@@ -202,7 +209,7 @@ pub async fn get_zip(
                 };
 
                 if let Err(e) =
-                    generate_pcap_data(&mut entry_writer, qmdl_file_for_pcap, qmdl_size_bytes).await
+                    generate_pcap_data(&mut entry_writer, qmdl_file_for_pcap, qmdl_size_bytes, offset_seconds).await
                 {
                     // if we fail to generate the PCAP file, we should still continue and give the
                     // user the QMDL.
@@ -248,6 +255,46 @@ pub async fn debug_set_display_state(
             "display system not available".to_string(),
         ))
     }
+}
+
+/// Get current time correction information
+pub async fn get_time_correction(
+    State(state): State<Arc<ServerState>>,
+) -> Json<TimeCorrection> {
+    let correction = state.time_correction.read().await;
+    Json(correction.clone())
+}
+
+/// Request to sync time from browser/client
+#[derive(Debug, Deserialize)]
+pub struct TimeSyncRequest {
+    /// Browser timestamp in milliseconds since Unix epoch
+    pub browser_timestamp_ms: i64,
+}
+
+/// Response for time sync operation
+#[derive(Debug, Serialize)]
+pub struct TimeSyncResponse {
+    pub success: bool,
+    pub offset_seconds: i64,
+    pub message: String,
+}
+
+/// Sync time correction from browser timestamp
+pub async fn sync_time_from_browser(
+    State(state): State<Arc<ServerState>>,
+    Json(request): Json<TimeSyncRequest>,
+) -> Json<TimeSyncResponse> {
+    let mut correction = state.time_correction.write().await;
+
+    correction.set_from_browser(request.browser_timestamp_ms);
+    let offset = correction.offset_seconds();
+
+    Json(TimeSyncResponse {
+        success: true,
+        offset_seconds: offset,
+        message: format!("Time synchronized. Offset: {} seconds", offset),
+    })
 }
 
 #[cfg(test)]
@@ -316,6 +363,7 @@ mod tests {
             analysis_sender: analysis_tx,
             daemon_restart_token: CancellationToken::new(),
             ui_update_sender: None,
+            time_correction: Arc::new(RwLock::new(TimeCorrection::new())),
         })
     }
 
@@ -350,5 +398,56 @@ mod tests {
             filenames,
             vec![format!("{entry_name}.qmdl"), format!("{entry_name}.pcapng"),]
         );
+    }
+
+    #[tokio::test]
+    async fn test_get_time_correction_default() {
+        let (_temp_dir, store_lock) = create_test_qmdl_store().await;
+        let state = create_test_server_state(store_lock);
+
+        let result = get_time_correction(State(state)).await;
+        let correction = result.0;
+
+        assert_eq!(correction.offset_seconds, 0);
+        assert!(correction.last_updated.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_sync_time_from_browser() {
+        let (_temp_dir, store_lock) = create_test_qmdl_store().await;
+        let state = create_test_server_state(store_lock);
+
+        // Sync with a timestamp 1 hour in the future
+        let browser_timestamp_ms = (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp_millis();
+        let request = TimeSyncRequest { browser_timestamp_ms };
+
+        let result = sync_time_from_browser(State(state.clone()), Json(request)).await;
+        let response = result.0;
+
+        assert!(response.success);
+        // Should be approximately 3600 seconds (1 hour)
+        assert!(response.offset_seconds >= 3595 && response.offset_seconds <= 3605);
+
+        // Verify the offset was persisted
+        let correction = state.time_correction.read().await;
+        assert_eq!(correction.offset_seconds(), response.offset_seconds);
+        assert!(correction.last_updated.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_sync_time_negative_offset() {
+        let (_temp_dir, store_lock) = create_test_qmdl_store().await;
+        let state = create_test_server_state(store_lock);
+
+        // Sync with a timestamp 2 hours in the past
+        let browser_timestamp_ms = (chrono::Utc::now() - chrono::Duration::hours(2)).timestamp_millis();
+        let request = TimeSyncRequest { browser_timestamp_ms };
+
+        let result = sync_time_from_browser(State(state.clone()), Json(request)).await;
+        let response = result.0;
+
+        assert!(response.success);
+        // Should be approximately -7200 seconds (-2 hours)
+        assert!(response.offset_seconds > -7205 && response.offset_seconds < -7195);
     }
 }

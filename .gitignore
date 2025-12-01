@@ -1,3 +1,7 @@
 /target
 /book
 .DS_Store
+
+# devenv
+.devenv/
+.devenv.flake.nix

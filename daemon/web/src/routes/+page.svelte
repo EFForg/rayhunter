@@ -11,6 +11,7 @@
     import ConfigForm from '$lib/components/ConfigForm.svelte';
     import ActionErrors from '$lib/components/ActionErrors.svelte';
     import LogView from '$lib/components/LogView.svelte';
+    import TimeSyncCard from '$lib/components/TimeSyncCard.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -227,7 +228,10 @@
                     </div>
                 </div>
             {/if}
-            <SystemStatsTable stats={system_stats!} />
+            <div class="flex-1 flex flex-col gap-4">
+                <SystemStatsTable stats={system_stats!} />
+                <TimeSyncCard />
+            </div>
         </div>
         <div class="flex flex-col gap-2">
             <div class="flex flex-row gap-2">

@@ -10,6 +10,7 @@ mod pcap;
 mod qmdl_store;
 mod server;
 mod stats;
+mod time_correction;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -22,7 +23,8 @@ use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
 use crate::server::{
-    ServerState, debug_set_display_state, get_config, get_qmdl, get_zip, serve_static, set_config,
+    ServerState, debug_set_display_state, get_config, get_qmdl, get_zip, get_time_correction,
+    serve_static, set_config, sync_time_from_browser,
 };
 use crate::stats::{get_qmdl_manifest, get_system_stats};
 
@@ -68,6 +70,8 @@ fn get_router() -> AppRouter {
         .route("/api/analysis/{name}", post(start_analysis))
         .route("/api/config", get(get_config))
         .route("/api/config", post(set_config))
+        .route("/api/time-correction", get(get_time_correction))
+        .route("/api/time-correction/sync", post(sync_time_from_browser))
         .route("/api/debug/display-state", post(debug_set_display_state))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/{*path}", get(serve_static))
@@ -287,6 +291,7 @@ async fn run_with_config(
         analysis_sender: analysis_tx,
         daemon_restart_token: restart_token.clone(),
         ui_update_sender: Some(ui_update_tx),
+        time_correction: Arc::new(RwLock::new(time_correction::TimeCorrection::new())),
     });
     run_server(&task_tracker, state, shutdown_token.clone()).await;
 
