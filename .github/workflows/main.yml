@@ -559,7 +559,7 @@ jobs:
           else
             mv installer-$platform/installer "$dest"/installer
           fi
-          cp -r rayhunter-check-* rayhunter-daemon rootshell/rootshell dist/* "$dest"/
+          cp -r rayhunter-check-* rayhunter-daemon dist/scripts "$dest"/
           zip -r "$dest.zip" "$dest"
           sha256sum "$dest.zip" > "$dest.zip.sha256"
 
