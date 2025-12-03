@@ -86,3 +86,36 @@ export async function set_config(config: Config): Promise<void> {
         throw new Error(error);
     }
 }
+
+export interface TimeCorrection {
+    offset_seconds: number;
+    last_updated?: string;
+}
+
+export interface TimeSyncResponse {
+    success: boolean;
+    offset_seconds: number;
+    message: string;
+}
+
+export async function get_time_correction(): Promise<TimeCorrection> {
+    return JSON.parse(await req('GET', '/api/time-correction'));
+}
+
+export async function sync_time_from_browser(): Promise<TimeSyncResponse> {
+    const browser_timestamp_ms = Date.now();
+    const response = await fetch('/api/time-correction/sync', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ browser_timestamp_ms }),
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+    }
+
+    return await response.json();
+}

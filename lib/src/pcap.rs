@@ -103,8 +103,16 @@ where
         msg: GsmtapMessage,
         timestamp: Timestamp,
     ) -> Result<(), GsmtapPcapError> {
-        let duration = timestamp
-            .to_datetime()
+        self.write_gsmtap_message_with_datetime(msg, timestamp.to_datetime())
+            .await
+    }
+
+    pub async fn write_gsmtap_message_with_datetime<Tz: chrono::TimeZone>(
+        &mut self,
+        msg: GsmtapMessage,
+        datetime: DateTime<Tz>,
+    ) -> Result<(), GsmtapPcapError> {
+        let duration = datetime
             .signed_duration_since(DateTime::UNIX_EPOCH)
             .to_std()?;
 
