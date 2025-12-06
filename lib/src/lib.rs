@@ -4,6 +4,7 @@ pub mod analysis;
 pub mod diag;
 pub mod gsmtap;
 pub mod gsmtap_parser;
+pub mod gsm_um;
 pub mod hdlc;
 pub mod log_codes;
 pub mod pcap;

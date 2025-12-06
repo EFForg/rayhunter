@@ -3,12 +3,14 @@ use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
+use crate::analysis::gsm_cell_reselection_offset::GsmCellReselectionOffsetAnalyzer;
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType};
 use crate::util::RuntimeMetadata;
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
 use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
+    gsm_cell_reselection_hysteresis::GsmCellReselectionHysteresisAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
     information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
     null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
@@ -323,6 +325,8 @@ impl Harness {
         if analyzer_config.imsi_requested {
             harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new()));
         }
+        harness.add_analyzer(Box::new(GsmCellReselectionHysteresisAnalyzer {}));
+        harness.add_analyzer(Box::new(GsmCellReselectionOffsetAnalyzer {}));
         if analyzer_config.connection_redirect_2g_downgrade {
             harness.add_analyzer(Box::new(ConnectionRedirect2GDowngradeAnalyzer {}));
         }

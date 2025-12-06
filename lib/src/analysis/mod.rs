@@ -8,3 +8,5 @@ pub mod null_cipher;
 pub mod priority_2g_downgrade;
 pub mod test_analyzer;
 pub mod util;
+pub mod gsm_cell_reselection_hysteresis;
+pub mod gsm_cell_reselection_offset;
