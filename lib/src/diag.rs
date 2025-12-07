@@ -131,7 +131,7 @@ pub enum Message {
         log_type: u16,
         timestamp: Timestamp,
         // pass the log type and log length (inner_length - (sizeof(log_type) + sizeof(timestamp)))
-        #[deku(ctx = "*log_type, *inner_length - 12")]
+        #[deku(ctx = "*log_type, inner_length.saturating_sub(12)")]
         body: LogBody,
     },
 
@@ -196,13 +196,13 @@ pub enum LogBody {
         rrc_version_minor: u8,
         rrc_version_major: u8,
         // message length = hdr_len - (sizeof(ext_header_version) + sizeof(rrc_rel) + sizeof(rrc_version_minor) + sizeof(rrc_version_major))
-        #[deku(count = "hdr_len - 4")]
+        #[deku(count = "hdr_len.saturating_sub(4)")]
         msg: Vec<u8>,
     },
     #[deku(id = "0x11eb")]
     IpTraffic {
         // is this right?? based on https://github.com/P1sec/QCSuper/blob/81dbaeee15ec7747e899daa8e3495e27cdcc1264/src/modules/pcap_dump.py#L378
-        #[deku(count = "hdr_len - 8")]
+        #[deku(count = "hdr_len.saturating_sub(8)")]
         msg: Vec<u8>,
     },
     #[deku(id = "0x713a")]
@@ -612,5 +612,30 @@ mod test {
             result[1],
             Err(DiagParsingError::HdlcDecapsulationError(_, _))
         ));
+    }
+
+    #[test]
+    fn test_fuzz_crash_inner_length_underflow() {
+        // Regression test: inner_length < 12 previously caused panic.
+        // Fixed by using saturating_sub in Message::Log body length calculation.
+        let fuzz_data = b"\x10\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        let _ = Message::from_bytes((fuzz_data, 0));
+    }
+
+    #[test]
+    fn test_fuzz_crash_nas_hdr_len_underflow() {
+        // Regression test: hdr_len < 4 previously caused panic in Nas4GMessage.
+        // Fixed by using saturating_sub for msg length calculation.
+        let nas_msg =
+            b"\x10\x00\x14\x00\x02\x00\xe2\xb0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00";
+        let _ = Message::from_bytes((nas_msg, 0));
+    }
+
+    #[test]
+    fn test_fuzz_crash_ip_traffic_hdr_len_underflow() {
+        // Regression test: hdr_len < 8 previously caused panic in IpTraffic.
+        // Fixed by using saturating_sub for msg length calculation.
+        let ip_msg = b"\x10\x00\x14\x00\x02\x00\xeb\x11\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00";
+        let _ = Message::from_bytes((ip_msg, 0));
     }
 }
