@@ -379,7 +379,9 @@ fn get_rayhunter_daemon(sdcard_path: &str) -> String {
     // specific to a particular hardware revision here.
     crate::RAYHUNTER_DAEMON_INIT.replace(
         "#RAYHUNTER-PRESTART",
-        &format!("mount /dev/mmcblk0p1 {sdcard_path} || true"),
+        &format!(
+            "(mount /dev/mmcblk0p1 {sdcard_path} || true) 2>&1 | tee /tmp/rayhunter-mount.log"
+        ),
     )
 }
 
