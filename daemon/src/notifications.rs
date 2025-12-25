@@ -6,8 +6,17 @@ use std::{
 
 use log::error;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tokio_util::task::TaskTracker;
+
+#[derive(Error, Debug)]
+pub enum NotificationError {
+    #[error("HTTP request failed: {0}")]
+    RequestFailed(#[from] reqwest::Error),
+    #[error("Server returned error status: {0}")]
+    HttpError(reqwest::StatusCode),
+}
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum NotificationType {
@@ -61,21 +70,17 @@ impl NotificationService {
 }
 
 /// Sends a notification message to the specified URL.
-/// Returns true if the notification was sent successfully, false otherwise.
-async fn send_notification(http_client: &reqwest::Client, url: &str, message: String) -> bool {
-    match http_client.post(url).body(message).send().await {
-        Ok(response) => {
-            if response.status().is_success() {
-                true
-            } else {
-                error!("Failed to send notification: HTTP {}", response.status());
-                false
-            }
-        }
-        Err(e) => {
-            error!("Failed to send notification to ntfy: {e}");
-            false
-        }
+pub async fn send_notification(
+    http_client: &reqwest::Client,
+    url: &str,
+    message: String,
+) -> Result<(), NotificationError> {
+    let response = http_client.post(url).body(message).send().await?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err(NotificationError::HttpError(response.status()))
     }
 }
 
@@ -144,13 +149,18 @@ pub fn run_notification_worker(
                         }
                     }
 
-                    if send_notification(&http_client, &url, notification.message.clone()).await {
-                        notification.last_sent = Some(Instant::now());
-                        notification.failed_since_last_success = 0;
-                        notification.needs_sending = false;
-                    } else {
-                        notification.failed_since_last_success += 1;
-                        notification.last_attempt = Some(Instant::now());
+                    match send_notification(&http_client, &url, notification.message.clone()).await
+                    {
+                        Ok(()) => {
+                            notification.last_sent = Some(Instant::now());
+                            notification.failed_since_last_success = 0;
+                            notification.needs_sending = false;
+                        }
+                        Err(e) => {
+                            error!("Failed to send notification: {e}");
+                            notification.failed_since_last_success += 1;
+                            notification.last_attempt = Some(Instant::now());
+                        }
                     }
                 }
 

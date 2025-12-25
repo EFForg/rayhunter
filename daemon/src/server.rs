@@ -136,6 +136,40 @@ pub async fn set_config(
     ))
 }
 
+pub async fn test_notification(
+    State(state): State<Arc<ServerState>>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let url = state.config.ntfy_url.as_ref().ok_or((
+        StatusCode::BAD_REQUEST,
+        "No notification URL configured".to_string(),
+    ))?;
+
+    if url.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Notification URL is empty".to_string(),
+        ));
+    }
+
+    let http_client = reqwest::Client::new();
+    let message = "Test notification from Rayhunter".to_string();
+
+    crate::notifications::send_notification(&http_client, url, message)
+        .await
+        .map(|()| {
+            (
+                StatusCode::OK,
+                "Test notification sent successfully".to_string(),
+            )
+        })
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to send test notification: {e}"),
+            )
+        })
+}
+
 pub async fn get_zip(
     State(state): State<Arc<ServerState>>,
     Path(entry_name): Path<String>,
