@@ -13,7 +13,7 @@ path = "src/lib.rs"
 bytes = "1.5.0"
 chrono = { version = "0.4.31", features = ["serde"] }
 crc = "3.0.1"
-deku = { version = "0.18.0", features = ["logging"] }
+deku = { version = "0.20.0", features = ["logging"] }
 libc = "0.2.150"
 log = "0.4.20"
 nix = { version = "0.29.0", features = ["feature"] }
