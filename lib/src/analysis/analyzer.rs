@@ -8,6 +8,7 @@ use crate::util::RuntimeMetadata;
 use crate::{diag::MessagesContainer, gsmtap_parser};
 
 use super::{
+    cell_fingerprint::CellFingerprintAnalyzer,
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
     information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
@@ -24,6 +25,7 @@ pub struct AnalyzerConfig {
     pub null_cipher: bool,
     pub nas_null_cipher: bool,
     pub incomplete_sib: bool,
+    pub cell_fingerprint: bool,
     pub test_analyzer: bool,
 }
 
@@ -36,6 +38,7 @@ impl Default for AnalyzerConfig {
             null_cipher: true,
             nas_null_cipher: true,
             incomplete_sib: true,
+            cell_fingerprint: true,
             test_analyzer: false,
         }
     }
@@ -339,6 +342,10 @@ impl Harness {
 
         if analyzer_config.incomplete_sib {
             harness.add_analyzer(Box::new(IncompleteSibAnalyzer {}))
+        }
+
+        if analyzer_config.cell_fingerprint {
+            harness.add_analyzer(Box::new(CellFingerprintAnalyzer::new()))
         }
 
         if analyzer_config.test_analyzer {
