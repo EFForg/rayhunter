@@ -5,7 +5,7 @@ use crc::{Algorithm, Crc};
 use deku::prelude::*;
 
 use crate::hdlc::{self, hdlc_decapsulate};
-use log::{error, warn};
+use log::warn;
 use thiserror::Error;
 
 pub const MESSAGE_TERMINATOR: u8 = 0x7e;
@@ -141,6 +141,7 @@ pub enum Message {
     // pass those opcodes down to their respective parsers.
     #[deku(id_pat = "_")]
     Response {
+        id: u8,
         opcode: u32,
         subopcode: u32,
         status: u32,
@@ -189,7 +190,8 @@ pub enum LogBody {
     // * 0xb0ed: plain EMM NAS message (outgoing)
     #[deku(id_pat = "0xb0e2 | 0xb0e3 | 0xb0ec | 0xb0ed")]
     Nas4GMessage {
-        #[deku(ctx = "log_type")]
+        log_type: u16,
+        #[deku(ctx = "*log_type")]
         direction: Nas4GMessageDirection,
         ext_header_version: u8,
         rrc_rel: u8,
