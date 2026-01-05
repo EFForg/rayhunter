@@ -190,6 +190,7 @@ pub enum LogBody {
     // * 0xb0ed: plain EMM NAS message (outgoing)
     #[deku(id_pat = "0xb0e2 | 0xb0e3 | 0xb0ec | 0xb0ed")]
     Nas4GMessage {
+        #[deku(skip, default = "log_type")]
         log_type: u16,
         #[deku(ctx = "*log_type")]
         direction: Nas4GMessageDirection,
@@ -626,11 +627,30 @@ mod test {
 
     #[test]
     fn test_fuzz_crash_nas_hdr_len_underflow() {
-        // Regression test: hdr_len < 4 previously caused panic in Nas4GMessage.
-        // Fixed by using saturating_sub for msg length calculation.
+        // Regression test for two things:
+        // - hdr_len < 4 previously caused panic in Nas4GMessage.
+        // - Upgrading to deku 0.20 caused incorrect parsing behavior (double-read of discriminant)
         let nas_msg =
             b"\x10\x00\x14\x00\x02\x00\xe2\xb0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00";
-        let _ = Message::from_bytes((nas_msg, 0));
+
+        let ((rest, _), msg) = Message::from_bytes((nas_msg, 0)).unwrap();
+
+        assert_eq!(rest.len(), 0);
+        assert!(
+            matches!(
+                msg,
+                Message::Log {
+                    log_type: 0xb0e2,
+                    body: LogBody::Nas4GMessage {
+                        direction: Nas4GMessageDirection::Downlink,
+                        ..
+                    },
+                    ..
+                }
+            ),
+            "Unexpected message: {:?}",
+            msg
+        );
     }
 
     #[test]
