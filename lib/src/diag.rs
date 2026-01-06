@@ -141,11 +141,13 @@ pub enum Message {
     // pass those opcodes down to their respective parsers.
     #[deku(id_pat = "_")]
     Response {
-        id: u8,
-        opcode: u32,
+        opcode1: u8, // the "id" (from deku's POV) gets parsed into this field
+        opcode2: u8,
+        opcode3: u8,
+        opcode4: u8,
         subopcode: u32,
         status: u32,
-        #[deku(ctx = "*opcode, *subopcode")]
+        #[deku(ctx = "u32::from_le_bytes([*opcode1, *opcode2, *opcode3, *opcode4]), *subopcode")]
         payload: ResponsePayload,
     },
 }
@@ -659,5 +661,40 @@ mod test {
         // Fixed by using saturating_sub for msg length calculation.
         let ip_msg = b"\x10\x00\x14\x00\x02\x00\xeb\x11\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00";
         let _ = Message::from_bytes((ip_msg, 0));
+    }
+
+    #[test]
+    fn test_fuzz_crash_response_opcode_parsing() {
+        // Regression test: Upgrading to deku 0.20 caused incorrect parsing of Response messages.
+        // The issue was that deku 0.20 requires an `id` field for `id_pat = "_"` variants,
+        // but in deku 0.18 the discriminant was NOT consumed from the stream.
+        // This caused a 1-byte offset, making opcode and all subsequent fields misaligned.
+        // Fixed by splitting the opcode into 4 separate u8 fields so the discriminant byte
+        // becomes the first byte of the opcode, matching the old deku 0.18 behavior.
+        let response_msg = b"\x73\x00\x00\x00\x03\x00\x00\x00\x0a\x00\xec\xb0\x8e\x51\x02\x6f\x2a\xc5\x0b\x01\x01\x09\x05\x00\x07\x45\x8e\x14\x7d";
+
+        let ((rest, _), msg) = Message::from_bytes((response_msg, 0)).unwrap();
+
+        // Verify the opcode is correctly parsed as 115 (0x73 in first byte)
+        // In little-endian: [0x73, 0x00, 0x00, 0x00] = 0x00000073 = 115
+        assert!(
+            matches!(
+                msg,
+                Message::Response {
+                    opcode1: 0x73,
+                    opcode2: 0x00,
+                    opcode3: 0x00,
+                    opcode4: 0x00,
+                    subopcode: 3,
+                    status: 2968256522, // [0x0a, 0x00, 0xec, 0xb0] in LE
+                    payload: ResponsePayload::LogConfig(LogConfigResponse::SetMask),
+                }
+            ),
+            "Unexpected message: {:?}",
+            msg
+        );
+
+        // Verify we consumed the expected number of bytes
+        assert_eq!(rest.len(), 17);
     }
 }
