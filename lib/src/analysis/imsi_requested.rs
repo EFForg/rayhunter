@@ -78,12 +78,7 @@ impl ImsiRequestedAnalyzer {
                 });
             }
 
-            // Notify on any identity reqeust (IMEI or IMSI)
             (_, State::IdentityRequest) => {
-                self.flag = Some(Event {
-                    event_type: EventType::Informational,
-                    message: "Identity Request happened but its not suspicious yet.".to_string(),
-                });
                 self.timeout_counter = 0;
             }
 

@@ -3,6 +3,7 @@ use crate::analysis::information_element::{InformationElement, LteInformationEle
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 use pycrate_rs::nas::generated::emm::emm_attach_reject::EMMCauseEMMCause as AttachRejectEMMCause;
+use pycrate_rs::nas::generated::emm::emm_attach_request::EPSAttachTypeV;
 use pycrate_rs::nas::generated::emm::emm_detach_request_mt::EPSDetachTypeMTType;
 use pycrate_rs::nas::generated::emm::emm_identity_request::IDTypeV;
 use pycrate_rs::nas::generated::emm::emm_service_reject::EMMCauseEMMCause as ServiceRejectEMMCause;
@@ -55,6 +56,10 @@ impl ImsiAttachAnalyzer {
                     req.eps_detach_type.inner.typ != EPSDetachTypeMTType::IMSIDetach
                 }
 
+                EMMMessage::EMMAttachRequest(req) => {
+                    req.eps_attach_type.inner == EPSAttachTypeV::CombinedEPSIMSIAttach
+                }
+
                 EMMMessage::EMMServiceReject(reject) => {
                     matches!(
                         reject.emm_cause.inner,
@@ -77,15 +82,16 @@ impl ImsiAttachAnalyzer {
 
 impl Analyzer for ImsiAttachAnalyzer {
     fn get_name(&self) -> Cow<'_, str> {
-        "IMSI-Exposed Message Detector".into()
+        "Diagnostic detector for IMSI Exposure".into()
     }
 
     fn get_description(&self) -> Cow<'_, str> {
-        "Catches any and all messages that may expose IMSI. Can be quite noisy. \
-        Based on the detection logic from the Marlin paper (\"They Know Where You Are: Tracking Mobile \
-        Devices Using Cellular Infrastructure\"). Since we don't have traffic of many devices, we \
-        cannot implement the original exposure ratio calculation, and naively trigger an event on \
-        every exposure.".into()
+        "Catches any messages that may expose IMSI. Can be quite noisy. \
+        Useful as a diagnostic for finding out why an IMSI was sent or what \
+        the reason for a reject message was. Not a useful indicator on its own \
+        but a helpful diagnostic for understanding why another indicator was \
+        triggered. Based on the list of IMSI exposing messages identified in \
+        the 'Marlin' paper.".into()
     }
 
     fn get_version(&self) -> u32 {
@@ -108,28 +114,33 @@ impl Analyzer for ImsiAttachAnalyzer {
                     let message_type = match nas_msg {
                         NASMessage::EMMMessage(emm_msg) => {
                             match emm_msg {
-                                EMMMessage::EMMIdentityRequest(_) => "EMM Identity Request (IMSI)",
-                                EMMMessage::EMMTrackingAreaUpdateReject(_) => {
-                                    "EMM Tracking Area Update Reject"
+                                EMMMessage::EMMIdentityRequest(request) => {
+                                    format!("EMM Identity Request ({:?})", request.id_type.inner)
+                                }
+                                EMMMessage::EMMTrackingAreaUpdateReject(reject) => {
+                                    format!("EMM Tracking Area Update Reject ({:?})", reject.emm_cause.inner )
                                 }
                                 EMMMessage::EMMAttachReject(reject) => {
-                                    if reject.emm_cause.inner == AttachRejectEMMCause::EPSServicesAndNonEPSServicesNotAllowed {
-                                    "EMM Attach Reject (EPS and Non EPS not allowed"
-                                } else {
-                                    "EMM Attach Reject"
+                                    format!("EMM Attach Reject ({:?})", reject.emm_cause.inner)
                                 }
+                                EMMMessage::EMMDetachRequestMT(request) => {
+                                    format!("EMM Detach Request ({:?}:{:?})", request.eps_detach_type.inner, request.emm_cause.inner)
                                 }
-                                EMMMessage::EMMDetachRequestMT(_) => "EMM Detach Request (MT)",
-                                EMMMessage::EMMServiceReject(_) => "EMM Service Reject",
-                                _ => "Unknown EMM Message",
+                                EMMMessage::EMMServiceReject(reject) => {
+                                    format!("EMM Service Reject ({:?})", reject.emm_cause.inner )
+                                }
+                                EMMMessage::EMMAttachRequest(request) => {
+                                    format!("EPS Attach Request ({:?})", request.eps_attach_type.inner )
+                                }
+                                _ => "Unknown EMM Message".to_string(),
                             }
                         }
-                        _ => "Unknown NAS Message",
+                        _ => "Unknown NAS Message".to_string(),
                     };
 
                     Some(Event {
                         event_type: EventType::Informational,
-                        message: format!("IMSI-exposing NAS message detected: {message_type}."),
+                        message: format!("Diagnostic: {message_type}."),
                     })
                 } else {
                     None
