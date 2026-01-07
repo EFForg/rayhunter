@@ -1,4 +1,5 @@
 pub mod analyzer;
+pub mod cell_fingerprint;
 pub mod connection_redirect_downgrade;
 pub mod imsi_requested;
 pub mod incomplete_sib;
