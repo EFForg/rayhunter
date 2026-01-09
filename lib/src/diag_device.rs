@@ -8,6 +8,8 @@ use crate::{Device, log_codes};
 use deku::prelude::*;
 use futures::TryStream;
 use log::{debug, error, info};
+use uds::UnixSocketAddr;
+use uds::tokio::UnixSeqpacketConn;
 use std::io::ErrorKind;
 use std::os::fd::AsRawFd;
 use std::time::Duration;
@@ -79,8 +81,13 @@ const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 #[cfg(all(not(target_env = "musl"), target_arch = "aarch64"))]
 const DIAG_IOCTL_SWITCH_LOGGING: u64 = 7;
 
+enum DiagIO {
+    File(File),
+    Socket(UnixSeqpacketConn),
+}
+
 pub struct DiagDevice {
-    file: File,
+    file: DiagIO,
     read_buf: Vec<u8>,
     use_mdm: i32,
 }
@@ -129,22 +136,32 @@ impl DiagDevice {
     }
 
     async fn try_new(configured_device: &Device) -> DiagResult<Self> {
-        let diag_file = File::options()
-            .read(true)
-            .write(true)
-            .open("/dev/diag")
-            .await
-            .map_err(DiagDeviceError::OpenDiagDeviceError)?;
-        let fd = diag_file.as_raw_fd();
+        if tokio::fs::try_exists("/dev/diag").await.unwrap() {
+            let diag_file = File::options()
+                .read(true)
+                .write(true)
+                .open("/dev/diag")
+                .await
+                .map_err(DiagDeviceError::OpenDiagDeviceError)?;
 
-        enable_frame_readwrite(fd, MEMORY_DEVICE_MODE, configured_device)?;
-        let use_mdm = determine_use_mdm(fd)?;
+            let fd = diag_file.as_raw_fd();
+            enable_frame_readwrite(fd, MEMORY_DEVICE_MODE, configured_device)?;
 
-        Ok(DiagDevice {
-            read_buf: vec![0; BUFFER_LEN],
-            file: diag_file,
-            use_mdm,
-        })
+            Ok(DiagDevice {
+                read_buf: vec![0; BUFFER_LEN],
+                file: DiagIO::File(diag_file),
+                use_mdm: determine_use_mdm(fd)?,
+            })
+        } else {
+            let addr = UnixSocketAddr::new(&[0; 108]).unwrap();
+            let socket = uds::tokio::UnixSeqpacketConn::connect_addr(&addr).unwrap();
+
+            Ok(DiagDevice {
+                read_buf: vec![0; BUFFER_LEN],
+                file: DiagIO::Socket(socket),
+                use_mdm: 0,
+            })
+        }
     }
 
     pub fn as_stream(
@@ -157,14 +174,21 @@ impl DiagDevice {
     }
 
     async fn get_next_messages_container(&mut self) -> Result<MessagesContainer, DiagDeviceError> {
+        info!("reading messages container...");
         let mut bytes_read = 0;
         // TP-Link M7350 sometimes sends too small messages, we need to be able to deal with short reads.
         while bytes_read <= 8 {
-            bytes_read = self
-                .file
-                .read(&mut self.read_buf)
-                .await
-                .map_err(DiagDeviceError::DeviceReadFailed)?;
+            bytes_read += match &mut self.file {
+                DiagIO::File(file) => file
+                    .read(&mut self.read_buf)
+                    .await
+                    .map_err(DiagDeviceError::DeviceReadFailed)?,
+                DiagIO::Socket(unix_datagram) =>  unix_datagram
+                    .recv(&mut self.read_buf)
+                    .await
+                    .map_err(DiagDeviceError::DeviceReadFailed)?,
+            };
+            info!("{bytes_read} bytes read");
         }
 
         debug!(
@@ -189,19 +213,28 @@ impl DiagDevice {
         }
         .to_bytes()
         .expect("Failed to serialize RequestContainer");
-        if let Err(err) = self.file.write(&buf).await {
-            // For reasons I don't entirely understand, calls to write(2) on
-            // /dev/diag always return 0 bytes written, though the written
-            // requests end up being interpreted. As such, we're not concerned
-            // about WriteZero errors
-            if err.kind() != ErrorKind::WriteZero {
-                return Err(DiagDeviceError::DeviceWriteFailed(err));
+        match &mut self.file {
+            DiagIO::File(file) => {
+                if let Err(err) = file.write(&buf).await {
+                    // For reasons I don't entirely understand, calls to write(2) on
+                    // /dev/diag always return 0 bytes written, though the written
+                    // requests end up being interpreted. As such, we're not concerned
+                    // about WriteZero errors
+                    if err.kind() != ErrorKind::WriteZero {
+                        return Err(DiagDeviceError::DeviceWriteFailed(err));
+                    }
+                }
+                if let Err(err) = file.flush().await
+                    && err.kind() != ErrorKind::WriteZero
+                {
+                    return Err(DiagDeviceError::DeviceWriteFailed(err));
+                }
+            },
+            DiagIO::Socket(unix_datagram) => {
+                unix_datagram.send(&buf)
+                    .await
+                    .map_err(DiagDeviceError::DeviceWriteFailed)?;
             }
-        }
-        if let Err(err) = self.file.flush().await
-            && err.kind() != ErrorKind::WriteZero
-        {
-            return Err(DiagDeviceError::DeviceWriteFailed(err));
         }
         Ok(())
     }
@@ -210,6 +243,8 @@ impl DiagDevice {
         loop {
             let container = self.get_next_messages_container().await?;
             if container.data_type != DataType::UserSpace {
+                info!("skipping non-userspace container...");
+                dbg!(&container);
                 continue;
             }
             return Ok(container.into_messages());
@@ -217,9 +252,11 @@ impl DiagDevice {
     }
 
     async fn retrieve_id_ranges(&mut self) -> DiagResult<[u32; 16]> {
+        info!("writing LogConfig request...");
         let req = Request::LogConfig(LogConfigRequest::RetrieveIdRanges);
         self.write_request(&req).await?;
 
+        info!("waiting for response...");
         for msg in self.read_response().await? {
             match msg {
                 Ok(Message::Log { .. }) => info!("skipping log response..."),
@@ -274,9 +311,11 @@ impl DiagDevice {
     pub async fn config_logs(&mut self) -> DiagResult<()> {
         info!("retrieving diag logging capabilities...");
         let log_mask_sizes = self.retrieve_id_ranges().await?;
+        info!("got log mask sizes");
 
         for (log_type, &log_mask_bitsize) in log_mask_sizes.iter().enumerate() {
             if log_mask_bitsize > 0 {
+                info!("setting log mask for type {log_type}...");
                 self.set_log_mask(log_type as u32, log_mask_bitsize).await?;
                 info!("enabled logging for log type {log_type}");
             }

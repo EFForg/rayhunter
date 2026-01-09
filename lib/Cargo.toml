@@ -26,5 +26,6 @@ futures = { version = "0.3.30", default-features = false }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0"
 num_enum = "0.7.4"
+uds = { version = "0.4.2", features = ["tokio"] }
 
 [dev-dependencies]

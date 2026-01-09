@@ -2790,6 +2790,7 @@ dependencies = [
  "telcom-parser",
  "thiserror 1.0.69",
  "tokio",
+ "uds",
 ]
 
 [[package]]
@@ -2833,6 +2834,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "toml",
+ "uds",
 ]
 
 [[package]]
@@ -3788,6 +3790,16 @@ name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
+
+[[package]]
+name = "uds"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "885c31f06fce836457fe3ef09a59f83fe8db95d270b11cd78f40a4666c4d1661"
+dependencies = [
+ "libc",
+ "tokio",
+]
 
 [[package]]
 name = "unicode-ident"
