@@ -5,6 +5,7 @@ use env_logger::Env;
 #[cfg(not(target_os = "android"))]
 use anyhow::bail;
 
+mod connection;
 #[cfg(not(target_os = "android"))]
 mod orbic;
 mod orbic_auth;
@@ -79,10 +80,18 @@ struct InstallTpLink {
     /// your custom path may conflict with the builtin storage functionality.
     #[arg(long, default_value = "")]
     sdcard_path: String,
+
+    /// Overwrite config.toml even if it already exists on the device.
+    #[arg(long)]
+    reset_config: bool,
 }
 
 #[derive(Parser, Debug)]
-struct InstallOrbic {}
+struct InstallOrbic {
+    /// Overwrite config.toml even if it already exists on the device.
+    #[arg(long)]
+    reset_config: bool,
+}
 
 #[derive(Parser, Debug)]
 struct OrbicNetworkArgs {
@@ -97,6 +106,10 @@ struct OrbicNetworkArgs {
     /// Admin password for authentication.
     #[arg(long)]
     admin_password: Option<String>,
+
+    /// Overwrite config.toml even if it already exists on the device.
+    #[arg(long)]
+    reset_config: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -231,8 +244,8 @@ async fn run(args: Args) -> Result<(), Error> {
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
         #[cfg(not(target_os = "android"))]
-        Command::OrbicUsb(_) => orbic::install().await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
-        Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
+        Command::OrbicUsb(args) => orbic::install(args.reset_config).await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
+        Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password, args.reset_config).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
         Command::Util(subcommand) => {
             match subcommand.command {

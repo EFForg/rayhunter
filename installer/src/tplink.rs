@@ -18,6 +18,7 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::InstallTpLink;
+use crate::connection::{TelnetConnection, install_config};
 use crate::output::println;
 use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
 
@@ -28,10 +29,11 @@ pub async fn main_tplink(
         skip_sdcard,
         admin_ip,
         sdcard_path,
+        reset_config,
     }: InstallTpLink,
 ) -> Result<(), Error> {
     let is_v3 = start_telnet(&admin_ip).await?;
-    tplink_run_install(skip_sdcard, admin_ip, sdcard_path, is_v3).await
+    tplink_run_install(skip_sdcard, admin_ip, sdcard_path, is_v3, reset_config).await
 }
 
 #[derive(Deserialize)]
@@ -111,6 +113,7 @@ async fn tplink_run_install(
     admin_ip: String,
     mut sdcard_path: String,
     is_v3: bool,
+    reset_config: bool,
 ) -> Result<(), Error> {
     println!("Connecting via telnet to {admin_ip}");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
@@ -181,15 +184,9 @@ async fn tplink_run_install(
     )
     .await?;
 
-    telnet_send_file(
-        addr,
-        &format!("{sdcard_path}/config.toml"),
-        crate::CONFIG_TOML
-            .replace("#device = \"orbic\"", "device = \"tplink\"")
-            .as_bytes(),
-        true,
-    )
-    .await?;
+    let mut conn = TelnetConnection::new(addr, true);
+    let config_path = format!("{sdcard_path}/config.toml");
+    install_config(&mut conn, &config_path, "tplink", reset_config).await?;
 
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 

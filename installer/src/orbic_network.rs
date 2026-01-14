@@ -7,10 +7,11 @@ use reqwest::Client;
 use serde::Deserialize;
 use tokio::time::sleep;
 
+use crate::RAYHUNTER_DAEMON_INIT;
+use crate::connection::{TelnetConnection, install_config};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
 use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
-use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 // Some kajeet devices have password protected telnetd on port 23, so we use port 24 just in case
 const TELNET_PORT: u16 = 24;
@@ -142,6 +143,7 @@ pub async fn install(
     admin_ip: String,
     admin_username: String,
     admin_password: Option<String>,
+    reset_config: bool,
 ) -> Result<()> {
     let Some(admin_password) = admin_password else {
         eprintln!(
@@ -165,7 +167,7 @@ pub async fn install(
     wait_for_telnet(&admin_ip).await?;
     println!("done");
 
-    setup_rayhunter(&admin_ip).await
+    setup_rayhunter(&admin_ip, reset_config).await
 }
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
@@ -189,7 +191,7 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
     Ok(())
 }
 
-async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
+async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
@@ -213,13 +215,12 @@ async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
     )
     .await?;
 
-    telnet_send_file(
-        addr,
+    let mut conn = TelnetConnection::new(addr, false);
+    install_config(
+        &mut conn,
         "/data/rayhunter/config.toml",
-        CONFIG_TOML
-            .replace(r#"#device = "orbic""#, r#"device = "orbic""#)
-            .as_bytes(),
-        false,
+        "orbic",
+        reset_config,
     )
     .await?;
 

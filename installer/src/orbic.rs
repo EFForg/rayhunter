@@ -12,9 +12,10 @@ use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
 use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
+use crate::RAYHUNTER_DAEMON_INIT;
+use crate::connection::{DeviceConnection, install_config};
 use crate::output::{print, println};
 use crate::util::open_usb_device;
-use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 pub const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
 Make sure your device is plugged in and turned on.
@@ -46,6 +47,21 @@ const PRODUCT_ID: u16 = 0xf601;
 
 const INTERFACE: u8 = 1;
 
+/// ADB-based connection wrapper for DeviceConnection trait
+pub struct AdbConnection<'a> {
+    device: &'a mut ADBUSBDevice,
+}
+
+impl DeviceConnection for AdbConnection<'_> {
+    async fn run_command(&mut self, command: &str) -> Result<String> {
+        adb_command(self.device, &["sh", "-c", command])
+    }
+
+    async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {
+        install_file(self.device, path, content).await
+    }
+}
+
 #[cfg(target_os = "windows")]
 const RNDIS_INTERFACE: u8 = 0;
 
@@ -61,7 +77,7 @@ async fn confirm() -> Result<bool> {
     Ok(input.trim() == "yes")
 }
 
-pub async fn install() -> Result<()> {
+pub async fn install(reset_config: bool) -> Result<()> {
     println!(
         "WARNING: The orbic USB installer is not recommended for most usecases. Consider using ./installer orbic instead, unless you want ADB access for other purposes."
     );
@@ -80,7 +96,7 @@ pub async fn install() -> Result<()> {
     setup_rootshell(&mut adb_device).await?;
     println!("done");
     print!("Installing rayhunter... ");
-    let mut adb_device = setup_rayhunter(adb_device).await?;
+    let mut adb_device = setup_rayhunter(adb_device, reset_config).await?;
     println!("done");
     print!("Testing rayhunter... ");
     test_rayhunter(&mut adb_device).await?;
@@ -127,7 +143,7 @@ async fn setup_rootshell(adb_device: &mut ADBUSBDevice) -> Result<()> {
     Ok(())
 }
 
-async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
+async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Result<ADBUSBDevice> {
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
     adb_at_syscmd(&mut adb_device, "mkdir -p /data/rayhunter").await?;
@@ -137,14 +153,20 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
         rayhunter_daemon_bin,
     )
     .await?;
-    install_file(
-        &mut adb_device,
-        "/data/rayhunter/config.toml",
-        CONFIG_TOML
-            .replace("#device = \"orbic\"", "device = \"orbic\"")
-            .as_bytes(),
-    )
-    .await?;
+
+    {
+        let mut conn = AdbConnection {
+            device: &mut adb_device,
+        };
+        install_config(
+            &mut conn,
+            "/data/rayhunter/config.toml",
+            "orbic",
+            reset_config,
+        )
+        .await?;
+    }
+
     install_file(
         &mut adb_device,
         "/etc/init.d/rayhunter_daemon",
