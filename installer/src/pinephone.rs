@@ -9,6 +9,7 @@ use nusb::Interface;
 use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
 use tokio::time::sleep;
 
+use crate::connection::DeviceConnection;
 use crate::orbic::test_rayhunter;
 use crate::output::{print, println};
 use crate::util::open_usb_device;
@@ -25,33 +26,39 @@ pub async fn install() -> Result<()> {
     let mut adb = ADBUSBDevice::new(USB_VENDOR_ID, USB_PRODUCT_ID).unwrap();
     println!("ok");
 
-    adb.run_command(&["mount", "-o", "remount,rw", "/"], "exit code 0")?;
-    adb.run_command(&["mkdir", "-p", "/data/rayhunter"], "exit code 0")?;
+    run_command_expect(&mut adb, "mount -o remount,rw /", "exit code 0").await?;
+    run_command_expect(&mut adb, "mkdir -p /data/rayhunter", "exit code 0").await?;
 
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
-    adb.install_file("/data/rayhunter/rayhunter-daemon", rayhunter_daemon_bin)?;
-    adb.install_file(
+    adb.write_file("/data/rayhunter/rayhunter-daemon", rayhunter_daemon_bin)
+        .await?;
+    adb.write_file(
         "/data/rayhunter/config.toml",
         CONFIG_TOML
             .replace("#device = \"orbic\"", "device = \"pinephone\"")
             .as_bytes(),
-    )?;
-    adb.install_file(
+    )
+    .await?;
+    adb.write_file(
         "/etc/init.d/rayhunter_daemon",
         RAYHUNTER_DAEMON_INIT.as_bytes(),
-    )?;
-    adb.install_file(
+    )
+    .await?;
+    adb.write_file(
         "/etc/init.d/misc-daemon",
         include_bytes!("../../dist/scripts/misc-daemon"),
-    )?;
-    adb.run_command(
-        &["chmod", "755", "/etc/init.d/rayhunter_daemon"],
+    )
+    .await?;
+    run_command_expect(
+        &mut adb,
+        "chmod 755 /etc/init.d/rayhunter_daemon",
         "exit code 0",
-    )?;
-    adb.run_command(&["chmod", "755", "/etc/init.d/misc-daemon"], "exit code 0")?;
+    )
+    .await?;
+    run_command_expect(&mut adb, "chmod 755 /etc/init.d/misc-daemon", "exit code 0").await?;
 
     println!("Rebooting device and waiting 30 seconds for it to start up.");
-    adb.run_command(&["shutdown -r -t 1 now"], "exit code 0")?;
+    run_command_expect(&mut adb, "shutdown -r -t 1 now", "exit code 0").await?;
     sleep(Duration::from_secs(30)).await;
 
     print!("Unlocking modem ... ");
@@ -65,6 +72,19 @@ pub async fn install() -> Result<()> {
     println!("ok");
     println!("rayhunter is running on the modem. Use adb to access the web interface.");
 
+    Ok(())
+}
+
+/// Helper to run a command and check for expected output
+async fn run_command_expect(
+    adb: &mut ADBUSBDevice,
+    command: &str,
+    expected_output: &str,
+) -> Result<()> {
+    let output = adb.run_command(command).await?;
+    if !output.contains(expected_output) {
+        bail!("{expected_output:?} not found in: {output}");
+    }
     Ok(())
 }
 
@@ -175,29 +195,18 @@ pub async fn stop_adb() -> Result<()> {
     Ok(())
 }
 
-trait Install {
-    fn run_command(&mut self, command: &[&str], expected_output: &str) -> Result<()>;
-    fn install_file(&mut self, dest: &str, payload: &[u8]) -> Result<()>;
-}
-
-impl Install for ADBUSBDevice {
-    /// Run an adb shell command, append '; echo exit code $?' to the command and verify its output.
-    fn run_command(&mut self, command: &[&str], expected_output: &str) -> Result<()> {
+impl DeviceConnection for ADBUSBDevice {
+    /// Run an adb shell command, append '; echo exit code $?' to the command and return output.
+    async fn run_command(&mut self, command: &str) -> Result<String> {
         let mut buf = Vec::<u8>::new();
-        let mut cmd = Vec::<&str>::new();
-        cmd.extend_from_slice(command);
-        cmd.extend_from_slice(&[";", "echo", "exit code $?"]);
+        let cmd = ["sh", "-c", &format!("{command}; echo exit code $?")];
         self.shell_command(&cmd, &mut buf)?;
-        let output = String::from_utf8_lossy(&buf);
-        if !output.contains(expected_output) {
-            bail!("{expected_output:?} not found in: {output}");
-        }
-        Ok(())
+        Ok(String::from_utf8_lossy(&buf).into_owned())
     }
 
     /// Transfer a file to the modem's filesystem with adb push.
     /// Validates the file sends successfully to /tmp before overwriting the destination.
-    fn install_file(&mut self, dest: &str, mut payload: &[u8]) -> Result<()> {
+    async fn write_file(&mut self, dest: &str, mut payload: &[u8]) -> Result<()> {
         print!("Sending file {dest} ... ");
         let file_name = Path::new(dest)
             .file_name()
@@ -208,8 +217,16 @@ impl Install for ADBUSBDevice {
         let push_tmp_path = format!("/tmp/{file_name}");
         let file_hash = md5_compute(payload);
         self.push(&mut payload, &push_tmp_path)?;
-        self.run_command(&["md5sum", &push_tmp_path], &format!("{file_hash:x}"))?;
-        self.run_command(&["mv", &push_tmp_path, dest], "exit code 0")?;
+        let output = self.run_command(&format!("md5sum {push_tmp_path}")).await?;
+        if !output.contains(&format!("{file_hash:x}")) {
+            bail!("{:x} not found in: {output}", file_hash);
+        }
+        let output = self
+            .run_command(&format!("mv {push_tmp_path} {dest}"))
+            .await?;
+        if !output.contains("exit code 0") {
+            bail!("exit code 0 not found in: {output}");
+        }
         println!("ok");
         Ok(())
     }
