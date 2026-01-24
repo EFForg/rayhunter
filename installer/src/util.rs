@@ -233,12 +233,19 @@ pub fn open_usb_device(vid: u16, pid: u16) -> Result<Option<Device>> {
 ///
 /// Connects to a shell service on the device and forwards stdin/stdout bidirectionally.
 pub async fn interactive_shell(admin_ip: &str, shell_port: u16, raw_mode: bool) -> Result<()> {
+    let stdin = tokio::io::stdin();
+
+    // Check if we can set up raw mode BEFORE connecting to the shell.
+    // This prevents killing the shell's nc process by connecting and immediately disconnecting.
+    #[cfg(unix)]
+    if raw_mode && unsafe { libc::isatty(stdin.as_raw_fd()) } == 0 {
+        bail!("Cannot use PTY mode: stdin is not a terminal. Use --no-pty for non-interactive use.");
+    }
+
     let shell_addr = SocketAddr::from_str(&format!("{admin_ip}:{shell_port}"))?;
     let mut stream = TcpStream::connect(shell_addr)
         .await
         .context("Failed to connect to shell. Make sure the device is reachable.")?;
-
-    let stdin = tokio::io::stdin();
 
     #[cfg(unix)]
     let raw_terminal_guard = if raw_mode {

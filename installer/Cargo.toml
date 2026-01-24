@@ -35,6 +35,7 @@ futures = "0.3"
 
 [target.'cfg(unix)'.dependencies]
 termios = "0.3"
+libc = "0.2"
 
 [target.'cfg(all(target_os = "linux", not(target_os = "android")))'.dependencies.adb_client]
 git = "https://github.com/EFForg/adb_client.git"
