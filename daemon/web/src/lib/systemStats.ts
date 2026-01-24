@@ -3,6 +3,7 @@ export interface SystemStats {
     memory_stats: MemoryStats;
     runtime_metadata: RuntimeMetadata;
     battery_status?: BatteryStatus;
+    cell_info?: CellSignalInfo;
 }
 
 export interface RuntimeMetadata {
@@ -29,4 +30,12 @@ export interface MemoryStats {
 export interface BatteryStatus {
     level: number;
     is_plugged_in: boolean;
+}
+
+export interface CellSignalInfo {
+    rsrp_dbm?: number;
+    rsrq_db?: number;
+    rssi_dbm?: number;
+    pci?: number;
+    earfcn?: number;
 }

@@ -33,6 +33,23 @@
         }
         return text;
     });
+
+    // Cell signal quality assessment based on RSRP
+    // Excellent: >= -80 dBm, Good: -80 to -90, Fair: -90 to -100, Poor: < -100
+    let signal_quality = $derived.by(() => {
+        const rsrp = stats.cell_info?.rsrp_dbm;
+        if (rsrp === undefined) return { label: 'Unknown', color: 'text-gray-500' };
+        if (rsrp >= -80) return { label: 'Excellent', color: 'text-green-600' };
+        if (rsrp >= -90) return { label: 'Good', color: 'text-green-600' };
+        if (rsrp >= -100) return { label: 'Fair', color: 'text-yellow-600' };
+        return { label: 'Poor', color: 'text-red-600' };
+    });
+
+    // Format signal value with unit
+    function formatSignal(value: number | undefined, unit: string): string {
+        if (value === undefined) return '—';
+        return `${value.toFixed(1)} ${unit}`;
+    }
 </script>
 
 <div
@@ -116,6 +133,39 @@
                     </svg>
                 </td>
             </tr>
+            {#if stats.cell_info}
+                <tr class="border-b">
+                    <th class={table_cell_classes}> Cell Signal </th>
+                    <td class={table_cell_classes}>
+                        <div class="flex flex-col gap-1 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium {signal_quality.color}">
+                                    {signal_quality.label}
+                                </span>
+                                {#if stats.cell_info.rsrp_dbm !== undefined}
+                                    <span class="text-gray-600">
+                                        (RSRP: {formatSignal(stats.cell_info.rsrp_dbm, 'dBm')})
+                                    </span>
+                                {/if}
+                            </div>
+                            <div class="text-gray-600 text-xs">
+                                {#if stats.cell_info.pci !== undefined}
+                                    <span>PCI: {stats.cell_info.pci}</span>
+                                {/if}
+                                {#if stats.cell_info.earfcn !== undefined}
+                                    <span class="ml-2">EARFCN: {stats.cell_info.earfcn}</span>
+                                {/if}
+                                {#if stats.cell_info.rsrq_db !== undefined}
+                                    <span class="ml-2">RSRQ: {formatSignal(stats.cell_info.rsrq_db, 'dB')}</span>
+                                {/if}
+                                {#if stats.cell_info.rssi_dbm !== undefined}
+                                    <span class="ml-2">RSSI: {formatSignal(stats.cell_info.rssi_dbm, 'dBm')}</span>
+                                {/if}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            {/if}
         </tbody>
     </table>
 </div>

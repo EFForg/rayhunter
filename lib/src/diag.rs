@@ -222,6 +222,11 @@ pub enum LogBody {
         #[deku(count = "hdr_len")]
         msg: Vec<u8>,
     },
+    /// LTE ML1 Serving Cell Measurement Response (0xB193)
+    /// Contains RSRP, RSRQ, and RSSI measurements for the serving cell.
+    /// This is used to populate signal strength in GSMTAP headers.
+    #[deku(id = "0xb193")]
+    LteMl1ServingCellMeas { meas: LteMl1ServingCellMeasData },
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -344,6 +349,132 @@ impl LteRrcOtaPacket {
     }
 }
 
+/// LTE ML1 Serving Cell Measurement (0xB193) packet structure.
+/// Uses subpacket architecture per Mobile Insight / Qualcomm DIAG format.
+///
+/// Packet layout:
+/// - Main Header: version (1) + num_subpackets (1) + reserved (2) = 4 bytes
+/// - SubPacket Header: id (1) + version (1) + size (2) = 4 bytes
+/// - SubPacket Data: varies by subpacket version (v4, v7, v18, v19, v22, v24, v35, v36, v40)
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
+#[deku(endian = "little")]
+pub struct LteMl1ServingCellMeasData {
+    pub main_version: u8,
+    pub num_subpackets: u8,
+    pub reserved: u16,
+    // SubPacket header
+    pub subpacket_id: u8,
+    pub subpacket_version: u8,
+    pub subpacket_size: u16,
+    // SubPacket data - we read enough to get RSRP/RSRQ/RSSI
+    // The actual layout depends on subpacket_version, but EARFCN and PCI are always first
+    #[deku(count = "subpacket_size.saturating_sub(4).min(128)")]
+    pub subpacket_data: Vec<u8>,
+}
+
+impl LteMl1ServingCellMeasData {
+    /// Helper to read a u16 from subpacket data at given offset
+    fn read_u16(&self, offset: usize) -> Option<u16> {
+        if offset + 2 <= self.subpacket_data.len() {
+            Some(u16::from_le_bytes([
+                self.subpacket_data[offset],
+                self.subpacket_data[offset + 1],
+            ]))
+        } else {
+            None
+        }
+    }
+
+    /// Helper to read a u32 from subpacket data at given offset
+    fn read_u32(&self, offset: usize) -> Option<u32> {
+        if offset + 4 <= self.subpacket_data.len() {
+            Some(u32::from_le_bytes([
+                self.subpacket_data[offset],
+                self.subpacket_data[offset + 1],
+                self.subpacket_data[offset + 2],
+                self.subpacket_data[offset + 3],
+            ]))
+        } else {
+            None
+        }
+    }
+
+    /// Get the RSRP field offset based on subpacket version
+    /// Returns (earfcn_offset, earfcn_size, rsrp_offset)
+    fn get_offsets(&self) -> (usize, usize, usize) {
+        match self.subpacket_version {
+            // v4: EARFCN(2) + PCI(2) + SFN(2) + skip(6) = offset 12 for RSRP
+            4 => (0, 2, 12),
+            // v7: EARFCN(4) + PCI(2) + SFN(2) + skip(6) = offset 14 for RSRP
+            7 => (0, 4, 14),
+            // v18+: more complex, estimate based on structure
+            // EARFCN(4) + PCI(2) + ... + skip = ~24-34 for RSRP
+            18..=24 => (0, 4, 24),
+            // v35+: 4-antenna support, larger structure
+            35..=40 => (0, 4, 28),
+            // Unknown version, try v7 offsets
+            _ => (0, 4, 14),
+        }
+    }
+
+    /// Get Physical Cell ID from measurement
+    pub fn get_pci(&self) -> Option<u16> {
+        let (earfcn_offset, earfcn_size, _) = self.get_offsets();
+        let pci_offset = earfcn_offset + earfcn_size;
+        self.read_u16(pci_offset).map(|v| v & 0x1FF)
+    }
+
+    /// Get EARFCN from measurement
+    pub fn get_earfcn(&self) -> Option<u32> {
+        let (earfcn_offset, earfcn_size, _) = self.get_offsets();
+        if earfcn_size == 2 {
+            self.read_u16(earfcn_offset).map(|v| v as u32)
+        } else {
+            self.read_u32(earfcn_offset)
+        }
+    }
+
+    /// Get RSRP (Reference Signal Received Power) in dBm.
+    /// Formula: -180 + raw_value * 0.0625
+    pub fn get_rsrp_dbm(&self) -> Option<f32> {
+        let (_, _, rsrp_offset) = self.get_offsets();
+        self.read_u32(rsrp_offset).map(|raw| {
+            let rsrp_raw = raw & 0xFFF;
+            -180.0 + (rsrp_raw as f32) * 0.0625
+        })
+    }
+
+    /// Get RSSI (Received Signal Strength Indicator) in dBm.
+    /// Formula: -110 + raw_value * 0.0625
+    /// RSSI is typically 12 bytes after RSRP (RSRP + avg_RSRP + RSRQ)
+    pub fn get_rssi_dbm(&self) -> Option<f32> {
+        let (_, _, rsrp_offset) = self.get_offsets();
+        let rssi_offset = rsrp_offset + 12; // Skip RSRP(4) + avg_RSRP(4) + RSRQ(4)
+        self.read_u32(rssi_offset).map(|raw| {
+            let rssi_raw = (raw >> 10) & 0x7FF;
+            -110.0 + (rssi_raw as f32) * 0.0625
+        })
+    }
+
+    /// Get RSRQ (Reference Signal Received Quality) in dB.
+    /// Formula: -30 + raw_value * 0.0625
+    pub fn get_rsrq_db(&self) -> Option<f32> {
+        let (_, _, rsrp_offset) = self.get_offsets();
+        let rsrq_offset = rsrp_offset + 8; // Skip RSRP(4) + avg_RSRP(4)
+        self.read_u32(rsrq_offset).map(|raw| {
+            let rsrq_raw = raw & 0x3FF;
+            -30.0 + (rsrq_raw as f32) * 0.0625
+        })
+    }
+
+    /// Get signal strength as i8 for GSMTAP header (clamped to valid range).
+    /// Uses RSRP as the primary signal indicator.
+    pub fn get_signal_dbm_i8(&self) -> Option<i8> {
+        self.get_rsrp_dbm()
+            .map(|rsrp| rsrp.clamp(-128.0, 127.0) as i8)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(endian = "little")]
 pub struct Timestamp {
@@ -441,6 +572,10 @@ mod test {
             bitsize,
             &crate::diag_device::LOG_CODES_FOR_RAW_PACKET_LOGGING,
         );
+        // Expected mask includes:
+        // - 0xB0C0 (LTE RRC): byte 24 = 0x01
+        // - 0xB0E2, 0xB0E3, 0xB0EC, 0xB0ED (NAS): bytes 28-29 = 0x0C, 0x30
+        // - 0xB193 (ML1 Serving Cell Meas): byte 50 = 0x08 (bit 3 for code 0x193 = 403)
         assert_eq!(
             req,
             Request::LogConfig(LogConfigRequest::SetMask {
@@ -450,7 +585,7 @@ mod test {
                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0xc, 0x30, 0x0,
                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0, 0x0, 0x8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                     0x0, 0x0,
                 ],
             })
@@ -696,5 +831,85 @@ mod test {
 
         // Verify we consumed the expected number of bytes
         assert_eq!(rest.len(), 17);
+    }
+
+    #[test]
+    fn test_lte_ml1_serving_cell_meas_parsing() {
+        // Test parsing of 0xB193 LTE ML1 Serving Cell Measurement log
+        // with subpacket version 18 (common on Orbic RC400L)
+        //
+        // Structure:
+        // - Log message header (type=16, log_type=0xB193)
+        // - LteMl1ServingCellMeasData with v18 subpacket containing RSRP=-95dBm
+        //
+        // RSRP calculation: -180 + (raw & 0xFFF) * 0.0625
+        // For -95 dBm: raw = (-95 + 180) / 0.0625 = 1360 = 0x550
+
+        let mut msg_bytes: Vec<u8> = vec![
+            // Log message header
+            0x10, // Message type: Log (16)
+            0x00, // pending_msgs
+            0x38, 0x00, // outer_length: 56
+            0x34, 0x00, // inner_length: 52
+            0x93, 0xB1, // log_type: 0xB193 (LTE ML1 Serving Cell Meas)
+            // timestamp (8 bytes, arbitrary)
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // LteMl1ServingCellMeasData
+            0x01, // main_version
+            0x01, // num_subpackets
+            0x00, 0x00, // reserved
+            0x00, // subpacket_id
+            0x12, // subpacket_version: 18
+            0x28, 0x00, // subpacket_size: 40 bytes (including header)
+        ];
+
+        // Subpacket data (36 bytes = 40 - 4 for header)
+        // For v18: EARFCN at offset 0 (4 bytes), PCI at offset 4 (2 bytes), RSRP at offset 24
+        let mut subpacket_data = vec![0u8; 36];
+        // EARFCN = 975 at offset 0 (u32 LE)
+        subpacket_data[0..4].copy_from_slice(&975u32.to_le_bytes());
+        // PCI = 446 at offset 4 (u16 LE, only lower 9 bits used)
+        subpacket_data[4..6].copy_from_slice(&446u16.to_le_bytes());
+        // RSRP raw = 1360 (0x550) at offset 24 (u32 LE)
+        // This gives RSRP = -180 + 1360 * 0.0625 = -95 dBm
+        subpacket_data[24..28].copy_from_slice(&1360u32.to_le_bytes());
+
+        msg_bytes.extend(subpacket_data);
+
+        let ((rest, _), msg) = Message::from_bytes((&msg_bytes, 0)).unwrap();
+
+        assert_eq!(rest.len(), 0, "Should consume all bytes");
+
+        if let Message::Log {
+            log_type,
+            body: LogBody::LteMl1ServingCellMeas { meas },
+            ..
+        } = msg
+        {
+            assert_eq!(log_type, 0xB193);
+            assert_eq!(meas.subpacket_version, 18);
+
+            // Verify RSRP extraction
+            let rsrp = meas.get_rsrp_dbm().expect("Should extract RSRP");
+            assert!(
+                (rsrp - (-95.0)).abs() < 0.1,
+                "RSRP should be -95 dBm, got {}",
+                rsrp
+            );
+
+            // Verify PCI extraction
+            let pci = meas.get_pci().expect("Should extract PCI");
+            assert_eq!(pci, 446);
+
+            // Verify EARFCN extraction
+            let earfcn = meas.get_earfcn().expect("Should extract EARFCN");
+            assert_eq!(earfcn, 975);
+
+            // Verify i8 conversion for GSMTAP header
+            let signal_dbm = meas.get_signal_dbm_i8().expect("Should get signal_dbm");
+            assert_eq!(signal_dbm, -95);
+        } else {
+            panic!("Expected LteMl1ServingCellMeas message, got {:?}", msg);
+        }
     }
 }

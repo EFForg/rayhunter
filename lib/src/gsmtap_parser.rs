@@ -1,8 +1,69 @@
 use crate::diag::*;
 use crate::gsmtap::*;
 
-use log::error;
+use log::{debug, error};
+use serde::Serialize;
+use std::sync::RwLock;
 use thiserror::Error;
+
+/// Cached LTE cell information from ML1 measurements.
+/// Contains signal strength and cell identity information.
+#[derive(Debug, Clone, Default, Serialize)]
+pub struct CellInfo {
+    /// Reference Signal Received Power in dBm (typical range: -140 to -44)
+    pub rsrp_dbm: Option<f32>,
+    /// Reference Signal Received Quality in dB (typical range: -20 to -3)
+    pub rsrq_db: Option<f32>,
+    /// Received Signal Strength Indicator in dBm
+    pub rssi_dbm: Option<f32>,
+    /// Physical Cell ID (0-503)
+    pub pci: Option<u16>,
+    /// E-UTRA Absolute Radio Frequency Channel Number
+    pub earfcn: Option<u32>,
+}
+
+/// Global cache for the most recent cell/signal measurement.
+/// This is populated by LteMl1ServingCellMeas messages and can be used
+/// to add signal strength to GSMTAP headers and display in the UI.
+///
+/// Uses RwLock for consistent multi-field updates. Reads >> writes so this is efficient.
+static CACHED_CELL_INFO: RwLock<CellInfo> = RwLock::new(CellInfo {
+    rsrp_dbm: None,
+    rsrq_db: None,
+    rssi_dbm: None,
+    pci: None,
+    earfcn: None,
+});
+
+/// Get the cached cell information.
+/// Returns a clone of the current cell info state.
+pub fn get_cached_cell_info() -> CellInfo {
+    CACHED_CELL_INFO
+        .read()
+        .expect("cell info lock poisoned")
+        .clone()
+}
+
+/// Get the cached signal strength (RSRP) in dBm as i8 for GSMTAP header compatibility.
+/// Returns 0 if no measurement has been received yet.
+pub fn get_cached_signal_dbm() -> i8 {
+    CACHED_CELL_INFO
+        .read()
+        .expect("cell info lock poisoned")
+        .rsrp_dbm
+        .map(|rsrp| rsrp.clamp(-128.0, 127.0) as i8)
+        .unwrap_or(0)
+}
+
+/// Update the cached cell info from a measurement.
+fn update_cell_info_cache(meas: &LteMl1ServingCellMeasData) {
+    let mut cache = CACHED_CELL_INFO.write().expect("cell info lock poisoned");
+    cache.rsrp_dbm = meas.get_rsrp_dbm();
+    cache.rsrq_db = meas.get_rsrq_db();
+    cache.rssi_dbm = meas.get_rssi_dbm();
+    cache.pci = meas.get_pci();
+    cache.earfcn = meas.get_earfcn();
+}
 
 #[derive(Debug, Error)]
 pub enum GsmtapParserError {
@@ -138,6 +199,8 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
             header.arfcn = packet.get_earfcn().try_into().unwrap_or(0);
             header.frame_number = packet.get_sfn();
             header.subslot = packet.get_subfn();
+            // Apply cached signal strength from ML1 measurements
+            header.signal_dbm = get_cached_signal_dbm();
             Ok(Some(GsmtapMessage {
                 header,
                 payload: packet.take_payload(),
@@ -151,6 +214,22 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 header,
                 payload: msg,
             }))
+        }
+        LogBody::LteMl1ServingCellMeas { meas, .. } => {
+            // Update the cell info cache with measurement data
+            update_cell_info_cache(&meas);
+            debug!(
+                "ML1 0xB193 v{}: RSRP={:?}dBm, RSRQ={:?}dB, RSSI={:?}dBm, PCI={:?}, EARFCN={:?}",
+                meas.subpacket_version,
+                meas.get_rsrp_dbm(),
+                meas.get_rsrq_db(),
+                meas.get_rssi_dbm(),
+                meas.get_pci(),
+                meas.get_earfcn()
+            );
+            // Measurement messages don't produce GSMTAP output themselves,
+            // they just update the cell info cache for subsequent messages.
+            Ok(None)
         }
         _ => {
             error!("gsmtap_sink: ignoring unhandled log type: {value:?}");
