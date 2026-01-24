@@ -31,6 +31,9 @@ pub const LOG_NR_RRC_OTA_MSG_LOG_C: u32 = 0xb821;
 // These are 4G-related log types.
 
 pub const LOG_LTE_RRC_OTA_MSG_LOG_C: u32 = 0xb0c0;
+
+// LTE ML1 (Modem Layer 1) measurement logs - contain signal strength data
+pub const LOG_LTE_ML1_SERVING_CELL_MEAS_RESPONSE: u32 = 0xb193;
 pub const LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C: u32 = 0xb0e2;
 pub const LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C: u32 = 0xb0e3;
 pub const LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C: u32 = 0xb0ec;
