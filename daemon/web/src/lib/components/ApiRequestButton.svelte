@@ -43,7 +43,7 @@
         },
     };
 
-    async function handleClick() {
+    async function handle_click() {
         if (is_disabled) return;
 
         is_requesting = true;
@@ -71,7 +71,7 @@
 
 <button
     class="text-white font-bold py-2 px-2 sm:px-4 rounded-md flex flex-row items-center gap-1 {buttonClasses}"
-    onclick={handleClick}
+    onclick={handle_click}
     disabled={is_disabled}
     aria-label={ariaLabel || label}
 >
