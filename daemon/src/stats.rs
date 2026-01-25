@@ -174,3 +174,25 @@ pub async fn get_log() -> Result<String, (StatusCode, String)> {
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
+
+#[derive(Debug, Serialize)]
+pub struct RouteStatus {
+    pub has_default_route: bool,
+}
+
+pub async fn get_route_status() -> Json<RouteStatus> {
+    let mut cmd = Command::new("busybox");
+    cmd.args(["ip", "route"]);
+
+    let has_default_route = match get_cmd_output(cmd).await {
+        Ok(output) => output.lines().any(|line| line.starts_with("default ")),
+        Err(err) => {
+            log::warn!("Failed to check default route: {err}");
+            // More likely than not, this is a portability issue. The logic hasn't been fully
+            // tested on all devices. We shouldn't scare users unnecessarily.
+            true
+        }
+    };
+
+    Json(RouteStatus { has_default_route })
+}

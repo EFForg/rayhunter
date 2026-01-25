@@ -97,3 +97,11 @@ export async function test_notification(): Promise<void> {
         throw new Error(error);
     }
 }
+
+export interface RouteStatus {
+    has_default_route: boolean;
+}
+
+export async function get_route_status(): Promise<RouteStatus> {
+    return JSON.parse(await req('GET', '/api/route-status'));
+}
