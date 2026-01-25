@@ -1,5 +1,6 @@
 <script lang="ts">
     import { action_errors } from '../action_errors.svelte';
+    import WarningIcon from './WarningIcon.svelte';
 
     let pos = $state(0);
     let current_error = $derived(action_errors[pos]);
@@ -25,21 +26,7 @@
     >
         <div class="flex flex-row justify-between">
             <span class="text-xl font-bold mb-2 mr-5 flex flex-row items-center gap-1 text-red-600">
-                <svg
-                    class="w-6 h-6 text-red-600"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        fill-rule="evenodd"
-                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
-                        clip-rule="evenodd"
-                    />
-                </svg>
+                <WarningIcon class="w-6 h-6 text-red-600" />
                 Error Completing Action {current_error.times > 1 ? `x${current_error.times}` : ''}
             </span>
             <div class="flex items-center mb-2">
