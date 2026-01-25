@@ -360,7 +360,8 @@ impl Timestamp {
         let mut delta_seconds = ts_upper as f64 * 1.25;
         delta_seconds += ts_lower as f64 / 40960.0;
         let ts_delta = chrono::Duration::milliseconds(delta_seconds as i64);
-        epoch + ts_delta
+        // Apply global clock offset to adjust for incorrect device time
+        epoch + ts_delta + crate::clock::get_offset()
     }
 }
 
