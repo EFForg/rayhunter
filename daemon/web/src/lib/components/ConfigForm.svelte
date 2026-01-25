@@ -12,7 +12,7 @@
     let testMessageType = $state<'success' | 'error' | null>(null);
     let showConfig = $state(false);
 
-    async function loadConfig() {
+    async function load_config() {
         try {
             loading = true;
             config = await get_config();
@@ -26,7 +26,7 @@
         }
     }
 
-    async function saveConfig() {
+    async function save_config() {
         if (!config) return;
 
         try {
@@ -43,7 +43,7 @@
         }
     }
 
-    async function sendTestNotification() {
+    async function send_test_notification() {
         try {
             testingNotification = true;
             testMessage = '';
@@ -61,7 +61,7 @@
 
     $effect(() => {
         if (showConfig && !config) {
-            loadConfig();
+            load_config();
         }
     });
 </script>
@@ -91,7 +91,7 @@
                 class="space-y-4"
                 onsubmit={(e) => {
                     e.preventDefault();
-                    saveConfig();
+                    save_config();
                 }}
             >
                 <div>
@@ -164,7 +164,7 @@
                     <div>
                         <button
                             type="button"
-                            onclick={sendTestNotification}
+                            onclick={send_test_notification}
                             disabled={testingNotification}
                             class="bg-rayhunter-blue hover:bg-rayhunter-dark-blue disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
                         >
