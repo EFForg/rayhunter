@@ -58,7 +58,7 @@ pub struct ManifestEntry {
 
 impl ManifestEntry {
     fn new() -> Self {
-        let now = Local::now();
+        let now = rayhunter::clock::get_adjusted_now();
         let metadata = RuntimeMetadata::new();
         ManifestEntry {
             name: format!("{}", now.timestamp()),
@@ -300,7 +300,8 @@ impl RecordingStore {
         size_bytes: usize,
     ) -> Result<(), RecordingStoreError> {
         self.manifest.entries[entry_index].qmdl_size_bytes = size_bytes;
-        self.manifest.entries[entry_index].last_message_time = Some(Local::now());
+        self.manifest.entries[entry_index].last_message_time =
+            Some(rayhunter::clock::get_adjusted_now());
         self.write_manifest().await
     }
 

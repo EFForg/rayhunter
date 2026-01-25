@@ -22,8 +22,8 @@ use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
 use crate::server::{
-    ServerState, debug_set_display_state, get_config, get_qmdl, get_zip, serve_static, set_config,
-    test_notification,
+    ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_zip, serve_static,
+    set_config, set_time_offset, test_notification,
 };
 use crate::stats::{get_qmdl_manifest, get_route_status, get_system_stats};
 
@@ -71,6 +71,8 @@ fn get_router() -> AppRouter {
         .route("/api/config", get(get_config))
         .route("/api/config", post(set_config))
         .route("/api/test-notification", post(test_notification))
+        .route("/api/time", get(get_time))
+        .route("/api/time-offset", post(set_time_offset))
         .route("/api/debug/display-state", post(debug_set_display_state))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/{*path}", get(serve_static))
