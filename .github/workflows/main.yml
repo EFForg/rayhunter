@@ -37,8 +37,11 @@ jobs:
         run: |
           lcommit=${{ github.event.pull_request.base.sha || 'origin/main' }}
 
-          # If we are on main, or if these workflow files are being changed, run everything
-          if [ ${GITHUB_REF} = 'refs/heads/main' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/ -e ^.cargo
+          # If we are on main, if workflow/cargo config files changed, or if
+          # the latest commit message contains "#build-all", run everything.
+          # Use #build-all in a commit message to force a full build on a PR
+          # branch (useful for testing release builds without merging to main).
+          if [ ${GITHUB_REF} = 'refs/heads/main' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/ -e ^.cargo || git log -1 --format='%s %b' | grep -qF '#build-all'
           then
             echo "building everything"
             echo code_count=forced >> "$GITHUB_OUTPUT"
