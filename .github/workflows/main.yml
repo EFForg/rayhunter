@@ -20,13 +20,14 @@ jobs:
     permissions:
       contents: read
     outputs:
-      code_changed: ${{ steps.files_changed.outputs.code_count }}
-      daemon_changed: ${{ steps.files_changed.outputs.daemon_count }}
-      web_changed: ${{ steps.files_changed.outputs.web_count }}
-      docs_changed: ${{ steps.files_changed.outputs.docs_count }}
-      installer_changed: ${{ steps.files_changed.outputs.installer_count }}
-      installer_gui_changed: ${{ steps.files_changed.outputs.installer_gui_count }}
-      rootshell_changed: ${{ steps.files_changed.outputs.rootshell_count }}
+      code_changed: ${{ steps.files_changed.outputs.code_count != '0' }}
+      daemon_changed: ${{ steps.files_changed.outputs.daemon_count != '0' }}
+      daemon_needed: ${{ steps.files_changed.outputs.daemon_count != '0' || steps.files_changed.outputs.installer_build != '0' }}
+      web_changed: ${{ steps.files_changed.outputs.web_count != '0' }}
+      docs_changed: ${{ steps.files_changed.outputs.docs_count != '0' }}
+      installer_changed: ${{ steps.files_changed.outputs.installer_count != '0' }}
+      installer_gui_changed: ${{ steps.files_changed.outputs.installer_gui_count != '0' }}
+      rootshell_needed: ${{ steps.files_changed.outputs.rootshell_count != '0' || steps.files_changed.outputs.installer_build != '0' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,6 +49,7 @@ jobs:
             echo daemon_count=forced >> "$GITHUB_OUTPUT"
             echo web_count=forced >> "$GITHUB_OUTPUT"
             echo docs_count=forced >> "$GITHUB_OUTPUT"
+            echo installer_build=forced >> "$GITHUB_OUTPUT"
             echo installer_count=forced >> "$GITHUB_OUTPUT"
             echo installer_gui_count=forced >> "$GITHUB_OUTPUT"
             echo rootshell_count=forced >> "$GITHUB_OUTPUT"
@@ -56,15 +58,25 @@ jobs:
             echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^lib -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon/web | wc -l)" >> "$GITHUB_OUTPUT"
             echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -e ^book.toml -e ^doc | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "installer_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer/ | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "installer_gui_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer-gui | wc -l)" >> "$GITHUB_OUTPUT"
             echo "rootshell_count=$(git diff --name-only $lcommit...HEAD | grep -e ^rootshell | wc -l)" >> "$GITHUB_OUTPUT"
+
+            installer_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer/ | wc -l)
+            installer_gui_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer-gui | wc -l)
+
+            if [ $installer_count != "0" ] || [ $installer_gui_count != "0" ]; then
+              echo "installer_build=1" >> "$GITHUB_OUTPUT"
+            else
+              echo "installer_build=0" >> "$GITHUB_OUTPUT"
+            fi
+
+            echo "installer_count=$installer_count" >> "$GITHUB_OUTPUT"
+            echo "installer_gui_count=$installer_gui_count" >> "$GITHUB_OUTPUT"
           fi
 
   mdbook_test:
     name: Test mdBook Documentation builds
     needs: files_changed
-    if: needs.files_changed.outputs.docs_changed != '0'
+    if: needs.files_changed.outputs.docs_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -109,7 +121,7 @@ jobs:
 
   check_and_test:
     needs: files_changed
-    if: needs.files_changed.outputs.code_changed != '0'
+    if: needs.files_changed.outputs.code_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -143,7 +155,7 @@ jobs:
     #    installer-gui isn't one of the default workspace packages
     # 2) avoid slowing down development on changes unrelated to the GUI installer
     needs: files_changed
-    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
     # we run this on macos simply because no additional OS packages need to be
     # installed
     runs-on: macos-latest
@@ -167,7 +179,7 @@ jobs:
 
   test_daemon_frontend:
     needs: files_changed
-    if: needs.files_changed.outputs.web_changed != '0'
+    if: needs.files_changed.outputs.web_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -185,7 +197,7 @@ jobs:
 
   test_installer_frontend:
     needs: files_changed
-    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -202,7 +214,7 @@ jobs:
 
   windows_installer_check_and_test:
     needs: files_changed
-    if: needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.installer_changed == 'true'
     runs-on: windows-latest
     permissions:
       contents: read
@@ -223,7 +235,7 @@ jobs:
           NO_FIRMWARE_BIN=true cargo test --verbose --no-default-features
 
   build_rayhunter_check:
-    if: needs.files_changed.outputs.daemon_changed != '0'
+    if: needs.files_changed.outputs.daemon_changed == 'true'
     needs:
       - check_and_test
       - files_changed
@@ -269,7 +281,7 @@ jobs:
           if-no-files-found: error
 
   build_rootshell:
-    if: needs.files_changed.outputs.rootshell_changed != '0' || needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.rootshell_needed == 'true'
     needs:
       - check_and_test
       - files_changed
@@ -293,10 +305,7 @@ jobs:
           if-no-files-found: error
 
   build_rayhunter:
-    # build_rust_installer needs this step. so when installer_changed, we need
-    # to build this step too. if we skip this step because only the installer
-    # changed, the build_rust_installer step will be skipped too.
-    if: needs.files_changed.outputs.daemon_changed != '0' || needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.daemon_needed == 'true'
     needs:
       - check_and_test
       - files_changed
@@ -336,7 +345,7 @@ jobs:
           if-no-files-found: error
 
   build_rust_installer:
-    if: needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.installer_changed == 'true'
     permissions:
       contents: read
       packages: write
@@ -384,7 +393,7 @@ jobs:
           if-no-files-found: error
 
   build_installer_gui_linux:
-    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
     permissions:
       contents: read
       packages: write
@@ -440,7 +449,7 @@ jobs:
           if-no-files-found: error
 
   build_installer_gui_macos:
-    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
     permissions:
       contents: read
       packages: write
@@ -483,7 +492,7 @@ jobs:
           if-no-files-found: error
 
   build_installer_gui_windows:
-    if: needs.files_changed.outputs.installer_gui_changed != '0'
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
     permissions:
       contents: read
       packages: write
