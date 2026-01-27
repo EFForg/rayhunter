@@ -1,4 +1,5 @@
 use chrono::{DateTime, FixedOffset};
+use log::debug;
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -327,7 +328,7 @@ impl Harness {
             harness.add_analyzer(Box::new(ConnectionRedirect2GDowngradeAnalyzer {}));
         }
         if analyzer_config.lte_sib6_and_7_downgrade {
-            harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer {}));
+            harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer::new()));
         }
         if analyzer_config.null_cipher {
             harness.add_analyzer(Box::new(NullCipherAnalyzer {}));
@@ -380,6 +381,7 @@ impl Harness {
         row.events = match InformationElement::try_from(&gsmtap_message) {
             Ok(element) => self.analyze_information_element(&element),
             Err(err) => {
+                debug!("in packet {} failed to convert gsmtap message to IE: {err:?}", self.packet_num);
                 row.skipped_message_reason =
                     Some(format!("failed to convert gsmtap message to IE: {err:?}"));
                 return row;
