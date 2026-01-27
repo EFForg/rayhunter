@@ -52,13 +52,13 @@ jobs:
             echo installer_gui_count=forced >> "$GITHUB_OUTPUT"
             echo rootshell_count=forced >> "$GITHUB_OUTPUT"
           else
-            echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^installer -e ^check -e ^lib -e ^rootshell -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^lib -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon/web | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -e ^book.toml -e ^doc | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "installer_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer/ | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "installer_gui_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer-gui | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "rootshell_count=$(git diff --name-only $lcommit...HEAD | grep -e ^rootshell | wc -l)" >> "$GITHUB_OUTPUT"
+            echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^daemon -e ^installer -e ^check -e ^lib -e ^rootshell -e ^telcom-parser)" >> "$GITHUB_OUTPUT"
+            echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^daemon -e ^lib -e ^telcom-parser)" >> "$GITHUB_OUTPUT"
+            echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^daemon/web)" >> "$GITHUB_OUTPUT"
+            echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^book.toml -e ^doc)" >> "$GITHUB_OUTPUT"
+            echo "installer_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^installer/)" >> "$GITHUB_OUTPUT"
+            echo "installer_gui_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^installer-gui)" >> "$GITHUB_OUTPUT"
+            echo "rootshell_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^rootshell)" >> "$GITHUB_OUTPUT"
           fi
 
   mdbook_test:
