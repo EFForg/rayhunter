@@ -76,9 +76,10 @@
             Clock Mismatch Detected
         </span>
         <p>
-            Rayhunter's clock doesn't match your browser's, and may be incorrect. This can happen if Rayhunter
-            is unable to get the correct time from the internet. Consider synchronizing your browser's clock with
-            the button below, or using another SIM card for better results.
+            Rayhunter's clock doesn't match your browser's, and may be incorrect. This can happen if
+            Rayhunter is unable to get the correct time from the internet. Consider synchronizing
+            your browser's clock with the button below, or using another SIM card for better
+            results.
         </p>
         <table class="w-fit">
             <tbody>
