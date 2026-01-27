@@ -32,3 +32,5 @@ After preparing dependencies, the GUI installer can be built by:
 This will build the GUI installer in development mode. While this command is running, any changes to either the frontend or backend code will cause the installer to be reloaded or rebuilt.
 
 You can also run `npm run tauri build` to create the final GUI installer artifacts for your OS as is done in CI.
+
+I changed something.
