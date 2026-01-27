@@ -4,7 +4,9 @@ use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use log::debug;
 use telcom_parser::lte_rrc::{
-    BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1, CellReselectionPriority, SystemInformation_r8_IEsSib_TypeAndInfo, SystemInformation_r8_IEsSib_TypeAndInfo_Entry, SystemInformationBlockType7, SystemInformationCriticalExtensions
+    BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1, CellReselectionPriority,
+    SystemInformation_r8_IEsSib_TypeAndInfo, SystemInformation_r8_IEsSib_TypeAndInfo_Entry,
+    SystemInformationBlockType7, SystemInformationCriticalExtensions,
 };
 
 /// Based on heuristic T7 from Shinjo Park's "Why We Cannot Win".
@@ -12,7 +14,7 @@ pub struct LteSib6And7DowngradeAnalyzer {
     lte_priority: i16,
     legacy_priority: i16,
 }
-impl Default for LteSib6And7DowngradeAnalyzer{
+impl Default for LteSib6And7DowngradeAnalyzer {
     fn default() -> Self {
         Self::new()
     }
@@ -69,7 +71,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
             && let LteInformationElement::BcchDlSch(sch_msg) = &**lte_ie
             && let BCCH_DL_SCH_MessageType::C1(c1) = &sch_msg.message
             && let BCCH_DL_SCH_MessageType_c1::SystemInformationBlockType1(_) = c1
-        {  
+        {
             let flag;
             if self.legacy_priority > self.lte_priority {
                 flag = Some(Event {
@@ -91,7 +93,11 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
         for sib in sibs {
             match sib {
                 SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib3(sib3) => {
-                    let res_p: i16 = sib3.cell_reselection_serving_freq_info.cell_reselection_priority.0.into();
+                    let res_p: i16 = sib3
+                        .cell_reselection_serving_freq_info
+                        .cell_reselection_priority
+                        .0
+                        .into();
                     if res_p > self.lte_priority {
                         self.lte_priority = res_p.into();
                         debug!(
@@ -99,7 +105,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             self.lte_priority, _packet_num
                         );
                     }
-                } ,
+                }
                 SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib5(sib5) => {
                     let carrier_freq_list = &sib5.inter_freq_carrier_freq_list;
                     for carrier_freq in &carrier_freq_list.0 {
@@ -114,7 +120,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             }
                         }
                     }
-                } ,
+                }
                 SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib6(sib6) => {
                     if let Some(carrier_info_list) = sib6.carrier_freq_list_utra_fdd.as_ref() {
                         for carrier_info in &carrier_info_list.0 {
@@ -154,10 +160,10 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             carrier_info.common_info.cell_reselection_priority
                         {
                             self.legacy_priority = p.into();
-                                debug!(
-                                    "set legacy priority {} due to sib7 (frame {})",
-                                    self.lte_priority, _packet_num
-                                );
+                            debug!(
+                                "set legacy priority {} due to sib7 (frame {})",
+                                self.lte_priority, _packet_num
+                            );
                         }
                     }
                 }
