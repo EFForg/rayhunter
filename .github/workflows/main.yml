@@ -22,11 +22,12 @@ jobs:
     outputs:
       code_changed: ${{ steps.files_changed.outputs.code_count }}
       daemon_changed: ${{ steps.files_changed.outputs.daemon_count }}
+      daemon_needed: ${{ steps.files_changed.outputs.daemon_count || steps.files_changed.outputs.installer_build }}
       web_changed: ${{ steps.files_changed.outputs.web_count }}
       docs_changed: ${{ steps.files_changed.outputs.docs_count }}
       installer_changed: ${{ steps.files_changed.outputs.installer_count }}
       installer_gui_changed: ${{ steps.files_changed.outputs.installer_gui_count }}
-      rootshell_changed: ${{ steps.files_changed.outputs.rootshell_count }}
+      rootshell_needed: ${{ steps.files_changed.outputs.rootshell_count || steps.files_changed.outputs.installer_build }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,6 +49,7 @@ jobs:
             echo daemon_count=forced >> "$GITHUB_OUTPUT"
             echo web_count=forced >> "$GITHUB_OUTPUT"
             echo docs_count=forced >> "$GITHUB_OUTPUT"
+            echo installer_build=forced >> "$GITHUB_OUTPUT"
             echo installer_count=forced >> "$GITHUB_OUTPUT"
             echo installer_gui_count=forced >> "$GITHUB_OUTPUT"
             echo rootshell_count=forced >> "$GITHUB_OUTPUT"
@@ -56,9 +58,17 @@ jobs:
             echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^daemon -e ^lib -e ^telcom-parser)" >> "$GITHUB_OUTPUT"
             echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^daemon/web)" >> "$GITHUB_OUTPUT"
             echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^book.toml -e ^doc)" >> "$GITHUB_OUTPUT"
-            echo "installer_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^installer/)" >> "$GITHUB_OUTPUT"
-            echo "installer_gui_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^installer-gui)" >> "$GITHUB_OUTPUT"
             echo "rootshell_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^rootshell)" >> "$GITHUB_OUTPUT"
+
+            installer_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^installer/)
+            installer_gui_count=$(git diff --name-only $lcommit...HEAD | grep -c -e ^installer-gui)
+
+            if [ $installer_count != "0" ] || [ $installer_gui_count != "0" ]; then
+              echo "installer_build=true" >> "$GITHUB_OUTPUT"
+            fi
+
+            echo "installer_count=$installer_count" >> "$GITHUB_OUTPUT"
+            echo "installer_gui_count=$installer_gui_count" >> "$GITHUB_OUTPUT"
           fi
 
   mdbook_test:
@@ -269,7 +279,7 @@ jobs:
           if-no-files-found: error
 
   build_rootshell:
-    if: needs.files_changed.outputs.rootshell_changed != '0' || needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.rootshell_needed
     needs:
       - check_and_test
       - files_changed
@@ -293,10 +303,7 @@ jobs:
           if-no-files-found: error
 
   build_rayhunter:
-    # build_rust_installer needs this step. so when installer_changed, we need
-    # to build this step too. if we skip this step because only the installer
-    # changed, the build_rust_installer step will be skipped too.
-    if: needs.files_changed.outputs.daemon_changed != '0' || needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.daemon_needed
     needs:
       - check_and_test
       - files_changed
