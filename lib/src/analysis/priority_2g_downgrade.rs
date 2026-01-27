@@ -72,9 +72,8 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
             && let BCCH_DL_SCH_MessageType::C1(c1) = &sch_msg.message
             && let BCCH_DL_SCH_MessageType_c1::SystemInformationBlockType1(_) = c1
         {
-            let flag;
             if self.legacy_priority > self.lte_priority {
-                flag = Some(Event {
+                let flag = Some(Event {
                     event_type: EventType::High,
                     message:
                         format!("LTE cell advertised a 3G cell for priority {} reselection over LTE neighbors at priority {}", self.legacy_priority, self.lte_priority)
@@ -99,7 +98,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         .0
                         .into();
                     if res_p > self.lte_priority {
-                        self.lte_priority = res_p.into();
+                        self.lte_priority = res_p;
                         debug!(
                             "set priority {} due to sib3 (frame {})",
                             self.lte_priority, _packet_num
