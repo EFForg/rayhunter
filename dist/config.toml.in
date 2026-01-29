@@ -12,6 +12,7 @@ colorblind_mode = false
 # 1 = Subtle mode, display a colored line at the top of the screen when rayhunter is running (green=running, white=paused, red=warnings)
 # 2 = Demo Mode, display a fun orca gif
 # 3 = display the EFF logo
+# 4 = High Visibility mode, fill the entire screen with the status color (green=running, white=paused, red=warnings)
 #
 # TP-Link with one-bit display:
 # 0 = invisible mode
