@@ -9,7 +9,8 @@ Through web UI you can set:
   - *Invisible mode*: Rayhunter does not show anything on the built-in screen
   - *Subtle mode (colored line)*: Rayhunter shows green line if there are no warnings, red line if there are warnings (warnings could be checked through web UI) and white line if Rayhunter is not recording.
   - *Demo mode (orca gif)*, which shows image of orcas *and* colored line.
-  - *EFF logo*, which shows EFF logo and *and* colored line.
+  - *EFF logo*, which shows EFF logo *and* colored line.
+  - *High visibility (full screen color)*: fills the entire screen with the status color (green for recording, red for warnings, white for paused).
 - **Device Input Mode**, which defines behavior of built-in power button of the device. *Device Input Mode* could be:
   - *Disable button control*: built-in power button of the device is not used by Rayhunter.
   - *Double-tap power button to start/stop recording*: double clicking on a built-in power button of the device stops and immediately restarts the recording. This could be useful if Rayhunter's heuristics is triggered and you get the red line, and you want to "reset" the past warnings. Normally you can do that through web UI, but sometimes it is easier to double tap on power button.

@@ -107,6 +107,7 @@
                         <option value={1}>1 - Subtle mode (colored line)</option>
                         <option value={2}>2 - Demo mode (orca gif)</option>
                         <option value={3}>3 - EFF logo</option>
+                        <option value={4}>4 - High visibility (full screen color)</option>
                     </select>
                 </div>
 
