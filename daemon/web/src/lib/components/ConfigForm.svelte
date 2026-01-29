@@ -109,6 +109,10 @@
                         <option value={3}>3 - EFF logo</option>
                         <option value={4}>4 - High visibility (full screen color)</option>
                     </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Note: Rayhunter draws over the device's native UI, so some flickering is
+                        expected
+                    </p>
                 </div>
 
                 <div>
