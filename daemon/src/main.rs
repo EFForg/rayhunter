@@ -206,6 +206,10 @@ async fn run_with_config(
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
     let restart_token = CancellationToken::new();
     let shutdown_token = restart_token.child_token();
+    // Ensure shutdown_token is cancelled when this function exits for any
+    // reason (e.g. diag device init failure), so all spawned tasks get
+    // signaled to stop.
+    let _shutdown_guard = shutdown_token.clone().drop_guard();
 
     let notification_service = NotificationService::new(config.ntfy_url.clone());
 
