@@ -12,6 +12,7 @@
         onclick,
         ariaLabel,
         errorMessage,
+        jsonBody,
     }: {
         url: string;
         method?: string;
@@ -23,6 +24,7 @@
         onclick?: () => void | Promise<void>;
         ariaLabel?: string;
         errorMessage?: string;
+        jsonBody?: unknown;
     } = $props();
 
     let is_requesting = $state(false);
@@ -51,7 +53,8 @@
             await user_action_req(
                 method,
                 url,
-                errorMessage ? errorMessage : 'Error performing action'
+                errorMessage ? errorMessage : 'Error performing action',
+                jsonBody
             );
             if (onclick) {
                 await onclick();

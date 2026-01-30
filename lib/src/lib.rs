@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod analysis;
+pub mod clock;
 pub mod diag;
 pub mod gsmtap;
 pub mod gsmtap_parser;

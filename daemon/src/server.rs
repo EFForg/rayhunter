@@ -9,7 +9,9 @@ use axum::extract::State;
 use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
+use chrono::{DateTime, Local};
 use log::{error, warn};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::fs::write;
 use tokio::io::{AsyncReadExt, copy, duplex};
@@ -168,6 +170,37 @@ pub async fn test_notification(
                 format!("Failed to send test notification: {e}"),
             )
         })
+}
+
+/// Response for GET /api/time
+#[derive(Serialize)]
+pub struct TimeResponse {
+    /// The raw system time (without clock offset)
+    pub system_time: DateTime<Local>,
+    /// The adjusted time (system time + offset)
+    pub adjusted_time: DateTime<Local>,
+    /// The current offset in seconds
+    pub offset_seconds: i64,
+}
+
+/// Request for POST /api/time-offset
+#[derive(Deserialize)]
+pub struct SetTimeOffsetRequest {
+    /// The offset to set, in seconds
+    pub offset_seconds: i64,
+}
+
+pub async fn get_time() -> Json<TimeResponse> {
+    Json(TimeResponse {
+        system_time: Local::now(),
+        adjusted_time: rayhunter::clock::get_adjusted_now(),
+        offset_seconds: rayhunter::clock::get_offset().num_seconds(),
+    })
+}
+
+pub async fn set_time_offset(Json(req): Json<SetTimeOffsetRequest>) -> StatusCode {
+    rayhunter::clock::set_offset(chrono::TimeDelta::seconds(req.offset_seconds));
+    StatusCode::OK
 }
 
 pub async fn get_zip(

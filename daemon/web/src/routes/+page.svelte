@@ -11,6 +11,7 @@
     import ConfigForm from '$lib/components/ConfigForm.svelte';
     import ActionErrors from '$lib/components/ActionErrors.svelte';
     import IPRouteAlert from '$lib/components/IPRouteAlert.svelte';
+    import ClockDriftAlert from '$lib/components/ClockDriftAlert.svelte';
     import LogView from '$lib/components/LogView.svelte';
     import WarningIcon from '$lib/components/WarningIcon.svelte';
 
@@ -196,6 +197,7 @@
     {/if}
     <ActionErrors />
     <IPRouteAlert />
+    <ClockDriftAlert />
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">
             {#if current_entry}
