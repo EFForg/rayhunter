@@ -9,9 +9,52 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use log::error;
+use rayhunter::gsmtap_parser::get_cached_cell_info;
 use rayhunter::{Device, util::RuntimeMetadata};
 use serde::Serialize;
 use tokio::process::Command;
+
+/// LTE cell/signal information from DIAG measurements.
+/// All fields are optional since they may not be available on all devices
+/// or may not have been received yet.
+#[derive(Debug, Serialize)]
+pub struct CellSignalInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rsrp_dbm: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rsrq_db: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rssi_dbm: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pci: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub earfcn: Option<u32>,
+}
+
+/// Get cell/signal information for devices that support DIAG.
+/// Returns None for devices without DIAG support or if no measurements available.
+pub fn get_cell_info(device: &Device) -> Option<CellSignalInfo> {
+    match device {
+        // Devices with DIAG support
+        Device::Orbic | Device::Tplink | Device::Tmobile | Device::Wingtech => {
+            let info = get_cached_cell_info();
+            // Only return if we have at least some data
+            if info.rsrp_dbm.is_some() || info.pci.is_some() {
+                Some(CellSignalInfo {
+                    rsrp_dbm: info.rsrp_dbm,
+                    rsrq_db: info.rsrq_db,
+                    rssi_dbm: info.rssi_dbm,
+                    pci: info.pci,
+                    earfcn: info.earfcn,
+                })
+            } else {
+                None
+            }
+        }
+        // Devices without DIAG support
+        Device::Pinephone | Device::Uz801 => None,
+    }
+}
 
 #[derive(Debug, Serialize)]
 pub struct SystemStats {
@@ -20,6 +63,8 @@ pub struct SystemStats {
     pub runtime_metadata: RuntimeMetadata,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub battery_status: Option<BatteryState>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cell_info: Option<CellSignalInfo>,
 }
 
 impl SystemStats {
@@ -36,6 +81,7 @@ impl SystemStats {
                     None
                 }
             },
+            cell_info: get_cell_info(device),
         })
     }
 }
