@@ -1,5 +1,7 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Frequently Asked Questions
+    url: https://efforg.github.io/rayhunter/faq.html
   - name: Questions and community
     url: https://efforg.github.io/rayhunter/support-feedback-community.html
     about: If you're having trouble using Rayhunter and aren't sure you've found a bug or request for a new feature, please first try asking for help on GitHub discussions or Mattermost
