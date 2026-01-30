@@ -14,12 +14,13 @@ You'll need to install [Tauri's dependencies](https://tauri.app/start/prerequisi
 
 The GUI installer pulls in the CLI installer as a library. Like with the CLI installer, the firmware binary needs to be present and can be overridden with the same envvars. See `../installer/build.rs` for options.
 
-For example, to build the firmware in development mode and then provide the path explicitly:
+For example, to build the firmware in development mode:
 
 ```bash
 cargo build-daemon-firmware-devel
+cargo build-rootshell-firmware-devel
 
-(cd installer-gui && FILE_RAYHUNTER_DAEMON=$PWD/../target/armv7-unknown-linux-musleabihf/firmware-devel/rayhunter-daemon npm run tauri android build)
+(cd installer-gui && FIRMWARE_PROFILE=firmware-devel npm run tauri android build)
 ```
 
 ## Building

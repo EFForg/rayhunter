@@ -5,6 +5,10 @@ build-daemon-firmware = "build -p rayhunter-daemon --bin rayhunter-daemon --targ
 # Build the daemon with "firmware-devel" profile and "rustcrypto" backend.
 # Works with just the Rust toolchain, and is medium-slow to build. Binaries are slightly larger.
 build-daemon-firmware-devel = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware-devel"
+# Build rootshell for firmware
+build-rootshell-firmware = "build -p rootshell --bin rootshell --target armv7-unknown-linux-musleabihf --profile firmware"
+# Build rootshell for development
+build-rootshell-firmware-devel = "build -p rootshell --bin rootshell --target armv7-unknown-linux-musleabihf --profile firmware-devel"
 
 [target.aarch64-apple-darwin]
 linker = "rust-lld"
