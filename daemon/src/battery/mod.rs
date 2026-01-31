@@ -1,6 +1,6 @@
 use std::{path::Path, time::Duration};
 
-use log::{error, info};
+use log::{info, warn};
 use rayhunter::Device;
 use serde::Serialize;
 use tokio::select;
@@ -66,11 +66,11 @@ pub fn run_battery_notification_worker(
         // Don't send a notification initially if the device starts at a low battery level.
         let mut triggered = match get_battery_status(&device).await {
             Err(RayhunterError::FunctionNotSupportedForDeviceError) => {
-                info!("Battery level function not supported for device");
-                false
+                info!("Battery status not supported for this device, disabling battery notifications");
+                return;
             }
             Err(e) => {
-                error!("Failed to get battery status: {e}");
+                warn!("Failed to get battery status: {e}");
                 true
             }
             Ok(status) => status.level <= LOW_BATTERY_LEVEL,
@@ -83,8 +83,12 @@ pub fn run_battery_notification_worker(
             }
 
             let status = match get_battery_status(&device).await {
+                Err(RayhunterError::FunctionNotSupportedForDeviceError) => {
+                    info!("Battery status not supported for this device, disabling battery notifications");
+                    break;
+                }
                 Err(e) => {
-                    error!("Failed to get battery status: {e}");
+                    warn!("Failed to get battery status: {e}");
                     continue;
                 }
                 Ok(status) => status,

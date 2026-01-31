@@ -133,7 +133,7 @@ pub enum Message {
         log_type: u16,
         timestamp: Timestamp,
         // pass the log type and log length (inner_length - (sizeof(log_type) + sizeof(timestamp)))
-        #[deku(ctx = "*log_type, *inner_length - 12")]
+        #[deku(ctx = "*log_type, inner_length.saturating_sub(12)")]
         body: LogBody,
     },
 
@@ -143,10 +143,13 @@ pub enum Message {
     // pass those opcodes down to their respective parsers.
     #[deku(id_pat = "_")]
     Response {
-        opcode: u32,
+        opcode1: u8, // the "id" (from deku's POV) gets parsed into this field
+        opcode2: u8,
+        opcode3: u8,
+        opcode4: u8,
         subopcode: u32,
         status: u32,
-        #[deku(ctx = "*opcode, *subopcode")]
+        #[deku(ctx = "u32::from_le_bytes([*opcode1, *opcode2, *opcode3, *opcode4]), *subopcode")]
         payload: ResponsePayload,
     },
 }
@@ -191,20 +194,22 @@ pub enum LogBody {
     // * 0xb0ed: plain EMM NAS message (outgoing)
     #[deku(id_pat = "0xb0e2 | 0xb0e3 | 0xb0ec | 0xb0ed")]
     Nas4GMessage {
-        #[deku(ctx = "log_type")]
+        #[deku(skip, default = "log_type")]
+        log_type: u16,
+        #[deku(ctx = "*log_type")]
         direction: Nas4GMessageDirection,
         ext_header_version: u8,
         rrc_rel: u8,
         rrc_version_minor: u8,
         rrc_version_major: u8,
         // message length = hdr_len - (sizeof(ext_header_version) + sizeof(rrc_rel) + sizeof(rrc_version_minor) + sizeof(rrc_version_major))
-        #[deku(count = "hdr_len - 4")]
+        #[deku(count = "hdr_len.saturating_sub(4)")]
         msg: Vec<u8>,
     },
     #[deku(id = "0x11eb")]
     IpTraffic {
         // is this right?? based on https://github.com/P1sec/QCSuper/blob/81dbaeee15ec7747e899daa8e3495e27cdcc1264/src/modules/pcap_dump.py#L378
-        #[deku(count = "hdr_len - 8")]
+        #[deku(count = "hdr_len.saturating_sub(8)")]
         msg: Vec<u8>,
     },
     #[deku(id = "0x713a")]
@@ -614,5 +619,84 @@ mod test {
             result[1],
             Err(DiagParsingError::HdlcDecapsulationError(_, _))
         ));
+    }
+
+    #[test]
+    fn test_fuzz_crash_inner_length_underflow() {
+        // Regression test: inner_length < 12 previously caused panic.
+        // Fixed by using saturating_sub in Message::Log body length calculation.
+        let fuzz_data = b"\x10\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        let _ = Message::from_bytes((fuzz_data, 0));
+    }
+
+    #[test]
+    fn test_fuzz_crash_nas_hdr_len_underflow() {
+        // Regression test for two things:
+        // - hdr_len < 4 previously caused panic in Nas4GMessage.
+        // - Upgrading to deku 0.20 caused incorrect parsing behavior (double-read of discriminant)
+        let nas_msg =
+            b"\x10\x00\x14\x00\x02\x00\xe2\xb0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00";
+
+        let ((rest, _), msg) = Message::from_bytes((nas_msg, 0)).unwrap();
+
+        assert_eq!(rest.len(), 0);
+        assert!(
+            matches!(
+                msg,
+                Message::Log {
+                    log_type: 0xb0e2,
+                    body: LogBody::Nas4GMessage {
+                        direction: Nas4GMessageDirection::Downlink,
+                        ..
+                    },
+                    ..
+                }
+            ),
+            "Unexpected message: {:?}",
+            msg
+        );
+    }
+
+    #[test]
+    fn test_fuzz_crash_ip_traffic_hdr_len_underflow() {
+        // Regression test: hdr_len < 8 previously caused panic in IpTraffic.
+        // Fixed by using saturating_sub for msg length calculation.
+        let ip_msg = b"\x10\x00\x14\x00\x02\x00\xeb\x11\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00";
+        let _ = Message::from_bytes((ip_msg, 0));
+    }
+
+    #[test]
+    fn test_fuzz_crash_response_opcode_parsing() {
+        // Regression test: Upgrading to deku 0.20 caused incorrect parsing of Response messages.
+        // The issue was that deku 0.20 requires an `id` field for `id_pat = "_"` variants,
+        // but in deku 0.18 the discriminant was NOT consumed from the stream.
+        // This caused a 1-byte offset, making opcode and all subsequent fields misaligned.
+        // Fixed by splitting the opcode into 4 separate u8 fields so the discriminant byte
+        // becomes the first byte of the opcode, matching the old deku 0.18 behavior.
+        let response_msg = b"\x73\x00\x00\x00\x03\x00\x00\x00\x0a\x00\xec\xb0\x8e\x51\x02\x6f\x2a\xc5\x0b\x01\x01\x09\x05\x00\x07\x45\x8e\x14\x7d";
+
+        let ((rest, _), msg) = Message::from_bytes((response_msg, 0)).unwrap();
+
+        // Verify the opcode is correctly parsed as 115 (0x73 in first byte)
+        // In little-endian: [0x73, 0x00, 0x00, 0x00] = 0x00000073 = 115
+        assert!(
+            matches!(
+                msg,
+                Message::Response {
+                    opcode1: 0x73,
+                    opcode2: 0x00,
+                    opcode3: 0x00,
+                    opcode4: 0x00,
+                    subopcode: 3,
+                    status: 2968256522, // [0x0a, 0x00, 0xec, 0xb0] in LE
+                    payload: ResponsePayload::LogConfig(LogConfigResponse::SetMask),
+                }
+            ),
+            "Unexpected message: {:?}",
+            msg
+        );
+
+        // Verify we consumed the expected number of bytes
+        assert_eq!(rest.len(), 17);
     }
 }

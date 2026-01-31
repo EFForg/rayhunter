@@ -19,7 +19,7 @@
         analysis_status === AnalysisStatus.Queued || analysis_status === AnalysisStatus.Running
     );
 
-    async function handleReAnalyze() {
+    async function handle_re_analyze() {
         // Update the entry directly for immediate UI feedback
         entry.analysis_status = AnalysisStatus.Queued;
         entry.analysis_report = undefined;
@@ -33,7 +33,7 @@
     loadingLabel="Analyzing..."
     disabled={is_processing}
     variant="blue"
-    onclick={handleReAnalyze}
+    onclick={handle_re_analyze}
     ariaLabel="re-analyze"
     errorMessage="Error re-analyzing recoding"
 >

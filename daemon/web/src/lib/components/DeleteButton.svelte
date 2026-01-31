@@ -12,7 +12,7 @@
         name: string;
     } = $props();
 
-    function confirmDelete() {
+    function confirm_delete() {
         if (window.confirm(prompt)) {
             user_action_req('POST', url, 'Unable to delete recording ' + name);
         }
@@ -21,7 +21,7 @@
 
 <button
     class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-2 sm:px-4 rounded-md flex flex-row"
-    onclick={confirmDelete}
+    onclick={confirm_delete}
     aria-label="delete"
 >
     <p>{text}</p>

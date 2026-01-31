@@ -2,7 +2,7 @@
 
 Make sure you've got one of Rayhunter's [supported devices](./supported-devices.md). These instructions have only been tested on macOS and Ubuntu 24.04. If they fail, you will need to [install Rayhunter from source](./installing-from-source.md).
 
-1. For the TP-Link only, insert a FAT-formatted SD card. This will be used to store all recordings.
+1. **For the TP-Link only,** insert a FAT-formatted SD card. This will be used to store all recordings.
 2. Download the latest `rayhunter-vX.X.X-PLATFORM.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases) for your platform:
     - for Linux on x64 architecture: `linux-x64`
     - for Linux on ARM64 architecture: `linux-aarch64`
@@ -18,29 +18,50 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
     cd ~/Downloads/rayhunter-vX.X.X-PLATFORM
     ```
 
-4. Turn on your device by holding the power button on the front.
+   On Windows you can decompress using the file browser, then navigate to the
+   folder that contains `installer.exe`, **hold Shift**, Right-Click inside the
+   folder, then click "Open in PowerShell".
 
-   * For the Orbic, connect the device using a USB-C cable.
-     * Or connect to the network if using the network based installer, this is especially recommended on Windows.
-   * For TP-Link, connect to its network using either WiFi or USB Tethering.
+4. **Connect to your device.**
 
-5. Run the installer:
+   First turn on your device by holding the power button on the front.
 
-    ```bash
-    # On MacOS, you must first remove the quarantine bit
-    xattr -d com.apple.quarantine installer
-    ```
-    Then run the installer:
-    ```bash
-    ./installer orbic
-    # or: ./installer [orbic-network|tplink|tmobile|uz801|pinephone|wingtech]
-    ```
+   Then connect to the device using either WiFi or USB tethering.
 
-    The device will restart multiple times over the next few minutes.
+   You know you are in the right network when you can access
+   <http://192.168.1.1> (Orbic) or <http://192.168.0.1> (TP-Link) and see the
+   hardware's own admin menu.
 
-    You will know it is done when you see terminal output that says `Testing Rayhunter... done`
+5. **On MacOS only**, you have to run `xattr -d
+   com.apple.quarantine installer` to allow execution of
+   the binary.
 
-6. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter.md). You should also see a green line flash along the top of top the display on the device.
+6. **Run the installer.**
+
+   ```bash
+   # For Orbic:
+   ./installer orbic --admin-password 'mypassword'
+   # Or install over USB if you want ADB and a root shell (not recommended for most users)
+   ./installer orbic-usb
+
+   # For TP-Link:
+   ./installer tplink
+   ```
+
+   * On Verizon Orbic, the password is the WiFi password.
+   * On Kajeet/Smartspot devices, the default password is `$m@rt$p0tc0nf!g`
+   * On Moxee-brand devices, check under the battery for the password.
+   * You can reset the password by pressing the button under the back case until the unit restarts.
+
+   TP-Link does not require an `--admin-password` parameter.
+
+   For other devices, check `./installer --help` or the
+   respective page in the sidebar under "Supported
+   Devices."
+
+7. The installer will eventually tell you it's done, and the device will reboot.
+
+8. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter.md). You should also see a green line flash along the top of top the display on the device.
 
 ## Troubleshooting
 

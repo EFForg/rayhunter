@@ -86,3 +86,22 @@ export async function set_config(config: Config): Promise<void> {
         throw new Error(error);
     }
 }
+
+export async function test_notification(): Promise<void> {
+    const response = await fetch('/api/test-notification', {
+        method: 'POST',
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+    }
+}
+
+export interface RouteStatus {
+    has_default_route: boolean;
+}
+
+export async function get_route_status(): Promise<RouteStatus> {
+    return JSON.parse(await req('GET', '/api/route-status'));
+}

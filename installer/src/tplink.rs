@@ -18,7 +18,9 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::InstallTpLink;
-use crate::util::{telnet_send_command, telnet_send_file};
+use crate::connection::{TelnetConnection, install_config};
+use crate::output::println;
+use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
 
 type HttpProxyClient = hyper_util::client::legacy::Client<HttpConnector, Body>;
 
@@ -27,10 +29,11 @@ pub async fn main_tplink(
         skip_sdcard,
         admin_ip,
         sdcard_path,
+        reset_config,
     }: InstallTpLink,
 ) -> Result<(), Error> {
     let is_v3 = start_telnet(&admin_ip).await?;
-    tplink_run_install(skip_sdcard, admin_ip, sdcard_path, is_v3).await
+    tplink_run_install(skip_sdcard, admin_ip, sdcard_path, is_v3, reset_config).await
 }
 
 #[derive(Deserialize)]
@@ -110,6 +113,7 @@ async fn tplink_run_install(
     admin_ip: String,
     mut sdcard_path: String,
     is_v3: bool,
+    reset_config: bool,
 ) -> Result<(), Error> {
     println!("Connecting via telnet to {admin_ip}");
     let addr = SocketAddr::from_str(&format!("{admin_ip}:23")).unwrap();
@@ -180,15 +184,9 @@ async fn tplink_run_install(
     )
     .await?;
 
-    telnet_send_file(
-        addr,
-        &format!("{sdcard_path}/config.toml"),
-        crate::CONFIG_TOML
-            .replace("#device = \"orbic\"", "device = \"tplink\"")
-            .as_bytes(),
-        true,
-    )
-    .await?;
+    let mut conn = TelnetConnection::new(addr, true);
+    let config_path = format!("{sdcard_path}/config.toml");
+    install_config(&mut conn, &config_path, "tplink", reset_config).await?;
 
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
@@ -265,6 +263,14 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
     // on other versions, this path is /js/settings.min.js
     let is_settings_js = path.ends_with("/settings.min.js");
 
+    if is_settings_js {
+        // It can happen that new versions of the admin JS do not take effect because of caching
+        // headers. This is a problem when trying multiple versions of the installer. Delete all
+        // caching headers and hope the server never erroneously returns a 304 that way.
+        req.headers_mut().remove("If-Modified-Since");
+        req.headers_mut().remove("If-None-Match");
+    }
+
     *req.uri_mut() = Uri::try_from(uri).unwrap();
 
     let mut response = state
@@ -281,22 +287,33 @@ async fn handler(state: State<AppState>, mut req: Request) -> Result<Response, S
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         let mut data = BytesMut::from(data);
         // inject some javascript into the admin UI to get us a telnet shell.
-        data.extend(br#";window.rayhunterPoll = window.setInterval(() => {
-            // Intentionally register rayhunter-daemon before rayhunter-root so that we are less
-            // likely to run into race conditions where rayhunter-root is launched, and the
-            // installer kills the server. In practice both HTTP requests may execute concurrently
-            // anyway.
-            Globals.models.PTModel.add({applicationName: "rayhunter-daemon", enableState: 1, entryId: 2, openPort: "2400-2500", openProtocol: "TCP", triggerPort: "$(/etc/init.d/rayhunter_daemon start)", triggerProtocol: "TCP"});
-            Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 1, openPort: "2300-2400", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh)", triggerProtocol: "TCP"});
+        data.extend(br#";document.addEventListener("DOMContentLoaded", () => {
+        console.log("rayhunter: start polling");
+
+        var rayhunterSleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        var rayhunterPoll = window.setInterval(async () => {
+            Globals.models.PTModel.add({applicationName: "rayhunter-daemon", enableState: 1, entryId: 1, openPort: "2401", openProtocol: "TCP", triggerPort: "$(/etc/init.d/rayhunter_daemon start &)", triggerProtocol: "TCP"});
+            console.log("rayhunter: first request succeeded, stopping rayhunter poll loop");
+            window.clearInterval(rayhunterPoll);
+
+            // PTModel.add actually does not wait for the request to finsh.
+            // Wait 1 second for the request to finish.
+            // Running both requests concurrently can get one of the two requests rejected, as
+            // sending a request with entryId: 2 is invalid if entryId 1 does not exist (yet)
+            // This only happens starting with firmware M7350(EU)_V9_9.0.2 Build 241021, earlier
+            // versions are not affected.
+            await rayhunterSleep(1000);
+
+            console.log("rayhunter: running second request");
+            Globals.models.PTModel.add({applicationName: "rayhunter-root", enableState: 1, entryId: 2, openPort: "2402", openProtocol: "TCP", triggerPort: "$(busybox telnetd -l /bin/sh &)", triggerProtocol: "TCP"});
 
             // Do not use alert(), instead replace page with success message. Using alert() will
             // block the event loop in such a way that any background promises are blocked from
             // progress too. For example: The HTTP requests to register our port triggers!
             document.body.innerHTML = "<h1>Success! You can go back to the rayhunter installer.</h1>";
-
-            // We can stop polling now, presumably both requests are already inflight.
-            window.clearInterval(window.rayhunterPoll);
-        }, 1000);"#);
+        }, 1000);
+        });"#);
         response = Response::from_parts(parts, Body::from(Bytes::from(data)));
         response.headers_mut().remove("Content-Length");
     }
@@ -359,8 +376,16 @@ fn get_rayhunter_daemon(sdcard_path: &str) -> String {
     // specific to a particular hardware revision here.
     crate::RAYHUNTER_DAEMON_INIT.replace(
         "#RAYHUNTER-PRESTART",
-        &format!("mount /dev/mmcblk0p1 {sdcard_path} || true"),
+        &format!(
+            "(mount /dev/mmcblk0p1 {sdcard_path} || true) 2>&1 | tee /tmp/rayhunter-mount.log"
+        ),
     )
+}
+
+/// Root the TP-Link device and open an interactive shell
+pub async fn shell(admin_ip: &str) -> Result<(), Error> {
+    start_telnet(admin_ip).await?;
+    interactive_shell(admin_ip, 23, true).await
 }
 
 #[test]

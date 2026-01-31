@@ -1,7 +1,15 @@
 [package]
 name = "installer"
-version = "0.7.1"
+version = "0.9.0"
 edition = "2024"
+
+[lib]
+name = "installer"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "installer"
+path = "src/main.rs"
 
 [dependencies]
 aes = "0.8.4"
@@ -23,8 +31,12 @@ sha2 = "0.10.8"
 tokio = { version = "1.44.2", features = ["io-util", "macros", "rt"], default-features = false }
 tokio-retry2 = "0.5.7"
 tokio-stream = "0.1.17"
+futures = "0.3"
 
-[target.'cfg(target_os = "linux")'.dependencies.adb_client]
+[target.'cfg(unix)'.dependencies]
+termios = "0.3"
+
+[target.'cfg(all(target_os = "linux", not(target_os = "android")))'.dependencies.adb_client]
 git = "https://github.com/EFForg/adb_client.git"
 rev = "e511662394e4fa32865c154c40f81a3d846f700c"
 default-features = false

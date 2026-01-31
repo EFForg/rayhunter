@@ -20,49 +20,70 @@ jobs:
     permissions:
       contents: read
     outputs:
-      code_changed: ${{ steps.files_changed.outputs.code_count }}
-      daemon_changed: ${{ steps.files_changed.outputs.daemon_count }}
-      web_changed: ${{ steps.files_changed.outputs.web_count }}
-      docs_changed: ${{ steps.files_changed.outputs.docs_count }}
-      installer_changed: ${{ steps.files_changed.outputs.installer_count }}
-      rootshell_changed: ${{ steps.files_changed.outputs.rootshell_count }}
+      code_changed: ${{ steps.files_changed.outputs.code_count != '0' }}
+      daemon_changed: ${{ steps.files_changed.outputs.daemon_count != '0' }}
+      daemon_needed: ${{ steps.files_changed.outputs.daemon_count != '0' || steps.files_changed.outputs.installer_build != '0' }}
+      web_changed: ${{ steps.files_changed.outputs.web_count != '0' }}
+      docs_changed: ${{ steps.files_changed.outputs.docs_count != '0' }}
+      installer_changed: ${{ steps.files_changed.outputs.installer_count != '0' }}
+      installer_gui_changed: ${{ steps.files_changed.outputs.installer_gui_count != '0' }}
+      rootshell_needed: ${{ steps.files_changed.outputs.rootshell_count != '0' || steps.files_changed.outputs.installer_build != '0' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: detect file changes
         id: files_changed
         run: |
           lcommit=${{ github.event.pull_request.base.sha || 'origin/main' }}
 
-          # If we are on main, or if these workflow files are being changed, run everything
-          if [ ${{ github.ref }} = 'refs/heads/main' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/ -e ^.cargo
+          # If we are on main, if workflow/cargo config files changed, or if
+          # the latest commit message contains "#build-all", run everything.
+          # Use #build-all in a commit message to force a full build on a PR
+          # branch (useful for testing release builds without merging to main).
+          if [ ${GITHUB_REF} = 'refs/heads/main' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/ -e ^.cargo || git log -1 --format='%s %b' | grep -qF '#build-all'
           then
             echo "building everything"
             echo code_count=forced >> "$GITHUB_OUTPUT"
             echo daemon_count=forced >> "$GITHUB_OUTPUT"
             echo web_count=forced >> "$GITHUB_OUTPUT"
             echo docs_count=forced >> "$GITHUB_OUTPUT"
+            echo installer_build=forced >> "$GITHUB_OUTPUT"
             echo installer_count=forced >> "$GITHUB_OUTPUT"
+            echo installer_gui_count=forced >> "$GITHUB_OUTPUT"
             echo rootshell_count=forced >> "$GITHUB_OUTPUT"
           else
             echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^installer -e ^check -e ^lib -e ^rootshell -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^lib -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
             echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon/web | wc -l)" >> "$GITHUB_OUTPUT"
             echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -e ^book.toml -e ^doc | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "installer_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer | wc -l)" >> "$GITHUB_OUTPUT"
             echo "rootshell_count=$(git diff --name-only $lcommit...HEAD | grep -e ^rootshell | wc -l)" >> "$GITHUB_OUTPUT"
+
+            installer_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer/ | wc -l)
+            installer_gui_count=$(git diff --name-only $lcommit...HEAD | grep -e ^installer-gui | wc -l)
+
+            if [ $installer_count != "0" ] || [ $installer_gui_count != "0" ]; then
+              echo "installer_build=1" >> "$GITHUB_OUTPUT"
+            else
+              echo "installer_build=0" >> "$GITHUB_OUTPUT"
+            fi
+
+            echo "installer_count=$installer_count" >> "$GITHUB_OUTPUT"
+            echo "installer_gui_count=$installer_gui_count" >> "$GITHUB_OUTPUT"
           fi
 
   mdbook_test:
     name: Test mdBook Documentation builds
     needs: files_changed
-    if: needs.files_changed.outputs.docs_changed != '0'
+    if: needs.files_changed.outputs.docs_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Install mdBook
         run: |
           cargo install mdbook --no-default-features --features search --vers "^0.4" --locked
@@ -80,6 +101,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Install mdBook
         run: |
           cargo install mdbook --no-default-features --features search --vers "^0.4" --locked
@@ -98,12 +121,14 @@ jobs:
 
   check_and_test:
     needs: files_changed
-    if: needs.files_changed.outputs.code_changed != '0'
+    if: needs.files_changed.outputs.code_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
     - uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt, clippy
@@ -124,9 +149,37 @@ jobs:
       run: |
         NO_FIRMWARE_BIN=true cargo clippy --verbose
 
-  test_web_frontend:
+  installer_gui_check:
+    # we test the GUI installer separately to:
+    # 1) mimic the default behavior of cargo commands for rayhunter devs where
+    #    installer-gui isn't one of the default workspace packages
+    # 2) avoid slowing down development on changes unrelated to the GUI installer
     needs: files_changed
-    if: needs.files_changed.outputs.web_changed != '0'
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
+    # we run this on macos simply because no additional OS packages need to be
+    # installed
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+    - uses: Swatinem/rust-cache@v2
+    # we don't need to run cargo fmt here because both cargo fmt and cargo
+    # fmt --all runs on all workspace packages so this is handled by
+    # check_and_test above
+    - name: Check
+      run: NO_FIRMWARE_BIN=true cargo check --package installer-gui --verbose
+    - name: Run clippy
+      run: NO_FIRMWARE_BIN=true cargo clippy --package installer-gui --verbose
+
+  test_daemon_frontend:
+    needs: files_changed
+    if: needs.files_changed.outputs.web_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -135,19 +188,40 @@ jobs:
         working-directory: daemon/web
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - run: npm install
       - run: npm run lint
       - run: npm run check
       - run: npm run test
 
+  test_installer_frontend:
+    needs: files_changed
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: installer-gui
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: npm install
+      - run: npm run lint
+      - run: npm run check
+
   windows_installer_check_and_test:
     needs: files_changed
-    if: needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.installer_changed == 'true'
     runs-on: windows-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: Swatinem/rust-cache@v2
       - name: cargo check
         shell: bash
@@ -161,7 +235,7 @@ jobs:
           NO_FIRMWARE_BIN=true cargo test --verbose --no-default-features
 
   build_rayhunter_check:
-    if: needs.files_changed.outputs.daemon_changed != '0'
+    if: needs.files_changed.outputs.daemon_changed == 'true'
     needs:
       - check_and_test
       - files_changed
@@ -192,6 +266,8 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform.target }}
@@ -205,7 +281,7 @@ jobs:
           if-no-files-found: error
 
   build_rootshell:
-    if: needs.files_changed.outputs.rootshell_changed != '0'
+    if: needs.files_changed.outputs.rootshell_needed == 'true'
     needs:
       - check_and_test
       - files_changed
@@ -214,6 +290,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: armv7-unknown-linux-musleabihf
@@ -227,10 +305,7 @@ jobs:
           if-no-files-found: error
 
   build_rayhunter:
-    # build_rust_installer needs this step. so when installer_changed, we need
-    # to build this step too. if we skip this step because only the installer
-    # changed, the build_rust_installer step will be skipped too.
-    if: needs.files_changed.outputs.daemon_changed != '0' || needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.daemon_needed == 'true'
     needs:
       - check_and_test
       - files_changed
@@ -240,6 +315,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: armv7-unknown-linux-musleabihf
@@ -268,7 +345,7 @@ jobs:
           if-no-files-found: error
 
   build_rust_installer:
-    if: needs.files_changed.outputs.installer_changed != '0'
+    if: needs.files_changed.outputs.installer_changed == 'true'
     permissions:
       contents: read
       packages: write
@@ -301,6 +378,8 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -311,6 +390,145 @@ jobs:
         with:
           name: installer-${{ matrix.platform.name }}
           path: target/${{ matrix.platform.target }}/release/installer${{ matrix.platform.os == 'windows-latest' && '.exe' || '' }}
+          if-no-files-found: error
+
+  build_installer_gui_linux:
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - build_rayhunter
+      - build_rootshell
+      - files_changed
+      - installer_gui_check
+      - test_installer_frontend
+    strategy:
+      matrix:
+        platform:
+          # we want to use the oldest supported version of ubuntu here to
+          # maximize compatibility with older versions of glibc
+          - name: linux-x64
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - name: linux-aarch64
+            os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Install tauri dependencies
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils
+      - name: Build GUI installer
+        shell: bash
+        run: |
+          cd installer-gui
+          npm install
+          npm run tauri build -- --target ${{ matrix.platform.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-${{ matrix.platform.name }}-appimage
+          path: target/${{ matrix.platform.target }}/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-${{ matrix.platform.name }}-deb
+          path: target/${{ matrix.platform.target }}/release/bundle/deb/*.deb
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-${{ matrix.platform.name }}-rpm
+          path: target/${{ matrix.platform.target }}/release/bundle/rpm/*.rpm
+          if-no-files-found: error
+
+  build_installer_gui_macos:
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - build_rayhunter
+      - build_rootshell
+      - files_changed
+      - installer_gui_check
+      - test_installer_frontend
+    strategy:
+      matrix:
+        platform:
+          - name: macos-arm
+            target: aarch64-apple-darwin
+          - name: macos-intel
+            target: x86_64-apple-darwin
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build GUI installer
+        shell: bash
+        run: |
+          cd installer-gui
+          npm install
+          npm run tauri build -- --target ${{ matrix.platform.target }}
+          cd ..
+          mv "target/${{ matrix.platform.target }}/release/bundle/macos/"*.app .
+          zip -r "rayhunter-installer-${{ matrix.platform.name }}.app.zip" ./*.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-${{ matrix.platform.name }}-app
+          path: ./*.app.zip
+          if-no-files-found: error
+
+  build_installer_gui_windows:
+    if: needs.files_changed.outputs.installer_gui_changed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - build_rayhunter
+      - build_rootshell
+      - files_changed
+      - installer_gui_check
+      - test_installer_frontend
+    env:
+      TARGET: x86_64-pc-windows-msvc
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ env.TARGET }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build GUI installer
+        shell: bash
+        run: |
+          cd installer-gui
+          npm install
+          npm run tauri build -- --target ${{ env.TARGET }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-msi
+          path: target/${{ env.TARGET }}/release/bundle/msi/*.msi
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-installer-exe
+          path: target/${{ env.TARGET }}/release/bundle/nsis/*.exe
           if-no-files-found: error
 
   build_release_zip:
@@ -334,6 +552,8 @@ jobs:
           - windows-x86_64
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
         run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon/rayhunter-daemon
@@ -343,7 +563,7 @@ jobs:
       - name: Setup versioned release directory
         run: |
           platform="${{ matrix.platform }}"
-          dest="rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}"
+          dest="rayhunter-v${VERSION}-${{ matrix.platform }}"
           mkdir "$dest"
           # Handle installer with proper extension for Windows
           if [ "$platform" = "windows-x86_64" ]; then
@@ -351,7 +571,7 @@ jobs:
           else
             mv installer-$platform/installer "$dest"/installer
           fi
-          cp -r rayhunter-check-* rayhunter-daemon rootshell/rootshell dist/* installer/install.ps1 "$dest"/
+          cp -r rayhunter-check-* rayhunter-daemon dist/scripts "$dest"/
           zip -r "$dest.zip" "$dest"
           sha256sum "$dest.zip" > "$dest.zip.sha256"
 

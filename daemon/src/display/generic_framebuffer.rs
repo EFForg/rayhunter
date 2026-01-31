@@ -178,6 +178,7 @@ pub fn update_ui(
     let display_level = config.ui_level;
     if display_level == 0 {
         info!("Invisible mode, not spawning UI.");
+        return;
     }
 
     let colorblind_mode = config.colorblind_mode;
@@ -214,9 +215,13 @@ pub fn update_ui(
                 Err(e) => error!("error receiving framebuffer update message: {e}"),
             }
 
+            let mut status_bar_height = 2;
             match display_level {
                 2 => fb.draw_gif(img.unwrap()).await,
                 3 => fb.draw_img(img.unwrap()).await,
+                4 => {
+                    status_bar_height = fb.dimensions().height;
+                }
                 128 => {
                     fb.draw_line(Color::Cyan, 128).await;
                     fb.draw_line(Color::Pink, 102).await;
@@ -224,12 +229,13 @@ pub fn update_ui(
                     fb.draw_line(Color::Pink, 50).await;
                     fb.draw_line(Color::Cyan, 25).await;
                 }
-                // this branch id for ui_level 1, which is also the default if an
+                // this branch is for ui_level 1, which is also the default if an
                 // unknown value is used
                 _ => {}
             };
             let (color, pattern) = display_style;
-            fb.draw_patterned_line(color, 2, pattern).await;
+            fb.draw_patterned_line(color, status_bar_height, pattern)
+                .await;
             tokio::time::sleep(Duration::from_millis(REFRESH_RATE)).await;
         }
     });

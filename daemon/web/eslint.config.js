@@ -37,6 +37,17 @@ export default ts.config(
                 { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
             ],
             '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/naming-convention': [
+                'error',
+                {
+                    selector: 'function',
+                    format: ['snake_case'],
+                },
+                {
+                    selector: 'method',
+                    format: ['snake_case'],
+                },
+            ],
         },
     }
 );

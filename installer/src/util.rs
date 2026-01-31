@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -10,13 +9,10 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
 
-macro_rules! echo {
-    ($($arg:tt)*) => {
-        print!($($arg)*);
-        let _ = std::io::stdout().flush();
-    };
-}
-pub(crate) use echo;
+use crate::output::{print, println};
+
+#[cfg(unix)]
+use std::os::fd::AsRawFd;
 
 pub async fn telnet_send_command_with_output(
     addr: SocketAddr,
@@ -91,7 +87,7 @@ pub async fn telnet_send_file(
     payload: &[u8],
     wait_for_prompt: bool,
 ) -> Result<()> {
-    echo!("Sending file {filename} ... ");
+    print!("Sending file {filename} ... ");
     let nc_output = {
         let filename = filename.to_owned();
         let handle = tokio::spawn(async move {
@@ -102,14 +98,31 @@ pub async fn telnet_send_file(
             )
             .await
         });
-        // wait for nc to become available. if the installer fails with connection refused, this
-        // likely is not high enough.
-        sleep(Duration::from_millis(100)).await;
+
         let mut addr = addr;
         addr.set_port(8081);
 
+        let mut stream;
+        let mut attempts = 0;
+
+        loop {
+            // wait for nc to become available, with exponential backoff.
+            //
+            // if the installer fails with connection refused, this
+            // likely is not high enough.
+            sleep(Duration::from_millis(100 * (1 << attempts))).await;
+
+            stream = TcpStream::connect(addr).await;
+            attempts += 1;
+            if stream.is_ok() || attempts > 3 {
+                break;
+            }
+
+            print!("attempt {attempts}... ");
+        }
+
         {
-            let mut stream = TcpStream::connect(addr).await?;
+            let mut stream = stream?;
             stream.write_all(payload).await?;
 
             // if the orbic is sluggish, we need for nc to write the data to disk before
@@ -122,6 +135,7 @@ pub async fn telnet_send_file(
             sleep(Duration::from_millis(1000)).await;
 
             // ensure that stream is dropped before we wait for nc to terminate.
+            drop(stream);
         }
 
         handle.await??
@@ -198,6 +212,7 @@ pub async fn http_ok_every(
 }
 
 /// General function to open a USB device
+#[cfg(not(target_os = "android"))]
 pub fn open_usb_device(vid: u16, pid: u16) -> Result<Option<Device>> {
     let devices = match nusb::list_devices() {
         Ok(d) => d,
@@ -212,4 +227,83 @@ pub fn open_usb_device(vid: u16, pid: u16) -> Result<Option<Device>> {
         }
     }
     Ok(None)
+}
+
+/// Open an interactive shell to a device
+///
+/// Connects to a shell service on the device and forwards stdin/stdout bidirectionally.
+pub async fn interactive_shell(admin_ip: &str, shell_port: u16, raw_mode: bool) -> Result<()> {
+    let shell_addr = SocketAddr::from_str(&format!("{admin_ip}:{shell_port}"))?;
+    let mut stream = TcpStream::connect(shell_addr)
+        .await
+        .context("Failed to connect to shell. Make sure the device is reachable.")?;
+
+    let stdin = tokio::io::stdin();
+
+    #[cfg(unix)]
+    let raw_terminal_guard = if raw_mode {
+        Some(RawTerminal::new(stdin.as_raw_fd())?)
+    } else {
+        None
+    };
+
+    // suppress "unused variable" lint
+    #[cfg(not(unix))]
+    let _used = raw_mode;
+
+    let mut stdio = tokio::io::join(stdin, tokio::io::stdout());
+    let _ = tokio::io::copy_bidirectional(&mut stream, &mut stdio).await;
+
+    // hitting ctrl-d will not print a trailing newline on tplink at least, which messes up the
+    // next prompt
+    println!();
+
+    // The current_thread runtime in tokio will block forever until stdin receives a read error. To
+    // work around this cleanup issue we just exit directly from here.
+    //
+    // This is documented as a flaw in tokio::io::stdin()'s own docs, but the recommended
+    // workaround to spawn your own OS thread doesn't work.
+    //
+    // For some reason this only happens when the terminal is being put in raw mode (removing
+    // RawTerminal fixes it)
+    //
+    // We have to drop the RawTerminal guard before exiting, otherwise we will
+    // mess up the terminal.
+    #[cfg(unix)]
+    drop(raw_terminal_guard);
+    std::process::exit(0)
+}
+
+#[cfg(unix)]
+struct RawTerminal {
+    fd: std::os::fd::RawFd,
+    original_termios: termios::Termios,
+}
+
+#[cfg(unix)]
+impl RawTerminal {
+    fn new(fd: std::os::fd::RawFd) -> Result<Self> {
+        // put terminal in raw mode so that arrow keys, tab etc are correctly forwarded to the
+        // device's shell
+        let original_termios = termios::Termios::from_fd(fd)?;
+        let mut new_termios = original_termios;
+
+        // set flags on the struct
+        termios::cfmakeraw(&mut new_termios);
+
+        // apply changes
+        termios::tcsetattr(fd, termios::TCSANOW, &new_termios)?;
+
+        Ok(RawTerminal {
+            fd,
+            original_termios,
+        })
+    }
+}
+
+#[cfg(unix)]
+impl Drop for RawTerminal {
+    fn drop(&mut self) {
+        let _ = termios::tcsetattr(self.fd, termios::TCSANOW, &self.original_termios);
+    }
 }

@@ -1,15 +1,18 @@
 <script lang="ts">
-    import { get_config, set_config, type Config } from '../utils.svelte';
+    import { get_config, set_config, test_notification, type Config } from '../utils.svelte';
 
     let config = $state<Config | null>(null);
 
     let loading = $state(false);
     let saving = $state(false);
+    let testingNotification = $state(false);
     let message = $state('');
     let messageType = $state<'success' | 'error' | null>(null);
+    let testMessage = $state('');
+    let testMessageType = $state<'success' | 'error' | null>(null);
     let showConfig = $state(false);
 
-    async function loadConfig() {
+    async function load_config() {
         try {
             loading = true;
             config = await get_config();
@@ -23,7 +26,7 @@
         }
     }
 
-    async function saveConfig() {
+    async function save_config() {
         if (!config) return;
 
         try {
@@ -40,10 +43,25 @@
         }
     }
 
-    // Load config when first shown
+    async function send_test_notification() {
+        try {
+            testingNotification = true;
+            testMessage = '';
+            testMessageType = null;
+            await test_notification();
+            testMessage = 'Test notification sent successfully!';
+            testMessageType = 'success';
+        } catch (error) {
+            testMessage = `${error}`;
+            testMessageType = 'error';
+        } finally {
+            testingNotification = false;
+        }
+    }
+
     $effect(() => {
         if (showConfig && !config) {
-            loadConfig();
+            load_config();
         }
     });
 </script>
@@ -73,7 +91,7 @@
                 class="space-y-4"
                 onsubmit={(e) => {
                     e.preventDefault();
-                    saveConfig();
+                    save_config();
                 }}
             >
                 <div>
@@ -89,7 +107,12 @@
                         <option value={1}>1 - Subtle mode (colored line)</option>
                         <option value={2}>2 - Demo mode (orca gif)</option>
                         <option value={3}>3 - EFF logo</option>
+                        <option value={4}>4 - High visibility (full screen color)</option>
                     </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Note: Rayhunter draws over the device's native UI, so some flickering is
+                        expected
+                    </p>
                 </div>
 
                 <div>
@@ -138,6 +161,49 @@
                             bind:value={config.ntfy_url}
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
                         />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Test button below uses the saved configuration URL, not the input above
+                        </p>
+                    </div>
+
+                    <div>
+                        <button
+                            type="button"
+                            onclick={send_test_notification}
+                            disabled={testingNotification}
+                            class="bg-rayhunter-blue hover:bg-rayhunter-dark-blue disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
+                        >
+                            {#if testingNotification}
+                                <div
+                                    class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+                                ></div>
+                                Sending...
+                            {:else}
+                                <svg
+                                    class="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                    ></path>
+                                </svg>
+                                Send Test Notification
+                            {/if}
+                        </button>
+                        {#if testMessage}
+                            <div
+                                class="mt-2 p-2 rounded text-sm {testMessageType === 'error'
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-green-100 text-green-700'}"
+                            >
+                                {testMessage}
+                            </div>
+                        {/if}
                     </div>
 
                     <div class="space-y-2">

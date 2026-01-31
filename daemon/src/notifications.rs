@@ -6,8 +6,17 @@ use std::{
 
 use log::error;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tokio_util::task::TaskTracker;
+
+#[derive(Error, Debug)]
+pub enum NotificationError {
+    #[error("HTTP request failed: {0}")]
+    RequestFailed(#[from] reqwest::Error),
+    #[error("Server returned error status: {0}")]
+    HttpError(reqwest::StatusCode),
+}
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum NotificationType {
@@ -57,6 +66,21 @@ impl NotificationService {
 
     pub fn new_handler(&self) -> mpsc::Sender<Notification> {
         self.tx.clone()
+    }
+}
+
+/// Sends a notification message to the specified URL.
+pub async fn send_notification(
+    http_client: &reqwest::Client,
+    url: &str,
+    message: String,
+) -> Result<(), NotificationError> {
+    let response = http_client.post(url).body(message).send().await?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err(NotificationError::HttpError(response.status()))
     }
 }
 
@@ -125,24 +149,15 @@ pub fn run_notification_worker(
                         }
                     }
 
-                    match http_client
-                        .post(&url)
-                        .body(notification.message.clone())
-                        .send()
-                        .await
+                    match send_notification(&http_client, &url, notification.message.clone()).await
                     {
-                        Ok(response) => {
-                            if response.status().is_success() {
-                                notification.last_sent = Some(Instant::now());
-                                notification.failed_since_last_success = 0;
-                                notification.needs_sending = false;
-                            } else {
-                                notification.failed_since_last_success += 1;
-                                notification.last_attempt = Some(Instant::now());
-                            }
+                        Ok(()) => {
+                            notification.last_sent = Some(Instant::now());
+                            notification.failed_since_last_success = 0;
+                            notification.needs_sending = false;
                         }
                         Err(e) => {
-                            error!("Failed to send notification to ntfy: {e}");
+                            error!("Failed to send notification: {e}");
                             notification.failed_since_last_success += 1;
                             notification.last_attempt = Some(Instant::now());
                         }
@@ -161,4 +176,206 @@ pub fn run_notification_worker(
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{Router, body::Bytes, extract::State, routing::post};
+    use std::sync::Arc;
+    use tokio::net::TcpListener;
+    use tokio::sync::Mutex;
+
+    #[derive(Clone)]
+    struct TestServerState {
+        received_messages: Arc<Mutex<Vec<String>>>,
+    }
+
+    async fn capture_notification(
+        State(state): State<TestServerState>,
+        body: Bytes,
+    ) -> &'static str {
+        let message = String::from_utf8_lossy(&body).to_string();
+        state.received_messages.lock().await.push(message);
+        "OK"
+    }
+
+    async fn setup_test_server() -> (Arc<Mutex<Vec<String>>>, String) {
+        #[cfg(feature = "rustcrypto-tls")]
+        {
+            let _ = rustls_rustcrypto::provider().install_default();
+        }
+
+        let received_messages = Arc::new(Mutex::new(Vec::new()));
+        let test_state = TestServerState {
+            received_messages: received_messages.clone(),
+        };
+
+        let app = Router::new()
+            .route("/", post(capture_notification))
+            .with_state(test_state);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://{}", addr);
+
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        (received_messages, url)
+    }
+
+    async fn cleanup_worker(sender: mpsc::Sender<Notification>, tracker: TaskTracker) {
+        drop(sender);
+        tracker.close();
+        tracker.wait().await;
+    }
+
+    #[tokio::test]
+    async fn test_notification_worker_sends_message() {
+        let (received_messages, url) = setup_test_server().await;
+
+        let task_tracker = TaskTracker::new();
+        let notification_service = NotificationService::new(Some(url));
+        let notification_sender = notification_service.new_handler();
+
+        run_notification_worker(
+            &task_tracker,
+            notification_service,
+            vec![NotificationType::Warning],
+        );
+
+        notification_sender
+            .send(Notification::new(
+                NotificationType::Warning,
+                "test warning message".to_string(),
+                None,
+            ))
+            .await
+            .unwrap();
+
+        tokio::time::sleep(Duration::from_secs(3)).await;
+
+        let messages = received_messages.lock().await;
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0], "test warning message");
+        drop(messages);
+
+        cleanup_worker(notification_sender, task_tracker).await;
+    }
+
+    #[tokio::test]
+    async fn test_notification_worker_filters_disabled_types() {
+        let (received_messages, url) = setup_test_server().await;
+
+        let task_tracker = TaskTracker::new();
+        let notification_service = NotificationService::new(Some(url));
+        let notification_sender = notification_service.new_handler();
+
+        run_notification_worker(
+            &task_tracker,
+            notification_service,
+            vec![NotificationType::Warning],
+        );
+
+        notification_sender
+            .send(Notification::new(
+                NotificationType::Warning,
+                "test warning".to_string(),
+                None,
+            ))
+            .await
+            .unwrap();
+
+        notification_sender
+            .send(Notification::new(
+                NotificationType::LowBattery,
+                "test low battery".to_string(),
+                None,
+            ))
+            .await
+            .unwrap();
+
+        tokio::time::sleep(Duration::from_secs(3)).await;
+
+        let messages = received_messages.lock().await;
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0], "test warning");
+        drop(messages);
+
+        cleanup_worker(notification_sender, task_tracker).await;
+    }
+
+    #[tokio::test]
+    async fn test_notification_worker_sends_enabled_types() {
+        let (received_messages, url) = setup_test_server().await;
+
+        let task_tracker = TaskTracker::new();
+        let notification_service = NotificationService::new(Some(url));
+        let notification_sender = notification_service.new_handler();
+
+        run_notification_worker(
+            &task_tracker,
+            notification_service,
+            vec![NotificationType::Warning, NotificationType::LowBattery],
+        );
+
+        notification_sender
+            .send(Notification::new(
+                NotificationType::Warning,
+                "test warning".to_string(),
+                None,
+            ))
+            .await
+            .unwrap();
+
+        notification_sender
+            .send(Notification::new(
+                NotificationType::LowBattery,
+                "test low battery".to_string(),
+                None,
+            ))
+            .await
+            .unwrap();
+
+        tokio::time::sleep(Duration::from_secs(3)).await;
+
+        let messages = received_messages.lock().await;
+        assert_eq!(messages.len(), 2);
+        // these are interchangeable, ordering not guaranteed
+        assert!(messages.contains(&"test warning".to_string()));
+        assert!(messages.contains(&"test low battery".to_string()));
+        drop(messages);
+
+        cleanup_worker(notification_sender, task_tracker).await;
+    }
+
+    #[tokio::test]
+    async fn test_notification_worker_with_no_url() {
+        let task_tracker = TaskTracker::new();
+        let notification_service = NotificationService::new(None);
+        let notification_sender = notification_service.new_handler();
+
+        run_notification_worker(
+            &task_tracker,
+            notification_service,
+            vec![NotificationType::Warning],
+        );
+
+        notification_sender
+            .send(Notification::new(
+                NotificationType::Warning,
+                "test warning".to_string(),
+                None,
+            ))
+            .await
+            .unwrap();
+
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        cleanup_worker(notification_sender, task_tracker).await;
+    }
 }

@@ -1,7 +1,7 @@
 #[cfg(target_os = "windows")]
 use std::io::stdin;
 
-use std::io::{ErrorKind, Write};
+use std::io::ErrorKind;
 use std::path::Path;
 use std::time::Duration;
 
@@ -12,8 +12,10 @@ use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
 use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
-use crate::util::{echo, open_usb_device};
-use crate::{CONFIG_TOML, RAYHUNTER_DAEMON_INIT};
+use crate::RAYHUNTER_DAEMON_INIT;
+use crate::connection::{DeviceConnection, install_config};
+use crate::output::{print, println};
+use crate::util::open_usb_device;
 
 pub const ORBIC_NOT_FOUND: &str = r#"No Orbic device found.
 Make sure your device is plugged in and turned on.
@@ -45,6 +47,21 @@ const PRODUCT_ID: u16 = 0xf601;
 
 const INTERFACE: u8 = 1;
 
+/// ADB-based connection wrapper for DeviceConnection trait
+pub struct AdbConnection<'a> {
+    device: &'a mut ADBUSBDevice,
+}
+
+impl DeviceConnection for AdbConnection<'_> {
+    async fn run_command(&mut self, command: &str) -> Result<String> {
+        adb_command(self.device, &["sh", "-c", command])
+    }
+
+    async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {
+        install_file(self.device, path, content).await
+    }
+}
+
 #[cfg(target_os = "windows")]
 const RNDIS_INTERFACE: u8 = 0;
 
@@ -54,13 +71,17 @@ const RNDIS_INTERFACE: u8 = 1;
 #[cfg(target_os = "windows")]
 async fn confirm() -> Result<bool> {
     println!("{}", WINDOWS_WARNING);
-    echo!("Do you wish to proceed? Enter 'yes' to install> ");
+    print!("Do you wish to proceed? Enter 'yes' to install> ");
     let mut input = String::new();
     stdin().read_line(&mut input)?;
     Ok(input.trim() == "yes")
 }
 
-pub async fn install() -> Result<()> {
+pub async fn install(reset_config: bool) -> Result<()> {
+    println!(
+        "WARNING: The orbic USB installer is not recommended for most usecases. Consider using ./installer orbic instead, unless you want ADB access for other purposes."
+    );
+
     #[cfg(target_os = "windows")]
     {
         let confirmation = confirm().await?;
@@ -71,19 +92,23 @@ pub async fn install() -> Result<()> {
     }
 
     let mut adb_device = force_debug_mode().await?;
-    echo!("Installing rootshell... ");
+    print!("Installing rootshell... ");
     setup_rootshell(&mut adb_device).await?;
     println!("done");
-    echo!("Installing rayhunter... ");
-    let mut adb_device = setup_rayhunter(adb_device).await?;
+    print!("Installing rayhunter... ");
+    let mut adb_device = setup_rayhunter(adb_device, reset_config).await?;
     println!("done");
-    echo!("Testing rayhunter... ");
+    print!("Testing rayhunter... ");
     test_rayhunter(&mut adb_device).await?;
     println!("done");
     Ok(())
 }
 
 pub async fn shell() -> Result<()> {
+    println!(
+        "WARNING: The orbic USB installer is not recommended for most usecases. Consider using ./installer util orbic-shell instead, unless you want ADB access for other purposes."
+    );
+
     println!("opening shell");
     let mut adb_device = get_adb().await?;
     adb_device.shell(&mut std::io::stdin(), Box::new(std::io::stdout()))?;
@@ -93,11 +118,11 @@ pub async fn shell() -> Result<()> {
 async fn force_debug_mode() -> Result<ADBUSBDevice> {
     println!("Forcing a switch into the debug mode to enable ADB");
     enable_command_mode()?;
-    echo!("ADB enabled, waiting for reboot... ");
+    print!("ADB enabled, waiting for reboot... ");
     let mut adb_device = get_adb().await?;
     adb_setup_serial(&mut adb_device).await?;
     println!("it's alive!");
-    echo!("Waiting for atfwd_daemon to startup... ");
+    print!("Waiting for atfwd_daemon to startup... ");
     adb_command(&mut adb_device, &["pgrep", "atfwd_daemon"])?;
     println!("done");
     Ok(adb_device)
@@ -118,7 +143,7 @@ async fn setup_rootshell(adb_device: &mut ADBUSBDevice) -> Result<()> {
     Ok(())
 }
 
-async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
+async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Result<ADBUSBDevice> {
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
     adb_at_syscmd(&mut adb_device, "mkdir -p /data/rayhunter").await?;
@@ -128,14 +153,20 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
         rayhunter_daemon_bin,
     )
     .await?;
-    install_file(
-        &mut adb_device,
-        "/data/rayhunter/config.toml",
-        CONFIG_TOML
-            .replace("#device = \"orbic\"", "device = \"orbic\"")
-            .as_bytes(),
-    )
-    .await?;
+
+    {
+        let mut conn = AdbConnection {
+            device: &mut adb_device,
+        };
+        install_config(
+            &mut conn,
+            "/data/rayhunter/config.toml",
+            "orbic",
+            reset_config,
+        )
+        .await?;
+    }
+
     install_file(
         &mut adb_device,
         "/etc/init.d/rayhunter_daemon",
@@ -151,7 +182,7 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/rayhunter_daemon").await?;
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/misc-daemon").await?;
     println!("done");
-    echo!("Waiting for reboot... ");
+    print!("Waiting for reboot... ");
     adb_at_syscmd(&mut adb_device, "shutdown -r -t 1 now").await?;
     // first wait for shutdown (it can take ~10s)
     tokio::time::timeout(Duration::from_secs(30), async {

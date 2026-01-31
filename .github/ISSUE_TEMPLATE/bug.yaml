@@ -2,6 +2,12 @@ name: Bug Report
 description: File a bug report.
 labels: ["bug"]
 body:
+  - type: checkboxes
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have read [CONTRIBUTING.md](https://github.com/EFForg/rayhunter/blob/main/CONTRIBUTING.md)
+          required: true
   - type: textarea
     attributes:
       label: Bug Report Details

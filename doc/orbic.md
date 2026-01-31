@@ -6,7 +6,8 @@ It is also sometimes sold under the brand Kajeet RC400L. This is the exact same 
 
 You can buy an Orbic [using bezos
 bucks](https://www.amazon.com/Orbic-Verizon-Hotspot-Connect-Enabled/dp/B08N3CHC4Y),
-or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
+or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l). You should not
+pay more than 30 USD for such a device (without shipping).
 
 [Please check whether the Orbic works in your country](https://www.frequencycheck.com/countries/), and whether the Orbic RC400L supports the right frequency bands for your purpose before buying.
 
@@ -21,30 +22,27 @@ or on [eBay](https://www.ebay.com/sch/i.html?_nkw=orbic+rc400l).
 | Wifi 5Ghz | a/ac/ax |
 | Wifi 6 | 🮱 |
 
-## The Network Installer
+## Two kinds of installers
 
-Since Rayhunter 0.6.0 there is an alternative, experimental installation
-procedure at `./installer orbic-network` that is supposed to eventually replace
-`./installer orbic`. It does not require any USB driver installation and works
-identically on Windows, Mac and Linux. From our testing it works much more
-reliably on Windows than `./installer orbic` does.
+The orbic's installation routine underwent many different changes:
 
-The drawback is that the device's admin password is required. 
-
-1. Connect to the Orbic's network via WiFi or USB tethering
-2. Run `./installer orbic-network --admin-password 'mypassword'`
-
-   * On Verizon Orbic, the password is the WiFi password.
-   * On Kajeet/Smartspot devices, the default password is `$m@rt$p0tc0nf!g`
-   * On Moxee-brand devices, check under the battery for the password.
-   * You can reset the password by pressing the button under the back case until the unit restarts.
-
-3. The installer will eventually reboot the device, at which point the device is up and running.
+1. The ADB-based shellscript prior to version 0.3.0
+2. The Rust-based, ADB-based installer since version 0.3.0
+3. Then, starting with 0.6.0, an alternative installer `./installer
+   orbic-network` that is supposed to work more reliably, can run over the
+   Orbic's WiFi connection and without the need to manually install USB drivers
+   on Windows.
+4. Starting with 0.8.0, `orbic-network` has been renamed to `orbic`, and the
+   old `./installer orbic` is now called `./installer orbic-usb`.
+   
+It's possible that many tutorials out there still refer to some of the old
+installation routines.
 
 ## Obtaining a shell
 
-After running through the installation procedure, you can obtain a root shell
-by running `adb shell` or `./installer util shell`. Then, inside of that shell
-you can run `/bin/rootshell` to obtain "fakeroot."
+After running the installer, there will not be a rootshell and ADB will not be
+enabled. Instead you can use `./installer util orbic-shell`.
 
-If you are using the network installer, there will not be a rootshell and ADB will not be enabled by the installer. Instead you can use `./installer util orbic-start-telnet` and connect to the hotspot using `nc 192.168.1.1 23`. On Windows you might not have `nc` and will have to use WSL for that.
+If you are using an installer prior to 0.7.0 or `orbic-usb` explicitly, you can
+obtain a root shell by running `adb shell` or `./installer util shell`. Then,
+inside of that shell you can run `/bin/rootshell` to obtain "fakeroot."

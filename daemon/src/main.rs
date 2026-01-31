@@ -23,8 +23,9 @@ use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
 use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_zip, serve_static, set_config,
+    test_notification,
 };
-use crate::stats::{get_qmdl_manifest, get_system_stats};
+use crate::stats::{get_qmdl_manifest, get_route_status, get_system_stats};
 
 use analysis::{
     AnalysisCtrlMessage, AnalysisStatus, get_analysis_status, run_analysis_thread, start_analysis,
@@ -57,6 +58,7 @@ fn get_router() -> AppRouter {
         .route("/api/qmdl/{name}", get(get_qmdl))
         .route("/api/zip/{name}", get(get_zip))
         .route("/api/system-stats", get(get_system_stats))
+        .route("/api/route-status", get(get_route_status))
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
         .route("/api/log", get(get_log))
         .route("/api/start-recording", post(start_recording))
@@ -68,6 +70,7 @@ fn get_router() -> AppRouter {
         .route("/api/analysis/{name}", post(start_analysis))
         .route("/api/config", get(get_config))
         .route("/api/config", post(set_config))
+        .route("/api/test-notification", post(test_notification))
         .route("/api/debug/display-state", post(debug_set_display_state))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/{*path}", get(serve_static))
