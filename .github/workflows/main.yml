@@ -135,6 +135,11 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - name: Check formatting
       run: cargo fmt --all --check
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: daemon/web/package-lock.json
     - name: Check
       run: |
         pushd daemon/web
@@ -208,6 +213,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: installer-gui/package-lock.json
       - run: npm install
       - run: npm run lint
       - run: npm run check
@@ -323,6 +333,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install ARM cross-compilation toolchain
         run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: daemon/web/package-lock.json
       - name: Build rayhunter-daemon (armv7)
         run: |
           pushd daemon/web
@@ -426,6 +441,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install tauri dependencies
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: installer-gui/package-lock.json
       - name: Build GUI installer
         shell: bash
         run: |
@@ -476,6 +496,11 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: installer-gui/package-lock.json
       - name: Build GUI installer
         shell: bash
         run: |
@@ -514,6 +539,11 @@ jobs:
         with:
           targets: ${{ env.TARGET }}
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: installer-gui/package-lock.json
       - name: Build GUI installer
         shell: bash
         run: |
