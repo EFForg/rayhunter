@@ -136,14 +136,14 @@ pub trait Analyzer {
     fn get_version(&self) -> u32;
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnalyzerMetadata {
     pub name: String,
     pub description: String,
     pub version: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 #[derive(Default)]
 pub struct ReportMetadata {

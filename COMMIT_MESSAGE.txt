@@ -1,0 +1,23 @@
+Add JSON output format to rayhunter-check
+
+Implements JSON formatted output for rayhunter-check to enable
+programmatic processing and automated analysis workflows.
+
+Key changes:
+- Add --format flag with 'text' (default) and 'json' options
+- Implement NDJSON output matching daemon format
+- Create individual .ndjson files when processing directories
+- Add Reporter trait with TextReporter and JsonReporter
+- Add Clone derives to metadata structures
+
+Testing:
+- 14 new tests (10 unit + 4 integration), all passing
+- Zero compilation warnings
+- Fully backward compatible
+
+Documentation:
+- Comprehensive format specification
+- Usage examples and integration guides
+- Real output examples
+
+Closes #570

@@ -4714,12 +4714,16 @@ dependencies = [
 name = "rayhunter-check"
 version = "0.9.0"
 dependencies = [
+ "chrono",
  "clap",
  "futures",
  "log",
  "pcap-file-tokio",
  "rayhunter",
+ "serde",
+ "serde_json",
  "simple_logger",
+ "tempfile",
  "tokio",
  "walkdir",
 ]
