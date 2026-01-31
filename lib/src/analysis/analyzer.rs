@@ -309,7 +309,7 @@ impl TryFrom<AnalysisRow> for DetectionRow {
     type Error = &'static str;
 
     fn try_from(ar: AnalysisRow) -> Result<DetectionRow, Self::Error> {
-        let events: Vec<Event> = ar.events.into_iter().filter_map(|e| e).collect();
+        let events: Vec<Event> = ar.events.into_iter().flatten().collect();
 
         if events.is_empty() {
             return Err("No detection events in analysis row");

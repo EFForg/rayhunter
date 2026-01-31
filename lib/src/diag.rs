@@ -1,11 +1,13 @@
 //! Diag protocol serialization/deserialization
 
+#![allow(unused_assignments)]
+
 use chrono::{DateTime, FixedOffset};
 use crc::{Algorithm, Crc};
 use deku::prelude::*;
 
 use crate::hdlc::{self, hdlc_decapsulate};
-use log::{error, warn};
+use log::warn;
 use thiserror::Error;
 
 pub const MESSAGE_TERMINATOR: u8 = 0x7e;

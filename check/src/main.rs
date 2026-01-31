@@ -4,7 +4,7 @@ use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
     analysis::analyzer::{
-        AnalysisRow, AnalyzerConfig, DetectionRow, Event, EventType, Harness, ReportMetadata,
+        AnalysisRow, AnalyzerConfig, DetectionRow, EventType, Harness, ReportMetadata,
     },
     diag::DataType,
     gsmtap_parser,
