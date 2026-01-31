@@ -6,6 +6,7 @@ pub mod gsmtap;
 pub mod gsmtap_parser;
 pub mod hdlc;
 pub mod log_codes;
+pub mod ndjson_writer;
 pub mod pcap;
 pub mod qmdl;
 pub mod util;

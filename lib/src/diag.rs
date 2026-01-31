@@ -1,5 +1,7 @@
 //! Diag protocol serialization/deserialization
 
+#![allow(unused_assignments)]
+
 use chrono::{DateTime, FixedOffset};
 use crc::{Algorithm, Crc};
 use deku::prelude::*;
