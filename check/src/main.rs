@@ -145,7 +145,10 @@ impl NdjsonReport {
     }
 
     async fn process_row(&mut self, row: DetectionRow) {
-        self.writer.write(&row).await.expect("failed to write ndjson row");
+        self.writer
+            .write(&row)
+            .await
+            .expect("failed to write ndjson row");
     }
 
     async fn finish(&mut self, _summary: &Summary) {

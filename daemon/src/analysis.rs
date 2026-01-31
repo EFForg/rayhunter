@@ -40,10 +40,7 @@ impl AnalysisWriter {
         let metadata = harness.get_metadata();
         writer.write(&metadata).await?;
 
-        Ok(Self {
-            writer,
-            harness,
-        })
+        Ok(Self { writer, harness })
     }
 
     // Runs the analysis harness on the given container, serializing the results

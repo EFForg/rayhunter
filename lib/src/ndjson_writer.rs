@@ -161,10 +161,7 @@ mod tests {
         // Write different serializable types
         writer.write(&42u32).await.unwrap();
         writer.write(&"hello").await.unwrap();
-        writer
-            .write(&vec!["a", "b", "c"])
-            .await
-            .unwrap();
+        writer.write(&vec!["a", "b", "c"]).await.unwrap();
         writer.close().await.unwrap();
 
         // Read and verify
