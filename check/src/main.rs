@@ -332,6 +332,7 @@ async fn main() {
         .with_level(level)
         //Filter out a stupid massive amount of uneccesary warnings from hampi about undecoded extensions
         .with_module_level("asn1_codecs", log::LevelFilter::Error)
+        .env()
         .init()
         .unwrap();
 
