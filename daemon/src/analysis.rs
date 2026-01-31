@@ -10,10 +10,10 @@ use futures::TryStreamExt;
 use log::{error, info};
 use rayhunter::analysis::analyzer::{AnalyzerConfig, EventType, Harness};
 use rayhunter::diag::{DataType, MessagesContainer};
+use rayhunter::ndjson_writer::NdjsonWriter;
 use rayhunter::qmdl::QmdlReader;
 use serde::Serialize;
 use tokio::fs::File;
-use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio_util::task::TaskTracker;
@@ -22,7 +22,7 @@ use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
 
 pub struct AnalysisWriter {
-    writer: BufWriter<File>,
+    writer: NdjsonWriter,
     harness: Harness,
 }
 
@@ -36,13 +36,14 @@ impl AnalysisWriter {
     pub async fn new(file: File, analyzer_config: &AnalyzerConfig) -> Result<Self, std::io::Error> {
         let harness = Harness::new_with_config(analyzer_config);
 
-        let mut result = Self {
-            writer: BufWriter::new(file),
+        let mut writer = NdjsonWriter::new(file);
+        let metadata = harness.get_metadata();
+        writer.write(&metadata).await?;
+
+        Ok(Self {
+            writer,
             harness,
-        };
-        let metadata = result.harness.get_metadata();
-        result.write(&metadata).await?;
-        Ok(result)
+        })
     }
 
     // Runs the analysis harness on the given container, serializing the results
@@ -55,25 +56,16 @@ impl AnalysisWriter {
 
         for row in self.harness.analyze_qmdl_messages(container) {
             if !row.is_empty() {
-                self.write(&row).await?;
+                self.writer.write(&row).await?;
             }
             max_type = cmp::max(max_type, row.get_max_event_type());
         }
         Ok(max_type)
     }
 
-    async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
-        let mut value_str = serde_json::to_string(value).unwrap();
-        value_str.push('\n');
-        self.writer.write_all(value_str.as_bytes()).await?;
-        self.writer.flush().await?;
-        Ok(())
-    }
-
     // Flushes any pending I/O to disk before dropping the writer
-    pub async fn close(mut self) -> Result<(), std::io::Error> {
-        self.writer.flush().await?;
-        Ok(())
+    pub async fn close(self) -> Result<(), std::io::Error> {
+        self.writer.close().await
     }
 }
 

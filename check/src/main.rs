@@ -8,13 +8,13 @@ use rayhunter::{
     },
     diag::DataType,
     gsmtap_parser,
+    ndjson_writer::NdjsonWriter,
     pcap::GsmtapPcapWriter,
     qmdl::QmdlReader,
 };
 use serde::Serialize;
 use std::{collections::HashMap, future, path::PathBuf, pin::pin};
 use tokio::fs::{File, OpenOptions};
-use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
 
 #[derive(ValueEnum, Copy, Clone, Debug, Default)]
@@ -120,39 +120,32 @@ impl LogReport {
 }
 
 struct NdjsonReport {
-    writer: BufWriter<File>,
+    writer: NdjsonWriter,
 }
 
-// The `njson` report has the same output format as the daemon analysis report.
+// The `ndjson` report has the same output format as the daemon analysis report.
 // See also: [Newline Delimited JSON](https://docs.mulesoft.com/dataweave/latest/dataweave-formats-ndjson)
 impl NdjsonReport {
     async fn new(file_path: &str, metadata: &ReportMetadata) -> std::io::Result<Self> {
         let mut report_path = PathBuf::from(file_path);
         report_path.set_extension("ndjson");
-        let writer = OpenOptions::new()
+        let file = OpenOptions::new()
             .write(true)
             .truncate(true)
             .create(true)
             .open(&report_path)
-            .await
-            .map(BufWriter::new)?;
+            .await?;
 
-        let mut r = NdjsonReport { writer };
+        let mut writer = NdjsonWriter::new(file);
 
         // Analysis metadata is written to the first line of the ndjson report format
-        r.write(metadata).await?;
+        writer.write(metadata).await?;
 
-        Ok(r)
-    }
-
-    async fn write<T: Serialize>(&mut self, value: &T) -> std::io::Result<()> {
-        let mut value_str = serde_json::to_string(value).unwrap();
-        value_str.push('\n');
-        self.writer.write_all(value_str.as_bytes()).await
+        Ok(NdjsonReport { writer })
     }
 
     async fn process_row(&mut self, row: DetectionRow) {
-        self.write(&row).await.expect("failed to write ndjson row");
+        self.writer.write(&row).await.expect("failed to write ndjson row");
     }
 
     async fn finish(&mut self, _summary: &Summary) {
