@@ -4,6 +4,10 @@
 //! Rayhunter has to keep track of in memory. The NDJSON format lets us simply
 //! append new rows to the end without parsing the entire JSON object beforehand.
 //!
+//! This module is used by both the daemon (for real-time analysis reporting) and
+//! the check tool (for offline analysis), ensuring consistent output format across
+//! both tools.
+//!
 //! See: [Newline Delimited JSON](https://docs.mulesoft.com/dataweave/latest/dataweave-formats-ndjson)
 
 use serde::Serialize;

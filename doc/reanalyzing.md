@@ -19,23 +19,29 @@ QCSuper.
 Since 0.6.1, `rayhunter-check` is included in the release zipfile.
 
 You can build `rayhunter-check` from source with the following command:
-`cargo build --bin rayhunter-check` 
+`cargo build --bin rayhunter-check`
 
 ## Usage
 ```sh
 rayhunter-check [OPTIONS] --path <PATH>
 
 Options:
-  -p, --path <PATH>   Path to the PCAP, or QMDL file. If given a directory will 
-                        recursively scan all pcap, qmdl, and subdirectories 
-  -P, --pcapify       Turn QMDL file into PCAP     
-      --show-skipped  Show skipped messages
-  -q, --quiet         Print only warnings
-  -d, --debug         Print debug info 
-  -h, --help          Print help
-  -V, --version       Print version
+  -p, --path <PATH>          Path to the PCAP or QMDL file. If given a directory will
+                             recursively scan all pcap, qmdl files and subdirectories
+  -P, --pcapify              Turn QMDL file into PCAP
+  -r, --report <REPORT>      Generate a report for each capture analyzed [default: log]
+                             [possible values: log, ndjson]
+      --show-skipped         Show skipped messages
+  -q, --quiet                Print only warnings/errors to stderr
+  -d, --debug                Print debug info to stderr
+  -h, --help                 Print help
+  -V, --version              Print version
 ```
-### Examples 
+
+**Note:** All log output (info, warnings, errors) is written to stderr. This allows you to
+redirect analysis output separately from logs when using `--report ndjson`.
+
+### Examples
 `rayhunter-check -p ~/Downloads/myfile.qmdl`
 
 `rayhunter-check -p ~/Downloads/myfile.pcap`
@@ -43,3 +49,5 @@ Options:
 `rayhunter-check -p ~/Downloads #Check all files in downloads`
 
 `rayhunter-check -d -p ~/Downloads/myfile.qmdl #run in debug mode`
+
+`rayhunter-check -p ~/Downloads -r ndjson #Generate NDJSON reports for all captures`
