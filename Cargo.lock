@@ -4708,7 +4708,6 @@ dependencies = [
 name = "rayhunter-check"
 version = "0.9.0"
 dependencies = [
- "chrono",
  "clap",
  "futures",
  "log",
