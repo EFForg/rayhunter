@@ -70,7 +70,7 @@ struct Args {
     debug: bool,
 }
 
-#[derive(Default, Debug, Clone, Serialize)]
+#[derive(Default)]
 struct Summary {
     skipped_reasons: HashMap<String, u32>,
     total_messages: u32,
