@@ -211,7 +211,7 @@ impl NdjsonReport {
             .expect("failed to write ndjson row");
     }
 
-    async fn finish(&mut self, _summary: &Summary) {
+    async fn finish(&mut self) {
         match &mut self.dest {
             NdjsonDest::File(writer) => {
                 writer.flush().await.expect("failed to flush ndjson file");
@@ -301,7 +301,7 @@ impl Report {
     async fn finish(&mut self) {
         match &mut self.dest {
             ReportDest::Log(r) => r.finish(&self.summary),
-            ReportDest::Ndjson(r) => r.finish(&self.summary).await,
+            ReportDest::Ndjson(r) => r.finish().await,
         }
     }
 }
