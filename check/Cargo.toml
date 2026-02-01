@@ -18,3 +18,7 @@ serde = "1.0.228"
 version = "5.0.0"
 # Log to stderr so that report output doesn't potentially collide with system logs
 features = ["stderr"]
+
+[dev-dependencies]
+tempfile = "3.14.0"
+tokio = { version = "1.44.2", features = ["full"] }

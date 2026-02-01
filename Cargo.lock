@@ -4716,6 +4716,7 @@ dependencies = [
  "serde",
  "serde_json",
  "simple_logger",
+ "tempfile",
  "tokio",
  "walkdir",
 ]
@@ -6154,6 +6155,7 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
+ "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",
