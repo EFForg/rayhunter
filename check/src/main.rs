@@ -198,6 +198,12 @@ impl NdjsonReport {
             .await
             .expect("failed to write ndjson row");
     }
+    
+    async fn process_skipped_row(&mut self, row: AnalysisRow) {
+        self.write_json(&row)
+            .await
+            .expect("failed to write ndjson skipped row");
+    }
 
     async fn finish(&mut self, _summary: &Summary) {
         match &mut self.dest {
@@ -268,6 +274,15 @@ impl Report {
                 .or_insert(0) += 1;
             self.summary.skipped += 1;
 
+            // For ndjson format, write skipped rows when --show-skipped is set
+            if self.show_skipped {
+                if let ReportDest::Ndjson(r) = &mut self.dest {
+                    r.process_skipped_row(row).await;
+                    return;
+                }
+            }
+            
+            // For log format or when show_skipped is false, skip the row
             if !self.show_skipped {
                 return;
             }
