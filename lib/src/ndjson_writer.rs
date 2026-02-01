@@ -12,18 +12,16 @@
 
 use serde::Serialize;
 use tokio::fs::File;
-use tokio::io::{AsyncWriteExt, BufWriter};
+use tokio::io::AsyncWriteExt;
 
 pub struct NdjsonWriter {
-    writer: BufWriter<File>,
+    writer: File,
 }
 
 impl NdjsonWriter {
     /// Create a new NDJSON writer from a file handle
     pub fn new(file: File) -> Self {
-        Self {
-            writer: BufWriter::new(file),
-        }
+        Self { writer: file }
     }
 
     /// Write a serializable value as a line of NDJSON
