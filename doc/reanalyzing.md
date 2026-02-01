@@ -28,8 +28,11 @@ rayhunter-check [OPTIONS] --path <PATH>
 Options:
   -p, --path <PATH>          Path to the PCAP or QMDL file. If given a directory will
                              recursively scan all pcap, qmdl files and subdirectories
-  -P, --pcapify              Turn QMDL file into PCAP
-  -r, --report <REPORT>      Generate a report for each capture analyzed [default: log]
+  -o, --output <OUTPUT>      Output directory for generated files (.ndjson reports and
+                             .pcapng files). If not specified, no files are written
+  -P, --pcapify              Convert qmdl files to pcap (requires --output)
+  -r, --report <REPORT>      Report format: 'log' outputs to stderr, 'ndjson' outputs
+                             to stdout (or files if --output is set) [default: log]
                              [possible values: log, ndjson]
       --show-skipped         Show skipped messages
   -q, --quiet                Print only warnings/errors to stderr
@@ -41,6 +44,24 @@ Options:
 **Note:** All log output (info, warnings, errors) is written to stderr. This allows you to
 redirect analysis output separately from logs when using `--report ndjson`.
 
+### Report Formats
+
+- **log** (default): Prints analysis results in human-readable format to stderr
+- **ndjson**: Outputs newline-delimited JSON format
+  - Without `--output`: Writes to stdout (can be piped or redirected)
+  - With `--output`: Creates `.ndjson` files in the specified directory alongside input files
+
+### File Generation
+
+The `--output` flag controls where generated files are written:
+
+- **NDJSON reports**: When using `--report ndjson --output <dir>`, a `.ndjson` file is created
+  for each analyzed capture in the specified directory
+- **PCAP conversion**: When using `--pcapify --output <dir>`, `.pcapng` files are created from
+  QMDL files in the specified directory
+
+Without `--output`, no files are created (NDJSON is written to stdout for piping/redirection).
+
 ### Examples
 `rayhunter-check -p ~/Downloads/myfile.qmdl`
 
@@ -50,4 +71,8 @@ redirect analysis output separately from logs when using `--report ndjson`.
 
 `rayhunter-check -d -p ~/Downloads/myfile.qmdl #run in debug mode`
 
-`rayhunter-check -p ~/Downloads -r ndjson #Generate NDJSON reports for all captures`
+`rayhunter-check -p ~/Downloads -r ndjson > analysis.ndjson #Output NDJSON to stdout`
+
+`rayhunter-check -p ~/Downloads -r ndjson -o ./reports #Generate NDJSON report files`
+
+`rayhunter-check -p file.qmdl -P -o ./output #Convert QMDL to PCAP in output directory`

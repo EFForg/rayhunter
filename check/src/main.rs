@@ -15,6 +15,7 @@ use rayhunter::{
 use serde::Serialize;
 use std::{collections::HashMap, future, path::PathBuf, pin::pin};
 use tokio::fs::{File, OpenOptions};
+use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
 
 #[derive(ValueEnum, Copy, Clone, Debug, Default)]
@@ -41,13 +42,20 @@ struct Args {
     #[arg(short = 'p', long, help = "A file or directory of packet captures")]
     path: PathBuf,
 
-    #[arg(short = 'P', long, help = "Convert qmdl files to pcap before analysis")]
+    #[arg(
+        short = 'o',
+        long,
+        help = "Output directory for generated files (.ndjson reports and .pcapng files). If not specified, no files are written"
+    )]
+    output: Option<PathBuf>,
+
+    #[arg(short = 'P', long, help = "Convert qmdl files to pcap (requires --output)")]
     pcapify: bool,
 
     #[arg(
         short = 'r',
         long,
-        help = "Generate a report for each capture analyzed",
+        help = "Report format: 'log' outputs to stderr, 'ndjson' outputs to stdout (or files if --output is set)",
         default_value_t = ReportFormat::default()
     )]
     report: ReportFormat,
@@ -119,43 +127,91 @@ impl LogReport {
     }
 }
 
+enum NdjsonDest {
+    File(NdjsonWriter),
+    Stdout(BufWriter<tokio::io::Stdout>),
+}
+
 struct NdjsonReport {
-    writer: NdjsonWriter,
+    dest: NdjsonDest,
+    output_path: Option<PathBuf>, // For logging purposes
 }
 
 // The `ndjson` report has the same output format as the daemon analysis report.
 // See also: [Newline Delimited JSON](https://docs.mulesoft.com/dataweave/latest/dataweave-formats-ndjson)
 impl NdjsonReport {
-    async fn new(file_path: &str, metadata: &ReportMetadata) -> std::io::Result<Self> {
-        let mut report_path = PathBuf::from(file_path);
-        report_path.set_extension("ndjson");
-        let file = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .create(true)
-            .open(&report_path)
-            .await?;
+    async fn new(
+        input_file_path: &str,
+        output_dir: Option<&PathBuf>,
+        metadata: &ReportMetadata,
+    ) -> std::io::Result<Self> {
+        let (dest, output_path): (NdjsonDest, Option<PathBuf>) = if let Some(dir) = output_dir {
+            // Write to file in the specified directory
+            let input_path = PathBuf::from(input_file_path);
+            let file_name = input_path
+                .file_name()
+                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid input path"))?;
+            let mut report_path = dir.join(file_name);
+            report_path.set_extension("ndjson");
 
-        let mut writer = NdjsonWriter::new(file);
+            let file = OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .create(true)
+                .open(&report_path)
+                .await?;
+
+            let writer = NdjsonWriter::new(file);
+            (NdjsonDest::File(writer), Some(report_path))
+        } else {
+            // Write to stdout
+            let stdout = BufWriter::new(tokio::io::stdout());
+            (NdjsonDest::Stdout(stdout), None)
+        };
+
+        let mut report = NdjsonReport {
+            dest,
+            output_path,
+        };
 
         // Analysis metadata is written to the first line of the ndjson report format
-        writer.write(metadata).await?;
+        report.write_json(metadata).await?;
 
-        Ok(NdjsonReport { writer })
+        Ok(report)
+    }
+
+    async fn write_json<T: Serialize>(&mut self, value: &T) -> std::io::Result<()> {
+        let mut value_str = serde_json::to_string(value)?;
+        value_str.push('\n');
+
+        match &mut self.dest {
+            NdjsonDest::File(writer) => writer.write(value).await,
+            NdjsonDest::Stdout(writer) => {
+                writer.write_all(value_str.as_bytes()).await?;
+                writer.flush().await
+            }
+        }
     }
 
     async fn process_row(&mut self, row: DetectionRow) {
-        self.writer
-            .write(&row)
+        self.write_json(&row)
             .await
             .expect("failed to write ndjson row");
     }
 
     async fn finish(&mut self, _summary: &Summary) {
-        self.writer
-            .flush()
-            .await
-            .expect("failed to flush ndjson report");
+        match &mut self.dest {
+            NdjsonDest::File(writer) => {
+                writer.flush().await.expect("failed to flush ndjson file");
+            }
+            NdjsonDest::Stdout(writer) => {
+                writer.flush().await.expect("failed to flush stdout");
+            }
+        }
+
+        if let Some(path) = &self.output_path {
+            info!("wrote ndjson report to {:?}", path);
+        }
     }
 }
 
@@ -176,6 +232,7 @@ impl Report {
         harness: &Harness,
         show_skipped: bool,
         path_str: &str,
+        output_dir: Option<&PathBuf>,
     ) -> Self {
         let dest = match format {
             ReportFormat::Log => {
@@ -184,7 +241,7 @@ impl Report {
             }
             ReportFormat::Ndjson => {
                 let metadata = harness.get_metadata();
-                let ndjson_report = NdjsonReport::new(path_str, &metadata)
+                let ndjson_report = NdjsonReport::new(path_str, output_dir, &metadata)
                     .await
                     .expect("failed to create ndjson report");
                 ReportDest::Ndjson(ndjson_report)
@@ -240,7 +297,14 @@ async fn analyze_pcap(pcap_path: &str, args: &Args) {
         .await
         .expect("failed to read PCAP file");
 
-    let mut report = Report::build(args.report, &harness, args.show_skipped, pcap_path).await;
+    let mut report = Report::build(
+        args.report,
+        &harness,
+        args.show_skipped,
+        pcap_path,
+        args.output.as_ref(),
+    )
+    .await;
 
     while let Some(Ok(block)) = pcap_reader.next_block().await {
         let row = match block {
@@ -269,7 +333,14 @@ async fn analyze_qmdl(qmdl_path: &str, args: &Args) {
             .as_stream()
             .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
     );
-    let mut report = Report::build(args.report, &harness, args.show_skipped, qmdl_path).await;
+    let mut report = Report::build(
+        args.report,
+        &harness,
+        args.show_skipped,
+        qmdl_path,
+        args.output.as_ref(),
+    )
+    .await;
     while let Some(container) = qmdl_stream
         .try_next()
         .await
@@ -282,17 +353,23 @@ async fn analyze_qmdl(qmdl_path: &str, args: &Args) {
     report.finish().await;
 }
 
-async fn pcapify(qmdl_path: &PathBuf) {
+async fn pcapify(qmdl_path: &PathBuf, output_dir: &PathBuf) {
     let qmdl_file = &mut File::open(&qmdl_path)
         .await
         .expect("failed to open qmdl file");
     let qmdl_file_size = qmdl_file.metadata().await.unwrap().len();
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_file_size as usize));
-    let mut pcap_path = qmdl_path.clone();
+
+    // Build the output path in the specified directory
+    let file_name = qmdl_path
+        .file_name()
+        .expect("Invalid qmdl path");
+    let mut pcap_path = output_dir.join(file_name);
     pcap_path.set_extension("pcapng");
+
     let pcap_file = &mut File::create(&pcap_path)
         .await
-        .expect("failed to open pcap file");
+        .expect("failed to create pcap file");
     let mut pcap_writer = GsmtapPcapWriter::new(pcap_file).await.unwrap();
     pcap_writer.write_iface_header().await.unwrap();
     while let Some(container) = qmdl_reader
@@ -315,6 +392,25 @@ async fn pcapify(qmdl_path: &PathBuf) {
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
+
+    // Validate arguments
+    if args.pcapify && args.output.is_none() {
+        eprintln!("Error: --pcapify requires --output to be specified");
+        std::process::exit(1);
+    }
+
+    // Create output directory if specified
+    if let Some(ref output_dir) = args.output {
+        if !output_dir.exists() {
+            tokio::fs::create_dir_all(output_dir)
+                .await
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: Failed to create output directory: {}", e);
+                    std::process::exit(1);
+                });
+        }
+    }
+
     let level = if args.debug {
         log::LevelFilter::Debug
     } else if args.quiet {
@@ -357,7 +453,9 @@ async fn main() {
             info!("**** Beginning analysis of {name_str}");
             analyze_qmdl(path_str, &args).await;
             if args.pcapify {
-                pcapify(&path.to_path_buf()).await;
+                if let Some(ref output_dir) = args.output {
+                    pcapify(&path.to_path_buf(), output_dir).await;
+                }
             }
         } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
