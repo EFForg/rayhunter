@@ -40,7 +40,10 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 
    ```bash
    # For Orbic:
-   ./installer orbic --admin-password <password> [--admin-username <uname> --admin-ip <device-ip-address>]
+   ./installer orbic --admin-password 'mypassword'
+   # Note: the arguments --admin-username 'myusername' and --admin-ip 'mydeviceip'
+   #       may be required if different from the default.
+
    # Or install over USB if you want ADB and a root shell (not recommended for most users)
    ./installer orbic-usb
 
