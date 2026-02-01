@@ -298,35 +298,6 @@ impl<'de> Deserialize<'de> for AnalysisRow {
     }
 }
 
-#[derive(Serialize, Clone)]
-pub struct DetectionRow {
-    pub packet_timestamp: DateTime<FixedOffset>,
-    pub events: Vec<Event>,
-    pub skipped_message_reason: Option<String>,
-}
-
-impl TryFrom<AnalysisRow> for DetectionRow {
-    type Error = &'static str;
-
-    fn try_from(ar: AnalysisRow) -> Result<DetectionRow, Self::Error> {
-        let events: Vec<Event> = ar.events.into_iter().flatten().collect();
-
-        if events.is_empty() {
-            return Err("No detection events in analysis row");
-        }
-
-        let Some(timestamp) = ar.packet_timestamp else {
-            return Err("Missing packet timestamp");
-        };
-
-        Ok(DetectionRow {
-            packet_timestamp: timestamp,
-            events,
-            skipped_message_reason: ar.skipped_message_reason,
-        })
-    }
-}
-
 pub struct Harness {
     analyzers: Vec<Box<dyn Analyzer + Send>>,
     packet_num: usize,

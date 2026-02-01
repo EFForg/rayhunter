@@ -7,7 +7,7 @@ edition = "2024"
 rayhunter = { path = "../lib" }
 futures = { version = "0.3.30", default-features = false }
 log = "0.4.20"
-tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt-multi-thread"] }
+tokio = { version = "1.44.2", default-features = false, features = ["fs", "rt-multi-thread", "io-std"] }
 pcap-file-tokio = "0.1.0"
 clap = { version = "4.5.2", features = ["derive"] }
 walkdir = "2.5.0"

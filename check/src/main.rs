@@ -3,9 +3,7 @@ use futures::TryStreamExt;
 use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
-    analysis::analyzer::{
-        AnalysisRow, AnalyzerConfig, EventType, Harness, ReportMetadata,
-    },
+    analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness, ReportMetadata},
     diag::DataType,
     gsmtap_parser,
     ndjson_writer::NdjsonWriter,
@@ -13,7 +11,12 @@ use rayhunter::{
     qmdl::QmdlReader,
 };
 use serde::Serialize;
-use std::{collections::HashMap, future, path::PathBuf, pin::pin};
+use std::{
+    collections::HashMap,
+    future,
+    path::{Path, PathBuf},
+    pin::pin,
+};
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
@@ -49,7 +52,11 @@ struct Args {
     )]
     output: Option<PathBuf>,
 
-    #[arg(short = 'P', long, help = "Convert qmdl files to pcap (requires --output)")]
+    #[arg(
+        short = 'P',
+        long,
+        help = "Convert qmdl files to pcap (requires --output)"
+    )]
     pcapify: bool,
 
     #[arg(
@@ -105,10 +112,7 @@ impl LogReport {
             match event.event_type {
                 EventType::Informational => {
                     if let Some(ts) = row.packet_timestamp {
-                        info!(
-                            "{}: INFO - {} {}",
-                            self.file_path, ts, event.message,
-                        );
+                        info!("{}: INFO - {} {}", self.file_path, ts, event.message,);
                     }
                 }
                 EventType::Low | EventType::Medium | EventType::High => {
@@ -159,9 +163,9 @@ impl NdjsonReport {
         let (dest, output_path): (NdjsonDest, Option<PathBuf>) = if let Some(dir) = output_dir {
             // Write to file in the specified directory
             let input_path = PathBuf::from(input_file_path);
-            let file_name = input_path
-                .file_name()
-                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid input path"))?;
+            let file_name = input_path.file_name().ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid input path")
+            })?;
             let mut report_path = dir.join(file_name);
             report_path.set_extension("ndjson");
 
@@ -180,10 +184,7 @@ impl NdjsonReport {
             (NdjsonDest::Stdout(stdout), None)
         };
 
-        let mut report = NdjsonReport {
-            dest,
-            output_path,
-        };
+        let mut report = NdjsonReport { dest, output_path };
 
         // Analysis metadata is written to the first line of the ndjson report format
         report.write_json(metadata).await?;
@@ -204,7 +205,7 @@ impl NdjsonReport {
         }
     }
 
-async fn process_row(&mut self, row: &AnalysisRow) {
+    async fn process_row(&mut self, row: &AnalysisRow) {
         self.write_json(&row)
             .await
             .expect("failed to write ndjson row");
@@ -368,7 +369,7 @@ async fn analyze_qmdl(qmdl_path: &str, args: &Args) {
     report.finish().await;
 }
 
-async fn pcapify(qmdl_path: &PathBuf, output_dir: &PathBuf) {
+async fn pcapify(qmdl_path: &Path, output_dir: &Path) {
     let qmdl_file = &mut File::open(&qmdl_path)
         .await
         .expect("failed to open qmdl file");
@@ -376,9 +377,7 @@ async fn pcapify(qmdl_path: &PathBuf, output_dir: &PathBuf) {
     let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_file_size as usize));
 
     // Build the output path in the specified directory
-    let file_name = qmdl_path
-        .file_name()
-        .expect("Invalid qmdl path");
+    let file_name = qmdl_path.file_name().expect("Invalid qmdl path");
     let mut pcap_path = output_dir.join(file_name);
     pcap_path.set_extension("pcapng");
 
@@ -415,15 +414,15 @@ async fn main() {
     }
 
     // Create output directory if specified
-    if let Some(ref output_dir) = args.output {
-        if !output_dir.exists() {
-            tokio::fs::create_dir_all(output_dir)
-                .await
-                .unwrap_or_else(|e| {
-                    eprintln!("Error: Failed to create output directory: {}", e);
-                    std::process::exit(1);
-                });
-        }
+    if let Some(ref output_dir) = args.output
+        && !output_dir.exists()
+    {
+        tokio::fs::create_dir_all(output_dir)
+            .await
+            .unwrap_or_else(|e| {
+                eprintln!("Error: Failed to create output directory: {}", e);
+                std::process::exit(1);
+            });
     }
 
     let level = if args.debug {
@@ -467,10 +466,10 @@ async fn main() {
         if name_str.ends_with(".qmdl") {
             info!("**** Beginning analysis of {name_str}");
             analyze_qmdl(path_str, &args).await;
-            if args.pcapify {
-                if let Some(ref output_dir) = args.output {
-                    pcapify(&path.to_path_buf(), output_dir).await;
-                }
+            if args.pcapify
+                && let Some(ref output_dir) = args.output
+            {
+                pcapify(path, output_dir).await;
             }
         } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
