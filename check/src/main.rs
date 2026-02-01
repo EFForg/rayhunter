@@ -4,7 +4,7 @@ use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
     analysis::analyzer::{
-        AnalysisRow, AnalyzerConfig, DetectionRow, EventType, Harness, ReportMetadata,
+        AnalysisRow, AnalyzerConfig, EventType, Harness, ReportMetadata,
     },
     diag::DataType,
     gsmtap_parser,
@@ -93,20 +93,31 @@ impl LogReport {
         }
     }
 
-    fn process_row(&mut self, row: DetectionRow) {
-        for event in row.events {
+    fn process_row(&mut self, row: &AnalysisRow) {
+        if let Some(ref reason) = row.skipped_message_reason {
+            if self.show_skipped {
+                warn!("{}: SKIPPED - {}", self.file_path, reason);
+            }
+            return;
+        }
+
+        for event in row.events.iter().flatten() {
             match event.event_type {
                 EventType::Informational => {
-                    info!(
-                        "{}: INFO - {} {}",
-                        self.file_path, row.packet_timestamp, event.message,
-                    );
+                    if let Some(ts) = row.packet_timestamp {
+                        info!(
+                            "{}: INFO - {} {}",
+                            self.file_path, ts, event.message,
+                        );
+                    }
                 }
                 EventType::Low | EventType::Medium | EventType::High => {
-                    warn!(
-                        "{}: WARNING (Severity: {:?}) - {} {}",
-                        self.file_path, event.event_type, row.packet_timestamp, event.message,
-                    );
+                    if let Some(ts) = row.packet_timestamp {
+                        warn!(
+                            "{}: WARNING (Severity: {:?}) - {} {}",
+                            self.file_path, event.event_type, ts, event.message,
+                        );
+                    }
                     self.warnings += 1;
                 }
             }
@@ -193,16 +204,10 @@ impl NdjsonReport {
         }
     }
 
-    async fn process_row(&mut self, row: DetectionRow) {
+async fn process_row(&mut self, row: &AnalysisRow) {
         self.write_json(&row)
             .await
             .expect("failed to write ndjson row");
-    }
-    
-    async fn process_skipped_row(&mut self, row: AnalysisRow) {
-        self.write_json(&row)
-            .await
-            .expect("failed to write ndjson skipped row");
     }
 
     async fn finish(&mut self, _summary: &Summary) {
@@ -266,6 +271,8 @@ impl Report {
 
     async fn process_row(&mut self, row: AnalysisRow) {
         self.summary.total_messages += 1;
+
+        // Track skipped messages in summary
         if let Some(ref reason) = row.skipped_message_reason {
             *self
                 .summary
@@ -273,26 +280,19 @@ impl Report {
                 .entry(reason.clone())
                 .or_insert(0) += 1;
             self.summary.skipped += 1;
-
-            // For ndjson format, write skipped rows when --show-skipped is set
-            if self.show_skipped {
-                if let ReportDest::Ndjson(r) = &mut self.dest {
-                    r.process_skipped_row(row).await;
-                    return;
-                }
-            }
-            
-            // For log format or when show_skipped is false, skip the row
-            if !self.show_skipped {
-                return;
-            }
         }
 
-        let det = DetectionRow::try_from(row).ok();
-        if let Some(detection) = det {
+        // Follow daemon's pattern: write all non-empty rows
+        if !row.is_empty() {
             match &mut self.dest {
-                ReportDest::Log(r) => r.process_row(detection),
-                ReportDest::Ndjson(r) => r.process_row(detection).await,
+                ReportDest::Log(r) => r.process_row(&row),
+                ReportDest::Ndjson(r) => r.process_row(&row).await,
+            }
+        } else if self.show_skipped && row.skipped_message_reason.is_some() {
+            // For empty skipped rows with --show-skipped, still write them
+            match &mut self.dest {
+                ReportDest::Log(r) => r.process_row(&row),
+                ReportDest::Ndjson(r) => r.process_row(&row).await,
             }
         }
     }
