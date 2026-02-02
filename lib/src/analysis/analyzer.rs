@@ -381,12 +381,12 @@ impl Harness {
         row.events = match InformationElement::try_from(&gsmtap_message) {
             Ok(element) => self.analyze_information_element(&element),
             Err(err) => {
-                debug!(
-                    "in packet {} failed to convert gsmtap message to IE: {err:?}",
+                let msg = format!(
+                    "in packet {}, failed to convert gsmtap message to IE: {err:?}",
                     self.packet_num
                 );
-                row.skipped_message_reason =
-                    Some(format!("failed to convert gsmtap message to IE: {err:?}"));
+                debug!(&msg);
+                row.skipped_message_reason = Some(msg);
                 return row;
             }
         };
