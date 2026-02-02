@@ -111,7 +111,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         if let Some(res_p) = &carrier_freq.cell_reselection_priority {
                             let pri: i16 = res_p.0.into();
                             if pri > self.lte_priority {
-                                self.lte_priority = res_p.0.into();
+                                self.lte_priority = pri;
                                 debug!(
                                     "set priority {} due to sib5 (frame {})",
                                     self.lte_priority, _packet_num
