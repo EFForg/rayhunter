@@ -29,7 +29,7 @@ impl LteSib6And7DowngradeAnalyzer {
     }
 
     fn unpack_system_information<'a>(
-        &mut self,
+        &self,
         ie: &'a InformationElement,
     ) -> Option<&'a SystemInformation_r8_IEsSib_TypeAndInfo> {
         if let InformationElement::LTE(lte_ie) = ie
