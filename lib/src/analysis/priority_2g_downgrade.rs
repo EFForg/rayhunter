@@ -11,8 +11,8 @@ use telcom_parser::lte_rrc::{
 
 /// Based on heuristic T7 from Shinjo Park's "Why We Cannot Win".
 pub struct LteSib6And7DowngradeAnalyzer {
-    lte_priority: i16,
-    legacy_priority: i16,
+    lte_priority: Option<u8>,
+    legacy_priority: Option<u8>,
 }
 impl Default for LteSib6And7DowngradeAnalyzer {
     fn default() -> Self {
@@ -23,8 +23,8 @@ impl Default for LteSib6And7DowngradeAnalyzer {
 impl LteSib6And7DowngradeAnalyzer {
     pub fn new() -> Self {
         Self {
-            lte_priority: 0,
-            legacy_priority: 0,
+            lte_priority: None,
+            legacy_priority: None,
         }
     }
 
@@ -76,14 +76,14 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                 Some(Event {
                     event_type: EventType::High,
                     message:
-                        format!("LTE cell advertised a 3G cell for priority {} reselection over LTE neighbors at priority {}", self.legacy_priority, self.lte_priority)
+                        format!("LTE cell advertised a 3G cell for priority {} reselection over LTE neighbors at priority {}", self.legacy_priority?, self.lte_priority?)
                             .to_string(),
                 })
             } else {
                 None
             };
-            self.lte_priority = 0;
-            self.legacy_priority = -1;
+            self.lte_priority = None;
+            self.legacy_priority = None;
             debug!("reset priority to 0 due to new sib1 at {_packet_num}");
             return flag;
         }
@@ -92,16 +92,15 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
         for sib in sibs {
             match sib {
                 SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib3(sib3) => {
-                    let res_p: i16 = sib3
+                    let res_p: u8 = sib3
                         .cell_reselection_serving_freq_info
                         .cell_reselection_priority
-                        .0
-                        .into();
-                    if res_p > self.lte_priority {
-                        self.lte_priority = res_p;
+                        .0;
+                    if Some(res_p) > self.lte_priority {
+                        self.lte_priority = Some(res_p);
                         debug!(
                             "set priority {} due to sib3 (frame {})",
-                            self.lte_priority, _packet_num
+                            res_p, _packet_num
                         );
                     }
                 }
@@ -109,12 +108,12 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                     let carrier_freq_list = &sib5.inter_freq_carrier_freq_list;
                     for carrier_freq in &carrier_freq_list.0 {
                         if let Some(res_p) = &carrier_freq.cell_reselection_priority {
-                            let pri: i16 = res_p.0.into();
-                            if pri > self.lte_priority {
-                                self.lte_priority = pri;
+                            let pri: u8 = res_p.0;
+                            if Some(pri) > self.lte_priority {
+                                self.lte_priority = Some(pri);
                                 debug!(
                                     "set priority {} due to sib5 (frame {})",
-                                    self.lte_priority, _packet_num
+                                    pri, _packet_num
                                 );
                             }
                         }
@@ -126,11 +125,13 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
                             {
-                                self.legacy_priority = p.into();
-                                debug!(
-                                    "set legacy priority {} due to sib6 (frame {})",
-                                    self.lte_priority, _packet_num
-                                );
+                                if Some(p) > self.legacy_priority {
+                                    self.legacy_priority = Some(p.into());
+                                    debug!(
+                                        "set legacy priority {} due to sib6 (frame {})",
+                                        p, _packet_num
+                                    );
+                                }
                             }
                         }
                     }
@@ -139,11 +140,13 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
                             {
-                                self.legacy_priority = p.into();
-                                debug!(
-                                    "set legacy priority {} due to sib6 (frame {})",
-                                    self.lte_priority, _packet_num
-                                );
+                                if Some(p) > self.legacy_priority {
+                                    self.legacy_priority = Some(p);
+                                    debug!(
+                                        "set legacy priority {} due to sib6 (frame {})",
+                                        p, _packet_num
+                                    );
+                                }
                             }
                         }
                     }
@@ -158,11 +161,13 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         if let Some(CellReselectionPriority(p)) =
                             carrier_info.common_info.cell_reselection_priority
                         {
-                            self.legacy_priority = p.into();
-                            debug!(
-                                "set legacy priority {} due to sib7 (frame {})",
-                                self.lte_priority, _packet_num
-                            );
+                            if Some(p) > self.legacy_priority {
+                                self.legacy_priority = p.into();
+                                debug!(
+                                    "set legacy priority {} due to sib7 (frame {})",
+                                    p, _packet_num
+                                );
+                            }
                         }
                     }
                 }

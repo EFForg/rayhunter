@@ -385,7 +385,7 @@ impl Harness {
                     "in packet {}, failed to convert gsmtap message to IE: {err:?}",
                     self.packet_num
                 );
-                debug!(&msg);
+                debug!("{msg}");
                 row.skipped_message_reason = Some(msg);
                 return row;
             }
