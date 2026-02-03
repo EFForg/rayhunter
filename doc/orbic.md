@@ -38,6 +38,7 @@ The orbic's installation routine underwent many different changes:
 It's possible that many tutorials out there still refer to some of the old
 installation routines.
 
+<a name=shell></a>
 ## Obtaining a shell
 
 After running the installer, there will not be a rootshell and ADB will not be
