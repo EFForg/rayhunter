@@ -16,6 +16,7 @@ crc = "3.0.1"
 deku = { version = "0.20.0", features = ["logging"] }
 libc = "0.2.150"
 log = "0.4.20"
+env_logger = { version = "0.11", default-features = false }
 nix = { version = "0.29.0", features = ["feature"] }
 pcap-file-tokio = "0.1.0"
 pycrate-rs = { git = "https://github.com/EFForg/pycrate-rs" }

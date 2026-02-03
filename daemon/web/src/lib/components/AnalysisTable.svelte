@@ -78,7 +78,8 @@
         <p class="text-lg underline">Unparsed Messages</p>
         <p>
             These are due to a limitation or bug in Rayhunter's parser, and aren't usually a
-            problem.
+            problem. We'll not accept bug reports about them unless something else is going wrong
+            (such as false-positives or definite false-negatives)
         </p>
         <div class="overflow-x-auto">
             <table class="table-auto text-left">

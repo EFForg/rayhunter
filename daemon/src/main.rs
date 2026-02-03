@@ -170,7 +170,7 @@ fn run_shutdown_thread(
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), RayhunterError> {
-    env_logger::init();
+    rayhunter::init_logging(log::LevelFilter::Info);
 
     #[cfg(feature = "rustcrypto-tls")]
     {

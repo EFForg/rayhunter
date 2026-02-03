@@ -177,14 +177,7 @@ async fn main() {
     } else {
         log::LevelFilter::Info
     };
-    simple_logger::SimpleLogger::new()
-        .with_colors(true)
-        .without_timestamps()
-        .with_level(level)
-        //Filter out a stupid massive amount of uneccesary warnings from hampi about undecoded extensions
-        .with_module_level("asn1_codecs", log::LevelFilter::Error)
-        .init()
-        .unwrap();
+    rayhunter::init_logging(level);
 
     let harness = Harness::new_with_config(&AnalyzerConfig::default());
     info!("Analyzers:");

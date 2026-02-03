@@ -1,5 +1,16 @@
 use serde::{Deserialize, Serialize};
 
+/// Initialize logging with the given default level, suppressing noisy warnings
+/// from hampi about undecoded ASN1 extensions. Respects `RUST_LOG` overrides.
+pub fn init_logging(default_level: log::LevelFilter) {
+    env_logger::Builder::new()
+        .filter_level(default_level)
+        //Filter out a stupid massive amount of uneccessary warnings from hampi about undecoded extensions
+        .filter_module("asn1_codecs", log::LevelFilter::Error)
+        .parse_default_env()
+        .init();
+}
+
 pub mod analysis;
 pub mod diag;
 pub mod gsmtap;
