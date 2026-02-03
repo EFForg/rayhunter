@@ -39,7 +39,7 @@ This heuristic will also issue a notification every time your identity is sent t
 This analyzer tests if a base station releases your device's connection and redirects your device to a 2G base station. This heuristic is useful, because some IMSI catchers may operate in a such way that they downgrade connection to 2G where they can intercept the communication (by performing man-in-the-middle attack).
 
 
-### LTE SIB6/7 Downgrade
+### LTE SIB6/7 Downgrade (v2)
 
 This analyzer tests if LTE base station is broadcasting a SIB type 6 and 7 messages which include 2G/3G frequencies with higher priorities.
 
@@ -49,7 +49,7 @@ This attack exploits the fact that SIB broadcast messages are not encrypted or a
 
 SIB6 is used for cell reselection to CDMA2000 systems which are not supported by many modern mobile phones, and SIB7 Provides the mobile device with information to perform cell reselection to GSM/EDGE networks. Therefore SIB6 messages are quite rare, while malformed SIB7 messages are much more frequent in practice. 
 
-This heuristic is the most useful in the United States or other countries where there are no more operating 2G base stations. See [Wikipedia page on past 2G networks](https://en.wikipedia.org/wiki/2G#Past_2G_networks) for information about your country. In countries where 2G is still in service (such as most of EU), this heuristic may trigger false positives. In that case you should consider disabling it. However this heuristic has been vastly improved to reduce false positive warnings and new tests in European networks show that false positives are vastly reduced.
+This heuristic is useful even in countries where 2g is still prevalent. A well behaved tower should always advertise its other 4g neighbors at a higher priority than 2g/3g neighbors. (Older versions of this heuristic were prone to false positives.)
 
 ### Null Cipher
 
