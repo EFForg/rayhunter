@@ -74,13 +74,12 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
         {
             debug!("encountered sib1 at {_packet_num}");
             let flag = if self.legacy_priority > self.lte_priority {
-                if self.lte_priority == None {
+                if self.lte_priority.is_none() {
                     Some(Event {
                         event_type: EventType::Informational,
-                        message: format!(
+                        message:
                             "LTE cell advertised a legacy (3G/2G) neighbors but no LTE neighbors"
-                        )
-                        .to_string(),
+                                .to_string(),
                     })
                 } else {
                     Some(Event {
@@ -133,14 +132,13 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         for carrier_info in &carrier_info_list.0 {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
+                                && Some(p) > self.legacy_priority
                             {
-                                if Some(p) > self.legacy_priority {
-                                    self.legacy_priority = Some(p.into());
-                                    debug!(
-                                        "set legacy priority {} due to sib6 (frame {})",
-                                        p, _packet_num
-                                    );
-                                }
+                                self.legacy_priority = Some(p);
+                                debug!(
+                                    "set legacy priority {} due to sib6 (frame {})",
+                                    p, _packet_num
+                                );
                             }
                         }
                     }
@@ -148,14 +146,13 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         for carrier_info in &carrier_info_list.0 {
                             if let Some(CellReselectionPriority(p)) =
                                 carrier_info.cell_reselection_priority
+                                && Some(p) > self.legacy_priority
                             {
-                                if Some(p) > self.legacy_priority {
-                                    self.legacy_priority = Some(p);
-                                    debug!(
-                                        "set legacy priority {} due to sib6 (frame {})",
-                                        p, _packet_num
-                                    );
-                                }
+                                self.legacy_priority = Some(p);
+                                debug!(
+                                    "set legacy priority {} due to sib6 (frame {})",
+                                    p, _packet_num
+                                );
                             }
                         }
                     }
@@ -169,14 +166,13 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                     for carrier_info in &carrier_info_list.0 {
                         if let Some(CellReselectionPriority(p)) =
                             carrier_info.common_info.cell_reselection_priority
+                            && Some(p) > self.legacy_priority
                         {
-                            if Some(p) > self.legacy_priority {
-                                self.legacy_priority = p.into();
-                                debug!(
-                                    "set legacy priority {} due to sib7 (frame {})",
-                                    p, _packet_num
-                                );
-                            }
+                            self.legacy_priority = p.into();
+                            debug!(
+                                "set legacy priority {} due to sib7 (frame {})",
+                                p, _packet_num
+                            );
                         }
                     }
                 }
