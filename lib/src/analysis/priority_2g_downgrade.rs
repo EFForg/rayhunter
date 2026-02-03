@@ -72,16 +72,28 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
             && let BCCH_DL_SCH_MessageType::C1(c1) = &sch_msg.message
             && let BCCH_DL_SCH_MessageType_c1::SystemInformationBlockType1(_) = c1
         {
+            debug!("encountered sib1 at {_packet_num}");
             let flag = if self.legacy_priority > self.lte_priority {
-                Some(Event {
-                    event_type: EventType::High,
-                    message:
-                        format!("LTE cell advertised a 3G cell for priority {} reselection over LTE neighbors at priority {}", self.legacy_priority?, self.lte_priority?)
-                            .to_string(),
-                })
+                if self.lte_priority == None {
+                    Some(Event {
+                        event_type: EventType::Medium,
+                        message:
+                            format!("LTE cell advertised a legacy (3G/2G) neighbors but no LTE neighbors")
+                                .to_string(),
+
+                    })
+                } else {
+                    Some(Event {
+                        event_type: EventType::High,
+                        message:
+                            format!("LTE cell advertised a legacy (3G/2G) cell for priority {:?} reselection over LTE neighbors at priority {:?}", self.legacy_priority?, self.lte_priority)
+                                .to_string(),
+                    })
+                }
             } else {
                 None
             };
+            debug!("flag is {flag:?} because lte priority is {:?} and legacy priority is {:?} ", self.lte_priority, self.legacy_priority);
             self.lte_priority = None;
             self.legacy_priority = None;
             debug!("reset priority to 0 due to new sib1 at {_packet_num}");
