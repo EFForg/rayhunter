@@ -39,6 +39,12 @@ impl Analyzer for TestAnalyzer {
                 .0
                 .as_bitslice()
                 .load_be::<u32>();
+            let tac = sib1
+                .cell_access_related_info
+                .tracking_area_code
+                .0
+                .as_bitslice()
+                .load_be::<u32>();
             let plmn = &sib1.cell_access_related_info.plmn_identity_list.0;
             let mcc_string: String;
 
@@ -62,8 +68,8 @@ impl Analyzer for TestAnalyzer {
             return Some(Event {
                 event_type: EventType::Low,
                 message: format!(
-                    "SIB1 received CID: {}, PLMN: {}-{}",
-                    cid, mcc_string, mnc_string
+                    "SIB1 received CID: {}, TAC: {}, PLMN: {}-{}",
+                    cid, tac, mcc_string, mnc_string
                 ),
             });
         }
