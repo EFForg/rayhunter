@@ -709,9 +709,9 @@ dependencies = [
 
 [[package]]
 name = "bytes"
-version = "1.10.1"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
+checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 dependencies = [
  "serde",
 ]
@@ -3512,7 +3512,7 @@ version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77e878c846a8abae00dd069496dbe8751b16ac1c3d6bd2a7283a938e8228f90d"
 dependencies = [
- "proc-macro-crate 2.0.0",
+ "proc-macro-crate 3.4.0",
  "proc-macro2",
  "quote",
  "syn 2.0.101",
