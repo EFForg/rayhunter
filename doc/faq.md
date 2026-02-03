@@ -24,18 +24,27 @@ If you want to use a non-Verizon SIM card you will probably need an unlocked dev
 
 ### How do I re-enable USB tethering after installing Rayhunter?
 
-Make sure USB tethering is also enabled in the Orbic's UI, and then run the following commands:
+If you have installed with `./installer orbic-usb`, you might find that USB
+tethering is now disabled. If you have run `./installer orbic`, this section is not
+relevant as it does not use or touch USB.
+
+[First obtain a shell](./orbic.md#shell), then:
+
 
 ```sh
-./installer util shell "echo 9 > /usrdata/mode.cfg"
-./installer util shell reboot
+# inside of Orbic's shell:
+echo 9 > /usrdata/mode.cfg
+reboot
 ```
+
+Make sure USB tethering is also enabled in the Orbic's UI.
 
 To disable tethering again:
 
 ```sh
-./installer util shell "echo 3 > /usrdata/mode.cfg"
-./installer util shell reboot
+# inside of Orbic's shell:
+echo 3 > /usrdata/mode.cfg
+reboot
 ```
 
 See `/data/usb/boot_hsusb_composition` for a list of USB modes and Android USB gadget settings.
@@ -43,16 +52,16 @@ See `/data/usb/boot_hsusb_composition` for a list of USB modes and Android USB g
 
 ### How do I disable the WiFi hotspot on the Orbic RC400L?
 
-To disable both WiFi bands:
+To disable both WiFi bands, [first obtain a shell](./orbic.md#shell), then:
 
 ```sh
-adb shell
-/bin/rootshell -c "sed -i 's/<wlan><Feature><state>1<\/state>/<wlan><Feature><state>0<\/state>/g' /usrdata/data/usr/wlan/wlan_conf_6174.xml && reboot"
+# inside of Orbic's shell:
+sed -i 's/<wlan><Feature><state>1<\/state>/<wlan><Feature><state>0<\/state>/g' /usrdata/data/usr/wlan/wlan_conf_6174.xml && reboot
 ```
 
 To re-enable WiFi:
 
 ```sh
-adb shell
-/bin/rootshell -c "sed -i 's/<wlan><Feature><state>0<\/state>/<wlan><Feature><state>1<\/state>/g' /usrdata/data/usr/wlan/wlan_conf_6174.xml && reboot"
+# inside of Orbic's shell:
+sed -i 's/<wlan><Feature><state>0<\/state>/<wlan><Feature><state>1<\/state>/g' /usrdata/data/usr/wlan/wlan_conf_6174.xml && reboot
 ```
