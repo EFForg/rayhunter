@@ -10,7 +10,7 @@ use std::sync::RwLock;
 static CLOCK_OFFSET: RwLock<TimeDelta> = RwLock::new(TimeDelta::zero());
 
 /// Get the current clock offset.
-pub fn get_offset() -> TimeDelta {
+fn get_offset() -> TimeDelta {
     *CLOCK_OFFSET.read().unwrap()
 }
 

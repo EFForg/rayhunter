@@ -191,10 +191,15 @@ pub struct SetTimeOffsetRequest {
 }
 
 pub async fn get_time() -> Json<TimeResponse> {
+    let system_time = Local::now();
+    let adjusted_time = rayhunter::clock::get_adjusted_now();
+    let offset_seconds = adjusted_time
+        .signed_duration_since(system_time)
+        .num_seconds();
     Json(TimeResponse {
-        system_time: Local::now(),
-        adjusted_time: rayhunter::clock::get_adjusted_now(),
-        offset_seconds: rayhunter::clock::get_offset().num_seconds(),
+        system_time,
+        adjusted_time,
+        offset_seconds,
     })
 }
 
