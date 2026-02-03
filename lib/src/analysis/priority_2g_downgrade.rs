@@ -76,11 +76,11 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
             let flag = if self.legacy_priority > self.lte_priority {
                 if self.lte_priority == None {
                     Some(Event {
-                        event_type: EventType::Medium,
-                        message:
-                            format!("LTE cell advertised a legacy (3G/2G) neighbors but no LTE neighbors")
-                                .to_string(),
-
+                        event_type: EventType::Informational,
+                        message: format!(
+                            "LTE cell advertised a legacy (3G/2G) neighbors but no LTE neighbors"
+                        )
+                        .to_string(),
                     })
                 } else {
                     Some(Event {
@@ -93,7 +93,10 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
             } else {
                 None
             };
-            debug!("flag is {flag:?} because lte priority is {:?} and legacy priority is {:?} ", self.lte_priority, self.legacy_priority);
+            debug!(
+                "flag is {flag:?} because lte priority is {:?} and legacy priority is {:?} ",
+                self.lte_priority, self.legacy_priority
+            );
             self.lte_priority = None;
             self.legacy_priority = None;
             debug!("reset priority to 0 due to new sib1 at {_packet_num}");
@@ -110,10 +113,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                         .0;
                     if Some(res_p) > self.lte_priority {
                         self.lte_priority = Some(res_p);
-                        debug!(
-                            "set priority {} due to sib3 (frame {})",
-                            res_p, _packet_num
-                        );
+                        debug!("set priority {} due to sib3 (frame {})", res_p, _packet_num);
                     }
                 }
                 SystemInformation_r8_IEsSib_TypeAndInfo_Entry::Sib5(sib5) => {
@@ -123,10 +123,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
                             let pri: u8 = res_p.0;
                             if Some(pri) > self.lte_priority {
                                 self.lte_priority = Some(pri);
-                                debug!(
-                                    "set priority {} due to sib5 (frame {})",
-                                    pri, _packet_num
-                                );
+                                debug!("set priority {} due to sib5 (frame {})", pri, _packet_num);
                             }
                         }
                     }
