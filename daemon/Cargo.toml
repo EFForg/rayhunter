@@ -18,7 +18,6 @@ axum = { version = "0.8", default-features = false, features = ["http1", "tokio"
 thiserror = "1.0.52"
 libc = "0.2.150"
 log = "0.4.20"
-env_logger = { version = "0.11", default-features = false }
 tokio-util = { version = "0.7.10", features = ["rt", "io", "compat"] }
 futures-macro = "0.3.30"
 include_dir = "0.7.3"
