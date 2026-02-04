@@ -35,6 +35,7 @@ You can get your TP-Link M7350 from:
 * First check for used offers on local sites, sometimes it's much cheaper there.
 * [Geizhals price comparison](https://geizhals.eu/?fs=tp-link+m7350).
 * [Ebay](https://www.ebay.com/sch/i.html?_nkw=tp-link+m7350&_sacat=0&_from=R40&_trksid=p4432023.m570.l1313).
+* Can also be found sold as the 'Vodafone Pocket Wifi 5' in Australia 
 
 ## Installation & Usage
 
