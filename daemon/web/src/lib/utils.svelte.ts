@@ -101,14 +101,6 @@ export async function test_notification(): Promise<void> {
     }
 }
 
-export interface RouteStatus {
-    has_default_route: boolean;
-}
-
-export async function get_route_status(): Promise<RouteStatus> {
-    return JSON.parse(await req('GET', '/api/route-status'));
-}
-
 export interface TimeResponse {
     system_time: string;
     adjusted_time: string;

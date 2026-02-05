@@ -5,7 +5,7 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: process.env.API_TARGET || 'http://localhost:8080',
+                target: 'http://localhost:8080',
                 changeOrigin: true,
                 secure: false,
                 configure: (proxy, _options) => {
