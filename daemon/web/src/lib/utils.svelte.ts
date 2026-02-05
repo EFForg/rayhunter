@@ -113,3 +113,14 @@ export interface TimeResponse {
 export async function get_daemon_time(): Promise<TimeResponse> {
     return JSON.parse(await req('GET', '/api/time'));
 }
+
+export interface TlsStatus {
+    https_enabled: boolean;
+    fallback_mode: boolean;
+    fallback_reason?: string;
+    tls_path: string;
+}
+
+export async function get_tls_status(): Promise<TlsStatus> {
+    return JSON.parse(await req('GET', '/api/tls-status'));
+}

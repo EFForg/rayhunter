@@ -23,4 +23,6 @@ pub enum RayhunterError {
     FunctionNotSupportedForDeviceError,
     #[error("TLS error: {0}")]
     TlsError(String),
+    #[error("Server error: {0}")]
+    ServerError(String),
 }

@@ -30,7 +30,7 @@ use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_zip, serve_static,
     set_config, set_time_offset, test_notification,
 };
-use crate::stats::{get_qmdl_manifest, get_system_stats};
+use crate::stats::{get_qmdl_manifest, get_system_stats, get_tls_status};
 
 use analysis::{
     AnalysisCtrlMessage, AnalysisStatus, get_analysis_status, run_analysis_thread, start_analysis,
@@ -96,6 +96,7 @@ fn get_router() -> AppRouter {
         .route("/api/qmdl/{name}", get(get_qmdl))
         .route("/api/zip/{name}", get(get_zip))
         .route("/api/system-stats", get(get_system_stats))
+        .route("/api/tls-status", get(get_tls_status))
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
         .route("/api/log", get(get_log))
         .route("/api/start-recording", post(start_recording))
@@ -122,7 +123,7 @@ async fn run_server(
     task_tracker: &TaskTracker,
     state: Arc<ServerState>,
     shutdown_token: CancellationToken,
-) {
+) -> Result<(), RayhunterError> {
     info!("spinning up server");
 
     if state.config.https_enabled {
@@ -130,13 +131,20 @@ async fn run_server(
         match setup_https_server(task_tracker, state.clone(), shutdown_token.clone()).await {
             Ok(()) => {
                 // Start HTTP redirect server on port 8080
-                setup_http_redirect_server(
+                if let Err(e) = setup_http_redirect_server(
                     task_tracker,
                     state.config.port,
                     state.config.https_port,
                     shutdown_token,
                 )
-                .await;
+                .await
+                {
+                    // Non-fatal: HTTPS still works, just no automatic redirect
+                    error!(
+                        "Failed to setup HTTP redirect server: {}. HTTPS may still be available.",
+                        e
+                    );
+                }
             }
             Err(e) => {
                 // Fall back to HTTP-only if HTTPS setup fails
@@ -144,13 +152,15 @@ async fn run_server(
                     "Failed to setup HTTPS server: {}, falling back to HTTP-only",
                     e
                 );
-                setup_http_server(task_tracker, state, shutdown_token).await;
+                setup_http_server(task_tracker, state, shutdown_token).await?;
             }
         }
     } else {
         // HTTP-only mode (default)
-        setup_http_server(task_tracker, state, shutdown_token).await;
+        setup_http_server(task_tracker, state, shutdown_token).await?;
     }
+
+    Ok(())
 }
 
 // Setup and spawn the HTTP server (serves full content)
@@ -158,19 +168,25 @@ async fn setup_http_server(
     task_tracker: &TaskTracker,
     state: Arc<ServerState>,
     shutdown_token: CancellationToken,
-) {
+) -> Result<(), RayhunterError> {
     let addr = SocketAddr::from(([0, 0, 0, 0], state.config.port));
-    let listener = TcpListener::bind(&addr).await.unwrap();
+    let listener = TcpListener::bind(&addr).await.map_err(|e| {
+        RayhunterError::ServerError(format!("Failed to bind HTTP server to {}: {}", addr, e))
+    })?;
     let app = get_router().with_state(state);
 
     task_tracker.spawn(async move {
         info!("HTTP server listening on {}", addr);
         info!("The orca is hunting for stingrays...");
-        axum::serve(listener, app)
+        if let Err(e) = axum::serve(listener, app)
             .with_graceful_shutdown(shutdown_token.cancelled_owned())
             .await
-            .unwrap();
+        {
+            error!("HTTP server on {} stopped unexpectedly: {}", addr, e);
+        }
     });
+
+    Ok(())
 }
 
 // Setup and spawn the HTTP redirect server (redirects to HTTPS)
@@ -179,9 +195,14 @@ async fn setup_http_redirect_server(
     http_port: u16,
     https_port: u16,
     shutdown_token: CancellationToken,
-) {
+) -> Result<(), RayhunterError> {
     let addr = SocketAddr::from(([0, 0, 0, 0], http_port));
-    let listener = TcpListener::bind(&addr).await.unwrap();
+    let listener = TcpListener::bind(&addr).await.map_err(|e| {
+        RayhunterError::ServerError(format!(
+            "Failed to bind HTTP redirect server to {}: {}",
+            addr, e
+        ))
+    })?;
     let app = get_redirect_router(https_port);
 
     task_tracker.spawn(async move {
@@ -190,11 +211,15 @@ async fn setup_http_redirect_server(
             addr, https_port
         );
         info!("The orca is hunting for stingrays...");
-        axum::serve(listener, app)
+        if let Err(e) = axum::serve(listener, app)
             .with_graceful_shutdown(shutdown_token.cancelled_owned())
             .await
-            .unwrap();
+        {
+            error!("HTTP redirect server on {} stopped unexpectedly: {}", addr, e);
+        }
     });
+
+    Ok(())
 }
 
 // Setup and spawn the HTTPS server
@@ -213,6 +238,10 @@ async fn setup_https_server(
 
     let tls_config = load_tls_config(&cert_path, &key_path).await?;
 
+    // TLS config loaded successfully - reset the regen counter
+    // This prevents false boot loop detection after successful startup
+    tls::reset_regen_attempts(&state.config.qmdl_store_path).await;
+
     let addr = SocketAddr::from(([0, 0, 0, 0], state.config.https_port));
     let app = get_router().with_state(state);
 
@@ -228,11 +257,13 @@ async fn setup_https_server(
 
     task_tracker.spawn(async move {
         info!("HTTPS server listening on {}", addr);
-        axum_server::bind_rustls(addr, tls_config)
+        if let Err(e) = axum_server::bind_rustls(addr, tls_config)
             .handle(handle)
             .serve(app.into_make_service())
             .await
-            .unwrap();
+        {
+            error!("HTTPS server on {} stopped unexpectedly: {}", addr, e);
+        }
     });
 
     Ok(())
@@ -245,7 +276,14 @@ async fn load_tls_config(
 ) -> Result<RustlsConfig, RayhunterError> {
     RustlsConfig::from_pem_file(cert_path, key_path)
         .await
-        .map_err(|e| RayhunterError::TlsError(format!("Failed to load TLS config: {}", e)))
+        .map_err(|e| {
+            RayhunterError::TlsError(format!(
+                "Failed to load TLS config from {} and {}: {}",
+                cert_path.display(),
+                key_path.display(),
+                e
+            ))
+        })
 }
 
 // Loads a RecordingStore if one exists, and if not, only create one if we're
@@ -445,7 +483,7 @@ async fn run_with_config(
         daemon_restart_token: restart_token.clone(),
         ui_update_sender: Some(ui_update_tx),
     });
-    run_server(&task_tracker, state, shutdown_token.clone()).await;
+    run_server(&task_tracker, state, shutdown_token.clone()).await?;
 
     task_tracker.close();
     task_tracker.wait().await;

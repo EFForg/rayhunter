@@ -29,10 +29,14 @@ ntfy_url = ""
 enabled_notifications = ["Warning", "LowBattery"]
 
 # HTTPS Configuration
-# Enable HTTPS with auto-generated self-signed certificate
-# When enabled, HTTP port (8080) redirects to HTTPS port (8443)
-# https_enabled = false
+# Enable HTTPS with auto-generated self-signed certificate.
+# When enabled, HTTP port (8080) redirects to HTTPS port (8443).
+# Certificates are stored in {qmdl_store_path}/../tls/ and auto-regenerate if invalid.
+https_enabled = false
 # https_port = 8443
+# Custom hostnames/IPs to include in TLS certificate (optional).
+# If empty, uses device-specific default IP. Can include IPs or DNS names.
+# tls_hosts = ["rayhunter.local", "10.0.0.5"]
 
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics
