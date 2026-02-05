@@ -10,11 +10,11 @@ use pycrate_rs::nas::generated::emm::emm_service_reject::EMMCauseEMMCause as Ser
 use pycrate_rs::nas::generated::emm::emm_tracking_area_update_reject::EMMCauseEMMCause as TAURejectEMMCause;
 use std::borrow::Cow;
 
-pub struct ImsiAttachAnalyzer;
+pub struct DiagnosticAnalyzer;
 
-impl ImsiAttachAnalyzer {
+impl DiagnosticAnalyzer {
     pub fn new() -> Self {
-        ImsiAttachAnalyzer
+        DiagnosticAnalyzer
     }
 
     fn is_imsi_exposing_nas(&self, nas_msg: &NASMessage) -> bool {
@@ -80,13 +80,13 @@ impl ImsiAttachAnalyzer {
     }
 }
 
-impl Analyzer for ImsiAttachAnalyzer {
+impl Analyzer for DiagnosticAnalyzer {
     fn get_name(&self) -> Cow<'_, str> {
-        "Diagnostic detector for IMSI Exposure".into()
+        "Diagnostic detector for messages which might lead to IMSI exposure".into()
     }
 
     fn get_description(&self) -> Cow<'_, str> {
-        "Catches any messages that may expose IMSI. Can be quite noisy. \
+        "Catches any messages that may lead to IMSI Exposure. Can be quite noisy. \
         Useful as a diagnostic for finding out why an IMSI was sent or what \
         the reason for a reject message was. Not a useful indicator on its own \
         but a helpful diagnostic for understanding why another indicator was \

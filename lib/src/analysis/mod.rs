@@ -1,6 +1,6 @@
 pub mod analyzer;
 pub mod connection_redirect_downgrade;
-pub mod imsi_attach;
+pub mod diagnostic;
 pub mod imsi_requested;
 pub mod incomplete_sib;
 pub mod information_element;
