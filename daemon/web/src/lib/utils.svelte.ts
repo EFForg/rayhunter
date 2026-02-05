@@ -10,7 +10,7 @@ export interface AnalyzerConfig {
     nas_null_cipher: boolean;
     incomplete_sib: boolean;
     test_analyzer: boolean;
-    imsi_attach_analyzer: boolean;
+    diagnostic_analyzer: boolean;
 }
 
 export enum enabled_notifications {

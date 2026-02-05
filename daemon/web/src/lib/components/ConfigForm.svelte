@@ -339,11 +339,11 @@
                             <input
                                 id="imsi_attach_analyzer"
                                 type="checkbox"
-                                bind:checked={config.analyzers.imsi_attach_analyzer}
+                                bind:checked={config.analyzers.diagnostic_analyzer}
                                 class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                             />
-                            <label for="imsi_attach_analyzer" class="ml-2 block text-sm text-gray-700">
-                                IMSI Attach Analyzer
+                            <label for="diagnostic_analyzer" class="ml-2 block text-sm text-gray-700">
+                                Diagnostic Analyzer
                             </label>
                         </div>
                     </div>

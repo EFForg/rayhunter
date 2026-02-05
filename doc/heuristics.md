@@ -73,6 +73,9 @@ This analyzer tests whether the SIB1 message contains a complete SIB chain (SIB3
 
 On its own this might just be a misconfigured base station (though we have only seen it in the wild under suspicious circumstances) but combined with other heuristics such as **IMSI Requested** detection it should be considered as a strong indicator of malicious activity.
 
+### Diagnostic Information 
+This analyzer displays some diagnostic information about when your device connects and disconnects from certain towers. It is helpful for analysis of suspicious PCAPs. The informational warnings in here can safely be ignored until there is a low, medium, or high severity warning. 
+
 ### Test Analyzer
 
 This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisy so we do not recommend leaving it on but if this alerts it means your Rayhunter device is working! 
