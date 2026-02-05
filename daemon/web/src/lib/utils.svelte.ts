@@ -24,6 +24,9 @@ export interface Config {
     ntfy_url: string;
     enabled_notifications: enabled_notifications[];
     analyzers: AnalyzerConfig;
+    https_enabled: boolean;
+    https_port: number;
+    tls_hosts: string[];
 }
 
 export async function req(method: string, url: string, json_body?: unknown): Promise<string> {

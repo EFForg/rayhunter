@@ -28,6 +28,12 @@ ntfy_url = ""
 # What notification types to enable. Does nothing if the above ntfy_url is not set.
 enabled_notifications = ["Warning", "LowBattery"]
 
+# HTTPS Configuration
+# Enable HTTPS with auto-generated self-signed certificate
+# When enabled, HTTP port (8080) redirects to HTTPS port (8443)
+# https_enabled = false
+# https_port = 8443
+
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics
 # See https://github.com/EFForg/rayhunter/blob/main/doc/heuristics.md for details

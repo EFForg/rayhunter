@@ -20,6 +20,19 @@ pub struct Config {
     pub ntfy_url: Option<String>,
     pub enabled_notifications: Vec<NotificationType>,
     pub analyzers: AnalyzerConfig,
+    /// Enable HTTPS on https_port (generates self-signed cert on first use)
+    pub https_enabled: bool,
+    /// HTTPS port (only active when https_enabled = true)
+    #[serde(default = "default_https_port")]
+    pub https_port: u16,
+    /// Custom hostnames/IPs to include in TLS certificate SANs.
+    /// If empty, uses device-specific defaults. Can include IPs or DNS names.
+    #[serde(default)]
+    pub tls_hosts: Vec<String>,
+}
+
+fn default_https_port() -> u16 {
+    8443
 }
 
 impl Default for Config {
@@ -35,6 +48,9 @@ impl Default for Config {
             analyzers: AnalyzerConfig::default(),
             ntfy_url: None,
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
+            https_enabled: false,
+            https_port: default_https_port(),
+            tls_hosts: Vec::new(),
         }
     }
 }

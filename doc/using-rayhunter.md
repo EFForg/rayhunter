@@ -14,7 +14,7 @@ You can access this UI in one of two ways:
   network and visit <http://192.168.1.1:8080> (orbic)
   or <http://192.168.0.1:8080> (tplink).
 
-  Click past your browser warning you about the connection not being secure; Rayhunter doesn't have HTTPS yet.
+  If you've enabled HTTPS in Configuration, use <https://192.168.1.1:8443> instead and accept the certificate warning (this is expected for self-signed certificates).
 
   On the **Orbic**, you can find the WiFi network password by going to the Orbic's menu > 2.4 GHz WIFI Info > Enter > find the 8-character password next to the lock 🔒 icon.
   On the **TP-Link**, you can find the WiFi network password by going to the TP-Link's menu > Advanced > Wireless > Basic Settings.
@@ -25,6 +25,35 @@ You can access this UI in one of two ways:
     * On MacOS, the easiest way to install ADB is with Homebrew: First [install Homebrew](https://brew.sh/), then run `brew install android-platform-tools`.
 
 * **Connect over USB (TP-Link):** Plug in the TP-Link and use USB tethering to establish a network connection. ADB support can be enabled on the device, but the installer won't do it for you.
+
+## HTTPS Support
+
+Rayhunter supports optional HTTPS for secure connections. To enable it:
+
+1. Access the web UI and go to Configuration
+2. Check "Enable HTTPS"
+3. Click "Apply and restart"
+4. After restart, access Rayhunter at `https://<device-ip>:8443`
+5. Accept the browser's certificate warning (expected for self-signed certificates)
+
+HTTP requests to port 8080 will automatically redirect to HTTPS when enabled.
+
+### HTTPS Recovery
+
+If you can't access the HTTPS interface (e.g., certificate issues), you can disable HTTPS via ADB:
+
+```bash
+adb shell
+vi /data/rayhunter/config.toml
+# Change: https_enabled = false
+# Save and reboot the device
+```
+
+Or reset to defaults by deleting the config file:
+```bash
+adb shell rm /data/rayhunter/config.toml
+# Reboot the device
+```
 
 ## Key shortcuts
 

@@ -15,6 +15,17 @@ Through web UI you can set:
   - *Disable button control*: built-in power button of the device is not used by Rayhunter.
   - *Double-tap power button to start/stop recording*: double clicking on a built-in power button of the device stops and immediately restarts the recording. This could be useful if Rayhunter's heuristics is triggered and you get the red line, and you want to "reset" the past warnings. Normally you can do that through web UI, but sometimes it is easier to double tap on power button.
 - **Colorblind Mode** enables color blind mode (blue line is shown instead of green line, red line remains red). Please note that this does not cover all types of color blindness, but switching green to blue should be about enough to differentiate the color change for most types of color blindness.
+- **Enable HTTPS** enables secure HTTPS connections on port 8443. When enabled:
+  - Rayhunter automatically generates a self-signed certificate on first use
+  - HTTP requests on port 8080 are redirected to HTTPS on port 8443
+  - Your browser will show a certificate warning (expected for self-signed certificates - you can safely accept it since you're connecting to your own device)
+  - Certificates are stored in `/data/rayhunter/tls/` and persist across restarts
+- **Custom TLS Hosts** (optional, only visible when HTTPS is enabled) allows you to add custom hostnames or IP addresses to include in the TLS certificate. This is useful if:
+  - You have DNS resolving to your device (e.g., `rayhunter.local`)
+  - Your device has a SIM card and gets a different IP address
+  - You're accessing the device from a different network
+
+  Enter values as comma-separated (e.g., `rayhunter.local, 10.0.0.5`). Leave empty to use device defaults. Changing this setting will regenerate the certificate on restart.
 - **ntfy URL**, which allows setting a [ntfy](https://ntfy.sh/) URL to which notifications of new detections will be sent. The topic should be unique to your device, e.g., `https://ntfy.sh/rayhunter_notifications_ba9di7ie` or `https://myserver.example.com/rayhunter_notifications_ba9di7ie`. The ntfy Android and iOS apps can then be used to receive notifications. More information can be found in the [ntfy docs](https://docs.ntfy.sh/).
 - **Enabled Notification Types** allows enabling or disabling the following types of notifications:
   - *Warnings*, which will alert when a heuristic is triggered. Alerts will be sent at most once every five minutes.
