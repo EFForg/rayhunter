@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
+use std::time::{Duration, Instant};
 
 use crate::battery::get_battery_status;
 use crate::error::RayhunterError;
@@ -175,12 +176,29 @@ pub async fn get_log() -> Result<String, (StatusCode, String)> {
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
 
+/// How long to wait after startup before showing route alerts.
+/// This gives the network time to fully connect on device boot.
+const ROUTE_ALERT_GRACE_PERIOD: Duration = Duration::from_secs(60);
+static STARTUP_TIME: LazyLock<Instant> = LazyLock::new(Instant::now);
+
+/// Call this early in main() to track the startup time.
+pub fn init_startup_time() {
+    LazyLock::force(&STARTUP_TIME);
+}
+
 #[derive(Debug, Serialize)]
 pub struct RouteStatus {
     pub has_default_route: bool,
 }
 
 pub async fn get_route_status() -> Json<RouteStatus> {
+    // Suppress the alert for the first 60 seconds to allow the network to connect
+    if STARTUP_TIME.elapsed() < ROUTE_ALERT_GRACE_PERIOD {
+        return Json(RouteStatus {
+            has_default_route: true,
+        });
+    }
+
     let has_default_route = match check_default_route().await {
         Ok(result) => result,
         Err(err) => {

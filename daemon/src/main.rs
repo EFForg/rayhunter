@@ -25,7 +25,7 @@ use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_zip, serve_static,
     set_config, set_time_offset, test_notification,
 };
-use crate::stats::{get_qmdl_manifest, get_route_status, get_system_stats};
+use crate::stats::{get_qmdl_manifest, get_route_status, get_system_stats, init_startup_time};
 
 use analysis::{
     AnalysisCtrlMessage, AnalysisStatus, get_analysis_status, run_analysis_thread, start_analysis,
@@ -173,6 +173,7 @@ fn run_shutdown_thread(
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), RayhunterError> {
     rayhunter::init_logging(log::LevelFilter::Info);
+    init_startup_time();
 
     #[cfg(feature = "rustcrypto-tls")]
     {
