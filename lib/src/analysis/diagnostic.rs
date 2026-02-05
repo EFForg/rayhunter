@@ -3,7 +3,6 @@ use crate::analysis::information_element::{InformationElement, LteInformationEle
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 use pycrate_rs::nas::generated::emm::emm_attach_reject::EMMCauseEMMCause as AttachRejectEMMCause;
-//use pycrate_rs::nas::generated::emm::emm_attach_request::EPSAttachTypeV;
 use pycrate_rs::nas::generated::emm::emm_detach_request_mt::EPSDetachTypeMTType;
 use pycrate_rs::nas::generated::emm::emm_service_reject::EMMCauseEMMCause as ServiceRejectEMMCause;
 use pycrate_rs::nas::generated::emm::emm_tracking_area_update_reject::EMMCauseEMMCause as TAURejectEMMCause;
