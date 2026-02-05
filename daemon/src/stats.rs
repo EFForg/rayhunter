@@ -174,33 +174,3 @@ pub async fn get_log() -> Result<String, (StatusCode, String)> {
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
-
-#[derive(Debug, Serialize)]
-pub struct RouteStatus {
-    pub has_default_route: bool,
-}
-
-pub async fn get_route_status() -> Json<RouteStatus> {
-    let has_default_route = match check_default_route().await {
-        Ok(result) => result,
-        Err(err) => {
-            log::warn!("Failed to check default route: {err}");
-            // More likely than not, this is a portability issue. The logic hasn't been fully
-            // tested on all devices. We shouldn't scare users unnecessarily.
-            true
-        }
-    };
-
-    Json(RouteStatus { has_default_route })
-}
-
-// Checks for an IPv4 default route by reading /proc/net/route
-// instead of shelling out to `ip route`, which may not be available on all devices.
-async fn check_default_route() -> std::io::Result<bool> {
-    let contents = tokio::fs::read_to_string("/proc/net/route").await?;
-    Ok(contents.lines().skip(1).any(|line| {
-        line.split_whitespace()
-            .nth(1)
-            .is_some_and(|dest| dest == "00000000")
-    }))
-}

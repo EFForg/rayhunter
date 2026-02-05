@@ -10,10 +10,8 @@
     import RecordingControls from '$lib/components/RecordingControls.svelte';
     import ConfigForm from '$lib/components/ConfigForm.svelte';
     import ActionErrors from '$lib/components/ActionErrors.svelte';
-    import IPRouteAlert from '$lib/components/IPRouteAlert.svelte';
     import ClockDriftAlert from '$lib/components/ClockDriftAlert.svelte';
     import LogView from '$lib/components/LogView.svelte';
-    import WarningIcon from '$lib/components/WarningIcon.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -180,7 +178,21 @@
             class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
         >
             <span class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600">
-                <WarningIcon class="w-8 h-8 text-red-600" />
+                <svg
+                    class="w-8 h-8 text-red-600"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
+                        clip-rule="evenodd"
+                    />
+                </svg>
                 Connection Error
             </span>
             <span
@@ -196,7 +208,6 @@
         </div>
     {/if}
     <ActionErrors />
-    <IPRouteAlert />
     <ClockDriftAlert />
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">
@@ -214,7 +225,21 @@
                     <span
                         class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600"
                     >
-                        <WarningIcon class="w-8 h-8 text-red-600" />
+                        <svg
+                            class="w-8 h-8 text-red-600"
+                            aria-hidden="true"
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                fill-rule="evenodd"
+                                d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
+                                clip-rule="evenodd"
+                            />
+                        </svg>
                         WARNING: Not Running
                     </span>
                     <span>
