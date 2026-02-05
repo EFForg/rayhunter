@@ -3,9 +3,8 @@ use crate::analysis::information_element::{InformationElement, LteInformationEle
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 use pycrate_rs::nas::generated::emm::emm_attach_reject::EMMCauseEMMCause as AttachRejectEMMCause;
-use pycrate_rs::nas::generated::emm::emm_attach_request::EPSAttachTypeV;
+//use pycrate_rs::nas::generated::emm::emm_attach_request::EPSAttachTypeV;
 use pycrate_rs::nas::generated::emm::emm_detach_request_mt::EPSDetachTypeMTType;
-use pycrate_rs::nas::generated::emm::emm_identity_request::IDTypeV;
 use pycrate_rs::nas::generated::emm::emm_service_reject::EMMCauseEMMCause as ServiceRejectEMMCause;
 use pycrate_rs::nas::generated::emm::emm_tracking_area_update_reject::EMMCauseEMMCause as TAURejectEMMCause;
 use std::borrow::Cow;
@@ -20,7 +19,7 @@ impl DiagnosticAnalyzer {
     fn is_imsi_exposing_nas(&self, nas_msg: &NASMessage) -> bool {
         match nas_msg {
             NASMessage::EMMMessage(emm_msg) => match emm_msg {
-                EMMMessage::EMMIdentityRequest(req) => req.id_type.inner == IDTypeV::IMSI,
+                EMMMessage::EMMIdentityRequest(_) => true, // Alert on all identity requests (IMSI, IMEI, IMEISV)
 
                 EMMMessage::EMMTrackingAreaUpdateReject(reject) => {
                     matches!(
@@ -56,8 +55,13 @@ impl DiagnosticAnalyzer {
                     req.eps_detach_type.inner.typ != EPSDetachTypeMTType::IMSIDetach
                 }
 
-                EMMMessage::EMMAttachRequest(req) => {
-                    req.eps_attach_type.inner == EPSAttachTypeV::CombinedEPSIMSIAttach
+                EMMMessage::EMMAttachRequest(_) => {
+                    // just because eps_attach_type is IMSI doesn't mean that the phoen transmitted its IMSI
+                    // It often sends the GUTI instead. We could check the req.epsid structure but it appears to actually
+                    // not be parsed. So for now we are just ignoreing this message
+                    // req.eps_attach_type.inner == EPSAttachTypeV::CombinedEPSIMSIAttach
+
+                    false
                 }
 
                 EMMMessage::EMMServiceReject(reject) => {
@@ -91,7 +95,8 @@ impl Analyzer for DiagnosticAnalyzer {
         the reason for a reject message was. Not a useful indicator on its own \
         but a helpful diagnostic for understanding why another indicator was \
         triggered. Based on the list of IMSI exposing messages identified in \
-        the 'Marlin' paper.".into()
+        the 'Marlin' paper."
+            .into()
     }
 
     fn get_version(&self) -> u32 {
@@ -112,29 +117,33 @@ impl Analyzer for DiagnosticAnalyzer {
             LteInformationElement::NAS(nas_msg) => {
                 if self.is_imsi_exposing_nas(nas_msg) {
                     let message_type = match nas_msg {
-                        NASMessage::EMMMessage(emm_msg) => {
-                            match emm_msg {
-                                EMMMessage::EMMIdentityRequest(request) => {
-                                    format!("EMM Identity Request ({:?})", request.id_type.inner)
-                                }
-                                EMMMessage::EMMTrackingAreaUpdateReject(reject) => {
-                                    format!("EMM Tracking Area Update Reject ({:?})", reject.emm_cause.inner )
-                                }
-                                EMMMessage::EMMAttachReject(reject) => {
-                                    format!("EMM Attach Reject ({:?})", reject.emm_cause.inner)
-                                }
-                                EMMMessage::EMMDetachRequestMT(request) => {
-                                    format!("EMM Detach Request ({:?}:{:?})", request.eps_detach_type.inner, request.emm_cause.inner)
-                                }
-                                EMMMessage::EMMServiceReject(reject) => {
-                                    format!("EMM Service Reject ({:?})", reject.emm_cause.inner )
-                                }
-                                EMMMessage::EMMAttachRequest(request) => {
-                                    format!("EPS Attach Request ({:?})", request.eps_attach_type.inner )
-                                }
-                                _ => "Unknown EMM Message".to_string(),
+                        NASMessage::EMMMessage(emm_msg) => match emm_msg {
+                            EMMMessage::EMMIdentityRequest(request) => {
+                                format!("EMM Identity Request ({:?})", request.id_type.inner)
                             }
-                        }
+                            EMMMessage::EMMTrackingAreaUpdateReject(reject) => {
+                                format!(
+                                    "EMM Tracking Area Update Reject ({:?})",
+                                    reject.emm_cause.inner
+                                )
+                            }
+                            EMMMessage::EMMAttachReject(reject) => {
+                                format!("EMM Attach Reject ({:?})", reject.emm_cause.inner)
+                            }
+                            EMMMessage::EMMDetachRequestMT(request) => {
+                                format!(
+                                    "EMM Detach Request ({:?}:{:?})",
+                                    request.eps_detach_type.inner, request.emm_cause.inner
+                                )
+                            }
+                            EMMMessage::EMMServiceReject(reject) => {
+                                format!("EMM Service Reject ({:?})", reject.emm_cause.inner)
+                            }
+                            EMMMessage::EMMAttachRequest(request) => {
+                                format!("EPS Attach Request ({:?})", request.epsid.inner)
+                            }
+                            _ => "Unknown EMM Message".to_string(),
+                        },
                         _ => "Unknown NAS Message".to_string(),
                     };
 

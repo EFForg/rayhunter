@@ -350,7 +350,7 @@ impl Harness {
         }
 
         if analyzer_config.diagnostic_analyzer {
-            harness.add_analyzer(Box::new(DiagnosticAnalyzer{}));
+            harness.add_analyzer(Box::new(DiagnosticAnalyzer {}));
         }
 
         harness
