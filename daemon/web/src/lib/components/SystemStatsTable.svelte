@@ -46,7 +46,7 @@
     });
 
     // Format signal value with unit
-    function formatSignal(value: number | undefined, unit: string): string {
+    function format_signal(value: number | undefined, unit: string): string {
         if (value === undefined) return '—';
         return `${value.toFixed(1)} ${unit}`;
     }
@@ -144,7 +144,7 @@
                                 </span>
                                 {#if stats.cell_info.rsrp_dbm !== undefined}
                                     <span class="text-gray-600">
-                                        (RSRP: {formatSignal(stats.cell_info.rsrp_dbm, 'dBm')})
+                                        (RSRP: {format_signal(stats.cell_info.rsrp_dbm, 'dBm')})
                                     </span>
                                 {/if}
                             </div>
@@ -157,12 +157,15 @@
                                 {/if}
                                 {#if stats.cell_info.rsrq_db !== undefined}
                                     <span class="ml-2"
-                                        >RSRQ: {formatSignal(stats.cell_info.rsrq_db, 'dB')}</span
+                                        >RSRQ: {format_signal(stats.cell_info.rsrq_db, 'dB')}</span
                                     >
                                 {/if}
                                 {#if stats.cell_info.rssi_dbm !== undefined}
                                     <span class="ml-2"
-                                        >RSSI: {formatSignal(stats.cell_info.rssi_dbm, 'dBm')}</span
+                                        >RSSI: {format_signal(
+                                            stats.cell_info.rssi_dbm,
+                                            'dBm'
+                                        )}</span
                                     >
                                 {/if}
                             </div>
