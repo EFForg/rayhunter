@@ -156,10 +156,14 @@
                                     <span class="ml-2">EARFCN: {stats.cell_info.earfcn}</span>
                                 {/if}
                                 {#if stats.cell_info.rsrq_db !== undefined}
-                                    <span class="ml-2">RSRQ: {formatSignal(stats.cell_info.rsrq_db, 'dB')}</span>
+                                    <span class="ml-2"
+                                        >RSRQ: {formatSignal(stats.cell_info.rsrq_db, 'dB')}</span
+                                    >
                                 {/if}
                                 {#if stats.cell_info.rssi_dbm !== undefined}
-                                    <span class="ml-2">RSSI: {formatSignal(stats.cell_info.rssi_dbm, 'dBm')}</span>
+                                    <span class="ml-2"
+                                        >RSSI: {formatSignal(stats.cell_info.rssi_dbm, 'dBm')}</span
+                                    >
                                 {/if}
                             </div>
                         </div>
