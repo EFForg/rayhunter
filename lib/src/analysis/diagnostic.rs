@@ -10,6 +10,12 @@ use std::borrow::Cow;
 
 pub struct DiagnosticAnalyzer;
 
+impl Default for DiagnosticAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DiagnosticAnalyzer {
     pub fn new() -> Self {
         DiagnosticAnalyzer
