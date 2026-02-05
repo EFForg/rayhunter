@@ -337,7 +337,7 @@
                         </div>
                         <div class="flex items-center">
                             <input
-                                id="imsi_attach_analyzer"
+                                id="diagnostic_analyzer"
                                 type="checkbox"
                                 bind:checked={config.analyzers.diagnostic_analyzer}
                                 class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
