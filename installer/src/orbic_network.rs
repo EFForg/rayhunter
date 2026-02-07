@@ -97,7 +97,10 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
         .context("Failed to parse login response")?;
 
     if login_result.retcode != 0 {
-        bail!("Login failed with retcode: {}", login_result.retcode);
+        match login_result.retcode {
+            201 => bail!("Login failed: incorrect password"),
+            code => bail!("Login failed with retcode: {}", code),
+        }
     }
 
     // Step 4: Exploit using authenticated session
