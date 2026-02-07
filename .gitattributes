@@ -7,3 +7,4 @@
 dist/config.toml.in eol=lf
 dist/scripts/misc-daemon eol=lf
 dist/scripts/rayhunter_daemon eol=lf
+scripts/*.sh eol=lf
