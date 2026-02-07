@@ -12,6 +12,17 @@ At a high level, we have:
 
 It's recommended to work either on Mac/Linux, or WSL on Windows.
 
+## Quick start
+
+If you have [Rust](https://www.rust-lang.org/tools/install) and
+[Node.js/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+installed, you can build everything with:
+
+```sh
+./scripts/build-dev.sh
+./scripts/install-dev.sh orbic  # replace 'orbic' with your device type
+```
+
 ## Step 1: Building the frontend
 
 Install [nodejs/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm), which is required to build Rayhunter's web UI.
