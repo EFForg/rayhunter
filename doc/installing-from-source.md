@@ -14,9 +14,13 @@ It's recommended to work either on Mac/Linux, or WSL on Windows.
 
 ## Building frontend and backend
 
-If you have [Rust](https://www.rust-lang.org/tools/install) and
-[Node.js/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-installed, you can build everything with:
+First, install dependencies:
+
+- [Rust](https://www.rust-lang.org/tools/install)
+- [Node.js/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+- C compiler tools (`apt install build-essential` or `brew install gcc`)
+
+Then you can build everything with:
 
 ```sh
 ./scripts/build-dev.sh
@@ -45,7 +49,7 @@ you make. Backend changes require building everything from the top (daemon and i
 
 ## Installer utils, getting a shell
 
-Check `FIRMWARE_PROFILE=firmware-devel cargo run -p installer -- util --help`
+Check `./scripts/install-dev.sh util --help`
 for useful utilities for transferring files, opening shells. The exact tools
 available wildly depend on the device you're working on, and they are
 usually documented the relevant device's page under [Supported
@@ -56,16 +60,19 @@ Debug Bridge) support. The USB-based installers (`orbic-usb`, `pinephone`,
 `uz801`) use ADB to perform the installation.
 
 You might want to install and use actual ADB to connect to the device, push
-files and generally poke around. `installer util --help` contains commands to enable
-ADB for some devices.
+files and generally poke around. The installer contains some tools to enable ADB:
+
+```sh
+adb kill-server
+
+# Enables ADB on either of these devices
+./scripts/install-dev.sh util tmobile-start-adb
+./scripts/install-dev.sh orbic-usb
+
+adb shell
+```
 
 Note though that we can't assist with any issues setting ADB up, _especially
 not_ on Windows. There have been too many driver issues to make this the
 "golden path" for most users or contributors. There have been instances where
 people managed to brick their orbic devices using ADB on Windows.
-
-The installers `orbic` and `tplink` use network connections exclusively to
-perform the installation. They end up not enabling ADB at all, and as such
-cannot run into permission issues, driver issues. The downside is that the
-development tooling (getting a shell, transferring a file) is currently all
-over the place, and mostly consists of random subcommands in `installer util`.
