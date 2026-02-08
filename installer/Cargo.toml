@@ -25,8 +25,9 @@ hyper-util = "0.1.11"
 md5 = "0.7.0"
 md5crypt = "1.0.0"
 nusb = "0.1.13"
-reqwest = { version = "0.12.15", features = ["json"], default-features = false }
+reqwest = { version = "0.12.15", features = ["json", "cookies"], default-features = false }
 serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1"
 sha2 = "0.10.8"
 tokio = { version = "1.44.2", features = ["io-util", "macros", "rt"], default-features = false }
 tokio-retry2 = "0.5.7"

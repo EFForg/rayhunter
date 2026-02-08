@@ -296,14 +296,14 @@ pub async fn interactive_shell(admin_ip: &str, shell_port: u16, raw_mode: bool) 
 }
 
 #[cfg(unix)]
-struct RawTerminal {
+pub(crate) struct RawTerminal {
     fd: std::os::fd::RawFd,
     original_termios: termios::Termios,
 }
 
 #[cfg(unix)]
 impl RawTerminal {
-    fn new(fd: std::os::fd::RawFd) -> Result<Self> {
+    pub(crate) fn new(fd: std::os::fd::RawFd) -> Result<Self> {
         // put terminal in raw mode so that arrow keys, tab etc are correctly forwarded to the
         // device's shell
         let original_termios = termios::Termios::from_fd(fd)?;
