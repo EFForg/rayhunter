@@ -2,8 +2,8 @@
 # Install a development build of Rayhunter to a device.
 # Run ./scripts/build-dev.sh first.
 #
-# Usage: ./scripts/install-dev.sh <device>
-# Example: ./scripts/install-dev.sh orbic
+# Usage: ./scripts/install-dev.sh <device> [options...]
+# Example: ./scripts/install-dev.sh orbic --admin-password mypass
 
 set -e
 
@@ -21,4 +21,5 @@ if [ -z "$DEVICE" ]; then
     exit 1
 fi
 
-FIRMWARE_PROFILE=firmware-devel cargo run -p installer --bin installer -- "$DEVICE"
+shift
+FIRMWARE_PROFILE=firmware-devel cargo run -p installer --bin installer -- "$DEVICE" "$@"
