@@ -33,8 +33,6 @@ check_dependencies() {
         echo "Installing ARM target (armv7-unknown-linux-musleabihf)..."
         rustup target add armv7-unknown-linux-musleabihf
     fi
-
-    echo "All dependencies found."
 }
 
 build_frontend() {
@@ -62,10 +60,9 @@ case "$COMMAND" in
         build_daemon
         echo ""
         echo "Build complete! To install to a device, run:"
-        echo "  FIRMWARE_PROFILE=firmware-devel cargo run -p installer --bin installer <device>"
+        echo "  ./scripts/install-dev.sh <device>"
         echo ""
         echo "Replace <device> with your device type (e.g. orbic, tplink)."
-        echo "Run 'cargo run --bin installer help' for a list of supported devices."
         ;;
     frontend)
         build_frontend

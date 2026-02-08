@@ -11,15 +11,4 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
-
-DEVICE="${1:-}"
-
-if [ -z "$DEVICE" ]; then
-    echo "Usage: $0 <device>"
-    echo ""
-    echo "Run 'cargo run --bin installer help' for a list of supported devices."
-    exit 1
-fi
-
-shift
-FIRMWARE_PROFILE=firmware-devel cargo run -p installer --bin installer -- "$DEVICE" "$@"
+FIRMWARE_PROFILE=firmware-devel cargo run -p installer --bin installer -- "$@"
