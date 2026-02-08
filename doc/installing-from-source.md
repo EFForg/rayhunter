@@ -18,7 +18,7 @@ First, install dependencies:
 
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Node.js/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-- C compiler tools (`apt install build-essential` or `brew install gcc`)
+- C compiler tools (`apt install build-essential` on Linux, `xcode-select --install` on Mac)
 
 Then you can build everything with:
 

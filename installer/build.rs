@@ -4,7 +4,14 @@ use std::process::exit;
 fn main() {
     println!("cargo::rerun-if-env-changed=NO_FIRMWARE_BIN");
     println!("cargo::rerun-if-env-changed=FIRMWARE_PROFILE");
-    let profile = std::env::var("FIRMWARE_PROFILE").unwrap_or_else(|_| "firmware".to_string());
+    let profile = std::env::var("FIRMWARE_PROFILE").unwrap_or_else(|_| {
+        // Default to firmware-devel for debug builds, firmware for release builds
+        if std::env::var("PROFILE").as_deref() == Ok("release") {
+            "firmware".to_string()
+        } else {
+            "firmware-devel".to_string()
+        }
+    });
     let include_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../target/armv7-unknown-linux-musleabihf")
         .join(&profile);
