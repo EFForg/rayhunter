@@ -81,6 +81,26 @@ pub async fn telnet_send_command(
     Ok(())
 }
 
+pub async fn wait_for_telnet(addr: SocketAddr) -> Result<()> {
+    let timeout = Duration::from_secs(60);
+    let start_time = std::time::Instant::now();
+
+    while telnet_send_command(addr, "true", "exit code 0", false)
+        .await
+        .is_err()
+    {
+        if start_time.elapsed() >= timeout {
+            bail!(
+                "Timeout waiting for shell to become available after {:?}",
+                timeout
+            );
+        }
+        sleep(Duration::from_secs(1)).await;
+    }
+
+    Ok(())
+}
+
 pub async fn telnet_send_file(
     addr: SocketAddr,
     filename: &str,
