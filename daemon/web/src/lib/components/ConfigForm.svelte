@@ -163,14 +163,17 @@
                     </div>
                     <p class="text-xs text-gray-500 mt-1">
                         When enabled, Rayhunter will generate a self-signed certificate and serve
-                        content over HTTPS on port {config.https_port || 8443}. HTTP requests on port
-                        8080 will redirect to HTTPS. Your browser will show a certificate warning
-                        which you can safely accept.
+                        content over HTTPS on port {config.https_port || 8443}. HTTP requests on
+                        port 8080 will redirect to HTTPS. Your browser will show a certificate
+                        warning which you can safely accept.
                     </p>
 
                     {#if config.https_enabled}
                         <div class="mt-4">
-                            <label for="tls_hosts" class="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                                for="tls_hosts"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
                                 Custom TLS Hosts (optional)
                             </label>
                             <input
@@ -188,10 +191,11 @@
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
                             />
                             <p class="text-xs text-gray-500 mt-1">
-                                Add custom hostnames or IP addresses to include in the TLS certificate
-                                (comma-separated). Use this if you have DNS resolving to your device or
-                                a SIM card with a different IP. Leave empty to use device defaults.
-                                Changes require certificate regeneration on restart.
+                                Add custom hostnames or IP addresses to include in the TLS
+                                certificate (comma-separated). Use this if you have DNS resolving to
+                                your device or a SIM card with a different IP. Leave empty to use
+                                device defaults. Changes require certificate regeneration on
+                                restart.
                             </p>
                         </div>
                     {/if}

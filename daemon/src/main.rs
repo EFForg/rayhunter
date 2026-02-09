@@ -215,7 +215,10 @@ async fn setup_http_redirect_server(
             .with_graceful_shutdown(shutdown_token.cancelled_owned())
             .await
         {
-            error!("HTTP redirect server on {} stopped unexpectedly: {}", addr, e);
+            error!(
+                "HTTP redirect server on {} stopped unexpectedly: {}",
+                addr, e
+            );
         }
     });
 

@@ -2821,7 +2821,7 @@ dependencies = [
 
 [[package]]
 name = "installer-gui"
-version = "0.10.0"
+version = "0.10.1"
 dependencies = [
  "anyhow",
  "installer",
@@ -4795,7 +4795,6 @@ dependencies = [
  "chrono",
  "futures",
  "futures-macro",
- "if-addrs",
  "image",
  "include_dir",
  "libc",

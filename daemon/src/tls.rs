@@ -1,11 +1,4 @@
 //! TLS certificate generation and management for HTTPS support.
-//!
-//! This module handles:
-//! - Detecting device IP addresses for certificate SANs
-//! - Generating self-signed certificates using rcgen
-//! - Loading existing certificates or generating new ones
-//! - Validating certificate expiration and integrity
-//! - Boot loop prevention for certificate regeneration
 
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
@@ -45,40 +38,29 @@ pub fn get_device_default_ip(device: &Device) -> IpAddr {
     }
 }
 
-/// Detect IP addresses for certificate SANs.
+/// Build Subject Alternative Names for the certificate.
 ///
-/// Combines device-specific default IP with any detected network interface IPs.
-/// The device default IP is always included first to ensure it's in the certificate
-/// even when there's no SIM card or network connection.
-pub fn detect_device_ips(device: &Device) -> Vec<IpAddr> {
-    let mut ips = Vec::new();
+/// Uses device-specific default gateway IP plus localhost, with optional custom hosts.
+pub fn get_certificate_sans(device: &Device, custom_hosts: &[String]) -> Vec<SanType> {
+    let mut sans = vec![
+        SanType::IpAddress(get_device_default_ip(device)),
+        SanType::IpAddress("127.0.0.1".parse().unwrap()),
+    ];
 
-    // Always include the device-specific default IP first
-    let device_ip = get_device_default_ip(device);
-    ips.push(device_ip);
-    info!("Using device default IP: {}", device_ip);
-
-    // Try to detect additional IPs from network interfaces
-    match if_addrs::get_if_addrs() {
-        Ok(interfaces) => {
-            let detected: Vec<IpAddr> = interfaces
-                .into_iter()
-                .filter(|iface| !iface.is_loopback())
-                .map(|iface| iface.ip())
-                .filter(|ip| ip.is_ipv4() && !ips.contains(ip))
-                .collect();
-
-            if !detected.is_empty() {
-                info!("Also detected network IPs: {:?}", detected);
-                ips.extend(detected);
-            }
+    // Add user-provided custom hosts if any
+    for host in custom_hosts {
+        let host = host.trim();
+        if host.is_empty() {
+            continue;
         }
-        Err(e) => {
-            warn!("Failed to detect network interfaces: {}", e);
+        if let Some(san) = parse_san_entry(host) {
+            if !sans.contains(&san) {
+                sans.push(san);
+            }
         }
     }
 
-    ips
+    sans
 }
 
 /// Parse a host string into a SanType (either IP or DNS name).
@@ -94,21 +76,11 @@ fn parse_san_entry(host: &str) -> Option<SanType> {
     }
 }
 
-/// Generate a self-signed certificate with the given IP addresses as SANs.
+/// Generate a self-signed certificate with the given SANs.
 ///
 /// Returns (certificate_pem, private_key_pem) as strings.
-#[allow(dead_code)] // Used by tests and kept as simpler public API
-pub fn generate_self_signed_cert(ips: &[IpAddr]) -> Result<(String, String), RayhunterError> {
-    generate_self_signed_cert_with_hosts(ips, &[])
-}
-
-/// Generate a self-signed certificate with IPs and custom hosts as SANs.
-///
-/// Custom hosts can be IP addresses or DNS names (hostnames).
-/// Returns (certificate_pem, private_key_pem) as strings.
-pub fn generate_self_signed_cert_with_hosts(
-    ips: &[IpAddr],
-    custom_hosts: &[String],
+fn generate_self_signed_cert_with_sans(
+    sans: Vec<SanType>,
 ) -> Result<(String, String), RayhunterError> {
     let mut params = CertificateParams::default();
 
@@ -119,30 +91,6 @@ pub fn generate_self_signed_cert_with_hosts(
     params
         .distinguished_name
         .push(DnType::OrganizationName, "Electronic Frontier Foundation");
-
-    // Add Subject Alternative Names (SANs)
-    let mut sans: Vec<SanType> = ips.iter().map(|ip| SanType::IpAddress(*ip)).collect();
-
-    // Add custom hosts (can be IPs or DNS names)
-    for host in custom_hosts {
-        let host = host.trim();
-        if host.is_empty() {
-            continue;
-        }
-        if let Some(san) = parse_san_entry(host) {
-            // Avoid duplicates
-            if !sans.contains(&san) {
-                info!("Adding custom SAN: {}", host);
-                sans.push(san);
-            }
-        }
-    }
-
-    // Always include localhost
-    let localhost_san = SanType::IpAddress("127.0.0.1".parse().unwrap());
-    if !sans.contains(&localhost_san) {
-        sans.push(localhost_san);
-    }
 
     let san_count = sans.len();
     params.subject_alt_names = sans;
@@ -262,7 +210,10 @@ async fn validate_certificate(cert_path: &Path) -> Result<bool, RayhunterError> 
     // Full expiration checking would require x509-parser crate
     // Instead, we'll rely on rustls failing to load expired certs
 
-    info!("Certificate validation passed (parseable PEM with {} cert(s))", certs.len());
+    info!(
+        "Certificate validation passed (parseable PEM with {} cert(s))",
+        certs.len()
+    );
     Ok(true)
 }
 
@@ -272,13 +223,15 @@ async fn set_key_permissions(key_path: &Path) -> Result<(), RayhunterError> {
     use std::os::unix::fs::PermissionsExt;
 
     let permissions = std::fs::Permissions::from_mode(0o600);
-    fs::set_permissions(key_path, permissions).await.map_err(|e| {
-        RayhunterError::TlsError(format!(
-            "Failed to set permissions on {}: {}",
-            key_path.display(),
-            e
-        ))
-    })?;
+    fs::set_permissions(key_path, permissions)
+        .await
+        .map_err(|e| {
+            RayhunterError::TlsError(format!(
+                "Failed to set permissions on {}: {}",
+                key_path.display(),
+                e
+            ))
+        })?;
 
     info!("Set private key permissions to 0600");
     Ok(())
@@ -310,15 +263,13 @@ pub async fn load_or_generate_certs(
     let key_path = tls_dir.join("key.pem");
 
     // Ensure TLS directory exists
-    fs::create_dir_all(&tls_dir)
-        .await
-        .map_err(|e| {
-            RayhunterError::TlsError(format!(
-                "Failed to create TLS directory {}: {}",
-                tls_dir.display(),
-                e
-            ))
-        })?;
+    fs::create_dir_all(&tls_dir).await.map_err(|e| {
+        RayhunterError::TlsError(format!(
+            "Failed to create TLS directory {}: {}",
+            tls_dir.display(),
+            e
+        ))
+    })?;
 
     // Check boot loop prevention - if we've tried too many times, fail immediately
     let regen_attempts = read_regen_attempts(&tls_dir).await;
@@ -351,7 +302,10 @@ pub async fn load_or_generate_certs(
                 true
             }
             Err(e) => {
-                warn!("Failed to validate existing certificate: {}, will regenerate", e);
+                warn!(
+                    "Failed to validate existing certificate: {}, will regenerate",
+                    e
+                );
                 true
             }
         }
@@ -374,31 +328,27 @@ pub async fn load_or_generate_certs(
     let _ = fs::remove_file(&cert_path).await;
     let _ = fs::remove_file(&key_path).await;
 
-    // Detect IPs (using device-specific defaults) and generate cert with custom hosts
-    let ips = detect_device_ips(device);
-    let (cert_pem, key_pem) = generate_self_signed_cert_with_hosts(&ips, custom_hosts)?;
+    // Build SANs and generate certificate
+    let sans = get_certificate_sans(device, custom_hosts);
+    let (cert_pem, key_pem) = generate_self_signed_cert_with_sans(sans)?;
 
     // Write certificate
-    fs::write(&cert_path, &cert_pem)
-        .await
-        .map_err(|e| {
-            RayhunterError::TlsError(format!(
-                "Failed to write certificate to {}: {}",
-                cert_path.display(),
-                e
-            ))
-        })?;
+    fs::write(&cert_path, &cert_pem).await.map_err(|e| {
+        RayhunterError::TlsError(format!(
+            "Failed to write certificate to {}: {}",
+            cert_path.display(),
+            e
+        ))
+    })?;
 
     // Write private key
-    fs::write(&key_path, &key_pem)
-        .await
-        .map_err(|e| {
-            RayhunterError::TlsError(format!(
-                "Failed to write private key to {}: {}",
-                key_path.display(),
-                e
-            ))
-        })?;
+    fs::write(&key_path, &key_pem).await.map_err(|e| {
+        RayhunterError::TlsError(format!(
+            "Failed to write private key to {}: {}",
+            key_path.display(),
+            e
+        ))
+    })?;
 
     // Set restrictive permissions on private key
     set_key_permissions(&key_path).await?;
@@ -441,29 +391,31 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_device_ips_orbic() {
-        let ips = detect_device_ips(&Device::Orbic);
-        // Should always include the device default IP first
-        assert!(!ips.is_empty());
-        assert_eq!(ips[0], "192.168.1.1".parse::<IpAddr>().unwrap());
-        // All should be valid IPv4 addresses
-        for ip in &ips {
-            assert!(ip.is_ipv4());
-        }
+    fn test_get_certificate_sans_basic() {
+        let sans = get_certificate_sans(&Device::Orbic, &[]);
+        // Should include device default IP and localhost
+        assert!(sans.len() >= 2);
     }
 
     #[test]
-    fn test_detect_device_ips_tplink() {
-        let ips = detect_device_ips(&Device::Tplink);
-        assert!(!ips.is_empty());
-        assert_eq!(ips[0], "192.168.0.1".parse::<IpAddr>().unwrap());
+    fn test_get_certificate_sans_with_custom_hosts() {
+        let custom_hosts = vec![
+            "rayhunter.local".to_string(),
+            "10.0.0.5".to_string(), // IP as string
+        ];
+        let sans = get_certificate_sans(&Device::Orbic, &custom_hosts);
+        // Should include device IP, localhost, and custom hosts
+        assert!(sans.len() >= 4);
     }
 
     #[test]
     fn test_generate_self_signed_cert() {
-        let ips: Vec<IpAddr> = vec!["192.168.1.1".parse().unwrap(), "10.0.0.1".parse().unwrap()];
+        let sans = vec![
+            SanType::IpAddress("192.168.1.1".parse().unwrap()),
+            SanType::IpAddress("10.0.0.1".parse().unwrap()),
+        ];
 
-        let result = generate_self_signed_cert(&ips);
+        let result = generate_self_signed_cert_with_sans(sans);
         assert!(result.is_ok());
 
         let (cert_pem, key_pem) = result.unwrap();
@@ -476,13 +428,6 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_self_signed_cert_empty_ips() {
-        // Should still work with empty IPs (will add localhost)
-        let result = generate_self_signed_cert(&[]);
-        assert!(result.is_ok());
-    }
-
-    #[test]
     fn test_get_tls_dir() {
         let tls_dir = get_tls_dir("/data/rayhunter/qmdl");
         assert_eq!(tls_dir, PathBuf::from("/data/rayhunter/tls"));
@@ -492,14 +437,14 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_self_signed_cert_with_custom_hosts() {
-        let ips: Vec<IpAddr> = vec!["192.168.1.1".parse().unwrap()];
-        let custom_hosts = vec![
-            "rayhunter.local".to_string(),
-            "10.0.0.5".to_string(), // IP as string
+    fn test_generate_self_signed_cert_with_custom_sans() {
+        let sans = vec![
+            SanType::IpAddress("192.168.1.1".parse().unwrap()),
+            SanType::DnsName(Ia5String::try_from("rayhunter.local").unwrap()),
+            SanType::IpAddress("10.0.0.5".parse().unwrap()),
         ];
 
-        let result = generate_self_signed_cert_with_hosts(&ips, &custom_hosts);
+        let result = generate_self_signed_cert_with_sans(sans);
         assert!(result.is_ok());
 
         let (cert_pem, _) = result.unwrap();
@@ -566,8 +511,8 @@ mod tests {
         std::fs::create_dir_all(&tls_path).unwrap();
 
         // Create valid cert files (validation now checks PEM format)
-        let ips: Vec<IpAddr> = vec!["192.168.1.1".parse().unwrap()];
-        let (cert_pem, key_pem) = generate_self_signed_cert(&ips).unwrap();
+        let sans = vec![SanType::IpAddress("192.168.1.1".parse().unwrap())];
+        let (cert_pem, key_pem) = generate_self_signed_cert_with_sans(sans).unwrap();
 
         let cert_path = tls_path.join("cert.pem");
         let key_path = tls_path.join("key.pem");

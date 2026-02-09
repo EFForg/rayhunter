@@ -35,5 +35,4 @@ async-trait = "0.1.88"
 axum-server = { version = "0.7", default-features = false, features = ["tls-rustls-no-provider"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rcgen = "0.13"
-if-addrs = "0.13"
 rustls-pemfile = "2.2"
