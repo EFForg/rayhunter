@@ -181,6 +181,7 @@
                                 type="text"
                                 value={config.tls_hosts?.join(', ') || ''}
                                 oninput={(e) => {
+                                    if (!config) return;
                                     const input = e.currentTarget.value;
                                     config.tls_hosts = input
                                         .split(',')
