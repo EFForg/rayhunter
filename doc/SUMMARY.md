@@ -1,6 +1,6 @@
 # Summary
 
-[Introduction](./introduction.md)
+- [Introduction](./introduction.md)
 - [Support, feedback, and community](./support-feedback-community.md)
 - [Frequently Asked Questions](./faq.md)
 - [Installation](./installation.md)
@@ -22,3 +22,4 @@
   - [Wingtech CT2MHS01](./wingtech-ct2mhs01.md)
   - [PinePhone and PinePhone Pro](./pinephone.md)
   - [Moxee Hotspot](./moxee.md)
+- [API](./api/api.md)
