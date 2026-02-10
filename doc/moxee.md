@@ -5,7 +5,15 @@ Supported in Rayhunter since version 0.6.0.
 The Moxee Hotspot is a device very similar to the Orbic RC400L. It seems to be
 primarily for the US market.
 
-**These devices are known to become completely bricked by installing Rayhunter.** We're still trying to figure out what's wrong in [this discussion](https://github.com/EFForg/rayhunter/issues/865). We don't recommend buying this device even though it's cheaper than the Orbic right now.
+<div class="warning-box">
+
+**WARNING: These devices are known to become completely bricked by installing Rayhunter.**
+
+Do not buy this device nor try to install _nor upgrade_ Rayhunter on it.
+
+We're still trying to figure out what's wrong in [this discussion](https://github.com/EFForg/rayhunter/issues/865).
+
+</div>
 
 - [KonnectONE product page](https://www.konnectone.com/specs-hotspot)
 - [Moxee product page](https://www.moxee.com/hotspot)

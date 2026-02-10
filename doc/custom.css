@@ -1,0 +1,6 @@
+.warning-box {
+    padding: 0.75em 1em;
+    border-left: 4px solid #e33;
+    border-radius: 4px;
+    background-color: color-mix(in srgb, currentColor 10%, transparent);
+}
