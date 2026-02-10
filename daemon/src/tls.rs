@@ -53,10 +53,10 @@ pub fn get_certificate_sans(device: &Device, custom_hosts: &[String]) -> Vec<San
         if host.is_empty() {
             continue;
         }
-        if let Some(san) = parse_san_entry(host) {
-            if !sans.contains(&san) {
-                sans.push(san);
-            }
+        if let Some(san) = parse_san_entry(host)
+            && !sans.contains(&san)
+        {
+            sans.push(san);
         }
     }
 
