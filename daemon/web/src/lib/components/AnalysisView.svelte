@@ -24,7 +24,23 @@
         {@const metadata: ReportMetadata = entry.analysis_report.metadata}
         <div class="flex flex-col gap-2">
             {#if !current}
-                <div class="flex flex-row justify-end items-center">
+                {@const numWarnings: number = entry.get_num_warnings() || 0}
+                <div class="flex flex-row justify-between items-center">
+                    {#if numWarnings}
+                        <div
+                            class="text-red-700 border-red-500 border rounded-lg text-blue-600 px-2 py-1 mr-12"
+                        >
+                            Your Rayhunter device raised {`${numWarnings}`} warning{`${
+                                numWarnings > 0 ? 's' : ''
+                            }`}!
+                            <a
+                                href="https://efforg.github.io/rayhunter/faq.html#help-rayhunters-line-is-redorangeyellowdotteddashed-what-should-i-do"
+                                class="text-blue-600 underline">Read the FAQ</a
+                            > to learn what you can do about it
+                        </div>
+                    {:else}
+                        <div></div>
+                    {/if}
                     <ReAnalyzeButton {entry} {manager} />
                 </div>
             {/if}
