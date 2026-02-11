@@ -25,6 +25,8 @@ export interface Config {
     ntfy_url: string;
     enabled_notifications: enabled_notifications[];
     analyzers: AnalyzerConfig;
+    min_space_to_start_recording_mb: number;
+    min_space_to_continue_recording_mb: number;
 }
 
 export async function req(method: string, url: string, json_body?: unknown): Promise<string> {

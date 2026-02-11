@@ -241,6 +241,48 @@
                     </div>
                 </div>
 
+                <div class="border-t pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Storage Management</h3>
+
+                    <div>
+                        <label
+                            for="min_space_to_start_recording_mb"
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                            Minimum Space to Start Recording (MB)
+                        </label>
+                        <input
+                            id="min_space_to_start_recording_mb"
+                            type="number"
+                            min="1"
+                            bind:value={config.min_space_to_start_recording_mb}
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Recording will not start if less than this amount of disk space is free
+                        </p>
+                    </div>
+
+                    <div>
+                        <label
+                            for="min_space_to_continue_recording_mb"
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                            Minimum Space to Continue Recording (MB)
+                        </label>
+                        <input
+                            id="min_space_to_continue_recording_mb"
+                            type="number"
+                            min="1"
+                            bind:value={config.min_space_to_continue_recording_mb}
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Recording will stop automatically if disk space drops below this level
+                        </p>
+                    </div>
+                </div>
+
                 <div class="border-t pt-4 mt-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         Analyzer Heuristic Settings
