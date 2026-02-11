@@ -81,6 +81,9 @@
     <input
         class="mr-1 px-5 py-2 rounded-lg shadow-md"
         placeholder="Enter CLI installer args..."
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
         bind:value={installerArgs}
     />
     <button
