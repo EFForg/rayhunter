@@ -11,6 +11,7 @@ interface JsonManifestEntry {
     start_time: string;
     last_message_time: string;
     qmdl_size_bytes: number;
+    stop_reason: string | null;
 }
 
 export class Manifest {
@@ -57,6 +58,7 @@ export class ManifestEntry {
     public analysis_size_bytes = $state(0);
     public analysis_status: AnalysisStatus | undefined = $state(undefined);
     public analysis_report: AnalysisReport | string | undefined = $state(undefined);
+    public stop_reason: string | undefined = $state(undefined);
 
     constructor(json: JsonManifestEntry) {
         this.name = json.name;
@@ -64,6 +66,9 @@ export class ManifestEntry {
         this.start_time = new Date(json.start_time);
         if (json.last_message_time) {
             this.last_message_time = new Date(json.last_message_time);
+        }
+        if (json.stop_reason) {
+            this.stop_reason = json.stop_reason;
         }
     }
 
