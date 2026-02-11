@@ -7,18 +7,30 @@ use rayhunter::analysis::analyzer::AnalyzerConfig;
 use crate::error::RayhunterError;
 use crate::notifications::NotificationType;
 
+/// The structure of a valid rayhunter configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct Config {
+    /// Path to store QMDL files
     pub qmdl_store_path: String,
+    /// Listening port
     pub port: u16,
+    /// Debug mode
     pub debug_mode: bool,
+    /// Internal device name
     pub device: Device,
+    /// UI level
     pub ui_level: u8,
+    /// Colorblind mode
     pub colorblind_mode: bool,
+    /// Key input mode
     pub key_input_mode: u8,
+    /// ntfy.sh URL
     pub ntfy_url: Option<String>,
+    /// Vector containing the types of enabled notifications
     pub enabled_notifications: Vec<NotificationType>,
+    /// Vector containing the list of enabled analyzers
     pub analyzers: AnalyzerConfig,
 }
 

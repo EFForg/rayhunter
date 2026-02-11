@@ -1,4 +1,4 @@
-use crate::ServerState;
+use crate::server::ServerState;
 
 use anyhow::Error;
 use axum::body::Body;
@@ -18,6 +18,21 @@ use tokio_util::io::ReaderStream;
 // Streams a pcap file chunk-by-chunk to the client by reading the QMDL data
 // written so far. This is done by spawning a thread which streams chunks of
 // pcap data to a channel that's piped to the client.
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    get,
+    path = "/api/pcap/{name}",
+    tag = "Recordings",
+    responses(
+        (status = StatusCode::OK, description = "PCAP conversion successful", content_type = "application/vnd.tcpdump.pcap"),
+        (status = StatusCode::NOT_FOUND, description = "Could not find file {name}"),
+        (status = StatusCode::SERVICE_UNAVAILABLE, description = "QMDL file is empty")
+    ),
+    params(
+        ("name" = String, Path, description = "QMDL filename to convert and download")
+    ),
+    summary = "Download a PCAP file",
+    description = "Stream a PCAP file to a client in chunks by converting the QMDL data for file {name} written so far."
+))]
 pub async fn get_pcap(
     State(state): State<Arc<ServerState>>,
     Path(mut qmdl_name): Path<String>,
