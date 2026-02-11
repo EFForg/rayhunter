@@ -1,3 +1,4 @@
+use std::ffi::CString;
 use std::sync::Arc;
 
 use crate::battery::get_battery_status;
@@ -25,7 +26,7 @@ pub struct SystemStats {
 impl SystemStats {
     pub async fn new(qmdl_path: &str, device: &Device) -> Result<Self, String> {
         Ok(Self {
-            disk_stats: DiskStats::new(qmdl_path, device).await?,
+            disk_stats: DiskStats::new(qmdl_path)?,
             memory_stats: MemoryStats::new(device).await?,
             runtime_metadata: RuntimeMetadata::new(),
             battery_status: match get_battery_status(device).await {
@@ -48,33 +49,42 @@ pub struct DiskStats {
     available_size: String,
     used_percent: String,
     mounted_on: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub available_bytes: Option<u64>,
 }
 
 impl DiskStats {
-    // runs "df -h <qmdl_path>" to get storage statistics for the partition containing
-    // the QMDL file.
-    pub async fn new(qmdl_path: &str, device: &Device) -> Result<Self, String> {
-        // Uz801 needs to be told to use the busybox df specifically
-        let mut df_cmd: Command;
-        if matches!(device, Device::Uz801) {
-            df_cmd = Command::new("busybox");
-            df_cmd.arg("df");
-        } else {
-            df_cmd = Command::new("df");
+    #[allow(clippy::unnecessary_cast)] // c_ulong is u32 on ARM, u64 on macOS
+    pub fn new(qmdl_path: &str) -> Result<Self, String> {
+        let c_path =
+            CString::new(qmdl_path).map_err(|e| format!("invalid path {qmdl_path}: {e}"))?;
+        let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
+        if unsafe { libc::statvfs(c_path.as_ptr(), &mut stat) } != 0 {
+            return Err(format!(
+                "statvfs({qmdl_path}) failed: {}",
+                std::io::Error::last_os_error()
+            ));
         }
-        df_cmd.arg("-h");
-        df_cmd.arg(qmdl_path);
-        let stdout = get_cmd_output(df_cmd).await?;
 
-        // Handle standard df -h format
-        let mut parts = stdout.split_whitespace().skip(7);
+        let block_size = stat.f_frsize as u64;
+        let total_kb = (stat.f_blocks as u64 * block_size / 1024) as usize;
+        let free_kb = (stat.f_bfree as u64 * block_size / 1024) as usize;
+        let available_kb = (stat.f_bavail as u64 * block_size / 1024) as usize;
+        let used_kb = total_kb.saturating_sub(free_kb);
+        let used_percent = if stat.f_blocks > 0 {
+            format!("{}%", (stat.f_blocks - stat.f_bfree) * 100 / stat.f_blocks)
+        } else {
+            "0%".to_string()
+        };
+
         Ok(Self {
-            partition: parts.next().ok_or("error parsing df output")?.to_string(),
-            total_size: parts.next().ok_or("error parsing df output")?.to_string(),
-            used_size: parts.next().ok_or("error parsing df output")?.to_string(),
-            available_size: parts.next().ok_or("error parsing df output")?.to_string(),
-            used_percent: parts.next().ok_or("error parsing df output")?.to_string(),
-            mounted_on: parts.next().ok_or("error parsing df output")?.to_string(),
+            partition: qmdl_path.to_string(),
+            total_size: humanize_kb(total_kb),
+            used_size: humanize_kb(used_kb),
+            available_size: humanize_kb(available_kb),
+            used_percent,
+            mounted_on: qmdl_path.to_string(),
+            available_bytes: Some(stat.f_bavail as u64 * block_size),
         })
     }
 }

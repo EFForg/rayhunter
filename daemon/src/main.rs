@@ -234,6 +234,8 @@ async fn run_with_config(
             analysis_tx.clone(),
             config.analyzers.clone(),
             notification_service.new_handler(),
+            config.min_space_to_start_recording_mb,
+            config.min_space_to_continue_recording_mb,
         );
         info!("Starting UI");
 

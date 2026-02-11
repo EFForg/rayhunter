@@ -20,6 +20,20 @@ pub struct Config {
     pub ntfy_url: Option<String>,
     pub enabled_notifications: Vec<NotificationType>,
     pub analyzers: AnalyzerConfig,
+    /// Minimum disk space (MB) required to start recording
+    #[serde(default = "default_min_space_to_start_recording_mb")]
+    pub min_space_to_start_recording_mb: u64,
+    /// Minimum disk space (MB) to continue recording (stops if below this)
+    #[serde(default = "default_min_space_to_continue_recording_mb")]
+    pub min_space_to_continue_recording_mb: u64,
+}
+
+fn default_min_space_to_start_recording_mb() -> u64 {
+    1
+}
+
+fn default_min_space_to_continue_recording_mb() -> u64 {
+    1
 }
 
 impl Default for Config {
@@ -35,6 +49,8 @@ impl Default for Config {
             analyzers: AnalyzerConfig::default(),
             ntfy_url: None,
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
+            min_space_to_start_recording_mb: default_min_space_to_start_recording_mb(),
+            min_space_to_continue_recording_mb: default_min_space_to_continue_recording_mb(),
         }
     }
 }
