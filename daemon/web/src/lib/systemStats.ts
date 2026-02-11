@@ -18,6 +18,7 @@ export interface DiskStats {
     available_size: string;
     used_percent: string;
     mounted_on: string;
+    available_bytes?: number;
 }
 
 export interface MemoryStats {
