@@ -251,7 +251,10 @@ impl DiagTask {
         {
             self.container_count += 1;
 
-            if self.container_count % SPACE_CHECK_INTERVAL_CONTAINERS == 0 {
+            if self
+                .container_count
+                .is_multiple_of(SPACE_CHECK_INTERVAL_CONTAINERS)
+            {
                 let min_continue_bytes = self.min_space_to_continue_mb * 1024 * 1024;
                 let min_start_bytes = self.min_space_to_start_mb * 1024 * 1024;
                 match DiskStats::new(qmdl_store.path.to_str().unwrap()) {
@@ -277,7 +280,10 @@ impl DiagTask {
                         return;
                     }
                     Ok(disk_stats) if disk_stats.available_bytes.unwrap_or(0) < min_start_bytes => {
-                        if self.container_count % (SPACE_CHECK_INTERVAL_CONTAINERS * 10) == 0 {
+                        if self
+                            .container_count
+                            .is_multiple_of(SPACE_CHECK_INTERVAL_CONTAINERS * 10)
+                        {
                             let available_mb =
                                 disk_stats.available_bytes.unwrap_or(0) / 1024 / 1024;
                             warn!("Disk space low: {}MB remaining", available_mb);
