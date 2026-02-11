@@ -67,6 +67,32 @@ enum DiagState {
     Stopped,
 }
 
+enum DiskSpaceCheck {
+    Ok(u64),
+    Warning(u64),
+    Critical(u64),
+    Failed,
+}
+
+fn check_disk_space(path: &std::path::Path, warning_mb: u64, critical_mb: u64) -> DiskSpaceCheck {
+    match DiskStats::new(path.to_str().unwrap()) {
+        Ok(stats) => {
+            let available_mb = stats.available_bytes.unwrap_or(0) / 1024 / 1024;
+            if available_mb < critical_mb {
+                DiskSpaceCheck::Critical(available_mb)
+            } else if available_mb < warning_mb {
+                DiskSpaceCheck::Warning(available_mb)
+            } else {
+                DiskSpaceCheck::Ok(available_mb)
+            }
+        }
+        Err(e) => {
+            warn!("Failed to check disk space: {e}");
+            DiskSpaceCheck::Failed
+        }
+    }
+}
+
 impl DiagTask {
     fn new(
         ui_update_sender: Sender<display::DisplayState>,
@@ -96,27 +122,23 @@ impl DiagTask {
         self.messages_since_space_check = 0;
         self.low_space_warned = false;
 
-        let min_space_bytes = self.min_space_to_start_mb * 1024 * 1024;
-        match DiskStats::new(qmdl_store.path.to_str().unwrap()) {
-            Ok(disk_stats) if disk_stats.available_bytes.unwrap_or(0) < min_space_bytes => {
-                let available_mb = disk_stats.available_bytes.unwrap_or(0) / 1024 / 1024;
+        match check_disk_space(
+            &qmdl_store.path,
+            self.min_space_to_start_mb,
+            self.min_space_to_continue_mb,
+        ) {
+            DiskSpaceCheck::Critical(mb) | DiskSpaceCheck::Warning(mb) => {
                 let msg = format!(
                     "Insufficient disk space: {}MB available, {}MB required",
-                    available_mb, self.min_space_to_start_mb
+                    mb, self.min_space_to_start_mb
                 );
                 error!("{msg}");
                 return Err(msg);
             }
-            Ok(disk_stats) => {
-                let available_mb = disk_stats.available_bytes.unwrap_or(0) / 1024 / 1024;
-                info!(
-                    "Starting recording with {}MB disk space available",
-                    available_mb
-                );
+            DiskSpaceCheck::Ok(mb) => {
+                info!("Starting recording with {}MB disk space available", mb);
             }
-            Err(e) => {
-                warn!("Failed to check disk space: {e}, starting recording anyway");
-            }
+            DiskSpaceCheck::Failed => {}
         }
 
         let (qmdl_file, analysis_file) = match qmdl_store.new_entry().await {
@@ -243,14 +265,15 @@ impl DiagTask {
 
             if self.messages_since_space_check >= DISK_CHECK_INTERVAL {
                 self.messages_since_space_check = 0;
-                let critical_bytes = self.min_space_to_continue_mb * 1024 * 1024;
-                let warning_bytes = self.min_space_to_start_mb * 1024 * 1024;
-                match DiskStats::new(qmdl_store.path.to_str().unwrap()) {
-                    Ok(disk_stats) if disk_stats.available_bytes.unwrap_or(0) < critical_bytes => {
-                        let available_mb = disk_stats.available_bytes.unwrap_or(0) / 1024 / 1024;
+                match check_disk_space(
+                    &qmdl_store.path,
+                    self.min_space_to_start_mb,
+                    self.min_space_to_continue_mb,
+                ) {
+                    DiskSpaceCheck::Critical(mb) => {
                         let reason = format!(
                             "Disk space critically low ({}MB free), recording stopped automatically",
-                            available_mb
+                            mb
                         );
                         error!("{reason}");
 
@@ -266,24 +289,19 @@ impl DiagTask {
                         self.stop(qmdl_store, Some(reason)).await;
                         return;
                     }
-                    Ok(disk_stats) if disk_stats.available_bytes.unwrap_or(0) < warning_bytes => {
+                    DiskSpaceCheck::Warning(mb) => {
                         if !self.low_space_warned {
                             self.low_space_warned = true;
-                            let available_mb =
-                                disk_stats.available_bytes.unwrap_or(0) / 1024 / 1024;
-                            warn!("Disk space low: {}MB remaining", available_mb);
+                            warn!("Disk space low: {}MB remaining", mb);
                             self.notification_channel
                                 .send(Notification::new(
                                     NotificationType::Warning,
-                                    format!("Disk space low: {}MB free", available_mb),
+                                    format!("Disk space low: {}MB free", mb),
                                     Some(Duration::from_secs(30)),
                                 ))
                                 .await
                                 .ok();
                         }
-                    }
-                    Err(e) => {
-                        warn!("Failed to check disk space: {e}");
                     }
                     _ => {}
                 }
