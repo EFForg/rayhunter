@@ -1,14 +1,13 @@
+use anyhow::Context;
 use tauri::Emitter;
 
 async fn run_installer(app_handle: tauri::AppHandle, args: String) -> anyhow::Result<()> {
+    let args_vec = shlex::split(&args).context("Failed to parse arguments: unclosed quote")?;
     tauri::async_runtime::spawn_blocking(move || {
         installer::run_with_callback(
-            // TODO: we should split using something similar to shlex in python
-            args.split_whitespace(),
+            args_vec.iter().map(|s| s.as_str()),
             Some(Box::new(move |output| {
-                app_handle
-                    .emit("installer-output", output)
-                    .expect("Error sending Rayhunter CLI installer output to GUI frontend");
+                let _ = app_handle.emit("installer-output", output);
             })),
         )
     })
