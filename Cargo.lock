@@ -2759,6 +2759,7 @@ dependencies = [
  "installer",
  "serde",
  "serde_json",
+ "shlex",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
