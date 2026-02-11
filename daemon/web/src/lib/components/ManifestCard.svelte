@@ -81,6 +81,11 @@
                 'N/A'}</span
         >
     </div>
+    {#if entry.stop_reason}
+        <div class="bg-yellow-50 border border-yellow-300 rounded p-2 text-yellow-800 text-sm">
+            {entry.stop_reason}
+        </div>
+    {/if}
     <div class="flex flex-row justify-between lg:justify-end gap-1 mt-2 overflow-x-auto">
         <DownloadLink url={entry.get_pcap_url()} text="pcap" full_button />
         <DownloadLink url={entry.get_qmdl_url()} text="qmdl" full_button />

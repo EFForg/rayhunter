@@ -81,8 +81,9 @@ pub fn run_key_input_thread(
                             {
                                 error!("Failed to send StopRecording: {e}");
                             }
-                            if let Err(e) =
-                                diag_tx.send(DiagDeviceCtrlMessage::StartRecording).await
+                            if let Err(e) = diag_tx
+                                .send(DiagDeviceCtrlMessage::StartRecording { response_tx: None })
+                                .await
                             {
                                 error!("Failed to send StartRecording: {e}");
                             }

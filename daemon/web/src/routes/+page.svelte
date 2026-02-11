@@ -11,7 +11,6 @@
     import ConfigForm from '$lib/components/ConfigForm.svelte';
     import ActionErrors from '$lib/components/ActionErrors.svelte';
     import ClockDriftAlert from '$lib/components/ClockDriftAlert.svelte';
-    import DiskSpaceAlert from '$lib/components/DiskSpaceAlert.svelte';
     import LogView from '$lib/components/LogView.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
@@ -211,7 +210,6 @@
     <ActionErrors />
     <ClockDriftAlert />
     {#if loaded}
-        <DiskSpaceAlert stats={system_stats!} is_recording={!!current_entry} />
         <div class="flex flex-col lg:flex-row gap-4">
             {#if current_entry}
                 <Card
