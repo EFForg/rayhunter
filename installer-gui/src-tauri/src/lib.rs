@@ -7,7 +7,9 @@ async fn run_installer(app_handle: tauri::AppHandle, args: String) -> anyhow::Re
         installer::run_with_callback(
             args_vec.iter().map(|s| s.as_str()),
             Some(Box::new(move |output| {
-                let _ = app_handle.emit("installer-output", output);
+                app_handle
+                    .emit("installer-output", output)
+                    .expect("Error sending Rayhunter CLI installer output to GUI frontend");
             })),
         )
     })
