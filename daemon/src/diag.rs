@@ -29,7 +29,7 @@ use crate::qmdl_store::{RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
 use crate::stats::DiskStats;
 
-const DISK_CHECK_INTERVAL: usize = 100;
+const DISK_CHECK_BYTES_INTERVAL: usize = 256 * 1024;
 
 pub enum DiagDeviceCtrlMessage {
     StopRecording,
@@ -55,7 +55,7 @@ pub struct DiagTask {
     min_space_to_continue_mb: u64,
     state: DiagState,
     max_type_seen: EventType,
-    messages_since_space_check: usize,
+    bytes_since_space_check: usize,
     low_space_warned: bool,
 }
 
@@ -111,7 +111,7 @@ impl DiagTask {
             min_space_to_continue_mb,
             state: DiagState::Stopped,
             max_type_seen: EventType::Informational,
-            messages_since_space_check: 0,
+            bytes_since_space_check: 0,
             low_space_warned: false,
         }
     }
@@ -119,7 +119,7 @@ impl DiagTask {
     /// Start recording, returning an error if disk space is too low.
     async fn start(&mut self, qmdl_store: &mut RecordingStore) -> Result<(), String> {
         self.max_type_seen = EventType::Informational;
-        self.messages_since_space_check = 0;
+        self.bytes_since_space_check = 0;
         self.low_space_warned = false;
 
         match check_disk_space(
@@ -261,10 +261,8 @@ impl DiagTask {
             analysis_writer,
         } = &mut self.state
         {
-            self.messages_since_space_check += 1;
-
-            if self.messages_since_space_check >= DISK_CHECK_INTERVAL {
-                self.messages_since_space_check = 0;
+            if self.bytes_since_space_check >= DISK_CHECK_BYTES_INTERVAL {
+                self.bytes_since_space_check = 0;
                 match check_disk_space(
                     &qmdl_store.path,
                     self.min_space_to_start_mb,
@@ -330,6 +328,8 @@ impl DiagTask {
                 return;
             }
             debug!("done!");
+            let container_bytes: usize = container.messages.iter().map(|m| m.data.len()).sum();
+            self.bytes_since_space_check += container_bytes;
             let max_type = match analysis_writer.analyze(container).await {
                 Ok(t) => t,
                 Err(e) => {
