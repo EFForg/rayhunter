@@ -27,6 +27,7 @@ use crate::config::Config;
 use crate::display::DisplayState;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
+use crate::tls;
 
 pub struct ServerState {
     pub config_path: String,
@@ -116,6 +117,37 @@ pub async fn set_config(
     State(state): State<Arc<ServerState>>,
     Json(config): Json<Config>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
+    // If HTTPS is being enabled or TLS hosts changed, regenerate certificates
+    let https_being_enabled = config.https_enabled && !state.config.https_enabled;
+    let tls_hosts_changed = config.tls_hosts != state.config.tls_hosts;
+
+    if https_being_enabled || (config.https_enabled && tls_hosts_changed) {
+        // Delete existing certs if hosts changed so they get regenerated
+        if tls_hosts_changed {
+            let tls_dir = tls::get_tls_dir(&config.qmdl_store_path);
+            let _ = tokio::fs::remove_file(tls_dir.join("cert.pem")).await;
+            let _ = tokio::fs::remove_file(tls_dir.join("key.pem")).await;
+        }
+
+        // Try to generate certificates before saving config
+        // This ensures we don't save a config that will fail on restart
+        tls::load_or_generate_certs(
+            &config.qmdl_store_path,
+            &state.config.device,
+            &config.tls_hosts,
+        )
+        .await
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!(
+                    "Failed to generate TLS certificates: {}. HTTPS not enabled.",
+                    err
+                ),
+            )
+        })?;
+    }
+
     let config_str = toml::to_string_pretty(&config).map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,

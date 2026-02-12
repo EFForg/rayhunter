@@ -149,6 +149,60 @@
                 </div>
 
                 <div class="border-t pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Security Settings</h3>
+                    <div class="flex items-center">
+                        <input
+                            id="https_enabled"
+                            type="checkbox"
+                            bind:checked={config.https_enabled}
+                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                        />
+                        <label for="https_enabled" class="ml-2 block text-sm text-gray-700">
+                            Enable HTTPS
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        When enabled, Rayhunter will generate a self-signed certificate and serve
+                        content over HTTPS on port {config.https_port || 8443}. HTTP requests on
+                        port 8080 will redirect to HTTPS. Your browser will show a certificate
+                        warning which you can safely accept.
+                    </p>
+
+                    {#if config.https_enabled}
+                        <div class="mt-4">
+                            <label
+                                for="tls_hosts"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Custom TLS Hosts (optional)
+                            </label>
+                            <input
+                                id="tls_hosts"
+                                type="text"
+                                value={config.tls_hosts?.join(', ') || ''}
+                                oninput={(e) => {
+                                    if (!config) return;
+                                    const input = e.currentTarget.value;
+                                    config.tls_hosts = input
+                                        .split(',')
+                                        .map((h) => h.trim())
+                                        .filter((h) => h.length > 0);
+                                }}
+                                placeholder="e.g., rayhunter.local, 10.0.0.5"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                Add custom hostnames or IP addresses to include in the TLS
+                                certificate (comma-separated). Use this if you have DNS resolving to
+                                your device or a SIM card with a different IP. Leave empty to use
+                                device defaults. Changes require certificate regeneration on
+                                restart.
+                            </p>
+                        </div>
+                    {/if}
+                </div>
+
+                <div class="border-t pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
                     <div>
                         <label for="ntfy_url" class="block text-sm font-medium text-gray-700 mb-1">

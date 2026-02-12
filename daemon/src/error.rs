@@ -21,4 +21,8 @@ pub enum RayhunterError {
     BatteryPluggedInStatusParseError,
     #[error("The requested functionality is not supported for this device")]
     FunctionNotSupportedForDeviceError,
+    #[error("TLS error: {0}")]
+    TlsError(String),
+    #[error("Server error: {0}")]
+    ServerError(String),
 }

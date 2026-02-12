@@ -174,3 +174,29 @@ pub async fn get_log() -> Result<String, (StatusCode, String)> {
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
+
+#[derive(Debug, Serialize)]
+pub struct TlsStatus {
+    /// Whether HTTPS is enabled in config
+    pub https_enabled: bool,
+    /// Whether TLS is in fallback mode (failed repeatedly, using HTTP-only)
+    pub fallback_mode: bool,
+    /// Human-readable reason for fallback, if in fallback mode
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallback_reason: Option<String>,
+    /// Path to TLS certificate directory
+    pub tls_path: String,
+}
+
+pub async fn get_tls_status(State(state): State<Arc<ServerState>>) -> Json<TlsStatus> {
+    use crate::tls;
+
+    let fallback_mode = tls::is_tls_fallback_mode();
+    let tls_path = tls::get_tls_dir(&state.config.qmdl_store_path);
+    Json(TlsStatus {
+        https_enabled: state.config.https_enabled,
+        fallback_mode,
+        fallback_reason: tls::get_tls_fallback_reason(),
+        tls_path: tls_path.display().to_string(),
+    })
+}

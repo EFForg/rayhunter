@@ -10,6 +10,7 @@
     import RecordingControls from '$lib/components/RecordingControls.svelte';
     import ConfigForm from '$lib/components/ConfigForm.svelte';
     import ActionErrors from '$lib/components/ActionErrors.svelte';
+    import TlsAlert from '$lib/components/TlsAlert.svelte';
     import ClockDriftAlert from '$lib/components/ClockDriftAlert.svelte';
     import LogView from '$lib/components/LogView.svelte';
 
@@ -208,6 +209,7 @@
         </div>
     {/if}
     <ActionErrors />
+    <TlsAlert />
     <ClockDriftAlert />
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">
