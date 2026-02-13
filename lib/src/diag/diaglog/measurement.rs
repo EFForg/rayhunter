@@ -1,110 +1,351 @@
-use deku::prelude::*;
+//! Diag ML1 measurement log serialization/deserialization. These are pretty
+//! much entirely based on Shinjo Park's work in scat, since we couldn't find
+//! any other documentation for the logs' structure.
 
-// Qualcomm ML1 (physical layer) serving cell measurement log (0xb17f).
-// Format from SCAT: https://github.com/fgsect/scat/blob/master/src/scat/parsers/qualcomm/diagltelogparser.py
-// V4 format string (after version byte): '<BHHHLLLLLL'
-// V5 format string (after version byte): '<BHLH2xLLLLLL'
-#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-#[deku(ctx = "version: u8", id = "version")]
-pub enum LteMl1ServingCellMeasPacket {
-    #[deku(id = "4")]
-    V4 {
-        rrc_release: u8,
-        reserved: u16,
-        earfcn: u16,
-        pci_serv_layer: u16,
-        meas_rsrp: u32,
-        avg_rsrp: u32,
-        rsrq: u32,
-        rssi: u32,
-        rxlev: u32,
-        search_threshold: u32,
-    },
-    // V5 expanded earfcn to u32; rrc_release shrunk to u8 with a reserved u16 before earfcn;
-    // 2-byte padding follows pci_serv_layer (SCAT: 2x)
-    #[deku(id_pat = "5..=255")]
-    V5 {
-        rrc_release: u8,
-        reserved: u16,
-        earfcn: u32,
-        #[deku(pad_bytes_after = "2")]
-        pci_serv_layer: u16,
-        meas_rsrp: u32,
-        avg_rsrp: u32,
-        rsrq: u32,
-        rssi: u32,
-        rxlev: u32,
-        search_threshold: u32,
-    },
+use deku::prelude::*;
+use deku::ctx::Order;
+
+fn decode_rsrp(rsrp: u16) -> f32 {
+    rsrp as f32 / 16.0 - 180.0
 }
 
-impl LteMl1ServingCellMeasPacket {
-    pub fn get_earfcn(&self) -> u32 {
-        match self {
-            Self::V4 { earfcn, .. } => *earfcn as u32,
-            Self::V5 { earfcn, .. } => *earfcn,
+fn decode_rssi(rssi: u16) -> f32 {
+    rssi as f32 / 16.0 - 110.0
+}
+
+fn decode_rsrq(rsrq: u16) -> f32 {
+    rsrq as f32 / 16.0 - 30.0
+}
+
+pub mod serving_cell {
+    use super::*;
+
+    #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
+    #[deku(bit_order = "lsb")]
+    pub struct MeasurementAndEvaluation {
+        pub header: MeasurementAndEvaluationHeader,
+        #[deku(bits = 12, pad_bits_after = "20")]
+        meas_rsrp: u16,
+        avg_rsrp: u32,
+        #[deku(bits = 10, pad_bits_after = "22")]
+        meas_rsrq: u16,
+        #[deku(pad_bits_before = "10", bits = 11, pad_bits_after = "11")]
+        meas_rssi: u16,
+        rxlev: u32,
+        s_search: u32,
+        #[deku(cond = "header.get_rrc_rel() == 0x01")]
+        r9_data: Option<u32>,
+    }
+
+    #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
+    #[deku(ctx = "_: Order", id_type = "u8", bit_order = "lsb")]
+    pub enum MeasurementAndEvaluationHeader {
+        #[deku(id = "4")]
+        V4 {
+            rrc_rel: u8,
+            _reserved: u16,
+            earfcn: u16,
+            #[deku(bits = 9)]
+            pci: u16,
+            #[deku(bits = 7)]
+            serv_layer_priority: u8,
+        },
+        #[deku(id = "5")]
+        V5 {
+            rrc_rel: u8,
+            _reserved: u16,
+            earfcn: u32,
+            #[deku(bits = 9)]
+            pci: u16,
+            #[deku(bits = 7, pad_bytes_after = "2")]
+            serv_layer_priority: u8,
+        },
+    }
+
+    impl MeasurementAndEvaluationHeader {
+        fn get_rrc_rel(&self) -> u8 {
+            match self {
+                MeasurementAndEvaluationHeader::V4 { rrc_rel, .. } => *rrc_rel,
+                MeasurementAndEvaluationHeader::V5 { rrc_rel, .. } => *rrc_rel,
+            }
         }
     }
 
-    // Lower 9 bits are the Physical Cell ID (0–503); upper bits encode serving layer.
-    pub fn get_pci(&self) -> u16 {
-        let raw = match self {
-            Self::V4 { pci_serv_layer, .. } => *pci_serv_layer,
-            Self::V5 { pci_serv_layer, .. } => *pci_serv_layer,
-        };
-        raw & 0x1FF
+    impl MeasurementAndEvaluation {
+        pub fn get_pci(&self) -> u16 {
+            match &self.header {
+                MeasurementAndEvaluationHeader::V4 { pci, .. } => *pci,
+                MeasurementAndEvaluationHeader::V5 { pci, .. } => *pci,
+            }
+        }
+
+        pub fn get_earfcn(&self) -> u32 {
+            match &self.header {
+                MeasurementAndEvaluationHeader::V4 { earfcn, .. } => *earfcn as u32,
+                MeasurementAndEvaluationHeader::V5 { earfcn, .. } => *earfcn,
+            }
+        }
+
+        pub fn get_meas_rsrp(&self) -> f32 {
+            decode_rsrp(self.meas_rsrp)
+        }
+
+        pub fn get_meas_rssi(&self) -> f32 {
+            decode_rssi(self.meas_rssi)
+        }
+
+        pub fn get_meas_rsrq(&self) -> f32 {
+            decode_rsrq(self.meas_rsrq)
+        }
+    }
+}
+
+pub mod neighbor_cells {
+    use super::*;
+
+    #[derive(Clone, Debug, DekuRead, DekuWrite, PartialEq)]
+    #[deku(id_type = "u8", bit_order = "lsb")]
+    pub enum MeasurementsHeader {
+        #[deku(id = "4")]
+        V4 {
+            rrc_rel: u8,
+            _reserved1: u16,
+            earfcn: u16,
+            #[deku(bits = 6)]
+            q_rxlevmin: u8,
+            #[deku(bits = 10)]
+            n_cells: u16,
+        },
+        #[deku(id = "5")]
+        V5 {
+            rrc_rel: u8,
+            _reserved1: u16,
+            earfcn: u32,
+            #[deku(bits = 6)]
+            q_rxlevmin: u8,
+            #[deku(bits = 26)]
+            n_cells: u32,
+        },
     }
 
-    // RSRP lower 12 bits, 1/16 dB steps, -180 dBm base.
-    // Returns whole dBm clamped to i8 for the GSMTAP signal_dbm header field.
-    pub fn get_rsrp_dbm(&self) -> i8 {
-        let raw = match self {
-            Self::V4 { meas_rsrp, .. } => *meas_rsrp,
-            Self::V5 { meas_rsrp, .. } => *meas_rsrp,
-        };
-        let sixteenth_db = -2880_i32 + (raw & 0x0FFF) as i32;
-        (sixteenth_db / 16).clamp(i8::MIN as i32, i8::MAX as i32) as i8
+    impl MeasurementsHeader {
+        fn get_n_cells(&self) -> usize {
+            match self {
+                MeasurementsHeader::V4 { n_cells, .. } => *n_cells as usize,
+                MeasurementsHeader::V5 { n_cells, .. } => *n_cells as usize,
+            }
+        }
+    }
+
+    #[derive(Clone, Debug, DekuRead, DekuWrite, PartialEq)]
+    pub struct Measurements {
+        pub header: MeasurementsHeader,
+        #[deku(count = "header.get_n_cells()")]
+        pub cells: Vec<MeasurementsCell>
+    }
+
+    impl Measurements {
+        pub fn get_earfcn(&self) -> u32 {
+            match &self.header {
+                MeasurementsHeader::V4 { earfcn, .. } => *earfcn as u32,
+                MeasurementsHeader::V5 { earfcn, .. } => *earfcn,
+            }
+        }
+    }
+
+
+    #[derive(Clone, Debug, DekuRead, DekuWrite, PartialEq)]
+    #[deku(bit_order = "lsb")]
+    pub struct MeasurementsCell {
+        #[deku(bits = 9)]
+        pub pci: u16,
+        #[deku(bits = 11)]
+        meas_rssi: u16,
+        #[deku(bits = 12)]
+        meas_rsrp: u16,
+        #[deku(pad_bits_before = "12", bits = 12, pad_bits_after = "8")]
+        avg_rsrp: u16,
+        #[deku(pad_bits_before = "12", bits = 10, pad_bits_after = "10")]
+        meas_rsrq: u16,
+        #[deku(bits = 10, pad_bits_after = "10")]
+        avg_rsrq: u16,
+        #[deku(bits = 6, pad_bits_after = "6")]
+        s_rxlev: u16,
+        n_freq_offset: u16,
+        val5: u16,
+        ant0_offset: u32,
+        ant1_offset: u32,
+        unk1: u32,
+    }
+
+    impl MeasurementsCell {
+        pub fn get_meas_rsrp(&self) -> f32 {
+            decode_rsrp(self.meas_rsrp)
+        }
+
+        pub fn get_meas_rssi(&self) -> f32 {
+            decode_rssi(self.meas_rssi)
+        }
+
+        pub fn get_meas_rsrq(&self) -> f32 {
+            decode_rsrq(self.meas_rsrq)
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::diag::{Message, diaglog::LogBody};
     use super::*;
+    use crate::diag::diaglog::LogBody;
+    use crate::log_codes::{LOG_LTE_ML1_NEIGHBOR_MEAS, LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C};
+    use std::io::{Cursor, Seek};
 
-    #[test]
-    fn test_lte_ml1_v5_rsrp() {
-        // Probe capture: full diag Message wrapping a 0xb17f log (Version 5, Band 3 / EARFCN 1849).
-        // Constructed as: opcode(1) + pending(1) + outer_len(2) + inner_len(2) +
-        //                 log_type(2=0xb17f LE) + timestamp(8) + body(40) = 56 bytes total
-        let mut msg_bytes: Vec<u8> = vec![
-            0x10, 0x00, // opcode=Log, pending=0
-            56, 0, 56, 0, // outer_length=56, inner_length=56
-            0x7f, 0xb1, // log_type = 0xb17f (LE)
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // timestamp
-        ];
-        msg_bytes.extend_from_slice(&[
-            0x05, // version=5
-            0x01, 0x00, 0x00, 0x39, 0x07, 0x00, 0x00, 0x89, 0x00, 0x00, 0x00, 0xab, 0xb5, 0x5a,
-            0x00, 0xab, 0xb5, 0x5a, 0x00, 0x1a, 0x69, 0xa4, 0x11, 0x1a, 0x45, 0x0d, 0x00, 0x86,
-            0xa7, 0xae, 0x02, 0x00, 0x00, 0x00, 0x00, 0x80, 0x1c, 0x00, 0x00,
-        ]);
-        let msg = Message::from_bytes((&msg_bytes, 0))
-            .expect("Message parse failed")
-            .1;
-        if let Message::Log {
-            body: LogBody::LteMl1ServingCellMeas { packet, .. },
-            ..
-        } = msg
-        {
-            assert_eq!(packet.get_earfcn(), 1849);
-            let rsrp = packet.get_rsrp_dbm();
-            assert!(
-                rsrp <= -44 && rsrp >= -120,
-                "RSRP {rsrp} dBm outside valid LTE range"
-            );
-        } else {
-            panic!("unexpected message variant");
+    fn unhexlify(hexlified_bytes: &str) -> (usize, Reader<Cursor<Vec<u8>>>) {
+        let byte_len = hexlified_bytes.len() / 2;
+        let bytes = (0..hexlified_bytes.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&hexlified_bytes[i..i+2], 16).unwrap())
+            .collect();
+        (byte_len, Reader::new(Cursor::new(bytes)))
+    }
+
+    fn parse_ncell_measurements(hexlified_bytes: &str) -> (u8, neighbor_cells::Measurements) {
+        let (total_size, mut reader) = unhexlify(hexlified_bytes);
+        match LogBody::from_reader_with_ctx(&mut reader, (LOG_LTE_ML1_NEIGHBOR_MEAS as u16, 0)) {
+            Ok(LogBody::LteMl1NeighborCellsMeasurements { data }) => {
+                if !reader.end() {
+                    let leftover_bits = reader.rest();
+                    let leftover_bytes = total_size - reader.stream_position().unwrap() as usize;
+                    panic!("failed to read entire buffer ({} bytes, {} bits left)", leftover_bytes, leftover_bits.len());
+                }
+                let pkt_version = match data.header {
+                    neighbor_cells::MeasurementsHeader::V4 { .. } => 4,
+                    neighbor_cells::MeasurementsHeader::V5 { .. } => 5,
+                };
+                (pkt_version, data)
+            },
+            Ok(x) => panic!("expected MeasurementAndEvaluation, but parsed {:?}", x),
+            Err(x) => panic!("failed to parse MeasurementAndEvaluation {:?}", x),
         }
+    }
+
+    fn parse_meas_eval(hexlified_bytes: &str) -> (u8, serving_cell::MeasurementAndEvaluation) {
+        let (total_size, mut reader) = unhexlify(hexlified_bytes);
+        match LogBody::from_reader_with_ctx(&mut reader, (LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C as u16, 0)) {
+            Ok(LogBody::LteMl1ServingCellMeasurementAndEvaluation { data }) => {
+                if !reader.end() {
+                    let leftover_bits = reader.rest();
+                    let leftover_bytes = total_size - reader.stream_position().unwrap() as usize;
+                    panic!("failed to read entire buffer ({} bytes, {} bits left)", leftover_bytes, leftover_bits.len());
+                }
+                let pkt_version = match data.header {
+                    serving_cell::MeasurementAndEvaluationHeader::V4 { .. } => 4,
+                    serving_cell::MeasurementAndEvaluationHeader::V5 { .. } => 5,
+                };
+                (pkt_version, data)
+            },
+            Ok(x) => panic!("expected MeasurementAndEvaluation, but parsed {:?}", x),
+            Err(x) => panic!("failed to parse MeasurementAndEvaluation {:?}", x),
+        }
+    }
+
+    fn scell_meas_and_eval_case(
+        hexlified_bytes: &str,
+        pkt_version: u8,
+        pci: u16,
+        earfcn: u32,
+        rsrp: f32,
+        rsrq: f32,
+        rssi: f32
+    ) {
+        let (parsed_pkt_version, data) = parse_meas_eval(hexlified_bytes);
+        assert_eq!(parsed_pkt_version, pkt_version);
+        assert_eq!(data.get_pci(), pci, "incorrect pci");
+        assert_eq!(data.get_earfcn(), earfcn, "incorrect earfcn");
+        assert_eq!(data.get_meas_rsrp(), rsrp, "incorrect rsrp");
+        assert_eq!(data.get_meas_rsrq(), rsrq, "incorrect rsrq");
+        assert_eq!(data.get_meas_rssi(), rssi, "incorrect rssi");
+    }
+
+    // Adapted from scat's TestDiagLteLogParser::test_parse_lte_ml1_scell_meas,
+    // but edited to print full-precision floats
+    #[test]
+    fn test_scell_meas() {
+        scell_meas_and_eval_case(
+            "040100009C18D60AECC44E00E2244E00FFFCE30FFED80A0047AD56021D310100A2624100",
+            4,
+            214,
+            6300,
+            -101.25,
+            -14.0625,
+            -66.625
+        );
+        scell_meas_and_eval_case(
+            "05010000160d0000d40e00004bb444005444450039e514133149070048adfe019f310100a23f0000",
+            5,
+            212,
+            3350,
+            -111.3125,
+            -10.4375,
+            -80.875,
+        );
+        scell_meas_and_eval_case(
+            "05010000f424000a4d43434d4e434d41524b45527c307c3236327c317c34323330333233347c7c4d43434d4e434d41524b45520a0a434f504d41524b45527c434f504552524f5232363230317c434f504d41524b45520a006306000057755500577555001d75d4111d290b0048ad7e02dd370100a27f4100",
+            5,
+            333,
+            167781620,
+            -127.125,
+            -22.25,
+            2.75,
+        );
+        scell_meas_and_eval_case(
+            "0501000000190000a90d0000d9944d00d9944d006081d5d55d2568bc48ad3e027f314fe0891900e0",
+            5,
+            425,
+            6400,
+            -102.4375,
+            -8.0,
+            -77.4375,
+        );
+    }
+
+    fn ncell_meas_case(
+        hexlified_bytes: &str,
+        pkt_version: u8,
+        earfcn: u32,
+        cells: Vec<(u16, f32, f32, f32)>,
+    ) {
+        let (parsed_pkt_version, data) = parse_ncell_measurements(hexlified_bytes);
+        assert_eq!(parsed_pkt_version, pkt_version, "incorrect pkt_version");
+        assert_eq!(data.cells.len(), cells.len(), "incorrect number of cells");
+        assert_eq!(data.get_earfcn(), earfcn, "incorrect earfcn");
+        for (parsed, (pci, rsrp, rssi, rsrq)) in data.cells.iter().zip(cells) {
+            assert_eq!(parsed.pci, pci, "incorrect pci");
+            assert_eq!(parsed.get_meas_rsrp(), rsrp, "incorrect rsrp");
+            assert_eq!(parsed.get_meas_rssi(), rssi, "incorrect rssi");
+            assert_eq!(parsed.get_meas_rsrq(), rsrq, "incorrect rsrq");
+        }
+    }
+
+    // Adapted from scat's TestDiagLteLogParser::test_parse_lte_ml1_ncell_meas,
+    // but edited to print full-precision floats
+    #[test]
+    fn test_ncell_meas() {
+        ncell_meas_case(
+            "040100009C1847008348E44DDEA44C00CAB4CC32B6D8420300000000FF773301FF77330122020100",
+            4,
+            6300,
+            vec![
+                (131, -102.125, -75.75, -17.3125),
+            ]
+        );
+         ncell_meas_case(
+             "05010000160d0000480000006cea413bb4433b00b4f3cc33cf3c130200000000ffefc00fffefc00f45081600",
+             5,
+             3350,
+             vec![
+                 (108, -120.75, -94.6875, -17.0625),
+             ]
+         );
     }
 }

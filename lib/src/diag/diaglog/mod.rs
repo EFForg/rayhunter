@@ -77,10 +77,12 @@ pub enum LogBody {
         msg: Vec<u8>,
     },
     #[deku(id = "0xb17f")]
-    LteMl1ServingCellMeas {
-        version: u8,
-        #[deku(ctx = "*version")]
-        packet: measurement::LteMl1ServingCellMeasPacket,
+    LteMl1ServingCellMeasurementAndEvaluation {
+        data: measurement::serving_cell::MeasurementAndEvaluation,
+    },
+    #[deku(id = "0xb180")]
+    LteMl1NeighborCellsMeasurements {
+        data: measurement::neighbor_cells::Measurements,
     },
     // Raw bytes; subpacket parsing happens in gsmtap_parser to extract Timing Advance
     #[deku(id = "0xb062")]
@@ -209,7 +211,6 @@ pub(crate) mod test {
     }
 
     // Just about all of these test cases from manually parsing diag packets w/ QCSuper
-
     #[test]
     fn test_request_serialization() {
         let req = Request::LogConfig(LogConfigRequest::RetrieveIdRanges);

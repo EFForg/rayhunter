@@ -153,13 +153,13 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 payload: msg,
             }))
         }
-        LogBody::LteMl1ServingCellMeas { packet, .. } => {
+        LogBody::LteMl1ServingCellMeasurementAndEvaluation { data, .. } => {
             // frame_number reused for PCI (normally SFN in RRC frames) so all three
             // serving-cell fields are accessible in Wireshark as gsmtap.* columns.
             let mut header = GsmtapHeader::new(GsmtapType::QcDiag);
-            header.signal_dbm = packet.get_rsrp_dbm();
-            header.arfcn = packet.get_earfcn().try_into().unwrap_or(0);
-            header.frame_number = packet.get_pci() as u32;
+            header.signal_dbm = data.get_meas_rsrp() as i8;
+            header.arfcn = data.get_earfcn().try_into().unwrap_or(0);
+            header.frame_number = data.get_pci() as u32;
             Ok(Some(GsmtapMessage {
                 header,
                 payload: vec![],
