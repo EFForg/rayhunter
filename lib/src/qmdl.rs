@@ -218,7 +218,7 @@ where
 mod test {
     use std::io::Cursor;
 
-    use crate::diag::{DataType, HdlcEncapsulatedMessage, test::get_test_message};
+    use crate::diag::{DataType, HdlcEncapsulatedMessage, diaglog::test::get_test_message};
 
     use super::*;
 

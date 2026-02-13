@@ -1,159 +1,9 @@
-//! Diag protocol serialization/deserialization
+//! Diag LogBody serialization/deserialization
 
 use chrono::{DateTime, FixedOffset};
-use crc::{Algorithm, Crc};
 use deku::prelude::*;
 
-use crate::hdlc::{self, hdlc_decapsulate};
-use log::warn;
-use thiserror::Error;
-
-pub const MESSAGE_TERMINATOR: u8 = 0x7e;
-pub const MESSAGE_ESCAPE_CHAR: u8 = 0x7d;
-
-pub const ESCAPED_MESSAGE_TERMINATOR: u8 = 0x5e;
-pub const ESCAPED_MESSAGE_ESCAPE_CHAR: u8 = 0x5d;
-
-#[derive(Debug, Clone, DekuWrite)]
-pub struct RequestContainer {
-    pub data_type: DataType,
-    #[deku(skip)]
-    pub use_mdm: bool,
-    #[deku(skip, cond = "!*use_mdm")]
-    pub mdm_field: i32,
-    pub hdlc_encapsulated_request: Vec<u8>,
-}
-
-#[derive(Debug, Clone, PartialEq, DekuWrite)]
-#[deku(id_type = "u32")]
-pub enum Request {
-    #[deku(id = "115")]
-    LogConfig(LogConfigRequest),
-}
-
-#[derive(Debug, Clone, PartialEq, DekuWrite)]
-#[deku(id_type = "u32", endian = "little")]
-pub enum LogConfigRequest {
-    #[deku(id = "1")]
-    RetrieveIdRanges,
-
-    #[deku(id = "3")]
-    SetMask {
-        log_type: u32,
-        log_mask_bitsize: u32,
-        log_mask: Vec<u8>,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-#[deku(id_type = "u32", endian = "little")]
-pub enum DataType {
-    #[deku(id = "32")]
-    UserSpace,
-    #[deku(id_pat = "_")]
-    Other(u32),
-}
-
-#[derive(Debug, Clone, PartialEq, Error)]
-pub enum DiagParsingError {
-    #[error("Failed to parse Message: {0}, data: {1:?}")]
-    MessageParsingError(deku::DekuError, Vec<u8>),
-    #[error("HDLC decapsulation of message failed: {0}, data: {1:?}")]
-    HdlcDecapsulationError(hdlc::HdlcError, Vec<u8>),
-}
-
-// this is sorta based on the params qcsuper uses, plus what seems to be used in
-// https://github.com/fgsect/scat/blob/f1538b397721df3ab8ba12acd26716abcf21f78b/util.py#L47
-pub const CRC_CCITT_ALG: Algorithm<u16> = Algorithm {
-    poly: 0x1021,
-    init: 0xffff,
-    refin: true,
-    refout: true,
-    width: 16,
-    xorout: 0xffff,
-    check: 0x2189,
-    residue: 0x0000,
-};
-
-pub const CRC_CCITT: Crc<u16> = Crc::<u16>::new(&CRC_CCITT_ALG);
-#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-pub struct MessagesContainer {
-    pub data_type: DataType,
-    pub num_messages: u32,
-    #[deku(count = "num_messages")]
-    pub messages: Vec<HdlcEncapsulatedMessage>,
-}
-
-impl MessagesContainer {
-    pub fn messages(&self) -> Vec<Result<Message, DiagParsingError>> {
-        let mut result = Vec::new();
-        for msg in &self.messages {
-            for sub_msg in msg.data.split_inclusive(|&b| b == MESSAGE_TERMINATOR) {
-                result.push(Message::from_hdlc(sub_msg));
-            }
-        }
-        result
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-pub struct HdlcEncapsulatedMessage {
-    pub len: u32,
-    #[deku(count = "len")]
-    pub data: Vec<u8>,
-}
-
-#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-#[deku(id_type = "u8")]
-pub enum Message {
-    #[deku(id = "16")]
-    Log {
-        pending_msgs: u8,
-        outer_length: u16,
-        inner_length: u16,
-        log_type: u16,
-        timestamp: Timestamp,
-        // pass the log type and log length (inner_length - (sizeof(log_type) + sizeof(timestamp)))
-        #[deku(ctx = "*log_type, inner_length.saturating_sub(12)")]
-        body: LogBody,
-    },
-
-    // kinda unpleasant deku hackery here. deku expects an enum's variant to be
-    // right before its data, but in this case, a status value comes between the
-    // variants and the data. so we need to use deku's context (ctx) feature to
-    // pass those opcodes down to their respective parsers.
-    #[deku(id_pat = "_")]
-    Response {
-        opcode1: u8, // the "id" (from deku's POV) gets parsed into this field
-        opcode2: u8,
-        opcode3: u8,
-        opcode4: u8,
-        subopcode: u32,
-        status: u32,
-        #[deku(ctx = "u32::from_le_bytes([*opcode1, *opcode2, *opcode3, *opcode4]), *subopcode")]
-        payload: ResponsePayload,
-    },
-}
-
-impl Message {
-    pub fn from_hdlc(data: &[u8]) -> Result<Message, DiagParsingError> {
-        match hdlc_decapsulate(data, &CRC_CCITT) {
-            Ok(data) => match Message::from_bytes((&data, 0)) {
-                Ok(((leftover_bytes, _), res)) => {
-                    if !leftover_bytes.is_empty() {
-                        warn!(
-                            "warning: {} leftover bytes when parsing Message",
-                            leftover_bytes.len()
-                        );
-                    }
-                    Ok(res)
-                }
-                Err(e) => Err(DiagParsingError::MessageParsingError(e, data)),
-            },
-            Err(err) => Err(DiagParsingError::HdlcDecapsulationError(err, data.to_vec())),
-        }
-    }
-}
+pub mod rrc;
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(ctx = "log_type: u16, hdr_len: u16", id = "log_type")]
@@ -186,7 +36,7 @@ pub enum LogBody {
     LteRrcOtaMessage {
         ext_header_version: u8,
         #[deku(ctx = "*ext_header_version")]
-        packet: LteRrcOtaPacket,
+        packet: rrc::LteRrcOtaPacket,
     },
     // the four NAS command opcodes refer to:
     // * 0xb0e2: plain ESM NAS message (incoming)
@@ -250,113 +100,6 @@ pub enum Nas4GMessageDirection {
     Downlink,
     #[deku(id_pat = "0xb0e3 | 0xb0ed")]
     Uplink,
-}
-
-#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-#[deku(ctx = "ext_header_version: u8", id = "ext_header_version")]
-pub enum LteRrcOtaPacket {
-    #[deku(id_pat = "0..=4")]
-    V0 {
-        rrc_rel_maj: u8,
-        rrc_rel_min: u8,
-        bearer_id: u8,
-        phy_cell_id: u16,
-        earfcn: u16,
-        sfn_subfn: u16,
-        pdu_num: u8,
-        len: u16,
-        #[deku(count = "len")]
-        packet: Vec<u8>,
-    },
-    #[deku(id_pat = "5..=7")]
-    V5 {
-        rrc_rel_maj: u8,
-        rrc_rel_min: u8,
-        bearer_id: u8,
-        phy_cell_id: u16,
-        earfcn: u16,
-        sfn_subfn: u16,
-        pdu_num: u8,
-        sib_mask: u32,
-        len: u16,
-        #[deku(count = "len")]
-        packet: Vec<u8>,
-    },
-    #[deku(id_pat = "8..=24")]
-    V8 {
-        rrc_rel_maj: u8,
-        rrc_rel_min: u8,
-        bearer_id: u8,
-        phy_cell_id: u16,
-        earfcn: u32,
-        sfn_subfn: u16,
-        pdu_num: u8,
-        sib_mask: u32,
-        len: u16,
-        #[deku(count = "len")]
-        packet: Vec<u8>,
-    },
-    #[deku(id_pat = "25..")]
-    V25 {
-        rrc_rel_maj: u8,
-        rrc_rel_min: u8,
-        nr_rrc_rel_maj: u8,
-        nr_rrc_rel_min: u8,
-        bearer_id: u8,
-        phy_cell_id: u16,
-        earfcn: u32,
-        sfn_subfn: u16,
-        pdu_num: u8,
-        sib_mask: u32,
-        len: u16,
-        #[deku(count = "len")]
-        packet: Vec<u8>,
-    },
-}
-
-impl LteRrcOtaPacket {
-    fn get_sfn_subfn(&self) -> u16 {
-        match self {
-            LteRrcOtaPacket::V0 { sfn_subfn, .. } => *sfn_subfn,
-            LteRrcOtaPacket::V5 { sfn_subfn, .. } => *sfn_subfn,
-            LteRrcOtaPacket::V8 { sfn_subfn, .. } => *sfn_subfn,
-            LteRrcOtaPacket::V25 { sfn_subfn, .. } => *sfn_subfn,
-        }
-    }
-    pub fn get_sfn(&self) -> u32 {
-        self.get_sfn_subfn() as u32 >> 4
-    }
-
-    pub fn get_subfn(&self) -> u8 {
-        (self.get_sfn_subfn() & 0xf) as u8
-    }
-
-    pub fn get_pdu_num(&self) -> u8 {
-        match self {
-            LteRrcOtaPacket::V0 { pdu_num, .. } => *pdu_num,
-            LteRrcOtaPacket::V5 { pdu_num, .. } => *pdu_num,
-            LteRrcOtaPacket::V8 { pdu_num, .. } => *pdu_num,
-            LteRrcOtaPacket::V25 { pdu_num, .. } => *pdu_num,
-        }
-    }
-
-    pub fn get_earfcn(&self) -> u32 {
-        match self {
-            LteRrcOtaPacket::V0 { earfcn, .. } => *earfcn as u32,
-            LteRrcOtaPacket::V5 { earfcn, .. } => *earfcn as u32,
-            LteRrcOtaPacket::V8 { earfcn, .. } => *earfcn,
-            LteRrcOtaPacket::V25 { earfcn, .. } => *earfcn,
-        }
-    }
-
-    pub fn take_payload(self) -> Vec<u8> {
-        match self {
-            LteRrcOtaPacket::V0 { packet, .. } => packet,
-            LteRrcOtaPacket::V5 { packet, .. } => packet,
-            LteRrcOtaPacket::V8 { packet, .. } => packet,
-            LteRrcOtaPacket::V25 { packet, .. } => packet,
-        }
-    }
 }
 
 // Qualcomm ML1 (physical layer) serving cell measurement log (0xb17f).
@@ -446,55 +189,90 @@ impl Timestamp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-#[deku(ctx = "opcode: u32, subopcode: u32", id = "opcode")]
-pub enum ResponsePayload {
-    #[deku(id = "115")]
-    LogConfig(#[deku(ctx = "subopcode")] LogConfigResponse),
-}
-
-#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
-#[deku(ctx = "subopcode: u32", id = "subopcode")]
-pub enum LogConfigResponse {
-    #[deku(id = "1")]
-    RetrieveIdRanges { log_mask_sizes: [u32; 16] },
-
-    #[deku(id = "3")]
-    SetMask,
-}
-
-pub fn build_log_mask_request(
-    log_type: u32,
-    log_mask_bitsize: u32,
-    accepted_log_codes: &[u32],
-) -> Request {
-    let mut current_byte: u8 = 0;
-    let mut num_bits_written: u8 = 0;
-    let mut log_mask: Vec<u8> = vec![];
-    for i in 0..log_mask_bitsize {
-        let log_code: u32 = (log_type << 12) | i;
-        if accepted_log_codes.contains(&log_code) {
-            current_byte |= 1 << num_bits_written;
-        }
-        num_bits_written += 1;
-
-        if num_bits_written == 8 || i == log_mask_bitsize - 1 {
-            log_mask.push(current_byte);
-            current_byte = 0;
-            num_bits_written = 0;
-        }
-    }
-
-    Request::LogConfig(LogConfigRequest::SetMask {
-        log_type,
-        log_mask_bitsize,
-        log_mask,
-    })
-}
-
 #[cfg(test)]
 pub(crate) mod test {
     use super::*;
+    use crate::{diag::*, hdlc};
+
+    #[test]
+    fn test_logs() {
+        let data = vec![
+            16, 0, 38, 0, 38, 0, 192, 176, 26, 165, 245, 135, 118, 35, 2, 1, 20, 14, 48, 0, 160, 0,
+            2, 8, 0, 0, 217, 15, 5, 0, 0, 0, 0, 7, 0, 64, 1, 238, 173, 213, 77, 208,
+        ];
+        let msg = Message::from_bytes((&data, 0)).unwrap().1;
+        assert_eq!(
+            msg,
+            Message::Log {
+                pending_msgs: 0,
+                outer_length: 38,
+                inner_length: 38,
+                log_type: 0xb0c0,
+                timestamp: Timestamp {
+                    ts: 72659535985485082
+                },
+                body: LogBody::LteRrcOtaMessage {
+                    ext_header_version: 20,
+                    packet: rrc::LteRrcOtaPacket::V8 {
+                        rrc_rel_maj: 14,
+                        rrc_rel_min: 48,
+                        bearer_id: 0,
+                        phy_cell_id: 160,
+                        earfcn: 2050,
+                        sfn_subfn: 4057,
+                        pdu_num: 5,
+                        sib_mask: 0,
+                        len: 7,
+                        packet: vec![0x40, 0x1, 0xee, 0xad, 0xd5, 0x4d, 0xd0],
+                    },
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn test_fuzz_crash_inner_length_underflow() {
+        // Regression test: inner_length < 12 previously caused panic.
+        // Fixed by using saturating_sub in Message::Log body length calculation.
+        let fuzz_data = b"\x10\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        let _ = Message::from_bytes((fuzz_data, 0));
+    }
+
+    #[test]
+    fn test_fuzz_crash_nas_hdr_len_underflow() {
+        // Regression test for two things:
+        // - hdr_len < 4 previously caused panic in Nas4GMessage.
+        // - Upgrading to deku 0.20 caused incorrect parsing behavior (double-read of discriminant)
+        let nas_msg =
+            b"\x10\x00\x14\x00\x02\x00\xe2\xb0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00";
+
+        let ((rest, _), msg) = Message::from_bytes((nas_msg, 0)).unwrap();
+
+        assert_eq!(rest.len(), 0);
+        assert!(
+            matches!(
+                msg,
+                Message::Log {
+                    log_type: 0xb0e2,
+                    body: LogBody::Nas4GMessage {
+                        direction: Nas4GMessageDirection::Downlink,
+                        ..
+                    },
+                    ..
+                }
+            ),
+            "Unexpected message: {:?}",
+            msg
+        );
+    }
+
+    #[test]
+    fn test_fuzz_crash_ip_traffic_hdr_len_underflow() {
+        // Regression test: hdr_len < 8 previously caused panic in IpTraffic.
+        // Fixed by using saturating_sub for msg length calculation.
+        let ip_msg = b"\x10\x00\x14\x00\x02\x00\xeb\x11\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00";
+        let _ = Message::from_bytes((ip_msg, 0));
+    }
 
     #[test]
     fn test_lte_ml1_v5_rsrp() {
@@ -596,42 +374,6 @@ pub(crate) mod test {
         );
     }
 
-    #[test]
-    fn test_logs() {
-        let data = vec![
-            16, 0, 38, 0, 38, 0, 192, 176, 26, 165, 245, 135, 118, 35, 2, 1, 20, 14, 48, 0, 160, 0,
-            2, 8, 0, 0, 217, 15, 5, 0, 0, 0, 0, 7, 0, 64, 1, 238, 173, 213, 77, 208,
-        ];
-        let msg = Message::from_bytes((&data, 0)).unwrap().1;
-        assert_eq!(
-            msg,
-            Message::Log {
-                pending_msgs: 0,
-                outer_length: 38,
-                inner_length: 38,
-                log_type: 0xb0c0,
-                timestamp: Timestamp {
-                    ts: 72659535985485082
-                },
-                body: LogBody::LteRrcOtaMessage {
-                    ext_header_version: 20,
-                    packet: LteRrcOtaPacket::V8 {
-                        rrc_rel_maj: 14,
-                        rrc_rel_min: 48,
-                        bearer_id: 0,
-                        phy_cell_id: 160,
-                        earfcn: 2050,
-                        sfn_subfn: 4057,
-                        pdu_num: 5,
-                        sib_mask: 0,
-                        len: 7,
-                        packet: vec![0x40, 0x1, 0xee, 0xad, 0xd5, 0x4d, 0xd0],
-                    },
-                },
-            }
-        );
-    }
-
     fn make_container(data_type: DataType, message: HdlcEncapsulatedMessage) -> MessagesContainer {
         MessagesContainer {
             data_type,
@@ -655,7 +397,7 @@ pub(crate) mod test {
             },
             body: LogBody::LteRrcOtaMessage {
                 ext_header_version: 20,
-                packet: LteRrcOtaPacket::V8 {
+                packet: diaglog::rrc::LteRrcOtaPacket::V8 {
                     rrc_rel_maj: 14,
                     rrc_rel_min: 48,
                     bearer_id: 0,
@@ -737,50 +479,6 @@ pub(crate) mod test {
             result[1],
             Err(DiagParsingError::HdlcDecapsulationError(_, _))
         ));
-    }
-
-    #[test]
-    fn test_fuzz_crash_inner_length_underflow() {
-        // Regression test: inner_length < 12 previously caused panic.
-        // Fixed by using saturating_sub in Message::Log body length calculation.
-        let fuzz_data = b"\x10\x00\x00\x00\x05\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        let _ = Message::from_bytes((fuzz_data, 0));
-    }
-
-    #[test]
-    fn test_fuzz_crash_nas_hdr_len_underflow() {
-        // Regression test for two things:
-        // - hdr_len < 4 previously caused panic in Nas4GMessage.
-        // - Upgrading to deku 0.20 caused incorrect parsing behavior (double-read of discriminant)
-        let nas_msg =
-            b"\x10\x00\x14\x00\x02\x00\xe2\xb0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00";
-
-        let ((rest, _), msg) = Message::from_bytes((nas_msg, 0)).unwrap();
-
-        assert_eq!(rest.len(), 0);
-        assert!(
-            matches!(
-                msg,
-                Message::Log {
-                    log_type: 0xb0e2,
-                    body: LogBody::Nas4GMessage {
-                        direction: Nas4GMessageDirection::Downlink,
-                        ..
-                    },
-                    ..
-                }
-            ),
-            "Unexpected message: {:?}",
-            msg
-        );
-    }
-
-    #[test]
-    fn test_fuzz_crash_ip_traffic_hdr_len_underflow() {
-        // Regression test: hdr_len < 8 previously caused panic in IpTraffic.
-        // Fixed by using saturating_sub for msg length calculation.
-        let ip_msg = b"\x10\x00\x14\x00\x02\x00\xeb\x11\x00\x00\x00\x00\x00\x00\x00\x00\x03\x00";
-        let _ = Message::from_bytes((ip_msg, 0));
     }
 
     #[test]
