@@ -2,7 +2,7 @@ use crate::diag::Message;
 use crate::diag::diaglog::{Timestamp, LogBody, Nas4GMessageDirection};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
 
-use log::error;
+use log::debug;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -154,7 +154,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
             }))
         }
         _ => {
-            error!("gsmtap_sink: ignoring unhandled log type: {value:?}");
+            debug!("gsmtap_sink: ignoring unhandled log type: {value:?}");
             Ok(None)
         }
     }
