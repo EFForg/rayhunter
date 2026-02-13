@@ -33,6 +33,8 @@ pub const LOG_NR_RRC_OTA_MSG_LOG_C: u32 = 0xb821;
 pub const LOG_LTE_RRC_OTA_MSG_LOG_C: u32 = 0xb0c0;
 // Qualcomm ML1 (physical layer) serving cell measurement report: RSRP, RSRQ, RSSI
 pub const LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C: u32 = 0xb17f;
+pub const LOG_LTE_ML1_SERVING_CELL_MEAS_RESPONSE: u32 = 0xb193;
+pub const LOG_LTE_ML1_NEIGHBOR_MEAS: u32 = 0xb180;
 // Qualcomm MAC layer RACH response log: contains Timing Advance from Random Access Response
 pub const LOG_LTE_MAC_RACH_RESPONSE_C: u32 = 0xb062;
 pub const LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C: u32 = 0xb0e2;
