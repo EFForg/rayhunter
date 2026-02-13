@@ -3,6 +3,7 @@
 use chrono::{DateTime, FixedOffset};
 use deku::prelude::*;
 
+pub mod measurement;
 pub mod rrc;
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -74,6 +75,14 @@ pub enum LogBody {
     NrRrcOtaMessage {
         #[deku(count = "hdr_len")]
         msg: Vec<u8>,
+    },
+    #[deku(id = "0xb17f")]
+    LteMl1ServingCellMeasurementAndEvaluation {
+        data: measurement::serving_cell::MeasurementAndEvaluation,
+    },
+    #[deku(id = "0xb180")]
+    LteMl1NeighborCellsMeasurements {
+        data: measurement::neighbor_cells::Measurements,
     },
 }
 
