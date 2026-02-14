@@ -46,13 +46,21 @@ Then, `./rayhunter-daemon config.toml` can be started manually.
 
 You can refer to [Installing from source](./installing-from-source.md) for how to obtain the `rayhunter-daemon` binary.
 
-We're assuming that your device is ARMv7, i.e. 32-bit ARM. If that's not the case, you can still build the daemon but you'll need to figure out the correct target triple on your own.
+We're assuming that your device is ARMv7, i.e. 32-bit ARM (`armv7-unknown-linux-musleabihf`). If that's not the case, you can still build the daemon but you'll need to figure out the correct target triple on your own.
 
 You can copy the daemon and config files to the device using `netcat` or `adb push`. They don't have to be in `/data/rayhunter/`, this is just convention. If you use a different path, be sure to update the `qmdl_store_path` setting in `config.toml`.
 
+The `device` setting in `config.toml` must match one of the lowercase variant names from the `Device` enum (e.g. `"orbic"`, `"tplink"`). This controls which display driver is used.
+
+Setting `debug_mode = true` in `config.toml` runs the daemon without `/dev/diag`, so you can test the display and web UI without the hardware.
+
+### Autostart
+
+To make Rayhunter start on boot, you'll need an init script. The existing installers use the template at `dist/scripts/rayhunter_daemon`, which has a `#RAYHUNTER-PRESTART` placeholder that gets replaced with device-specific setup commands (e.g. killing a vendor UI process, mounting an SD card). Look at how the existing installers handle this in their `install()` functions.
+
 ## Display support
 
-Rayhunter has a `device` setting in `config.toml` (see [`Device` enum in `lib/src/lib.rs`](https://github.com/EFForg/rayhunter/blob/main/lib/src/lib.rs)), which conditionally enables and disables specific behavior such as how to render the display. Unless your device is a variant of an existing device, you'll want to add a new variant to the `Device` enum and write a corresponding display module in `daemon/src/display/`.
+The `device` setting [mentioned above](#installing-rayhunter-manually) also controls which display driver is loaded (see [`Device` enum in `lib/src/lib.rs`](https://github.com/EFForg/rayhunter/blob/main/lib/src/lib.rs)). Unless your device is a variant of an existing device, you'll want to add a new variant to the `Device` enum and write a corresponding display module in `daemon/src/display/`.
 
 You can play around with the existing values of the `device` setting to see which one ends up rendering on your device's display. Most likely your device has a display similar enough to an existing one, and the display module for that device (e.g. `daemon/src/display/orbic.rs`, `daemon/src/display/tplink.rs`) can be used as a starting point.
 
@@ -70,6 +78,8 @@ At this point you'll want to have figured out how to automate the entire install
 
 Writing the installer means adding a new variant to the `Command` enum in [`installer/src/lib.rs`](https://github.com/EFForg/rayhunter/blob/main/installer/src/lib.rs) and implementing the install logic in a new module under `installer/src/`. Each subcommand maps to a device-specific entry point function (e.g. `tplink::main_tplink`, `orbic_network::install`).
 
-You should also add a corresponding shell/telnet utility subcommand under `installer util` (the `UtilSubCommand` enum in `installer/src/lib.rs`). These utilities (e.g. `installer util tplink-shell`, `installer util orbic-shell`) give users and developers interactive shell access to the device, which is essential for debugging. See the existing `UtilSubCommand` variants for examples.
+The installer gets the daemon binary path from `env!("FILE_RAYHUNTER_DAEMON")`, which is set at build time. Config installation is handled by the shared `install_config()` helper in the `connection` module, which writes the config file with the correct device name.
+
+You must also add a shell utility subcommand under `installer util` (the `UtilSubCommand` enum in `installer/src/lib.rs`), e.g. `installer util tplink-shell`, `installer util orbic-shell`. This is required -- without it, users and developers have no way to interactively debug the device. Depending on connectivity, this might be a telnet session, an ADB shell, or a serial connection. Other utilities (file transfer helpers, etc.) are optional but encouraged. See the existing `UtilSubCommand` variants for examples.
 
 Please reuse existing utilities wherever possible. Take a look at [`installer/src/tplink.rs`](https://github.com/EFForg/rayhunter/blob/main/installer/src/tplink.rs) and [`installer/src/orbic_network.rs`](https://github.com/EFForg/rayhunter/blob/main/installer/src/orbic_network.rs) for inspiration. But the structures there are still evolving, and we'll happily guide you during code review.
