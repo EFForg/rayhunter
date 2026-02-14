@@ -1,0 +1,227 @@
+# Maintenance metadata for deps.toml features.
+# Tracks who introduced each feature and current maintenance status.
+#
+# maintainer values:
+#   "core"                - actively maintained by core team
+#   "community:<user>"    - maintained by an active community contributor
+#   "unmaintained"        - original author inactive, no core team adoption
+
+[feature.telcom_parser]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.hdlc_framing]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.diag_protocol]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.diag_device]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.gsmtap_parsing]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.qmdl_recording]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.pcap_export]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.information_element]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.config_management]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.qmdl_store]
+maintainer = "core"
+introduced_by = { author = "gaykitty", pr = 481, date = "2025-07-27" }
+
+[feature.disk_space_monitoring]
+maintainer = "community:BeigeBox"
+introduced_by = { author = "BeigeBox", pr = 877, date = "2026-02-11" }
+
+[feature.analysis_writer]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.recording_lifecycle]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.web_server]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.web_frontend]
+maintainer = "unmaintained"
+introduced_by = { author = "alliraine", pr = 320, date = "2025-05-17" }
+
+[feature.analysis_harness]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.imsi_requested]
+maintainer = "core"
+introduced_by = { author = "cooperq", pr = 463, date = "2025-07-18" }
+
+[feature.connection_redirect_2g_downgrade]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.lte_sib6_7_downgrade]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.null_cipher]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.nas_null_cipher]
+maintainer = "core"
+introduced_by = { author = "cooperq", pr = 456, date = "2025-07-16" }
+
+[feature.incomplete_sib]
+maintainer = "core"
+introduced_by = { author = "cooperq", pr = 473, date = "2025-07-24" }
+
+[feature.diagnostic_analyzer]
+maintainer = "core"
+introduced_by = { author = "cooperq", pr = 859, date = "2026-02-05" }
+
+[feature.test_analyzer]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.generic_framebuffer]
+maintainer = "core"
+introduced_by = { author = "oopsbagel", pr = 471, date = "2025-07-24" }
+
+[feature.orbic_display]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.tplink_display]
+maintainer = "core"
+introduced_by = { author = "untitaker", pr = 614, date = "2025-09-23" }
+
+[feature.tplink_framebuffer_display]
+maintainer = "core"
+introduced_by = { author = "untitaker", pr = 614, date = "2025-09-23" }
+
+[feature.tplink_onebit_display]
+maintainer = "core"
+introduced_by = { author = "untitaker", pr = 614, date = "2025-09-23" }
+
+[feature.tmobile_display]
+maintainer = "core"
+introduced_by = { author = "oopsbagel", pr = 460, date = "2025-07-17" }
+
+[feature.wingtech_display]
+maintainer = "core"
+introduced_by = { author = "oopsbagel", pr = 460, date = "2025-07-17" }
+
+[feature.uz801_display]
+maintainer = "unmaintained"
+introduced_by = { author = "Tunas1337", pr = 511, date = "2025-08-03" }
+
+[feature.headless_display]
+maintainer = "core"
+introduced_by = { author = "oopsbagel", pr = 464, date = "2025-07-17" }
+
+[feature.battery_monitoring]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.orbic_battery]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.tplink_battery]
+maintainer = "unmaintained"
+introduced_by = { author = "evan-a-a", pr = 623, date = "2025-09-26" }
+
+[feature.tmobile_battery]
+maintainer = "core"
+introduced_by = { author = "oopsbagel", pr = 460, date = "2025-07-17" }
+
+[feature.wingtech_battery]
+maintainer = "core"
+introduced_by = { author = "oopsbagel", pr = 460, date = "2025-07-17" }
+
+[feature.key_input]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.wifi_client_mode]
+maintainer = "community:BeigeBox"
+introduced_by = { author = "BeigeBox", date = "2026-02-07" }
+
+[feature.ntfy_notifications]
+maintainer = "unmaintained"
+introduced_by = { author = "simonft", pr = 429, date = "2025-06-26" }
+
+[feature.battery_notifications]
+maintainer = "unmaintained"
+introduced_by = { author = "simonft", pr = 603, date = "2025-09-18" }
+
+[feature.warning_notifications]
+maintainer = "unmaintained"
+introduced_by = { author = "simonft", pr = 429, date = "2025-06-26" }
+
+[feature.rustcrypto_tls]
+maintainer = "core"
+introduced_by = { author = "untitaker", pr = 611, date = "2025-09-23" }
+
+[feature.ring_tls]
+maintainer = "core"
+introduced_by = { author = "untitaker", pr = 611, date = "2025-09-23" }
+
+[feature.embedded_graphics]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.orbic_installer]
+maintainer = "unmaintained"
+introduced_by = { author = "gaykitty", pr = 291, date = "2025-04-23" }
+
+[feature.tplink_installer]
+maintainer = "core"
+introduced_by = { author = "untitaker", pr = 443, date = "2025-07-04" }
+
+[feature.tmobile_installer]
+maintainer = "core"
+introduced_by = { author = "oopsbagel", pr = 460, date = "2025-07-17" }
+
+[feature.wingtech_installer]
+maintainer = "core"
+introduced_by = { author = "untitaker", pr = 443, date = "2025-07-04" }
+
+[feature.uz801_installer]
+maintainer = "unmaintained"
+introduced_by = { author = "Tunas1337", pr = 511, date = "2025-08-03" }
+
+[feature.pinephone_installer]
+maintainer = "core"
+introduced_by = { author = "oopsbagel", pr = 464, date = "2025-07-17" }
+
+[feature.check_cli]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", pr = 454, date = "2025-07-16" }
+
+[feature.rootshell]
+maintainer = "core"
+introduced_by = { author = "wgreenberg", date = "2024-01-01" }
+
+[feature.installer_gui]
+maintainer = "community:BeigeBox"
+introduced_by = { author = "bmw", pr = 687, date = "2025-10-31" }

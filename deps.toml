@@ -1,0 +1,426 @@
+[meta]
+version = 2
+
+# ─── Devices ───────────────────────────────────────────────────────
+
+[device.orbic]
+description = "Orbic RC400L"
+
+[device.tplink]
+description = "TP-Link M7350"
+
+[device.tmobile]
+description = "T-Mobile TMOHS1"
+
+[device.wingtech]
+description = "Wingtech CT2MHS01"
+
+[device.uz801]
+description = "UZ801"
+
+[device.pinephone]
+description = "PinePhone"
+
+# ─── Core protocol (lib crate) ────────────────────────────────────
+
+[feature.telcom_parser]
+category = "core"
+description = "Auto-generated LTE RRC parser from 3GPP ASN.1 specs"
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["telcom-parser/"]
+
+[feature.hdlc_framing]
+category = "core"
+description = "HDLC encapsulation for DIAG protocol"
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["lib/src/hdlc.rs"]
+
+[feature.diag_protocol]
+category = "core"
+description = "Qualcomm DIAG protocol serialization"
+depends_on = ["hdlc_framing"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["lib/src/diag.rs"]
+
+[feature.diag_device]
+category = "core"
+description = "DIAG device driver for reading/writing to hardware"
+depends_on = ["diag_protocol", "hdlc_framing"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["lib/src/diag_device.rs"]
+
+[feature.gsmtap_parsing]
+category = "core"
+description = "GSMTAP message parsing and type classification"
+depends_on = ["diag_protocol"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["lib/src/gsmtap.rs", "lib/src/gsmtap_parser.rs"]
+
+[feature.qmdl_recording]
+category = "core"
+description = "QMDL binary log reading and writing"
+depends_on = ["diag_protocol", "hdlc_framing"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["lib/src/qmdl.rs"]
+
+[feature.pcap_export]
+category = "core"
+description = "PCAP file generation from QMDL recordings"
+depends_on = ["diag_protocol", "gsmtap_parsing", "qmdl_recording"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["lib/src/pcap.rs"]
+
+[feature.information_element]
+category = "core"
+description = "Parsed telecom information element types (RRC, NAS)"
+depends_on = ["gsmtap_parsing", "telcom_parser"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["lib/src/analysis/information_element.rs"]
+
+# ─── Core daemon infrastructure ───────────────────────────────────
+
+[feature.config_management]
+category = "daemon"
+description = "TOML config parsing, device selection, analyzer config"
+depends_on = ["analysis_harness", "ntfy_notifications"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["daemon/src/config.rs"]
+
+[feature.qmdl_store]
+category = "daemon"
+description = "Recording store manifest, QMDL file management, recovery"
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["daemon/src/qmdl_store.rs"]
+
+[feature.disk_space_monitoring]
+category = "daemon"
+description = "Disk space checks using statvfs syscall, system stats"
+depends_on = ["qmdl_store", "battery_monitoring"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["daemon/src/stats.rs"]
+
+[feature.analysis_writer]
+category = "daemon"
+description = "Bridges lib analysis harness to daemon recording system"
+depends_on = ["analysis_harness", "qmdl_recording", "qmdl_store"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["daemon/src/analysis.rs"]
+
+[feature.recording_lifecycle]
+category = "daemon"
+description = "DiagTask managing recording start/stop, disk checks, and event dispatch"
+depends_on = ["diag_device", "qmdl_recording", "qmdl_store", "disk_space_monitoring", "analysis_writer", "ntfy_notifications"]
+runtime_deps = ["warning_notifications"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["daemon/src/diag.rs"]
+
+[feature.web_server]
+category = "daemon"
+description = "Axum HTTP API and static file serving"
+depends_on = ["qmdl_recording", "pcap_export", "qmdl_store", "config_management", "analysis_writer"]
+runtime_deps = ["recording_lifecycle"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["daemon/src/server.rs"]
+
+[feature.web_frontend]
+category = "daemon"
+description = "SvelteKit web UI"
+depends_on = ["web_server"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["daemon/web/"]
+
+# ─── Analysis (lib crate) ─────────────────────────────────────────
+
+[feature.analysis_harness]
+category = "analysis"
+description = "Analyzer trait and harness for running heuristics"
+depends_on = ["information_element", "gsmtap_parsing", "diag_protocol"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["lib/src/analysis/analyzer.rs", "lib/src/analysis/mod.rs"]
+
+[feature.imsi_requested]
+category = "analysis"
+description = "Detects suspicious IMSI/IMEI identity requests"
+depends_on = ["analysis_harness"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "analyzers.imsi_requested"
+source_files = ["lib/src/analysis/imsi_requested.rs"]
+
+[feature.connection_redirect_2g_downgrade]
+category = "analysis"
+description = "Detects forced downgrades to 2G via RRC redirect"
+depends_on = ["analysis_harness"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "analyzers.connection_redirect_2g_downgrade"
+source_files = ["lib/src/analysis/connection_redirect_downgrade.rs"]
+
+[feature.lte_sib6_7_downgrade]
+category = "analysis"
+description = "Detects broadcast SIB6/7 messages directing devices to 2G"
+depends_on = ["analysis_harness"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "analyzers.lte_sib6_and_7_downgrade"
+source_files = ["lib/src/analysis/priority_2g_downgrade.rs"]
+
+[feature.null_cipher]
+category = "analysis"
+description = "Detects unencrypted RRC layer connections"
+depends_on = ["analysis_harness"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "analyzers.null_cipher"
+source_files = ["lib/src/analysis/null_cipher.rs"]
+
+[feature.nas_null_cipher]
+category = "analysis"
+description = "Detects unencrypted NAS layer connections"
+depends_on = ["analysis_harness"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "analyzers.nas_null_cipher"
+source_files = ["lib/src/analysis/nas_null_cipher.rs"]
+
+[feature.incomplete_sib]
+category = "analysis"
+description = "Detects incomplete system information broadcasts"
+depends_on = ["analysis_harness"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "analyzers.incomplete_sib"
+source_files = ["lib/src/analysis/incomplete_sib.rs"]
+
+[feature.diagnostic_analyzer]
+category = "analysis"
+description = "Logs all decoded information elements for diagnostics"
+depends_on = ["analysis_harness"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "analyzers.diagnostic_analyzer"
+source_files = ["lib/src/analysis/diagnostic.rs"]
+
+[feature.test_analyzer]
+category = "analysis"
+description = "Test-only analyzer that alerts on every new tower"
+depends_on = ["analysis_harness"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "analyzers.test_analyzer"
+source_files = ["lib/src/analysis/test_analyzer.rs"]
+
+# ─── Display ───────────────────────────────────────────────────────
+
+[feature.generic_framebuffer]
+category = "display"
+description = "Shared framebuffer display logic (color line, gif, image)"
+devices = ["orbic", "tplink", "wingtech"]
+source_files = ["daemon/src/display/generic_framebuffer.rs"]
+
+[feature.orbic_display]
+category = "display"
+description = "Orbic 128x128 color framebuffer with full text UI"
+depends_on = ["generic_framebuffer", "embedded_graphics"]
+devices = ["orbic"]
+cargo_feature = "orbic-ui"
+source_files = ["daemon/src/display/orbic.rs"]
+
+[feature.tplink_display]
+category = "display"
+description = "TP-Link display with runtime auto-detect (framebuffer or OLED)"
+depends_on = ["tplink_framebuffer_display", "tplink_onebit_display"]
+devices = ["tplink"]
+source_files = ["daemon/src/display/tplink.rs"]
+
+[feature.tplink_framebuffer_display]
+category = "display"
+description = "TP-Link color framebuffer sub-backend"
+depends_on = ["generic_framebuffer"]
+devices = ["tplink"]
+source_files = ["daemon/src/display/tplink_framebuffer.rs"]
+
+[feature.tplink_onebit_display]
+category = "display"
+description = "TP-Link one-bit OLED sub-backend"
+devices = ["tplink"]
+source_files = ["daemon/src/display/tplink_onebit.rs"]
+
+[feature.tmobile_display]
+category = "display"
+description = "T-Mobile LED blink display"
+devices = ["tmobile"]
+source_files = ["daemon/src/display/tmobile.rs"]
+
+[feature.wingtech_display]
+category = "display"
+description = "Wingtech 160x128 color framebuffer display"
+depends_on = ["generic_framebuffer"]
+devices = ["wingtech"]
+source_files = ["daemon/src/display/wingtech.rs"]
+
+[feature.uz801_display]
+category = "display"
+description = "UZ801 LED brightness display"
+devices = ["uz801"]
+source_files = ["daemon/src/display/uz801.rs"]
+
+[feature.headless_display]
+category = "display"
+description = "No-op headless display for PinePhone"
+devices = ["pinephone"]
+source_files = ["daemon/src/display/headless.rs"]
+
+# ─── Battery ──────────────────────────────────────────────────────
+
+[feature.battery_monitoring]
+category = "battery"
+description = "Battery level/plugged-in polling and notification dispatch"
+runtime_deps = ["ntfy_notifications"]
+devices = ["orbic", "tplink", "tmobile", "wingtech"]
+source_files = ["daemon/src/battery/mod.rs"]
+
+[feature.orbic_battery]
+category = "battery"
+description = "Orbic battery sysfs driver"
+depends_on = ["battery_monitoring"]
+devices = ["orbic"]
+source_files = ["daemon/src/battery/orbic.rs"]
+
+[feature.tplink_battery]
+category = "battery"
+description = "TP-Link battery sysfs driver"
+depends_on = ["battery_monitoring"]
+devices = ["tplink"]
+source_files = ["daemon/src/battery/tplink.rs"]
+
+[feature.tmobile_battery]
+category = "battery"
+description = "T-Mobile battery sysfs driver"
+depends_on = ["battery_monitoring"]
+devices = ["tmobile"]
+source_files = ["daemon/src/battery/tmobile.rs"]
+
+[feature.wingtech_battery]
+category = "battery"
+description = "Wingtech battery sysfs driver"
+depends_on = ["battery_monitoring"]
+devices = ["wingtech"]
+source_files = ["daemon/src/battery/wingtech.rs"]
+
+# ─── Input ─────────────────────────────────────────────────────────
+
+[feature.key_input]
+category = "input"
+description = "Power button double-tap to toggle recording"
+runtime_deps = ["recording_lifecycle"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "key_input_mode"
+source_files = ["daemon/src/key_input.rs"]
+
+# ─── Network ──────────────────────────────────────────────────────
+
+[feature.wifi_client_mode]
+category = "network"
+description = "Concurrent AP+STA WiFi client on Orbic wlan1"
+devices = ["orbic"]
+cargo_feature = "orbic-ui"
+source_files = ["daemon/src/network.rs", "client-mode/scripts/wifi-client.sh"]
+
+# ─── Notifications ─────────────────────────────────────────────────
+
+[feature.ntfy_notifications]
+category = "notifications"
+description = "Push notifications via ntfy.sh"
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "ntfy_url"
+source_files = ["daemon/src/notifications.rs"]
+
+[feature.battery_notifications]
+category = "notifications"
+description = "Low-battery push notifications"
+depends_on = ["battery_monitoring", "ntfy_notifications"]
+devices = ["orbic", "tplink", "tmobile", "wingtech"]
+config_key = "enabled_notifications"
+source_files = ["daemon/src/battery/mod.rs"]
+
+[feature.warning_notifications]
+category = "notifications"
+description = "Analyzer warning push notifications"
+depends_on = ["analysis_harness", "ntfy_notifications"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+config_key = "enabled_notifications"
+source_files = ["daemon/src/diag.rs"]
+
+# ─── Build ─────────────────────────────────────────────────────────
+
+[feature.rustcrypto_tls]
+category = "build"
+description = "rustls TLS backend using rustcrypto (default)"
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+cargo_feature = "rustcrypto-tls"
+
+[feature.ring_tls]
+category = "build"
+description = "rustls TLS backend using ring (firmware builds)"
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+cargo_feature = "ring-tls"
+
+[feature.embedded_graphics]
+category = "build"
+description = "embedded-graphics crate and Silkscreen font for Orbic UI"
+devices = ["orbic"]
+cargo_feature = "orbic-ui"
+
+# ─── Installers ────────────────────────────────────────────────────
+
+[feature.orbic_installer]
+category = "installer"
+description = "Orbic USB+ADB and network installer"
+depends_on = ["rootshell"]
+devices = ["orbic"]
+source_files = ["installer/src/orbic.rs", "installer/src/orbic_network.rs", "installer/src/orbic_auth.rs"]
+
+[feature.tplink_installer]
+category = "installer"
+description = "TP-Link HTTP/SSH installer"
+devices = ["tplink"]
+source_files = ["installer/src/tplink.rs"]
+
+[feature.tmobile_installer]
+category = "installer"
+description = "T-Mobile SSH installer"
+devices = ["tmobile"]
+source_files = ["installer/src/tmobile.rs"]
+
+[feature.wingtech_installer]
+category = "installer"
+description = "Wingtech HTTP installer"
+devices = ["wingtech"]
+source_files = ["installer/src/wingtech.rs"]
+
+[feature.uz801_installer]
+category = "installer"
+description = "UZ801 HTTP installer"
+devices = ["uz801"]
+source_files = ["installer/src/uz801.rs"]
+
+[feature.pinephone_installer]
+category = "installer"
+description = "PinePhone USB+ADB installer"
+devices = ["pinephone"]
+source_files = ["installer/src/pinephone.rs"]
+
+# ─── Workspace binaries ───────────────────────────────────────────
+
+[feature.check_cli]
+category = "binary"
+description = "Offline QMDL/PCAP analysis CLI tool"
+depends_on = ["analysis_harness", "qmdl_recording", "pcap_export"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["check/src/main.rs"]
+
+[feature.rootshell]
+category = "binary"
+description = "Privilege escalation helper (runs bash as UID 0)"
+devices = ["orbic"]
+source_files = ["rootshell/src/main.rs"]
+
+[feature.installer_gui]
+category = "binary"
+description = "Cross-platform Tauri GUI installer"
+depends_on = ["orbic_installer", "tplink_installer", "tmobile_installer", "wingtech_installer", "uz801_installer", "pinephone_installer"]
+devices = ["orbic", "tplink", "tmobile", "wingtech", "uz801", "pinephone"]
+source_files = ["installer-gui/src-tauri/"]
