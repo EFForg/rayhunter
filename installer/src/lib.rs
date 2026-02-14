@@ -6,6 +6,7 @@ use env_logger::Env;
 use anyhow::bail;
 
 mod connection;
+mod moxee;
 #[cfg(not(target_os = "android"))]
 mod orbic;
 mod orbic_auth;
@@ -40,9 +41,11 @@ enum Command {
     /// Install rayhunter on the Orbic RC400L using the legacy USB+ADB-based installer.
     #[cfg(not(target_os = "android"))]
     OrbicUsb(InstallOrbic),
-    /// Install rayhunter on the Orbic RC400L or Moxee Hotspot via network.
+    /// Install rayhunter on the Orbic RC400L via network.
     #[clap(alias = "orbic-network")]
     Orbic(OrbicNetworkArgs),
+    /// Install rayhunter on the Moxee Hotspot via network.
+    Moxee(MoxeeArgs),
     /// Install rayhunter on the TMobile TMOHS1.
     Tmobile(TmobileArgs),
     /// Install rayhunter on the Uz801.
@@ -84,6 +87,11 @@ struct InstallTpLink {
     /// Overwrite config.toml even if it already exists on the device.
     #[arg(long)]
     reset_config: bool,
+
+    /// Override the data directory path. Defaults to /cache/rayhunter-data (or SD card path when
+    /// SD card is used). Must not be /data/rayhunter.
+    #[arg(long)]
+    data_dir: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -110,6 +118,35 @@ struct OrbicNetworkArgs {
     /// Overwrite config.toml even if it already exists on the device.
     #[arg(long)]
     reset_config: bool,
+
+    /// Override the data directory path. Defaults to /data/rayhunter-data.
+    /// Must not be /data/rayhunter.
+    #[arg(long)]
+    data_dir: Option<String>,
+}
+
+#[derive(Parser, Debug)]
+struct MoxeeArgs {
+    /// IP address for Moxee admin interface, if custom.
+    #[arg(long, default_value = "192.168.1.1")]
+    admin_ip: String,
+
+    /// Admin username for authentication.
+    #[arg(long, default_value = "admin")]
+    admin_username: String,
+
+    /// Admin password for authentication.
+    #[arg(long)]
+    admin_password: Option<String>,
+
+    /// Overwrite config.toml even if it already exists on the device.
+    #[arg(long)]
+    reset_config: bool,
+
+    /// Override the data directory path. Defaults to /cache/rayhunter-data.
+    /// Must not be /data/rayhunter.
+    #[arg(long)]
+    data_dir: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -245,7 +282,8 @@ async fn run(args: Args) -> Result<(), Error> {
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
         #[cfg(not(target_os = "android"))]
         Command::OrbicUsb(args) => orbic::install(args.reset_config).await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
-        Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password, args.reset_config).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
+        Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password, args.reset_config, args.data_dir).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
+        Command::Moxee(args) => moxee::install(args).await.context("\nFailed to install rayhunter on the Moxee Hotspot")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
         Command::Util(subcommand) => {
             match subcommand.command {
