@@ -283,6 +283,48 @@
                     </div>
                 </div>
 
+                <div class="border-t pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        WiFi Client Mode (Orbic only)
+                    </h3>
+                    <p class="text-xs text-gray-500">
+                        Connect the device to an existing WiFi network for internet access (e.g.
+                        notifications). The hotspot AP stays running. Leave both fields empty to
+                        disable.
+                    </p>
+
+                    <div>
+                        <label for="wifi_ssid" class="block text-sm font-medium text-gray-700 mb-1">
+                            WiFi Network Name (SSID)
+                        </label>
+                        <input
+                            id="wifi_ssid"
+                            type="text"
+                            bind:value={config.wifi_ssid}
+                            placeholder="MyWiFiNetwork"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            for="wifi_password"
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                            WiFi Password
+                        </label>
+                        <input
+                            id="wifi_password"
+                            type="password"
+                            bind:value={config.wifi_password}
+                            placeholder={config.wifi_ssid
+                                ? 'Leave blank to keep current password'
+                                : 'password'}
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                        />
+                    </div>
+                </div>
+
                 <div class="border-t pt-4 mt-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         Analyzer Heuristic Settings

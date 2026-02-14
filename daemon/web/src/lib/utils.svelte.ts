@@ -27,6 +27,8 @@ export interface Config {
     analyzers: AnalyzerConfig;
     min_space_to_start_recording_mb: number;
     min_space_to_continue_recording_mb: number;
+    wifi_ssid: string | null;
+    wifi_password: string | null;
 }
 
 export async function req(method: string, url: string, json_body?: unknown): Promise<string> {
