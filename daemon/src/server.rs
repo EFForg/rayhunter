@@ -134,7 +134,9 @@ pub async fn serve_static(
 pub async fn get_config(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Config>, (StatusCode, String)> {
-    Ok(Json(state.config.clone()))
+    let mut config = state.config.clone();
+    config.wifi_password = None;
+    Ok(Json(config))
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -157,7 +159,11 @@ pub async fn set_config(
     State(state): State<Arc<ServerState>>,
     Json(config): Json<Config>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    let config_str = toml::to_string_pretty(&config).map_err(|err| {
+    let mut config_to_write = config.clone();
+    config_to_write.wifi_ssid = None;
+    config_to_write.wifi_password = None;
+
+    let config_str = toml::to_string_pretty(&config_to_write).map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("failed to serialize config as TOML: {err}"),
@@ -171,12 +177,58 @@ pub async fn set_config(
         )
     })?;
 
+    update_wifi_creds(&config).await;
+
     // Trigger daemon restart after writing config
     state.daemon_restart_token.cancel();
     Ok((
         StatusCode::ACCEPTED,
         "wrote config and triggered restart".to_string(),
     ))
+}
+
+async fn update_wifi_creds(config: &Config) {
+    let has_ssid = config
+        .wifi_ssid
+        .as_ref()
+        .is_some_and(|s| !s.trim().is_empty());
+    let has_password = config
+        .wifi_password
+        .as_ref()
+        .is_some_and(|s| !s.trim().is_empty());
+
+    let creds_path = crate::config::WIFI_CREDS_PATH;
+
+    if !has_ssid {
+        if tokio::fs::metadata(creds_path).await.is_ok()
+            && let Err(e) = tokio::fs::remove_file(creds_path).await
+        {
+            warn!("failed to remove wifi credentials: {e}");
+        }
+    } else if has_password {
+        let contents = format!(
+            "ssid={}\npassword={}\n",
+            config.wifi_ssid.as_ref().unwrap(),
+            config.wifi_password.as_ref().unwrap()
+        );
+        if let Err(e) = write(creds_path, contents).await {
+            warn!("failed to write wifi credentials: {e}");
+        }
+    } else if let Ok(existing) = tokio::fs::read_to_string(creds_path).await {
+        let existing_password = existing
+            .lines()
+            .find_map(|line| line.strip_prefix("password="));
+        if let Some(password) = existing_password {
+            let contents = format!(
+                "ssid={}\npassword={}\n",
+                config.wifi_ssid.as_ref().unwrap(),
+                password
+            );
+            if let Err(e) = write(creds_path, contents).await {
+                warn!("failed to write wifi credentials: {e}");
+            }
+        }
+    }
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(

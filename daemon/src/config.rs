@@ -7,6 +7,8 @@ use rayhunter::analysis::analyzer::AnalyzerConfig;
 use crate::error::RayhunterError;
 use crate::notifications::NotificationType;
 
+pub const WIFI_CREDS_PATH: &str = "/data/rayhunter/wifi-creds.conf";
+
 /// The structure of a valid rayhunter configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
@@ -34,6 +36,8 @@ pub struct Config {
     pub analyzers: AnalyzerConfig,
     pub min_space_to_start_recording_mb: u64,
     pub min_space_to_continue_recording_mb: u64,
+    pub wifi_ssid: Option<String>,
+    pub wifi_password: Option<String>,
 }
 
 impl Default for Config {
@@ -51,6 +55,8 @@ impl Default for Config {
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
             min_space_to_start_recording_mb: 1,
             min_space_to_continue_recording_mb: 1,
+            wifi_ssid: None,
+            wifi_password: None,
         }
     }
 }
@@ -59,12 +65,22 @@ pub async fn parse_config<P>(path: P) -> Result<Config, RayhunterError>
 where
     P: AsRef<std::path::Path>,
 {
-    if let Ok(config_file) = tokio::fs::read_to_string(&path).await {
-        Ok(toml::from_str(&config_file).map_err(RayhunterError::ConfigFileParsingError)?)
+    let mut config = if let Ok(config_file) = tokio::fs::read_to_string(&path).await {
+        toml::from_str(&config_file).map_err(RayhunterError::ConfigFileParsingError)?
     } else {
         warn!("unable to read config file, using default config");
-        Ok(Config::default())
+        Config::default()
+    };
+
+    if let Ok(creds) = tokio::fs::read_to_string(WIFI_CREDS_PATH).await {
+        config.wifi_ssid = creds
+            .lines()
+            .find_map(|line| line.strip_prefix("ssid="))
+            .map(|s| s.to_string());
     }
+    config.wifi_password = None;
+
+    Ok(config)
 }
 
 pub struct Args {

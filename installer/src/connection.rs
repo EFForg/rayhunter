@@ -155,6 +155,28 @@ pub async fn setup_data_directory<C: DeviceConnection>(conn: &mut C, data_dir: &
     Ok(())
 }
 
+const WIFI_CREDS_PATH: &str = "/data/rayhunter/wifi-creds.conf";
+
+pub async fn install_wifi_creds<C: DeviceConnection>(
+    conn: &mut C,
+    wifi_ssid: Option<&str>,
+    wifi_password: Option<&str>,
+) -> Result<()> {
+    match (wifi_ssid, wifi_password) {
+        (Some(ssid), Some(password)) if !ssid.is_empty() && !password.is_empty() => {
+            let contents = format!("ssid={ssid}\npassword={password}\n");
+            conn.write_file(WIFI_CREDS_PATH, contents.as_bytes())
+                .await?;
+            println!("WiFi client mode credentials written");
+        }
+        (Some(_), None) | (None, Some(_)) => {
+            println!("Both --wifi-ssid and --wifi-password are required, skipping WiFi setup");
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
 /// Telnet-based connection wrapper
 pub struct TelnetConnection {
     pub addr: SocketAddr,

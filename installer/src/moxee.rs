@@ -10,6 +10,8 @@ pub async fn install(args: MoxeeArgs) -> Result<()> {
         args.admin_password,
         args.reset_config,
         data_dir,
+        args.wifi_ssid.as_deref(),
+        args.wifi_password.as_deref(),
     )
     .await
 }

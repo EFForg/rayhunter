@@ -100,6 +100,14 @@ struct InstallOrbic {
     /// Overwrite config.toml even if it already exists on the device.
     #[arg(long)]
     reset_config: bool,
+
+    /// WiFi network name to connect to (enables WiFi client mode).
+    #[arg(long)]
+    wifi_ssid: Option<String>,
+
+    /// WiFi password for the network specified by --wifi-ssid.
+    #[arg(long)]
+    wifi_password: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -124,6 +132,14 @@ struct OrbicNetworkArgs {
     /// Must not be /data/rayhunter.
     #[arg(long)]
     data_dir: Option<String>,
+
+    /// WiFi network name to connect to (enables WiFi client mode).
+    #[arg(long)]
+    wifi_ssid: Option<String>,
+
+    /// WiFi password for the network specified by --wifi-ssid.
+    #[arg(long)]
+    wifi_password: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -148,6 +164,14 @@ struct MoxeeArgs {
     /// Must not be /data/rayhunter.
     #[arg(long)]
     data_dir: Option<String>,
+
+    /// WiFi network name to connect to (enables WiFi client mode).
+    #[arg(long)]
+    wifi_ssid: Option<String>,
+
+    /// WiFi password for the network specified by --wifi-ssid.
+    #[arg(long)]
+    wifi_password: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -282,8 +306,8 @@ async fn run(args: Args) -> Result<(), Error> {
         Command::Pinephone(_) => pinephone::install().await
             .context("Failed to install rayhunter on the Pinephone's Quectel modem")?,
         #[cfg(not(target_os = "android"))]
-        Command::OrbicUsb(args) => orbic::install(args.reset_config).await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
-        Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password, args.reset_config, args.data_dir).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
+        Command::OrbicUsb(args) => orbic::install(args.reset_config, args.wifi_ssid.as_deref(), args.wifi_password.as_deref()).await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
+        Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password, args.reset_config, args.data_dir, args.wifi_ssid.as_deref(), args.wifi_password.as_deref()).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Moxee(args) => moxee::install(args).await.context("\nFailed to install rayhunter on the Moxee Hotspot")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
         Command::Util(subcommand) => {
