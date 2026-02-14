@@ -158,13 +158,7 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Re
         let mut conn = AdbConnection {
             device: &mut adb_device,
         };
-        install_config(
-            &mut conn,
-            "/data/rayhunter/config.toml",
-            "orbic",
-            reset_config,
-        )
-        .await?;
+        install_config(&mut conn, "orbic", reset_config).await?;
     }
 
     install_file(

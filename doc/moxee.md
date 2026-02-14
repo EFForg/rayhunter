@@ -40,10 +40,13 @@ According to [FCC ID 2APQU-K779HSDL](https://fcc.report/FCC-ID/2APQU-K779HSDL), 
 Connect to the hotspot's network using WiFi or USB tethering and run:
 
 ```sh
-./installer orbic --admin-password 'mypassword'
+./installer moxee --admin-password 'mypassword'
 ```
 
 The password (in place of `mypassword`) is under the battery.
+
+`./installer moxee` is almost the same as `./installer orbic`, it just comes
+with slightly better defaults that will give you more space for recordings.
 
 ## Obtaining a shell
 
