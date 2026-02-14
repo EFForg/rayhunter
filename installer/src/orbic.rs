@@ -199,7 +199,7 @@ async fn setup_rayhunter(
 
     let rayhunter_daemon_init = RAYHUNTER_DAEMON_INIT.replace(
         "#RAYHUNTER-PRESTART",
-        "pkill -f start_qt_daemon 2>/dev/null || true; sleep 1; pkill -f qt_daemon 2>/dev/null || true\n    sh /data/rayhunter/scripts/wifi-client.sh start 2>/dev/null &",
+        "pkill -f start_qt_daemon 2>/dev/null || true; sleep 1; pkill -f qt_daemon 2>/dev/null || true\n    printf '#!/bin/sh\\nwhile true; do sleep 3600; done\\n' > /tmp/daemon-stub\n    chmod 755 /tmp/daemon-stub\n    mount --bind /tmp/daemon-stub /usr/bin/dmclient 2>/dev/null || true\n    mount --bind /tmp/daemon-stub /usr/bin/upgrade 2>/dev/null || true\n    kill -9 $(pidof dmclient) 2>/dev/null || true\n    kill -9 $(pidof upgrade) 2>/dev/null || true\n    sh /data/rayhunter/scripts/wifi-client.sh start 2>/dev/null &",
     );
     install_file(
         &mut adb_device,
