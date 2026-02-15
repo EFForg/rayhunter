@@ -93,7 +93,7 @@ pub async fn telnet_send_file(
         let handle = tokio::spawn(async move {
             telnet_send_command_with_output(
                 addr,
-                &format!("nc -l -p 8081 >{filename}.tmp"),
+                &format!("nc -l -p 8081 2>&1 >{filename}.tmp"),
                 wait_for_prompt,
             )
             .await
@@ -121,7 +121,7 @@ pub async fn telnet_send_file(
             print!("attempt {attempts}... ");
         }
 
-        {
+        let send_result: Result<()> = async {
             let mut stream = stream?;
             stream.write_all(payload).await?;
 
@@ -134,11 +134,20 @@ pub async fn telnet_send_file(
             // application buffers here.
             sleep(Duration::from_millis(1000)).await;
 
-            // ensure that stream is dropped before we wait for nc to terminate.
-            drop(stream);
+            Ok(())
+        }
+        .await;
+
+        let nc_output = handle.await??;
+
+        if let Err(e) = send_result {
+            bail!(
+                "Failed to send data to nc: {e}. nc output: '{}'",
+                nc_output.trim()
+            );
         }
 
-        handle.await??
+        nc_output
     };
 
     let checksum = md5::compute(payload);
