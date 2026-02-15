@@ -292,5 +292,9 @@ pub async fn shell(admin_ip: &str, admin_password: &str) -> Result<()> {
     wait_for_telnet(addr).await?;
     println!("ok");
 
+    eprintln!(
+        "This terminal is fairly limited. The shell prompt may not be visible, but it still accepts commands."
+    );
+
     interactive_shell(admin_ip, SHELL_PORT, false).await
 }
