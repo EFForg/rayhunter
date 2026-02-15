@@ -102,7 +102,7 @@ pub trait GenericFramebuffer: Send + 'static {
             resized_img = img;
         }
         let img_rgba8 = resized_img.as_rgba8().unwrap();
-        let mut buf = Vec::new();
+        let mut buf = Vec::with_capacity((height * width).try_into().unwrap());
         for y in 0..height {
             for x in 0..width {
                 let px = img_rgba8.get_pixel(x, y);
@@ -145,7 +145,7 @@ pub trait GenericFramebuffer: Send + 'static {
 
     async fn draw_patterned_line(&mut self, color: Color, height: u32, pattern: LinePattern) {
         let width = self.dimensions().width;
-        let mut buffer = Vec::new();
+        let mut buffer = Vec::with_capacity((height * width).try_into().unwrap());
 
         for _row in 0..height {
             for col in 0..width {

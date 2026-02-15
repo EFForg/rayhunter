@@ -28,7 +28,7 @@ impl GenericFramebuffer for Framebuffer {
     }
 
     async fn write_buffer(&mut self, buffer: Vec<(u8, u8, u8)>) {
-        let mut raw_buffer = Vec::new();
+        let mut raw_buffer = Vec::with_capacity(buffer.len() * 2);
         for (r, g, b) in buffer {
             let mut rgb565: u16 = (r as u16 & 0b11111000) << 8;
             rgb565 |= (g as u16 & 0b11111100) << 3;
