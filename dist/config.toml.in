@@ -34,6 +34,13 @@ min_space_to_start_recording_mb = 1
 # Minimum free space (MB) to continue recording (stops if below this)
 min_space_to_continue_recording_mb = 1
 
+# WiFi Client Mode (Orbic only)
+# Set both wifi_ssid and wifi_password to connect the device to an existing WiFi network.
+# This enables internet access for notifications while keeping the hotspot AP running.
+# Leave unset or empty to disable.
+#wifi_ssid = ""
+#wifi_password = ""
+
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics
 # See https://github.com/EFForg/rayhunter/blob/main/doc/heuristics.md for details

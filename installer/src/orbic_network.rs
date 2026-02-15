@@ -8,7 +8,7 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{TelnetConnection, install_config};
+use crate::connection::{TelnetConnection, install_config, install_wifi_creds};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
 use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
@@ -147,6 +147,8 @@ pub async fn install(
     admin_username: String,
     admin_password: Option<String>,
     reset_config: bool,
+    wifi_ssid: Option<&str>,
+    wifi_password: Option<&str>,
 ) -> Result<()> {
     let Some(admin_password) = admin_password else {
         eprintln!(
@@ -170,7 +172,7 @@ pub async fn install(
     wait_for_telnet(&admin_ip).await?;
     println!("done");
 
-    setup_rayhunter(&admin_ip, reset_config).await
+    setup_rayhunter(&admin_ip, reset_config, wifi_ssid, wifi_password).await
 }
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
@@ -194,9 +196,16 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
     Ok(())
 }
 
-async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
+async fn setup_rayhunter(
+    admin_ip: &str,
+    reset_config: bool,
+    wifi_ssid: Option<&str>,
+    wifi_password: Option<&str>,
+) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
+    let wpa_supplicant_bin = include_bytes!(env!("FILE_WPA_SUPPLICANT"));
+    let wpa_cli_bin = include_bytes!(env!("FILE_WPA_CLI"));
 
     // Remount filesystem as read-write to allow modifications
     // This is really only necessary for the Moxee Hotspot
@@ -208,7 +217,13 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
     )
     .await?;
 
-    telnet_send_command(addr, "mkdir -p /data/rayhunter", "exit code 0", false).await?;
+    telnet_send_command(
+        addr,
+        "mkdir -p /data/rayhunter/scripts /data/rayhunter/bin",
+        "exit code 0",
+        false,
+    )
+    .await?;
 
     telnet_send_file(
         addr,
@@ -217,6 +232,21 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
         false,
     )
     .await?;
+    telnet_send_file(
+        addr,
+        "/data/rayhunter/scripts/wifi-client.sh",
+        include_bytes!("../../client-mode/scripts/wifi-client.sh"),
+        false,
+    )
+    .await?;
+    telnet_send_file(
+        addr,
+        "/data/rayhunter/bin/wpa_supplicant",
+        wpa_supplicant_bin,
+        false,
+    )
+    .await?;
+    telnet_send_file(addr, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin, false).await?;
 
     let mut conn = TelnetConnection::new(addr, false);
     install_config(
@@ -226,11 +256,16 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
         reset_config,
     )
     .await?;
+    install_wifi_creds(&mut conn, wifi_ssid, wifi_password).await?;
 
+    let rayhunter_daemon_init = RAYHUNTER_DAEMON_INIT.replace(
+        "#RAYHUNTER-PRESTART",
+        "pkill -f start_qt_daemon 2>/dev/null || true; sleep 1; pkill -f qt_daemon 2>/dev/null || true\n    printf '#!/bin/sh\\nwhile true; do sleep 3600; done\\n' > /tmp/daemon-stub\n    chmod 755 /tmp/daemon-stub\n    mount --bind /tmp/daemon-stub /usr/bin/dmclient 2>/dev/null || true\n    mount --bind /tmp/daemon-stub /usr/bin/upgrade 2>/dev/null || true\n    kill -9 $(pidof dmclient) 2>/dev/null || true\n    kill -9 $(pidof upgrade) 2>/dev/null || true\n    sh /data/rayhunter/scripts/wifi-client.sh start 2>/dev/null &",
+    );
     telnet_send_file(
         addr,
         "/etc/init.d/rayhunter_daemon",
-        RAYHUNTER_DAEMON_INIT.as_bytes(),
+        rayhunter_daemon_init.as_bytes(),
         false,
     )
     .await?;
@@ -245,7 +280,7 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
 
     telnet_send_command(
         addr,
-        "chmod +x /data/rayhunter/rayhunter-daemon",
+        "chmod +x /data/rayhunter/rayhunter-daemon /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli",
         "exit code 0",
         false,
     )
