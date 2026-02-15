@@ -322,7 +322,7 @@ jobs:
           targets: armv7-unknown-linux-musleabihf
       - uses: Swatinem/rust-cache@v2
       - name: Install ARM cross-compilation toolchain
-        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf upx-ucl
       - name: Build rayhunter-daemon (armv7)
         run: |
           pushd daemon/web
@@ -338,10 +338,20 @@ jobs:
           #
           # https://github.com/rust-lang/cargo/issues/4463
           CC_armv7_unknown_linux_musleabihf=arm-linux-gnueabihf-gcc cargo build-daemon-firmware
+      - name: Create UPX-compressed daemon for storage-constrained devices
+        run: |
+          cp target/armv7-unknown-linux-musleabihf/firmware/rayhunter-daemon \
+             target/armv7-unknown-linux-musleabihf/firmware/rayhunter-daemon-compressed
+          upx --best target/armv7-unknown-linux-musleabihf/firmware/rayhunter-daemon-compressed
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-daemon
           path: target/armv7-unknown-linux-musleabihf/firmware/rayhunter-daemon
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rayhunter-daemon-compressed
+          path: target/armv7-unknown-linux-musleabihf/firmware/rayhunter-daemon-compressed
           if-no-files-found: error
 
   build_rust_installer:
@@ -540,6 +550,19 @@ jobs:
       - build_rootshell
       - build_rayhunter
       - build_rust_installer
+    env:
+      # Note included in release ZIP for users choosing between daemon variants
+      DAEMON_README: |
+        This release includes two builds of rayhunter-daemon:
+
+        rayhunter-daemon/
+          The standard build. Use this unless you are running out of storage.
+
+        rayhunter-daemon-compressed/
+          A UPX-compressed build for devices with extreme storage constraints
+          (such as the Moxee, which has less than 8MB of usable space). The
+          tradeoff is slower startup time, since the binary must decompress
+          itself into memory before it can run.
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -556,7 +579,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
       - name: Fix executable permissions on binaries
-        run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon/rayhunter-daemon
+        run: chmod +x installer-*/installer rayhunter-check-*/rayhunter-check rayhunter-daemon/rayhunter-daemon rayhunter-daemon-compressed/rayhunter-daemon-compressed
       - name: Get Rayhunter version
         id: get_version
         run: echo "VERSION=$(grep '^version' daemon/Cargo.toml | head -n 1 | cut -d'"' -f2)" >> $GITHUB_ENV
@@ -571,6 +594,11 @@ jobs:
           else
             mv installer-$platform/installer "$dest"/installer
           fi
+          # Include both standard and compressed daemon builds
+          mkdir -p "$dest/rayhunter-daemon-compressed"
+          cp rayhunter-daemon-compressed/rayhunter-daemon-compressed \
+             "$dest/rayhunter-daemon-compressed/rayhunter-daemon"
+          echo "$DAEMON_README" > "$dest/DAEMON-VARIANTS.txt"
           cp -r rayhunter-check-* rayhunter-daemon dist/scripts "$dest"/
           zip -r "$dest.zip" "$dest"
           sha256sum "$dest.zip" > "$dest.zip.sha256"
