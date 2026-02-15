@@ -26,7 +26,7 @@ You can access this UI in one of two ways:
 
 * **Connect over USB (TP-Link):** Plug in the TP-Link and use USB tethering to establish a network connection. ADB support can be enabled on the device, but the installer won't do it for you.
 
-> **_NOTE:_** When downloading session files, "Insecure download blocked" warnings can safely be ignored - this is due to Rayhunter not using HTTPS.
+> **_NOTE:_** When downloading recordings, "Insecure download blocked" warnings can safely be ignored - this is due to Rayhunter not using HTTPS.
 
 ## Key shortcuts
 
