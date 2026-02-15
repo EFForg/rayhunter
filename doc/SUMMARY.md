@@ -22,3 +22,4 @@
   - [Wingtech CT2MHS01](./wingtech-ct2mhs01.md)
   - [PinePhone and PinePhone Pro](./pinephone.md)
   - [Moxee Hotspot](./moxee.md)
+  - [ZTE MF920V](./zte-mf920v.md)

@@ -20,6 +20,7 @@ mod util;
 #[cfg(not(target_os = "android"))]
 mod uz801;
 mod wingtech;
+mod zte;
 
 use crate::output::eprintln;
 
@@ -55,6 +56,8 @@ enum Command {
     Tplink(InstallTpLink),
     /// Install rayhunter on the Wingtech CT2MHS01.
     Wingtech(WingtechArgs),
+    /// Install rayhunter on the ZTE MF920V (Vodafone R218).
+    Zte(ZteArgs),
     /// Developer utilities.
     Util(Util),
 }
@@ -155,6 +158,8 @@ enum UtilSubCommand {
     OrbicStartTelnet(OrbicNetworkArgs),
     /// Root the Orbic and open an interactive shell.
     OrbicShell(OrbicNetworkArgs),
+    /// Root the ZTE and open an interactive shell.
+    ZteShell(ZteArgs),
     /// Send a file to the TP-Link device over telnet.
     ///
     /// Before running this utility, you need to make telnet accessible with `installer util
@@ -226,6 +231,21 @@ struct WingtechArgs {
 }
 
 #[derive(Parser, Debug)]
+struct ZteArgs {
+    /// IP address for ZTE admin interface, if custom.
+    #[arg(long, default_value = "192.168.0.1")]
+    admin_ip: String,
+
+    /// Admin password for authentication.
+    #[arg(long)]
+    admin_password: String,
+
+    /// Overwrite config.toml even if it already exists on the device.
+    #[arg(long)]
+    reset_config: bool,
+}
+
+#[derive(Parser, Debug)]
 struct Serial {
     #[arg(long)]
     root: bool,
@@ -247,6 +267,7 @@ async fn run(args: Args) -> Result<(), Error> {
         Command::OrbicUsb(args) => orbic::install(args.reset_config).await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
         Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password, args.reset_config).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
+        Command::Zte(args) => zte::install(args).await.context("\nFailed to install rayhunter on the ZTE MF920V")?,
         Command::Util(subcommand) => {
             match subcommand.command {
             #[cfg(not(target_os = "android"))]
@@ -295,6 +316,7 @@ async fn run(args: Args) -> Result<(), Error> {
             UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
             UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\nFailed to start telnet on the Orbic RC400L")?,
             UtilSubCommand::OrbicShell(args) => orbic_network::shell(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\nFailed to open shell on Orbic RC400L")?,
+            UtilSubCommand::ZteShell(args) => zte::shell(&args.admin_ip, &args.admin_password).await.context("\nFailed to open shell on ZTE MF920V")?,
         }
         }
     }
