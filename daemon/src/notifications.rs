@@ -19,7 +19,8 @@ pub enum NotificationError {
 }
 
 /// Enum of valid notification types
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub enum NotificationType {
     Warning,
     LowBattery,

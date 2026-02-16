@@ -8,8 +8,9 @@ use crate::error::RayhunterError;
 use crate::notifications::NotificationType;
 
 /// The structure of a valid rayhunter configuration
-#[derive(Debug, Clone, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct Config {
     /// Path to store QMDL files
     pub qmdl_store_path: String,

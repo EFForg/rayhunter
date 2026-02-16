@@ -18,7 +18,7 @@ use tokio_util::io::ReaderStream;
 // Streams a pcap file chunk-by-chunk to the client by reading the QMDL data
 // written so far. This is done by spawning a thread which streams chunks of
 // pcap data to a channel that's piped to the client.
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/pcap/{name}",
     tag = "Recordings",
@@ -32,7 +32,7 @@ use tokio_util::io::ReaderStream;
     ),
     summary = "Download a PCAP file",
     description = "Stream a PCAP file to a client in chunks by converting the QMDL data for file {name} written so far."
-)]
+))]
 pub async fn get_pcap(
     State(state): State<Arc<ServerState>>,
     Path(mut qmdl_name): Path<String>,

@@ -46,15 +46,16 @@ pub struct Manifest {
 }
 
 /// The structure of an entry in the QMDL manifest table
-#[derive(Deserialize, Serialize, Clone, PartialEq, Debug, utoipa::ToSchema)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct ManifestEntry {
     /// The name of the entry
     pub name: String,
     /// The system time when recording began
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub start_time: DateTime<Local>,
     /// The system time when the last message was recorded to the file
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub last_message_time: Option<DateTime<Local>>,
     /// The size of the QMDL file in bytes
     pub qmdl_size_bytes: usize,

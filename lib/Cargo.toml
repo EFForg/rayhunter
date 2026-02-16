@@ -4,10 +4,12 @@ version = "0.10.1"
 edition = "2024"
 description = "Realtime cellular data decoding and analysis for IMSI catcher detection"
 
-
 [lib]
 name = "rayhunter"
 path = "src/lib.rs"
+
+[features]
+apidocs = ["dep:utoipa"]
 
 [dependencies]
 bytes = "1.11.1"
@@ -27,6 +29,6 @@ futures = { version = "0.3.30", default-features = false }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0"
 num_enum = "0.7.4"
-utoipa = "5.4.0"
+utoipa = { version = "5.4.0", optional = true }
 
 [dev-dependencies]

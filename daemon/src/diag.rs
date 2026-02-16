@@ -17,9 +17,9 @@ use tokio::sync::{RwLock, oneshot};
 use tokio_stream::wrappers::LinesStream;
 use tokio_util::task::TaskTracker;
 
-use rayhunter::analysis::analyzer::{
-    AnalysisLineNormalizer, AnalyzerConfig, EventType, ReportMetadata,
-};
+#[cfg(feature = "apidocs")]
+use rayhunter::analysis::analyzer::ReportMetadata;
+use rayhunter::analysis::analyzer::{AnalysisLineNormalizer, AnalyzerConfig, EventType};
 use rayhunter::diag::{DataType, MessagesContainer};
 use rayhunter::diag_device::DiagDevice;
 use rayhunter::qmdl::QmdlWriter;
@@ -307,7 +307,7 @@ pub fn run_diag_read_thread(
 }
 
 /// Start recording API for web thread
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/start-recording",
     tag = "Recordings",
@@ -318,7 +318,7 @@ pub fn run_diag_read_thread(
     ),
     summary = "Start recording",
     description = "Begin a new data capture."
-)]
+))]
 pub async fn start_recording(
     State(state): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
@@ -341,7 +341,7 @@ pub async fn start_recording(
 }
 
 /// Stop recording API for web thread
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/stop-recording",
     tag = "Recordings",
@@ -352,7 +352,7 @@ pub async fn start_recording(
     ),
     summary = "Stop recording",
     description = "Stop current data capture."
-)]
+))]
 pub async fn stop_recording(
     State(state): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
@@ -372,7 +372,7 @@ pub async fn stop_recording(
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/delete-recording/{name}",
     tag = "Recordings",
@@ -387,7 +387,7 @@ pub async fn stop_recording(
     ),
     summary = "Delete recording",
     description = "Remove data capture file named {name}."
-)]
+))]
 pub async fn delete_recording(
     State(state): State<Arc<ServerState>>,
     Path(qmdl_name): Path<String>,
@@ -427,7 +427,7 @@ pub async fn delete_recording(
     }
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/delete-all-recordings",
     tag = "Recordings",
@@ -438,7 +438,7 @@ pub async fn delete_recording(
     ),
     summary = "Delete all recordings",
     description = "Remove all saved data capture files."
-)]
+))]
 pub async fn delete_all_recordings(
     State(state): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
@@ -470,7 +470,7 @@ pub async fn delete_all_recordings(
     }
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/analysis-report/{name}",
     tag = "Recordings",
@@ -484,7 +484,7 @@ pub async fn delete_all_recordings(
     ),
     summary = "Analysis report",
     description = "Download processed analysis report for QMDL file {name}, as well as the types (and versions) of analyzers used."
-)]
+))]
 pub async fn get_analysis_report(
     State(state): State<Arc<ServerState>>,
     Path(qmdl_name): Path<String>,

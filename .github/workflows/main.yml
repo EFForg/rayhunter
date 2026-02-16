@@ -24,7 +24,7 @@ jobs:
       daemon_changed: ${{ steps.files_changed.outputs.daemon_count != '0' }}
       daemon_needed: ${{ steps.files_changed.outputs.daemon_count != '0' || steps.files_changed.outputs.installer_build != '0' }}
       web_changed: ${{ steps.files_changed.outputs.web_count != '0' }}
-      docs_changed: ${{ steps.files_changed.outputs.docs_count != '0' }}
+      docs_changed: ${{ steps.files_changed.outputs.docs_count != '0' || steps.files_changed.outputs.daemon_count != '0' }}
       installer_changed: ${{ steps.files_changed.outputs.installer_count != '0' }}
       installer_gui_changed: ${{ steps.files_changed.outputs.installer_gui_count != '0' }}
       rootshell_needed: ${{ steps.files_changed.outputs.rootshell_count != '0' || steps.files_changed.outputs.installer_build != '0' }}
@@ -582,7 +582,7 @@ jobs:
           if-no-files-found: error
 
   openapi_build:
-    if: needs.files_changed.outputs.daemon_needed == 'true'
+    if: needs.files_changed.outputs.docs_changed == 'true'
     needs:
       - files_changed
     permissions:
@@ -596,13 +596,11 @@ jobs:
         with:
           targets: armv7-unknown-linux-musleabihf
       - uses: Swatinem/rust-cache@v2
-      - name: Install ARM cross-compilation toolchain
-        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf
       - name: Build rayhunter-daemon openapi docs
         run: |
           mkdir -p daemon/web/build
           touch daemon/web/build/{favicon.png,index.html.gz,rayhunter_orca_only.png,rayhunter_text.png}
-          cargo run --bin gen_api -- ./rayhunter-openapi.json
+          cargo run --bin gen_api --features apidocs -- ./rayhunter-openapi.json
       - name: Make swagger folder
         run: |
           mkdir api-docs

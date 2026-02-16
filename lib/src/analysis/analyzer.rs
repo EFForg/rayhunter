@@ -18,8 +18,9 @@ use super::{
 };
 
 /// A list of booleans which stores information about which analyzers are enabled
-#[derive(Debug, Clone, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct AnalyzerConfig {
     pub diagnostic_analyzer: bool,
     pub connection_redirect_2g_downgrade: bool,
@@ -51,7 +52,8 @@ pub const REPORT_VERSION: u32 = 2;
 /// The severity level of an event.
 ///
 /// Informational does not result in any alert on the display.
-#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, utoipa::ToSchema)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub enum EventType {
     Informational = 0,
     Low = 1,
@@ -142,7 +144,8 @@ pub trait Analyzer {
 }
 
 /// Specific information on a given analyzer
-#[derive(Serialize, Deserialize, Debug, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct AnalyzerMetadata {
     /// The analyzer name
     pub name: String,
@@ -153,9 +156,10 @@ pub struct AnalyzerMetadata {
 }
 
 /// The metadata for an analyzed report
-#[derive(Serialize, Deserialize, Debug, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(default)]
 #[derive(Default)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct ReportMetadata {
     /// A vector array of which analyzers were in use for the analysis
     pub analyzers: Vec<AnalyzerMetadata>,

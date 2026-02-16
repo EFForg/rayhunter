@@ -14,7 +14,8 @@ use serde::Serialize;
 use tokio::process::Command;
 
 /// Structure of device system statistics
-#[derive(Debug, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Serialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct SystemStats {
     pub disk_stats: DiskStats,
     pub memory_stats: MemoryStats,
@@ -42,7 +43,8 @@ impl SystemStats {
 }
 
 /// Device storage information
-#[derive(Debug, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Serialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct DiskStats {
     /// The partition to which the daemon is installed
     partition: String,
@@ -88,7 +90,8 @@ impl DiskStats {
 }
 
 /// Device memory information
-#[derive(Debug, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Serialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct MemoryStats {
     /// The total memory available on the device
     total: String,
@@ -147,7 +150,7 @@ fn humanize_kb(kb: usize) -> String {
     format!("{:.1}M", kb as f64 / 1024.0)
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/system-stats",
     tag = "Statistics",
@@ -157,7 +160,7 @@ fn humanize_kb(kb: usize) -> String {
     ),
     summary = "Get system info",
     description = "Display system/device statistics."
-)]
+))]
 pub async fn get_system_stats(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<SystemStats>, (StatusCode, String)> {
@@ -175,7 +178,8 @@ pub async fn get_system_stats(
 }
 
 /// QMDL manifest information
-#[derive(Serialize, utoipa::ToSchema)]
+#[derive(Serialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct ManifestStats {
     /// A vector containing the names of the QMDL files
     pub entries: Vec<ManifestEntry>,
@@ -183,7 +187,7 @@ pub struct ManifestStats {
     pub current_entry: Option<ManifestEntry>,
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/qmdl-manifest",
     tag = "Statistics",
@@ -192,7 +196,7 @@ pub struct ManifestStats {
     ),
     summary = "QMDL Manifest",
     description = "List QMDL files available on the device and some of their basic statistics."
-)]
+))]
 pub async fn get_qmdl_manifest(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<ManifestStats>, (StatusCode, String)> {
@@ -205,7 +209,7 @@ pub async fn get_qmdl_manifest(
     }))
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/log",
     tag = "Statistics",
@@ -215,7 +219,7 @@ pub async fn get_qmdl_manifest(
     ),
     summary = "Display log",
     description = "Download the current device log in UTF-8 plaintext."
-)]
+))]
 pub async fn get_log() -> Result<String, (StatusCode, String)> {
     tokio::fs::read_to_string("/data/rayhunter/rayhunter.log")
         .await

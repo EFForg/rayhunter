@@ -1,4 +1,3 @@
-use utoipa::OpenApi;
 pub mod analysis;
 pub mod battery;
 pub mod config;
@@ -12,7 +11,11 @@ pub mod qmdl_store;
 pub mod server;
 pub mod stats;
 
+#[cfg(feature = "apidocs")]
+use utoipa::OpenApi;
+
 // Add anotated paths to api docs
+#[cfg(feature = "apidocs")]
 #[derive(OpenApi)]
 #[openapi(
     info(
@@ -60,6 +63,7 @@ pub mod stats;
 )]
 pub struct ApiDocs;
 
+#[cfg(feature = "apidocs")]
 impl ApiDocs {
     pub fn generate() -> String {
         ApiDocs::openapi().to_pretty_json().unwrap()

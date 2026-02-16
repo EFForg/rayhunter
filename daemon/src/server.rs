@@ -39,7 +39,7 @@ pub struct ServerState {
     pub ui_update_sender: Option<Sender<DisplayState>>,
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/qmdl/{name}",
     tag = "Recordings",
@@ -53,7 +53,7 @@ pub struct ServerState {
     ),
     summary = "Download a QMDL file",
     description = "Stream the QMDL file {name} to the client."
-)]
+))]
 pub async fn get_qmdl(
     State(state): State<Arc<ServerState>>,
     Path(qmdl_name): Path<String>,
@@ -121,7 +121,7 @@ pub async fn serve_static(
     }
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/config",
     tag = "Configuration",
@@ -130,14 +130,14 @@ pub async fn serve_static(
     ),
     summary = "Get config",
     description = "Show the running configuration for Rayhunter."
-)]
+))]
 pub async fn get_config(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Config>, (StatusCode, String)> {
     Ok(Json(state.config.clone()))
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/config",
     tag = "Configuration",
@@ -152,7 +152,7 @@ pub async fn get_config(
     ),
     summary = "Set config",
     description = "Write a new configuration for Rayhunter and trigger a restart."
-)]
+))]
 pub async fn set_config(
     State(state): State<Arc<ServerState>>,
     Json(config): Json<Config>,
@@ -179,7 +179,7 @@ pub async fn set_config(
     ))
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/test-notification",
     tag = "Configuration",
@@ -190,7 +190,7 @@ pub async fn set_config(
     ),
     summary = "Test ntfy notification",
     description = "Send a test notification to the ntfy_url in the running configuration for Rayhunter."
-)]
+))]
 pub async fn test_notification(
     State(state): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
@@ -226,26 +226,28 @@ pub async fn test_notification(
 }
 
 /// Response for GET /api/time
-#[derive(Serialize, utoipa::ToSchema)]
+#[derive(Serialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct TimeResponse {
     /// The raw system time (without clock offset)
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub system_time: DateTime<Local>,
     /// The adjusted time (system time + offset)
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub adjusted_time: DateTime<Local>,
     /// The current offset in seconds
     pub offset_seconds: i64,
 }
 
 /// Request for POST /api/time-offset
-#[derive(Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct SetTimeOffsetRequest {
     /// The offset to set, in seconds
     pub offset_seconds: i64,
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/time",
     tag = "Configuration",
@@ -254,7 +256,7 @@ pub struct SetTimeOffsetRequest {
     ),
     summary = "Get time",
     description = "Get the current time and offset (in seconds) of the device."
-)]
+))]
 pub async fn get_time() -> Json<TimeResponse> {
     let system_time = Local::now();
     let adjusted_time = rayhunter::clock::get_adjusted_now();
@@ -268,7 +270,7 @@ pub async fn get_time() -> Json<TimeResponse> {
     })
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/time-offset",
     tag = "Configuration",
@@ -280,13 +282,13 @@ pub async fn get_time() -> Json<TimeResponse> {
     ),
     summary = "Set time offset",
     description = "Set the difference (in seconds) between the system time and the adjusted time for Rayhunter."
-)]
+))]
 pub async fn set_time_offset(Json(req): Json<SetTimeOffsetRequest>) -> StatusCode {
     rayhunter::clock::set_offset(chrono::TimeDelta::seconds(req.offset_seconds));
     StatusCode::OK
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/zip/{name}",
     tag = "Recordings",
@@ -300,7 +302,7 @@ pub async fn set_time_offset(Json(req): Json<SetTimeOffsetRequest>) -> StatusCod
     ),
     summary = "Download a ZIP file",
     description = "Stream a ZIP file to the client which contains the QMDL file {name} and a PCAP generated from the same file."
-)]
+))]
 pub async fn get_zip(
     State(state): State<Arc<ServerState>>,
     Path(entry_name): Path<String>,
@@ -392,7 +394,7 @@ pub async fn get_zip(
     Ok((headers, body).into_response())
 }
 
-#[utoipa::path(
+#[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/debug/display-state",
     tag = "Configuration",
@@ -406,7 +408,7 @@ pub async fn get_zip(
     ),
     summary = "Set display state",
     description = "Change the display state (color bar or otherwise) of the device for debugging purposes."
-)]
+))]
 pub async fn debug_set_display_state(
     State(state): State<Arc<ServerState>>,
     Json(display_state): Json<DisplayState>,
