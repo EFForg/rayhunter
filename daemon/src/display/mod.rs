@@ -12,7 +12,9 @@ pub mod tplink_onebit;
 pub mod uz801;
 pub mod wingtech;
 
+/// A list of available display states
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub enum DisplayState {
     /// We're recording but no warning has been found yet.
     Recording,
