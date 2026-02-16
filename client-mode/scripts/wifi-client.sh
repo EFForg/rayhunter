@@ -9,8 +9,17 @@ LOG="/tmp/wifi-client.log"
 exec > "$LOG" 2>&1
 
 CRED_FILE="/data/rayhunter/wifi-creds.conf"
-WPA_BIN="/data/rayhunter/bin/wpa_supplicant"
 WPA_CONF="/tmp/wpa_sta.conf"
+
+# Auto-detect wpa_supplicant location (Moxee uses /cache, Orbic uses /data)
+if [ -x "/cache/rayhunter/bin/wpa_supplicant" ]; then
+    WPA_BIN="/cache/rayhunter/bin/wpa_supplicant"
+elif [ -x "/data/rayhunter/bin/wpa_supplicant" ]; then
+    WPA_BIN="/data/rayhunter/bin/wpa_supplicant"
+else
+    echo "wpa_supplicant not found in /cache/rayhunter/bin or /data/rayhunter/bin"
+    exit 1
+fi
 WPA_PID="/tmp/wpa_sta.pid"
 DHCP_PID="/tmp/udhcpc_wlan1.pid"
 IFACE="wlan1"
@@ -109,7 +118,7 @@ WPAEOF
     iptables -I INPUT -i "$IFACE" -j ACCEPT
     iptables -I FORWARD -i "$IFACE" -j ACCEPT
 
-    # Block stock Orbic daemons from phoning home (dmclient, upgrade, etc.)
+    # Block stock daemons from phoning home (dmclient, upgrade, etc.)
     # Allow only: replies to incoming connections, DHCP renewal, DNS, and HTTPS
     # (needed for ntfy notifications).
     iptables -A OUTPUT -o "$IFACE" -m state --state ESTABLISHED,RELATED -j ACCEPT
@@ -134,7 +143,7 @@ WPAEOF
     ip route show
 
     echo "Internet test:"
-    wget -q -O /dev/null http://detectportal.firefox.com/success.txt && echo "OK" || echo "FAILED"
+    wget -q -O /dev/null https://detectportal.firefox.com/success.txt && echo "OK" || echo "FAILED"
 }
 
 status() {

@@ -240,7 +240,7 @@ async fn run_with_config(
         info!("Starting UI");
 
         let update_ui = match &config.device {
-            Device::Orbic => display::orbic::update_ui,
+            Device::Orbic | Device::Moxee => display::orbic::update_ui,
             Device::Tplink => display::tplink::update_ui,
             Device::Tmobile => display::tmobile::update_ui,
             Device::Wingtech => display::wingtech::update_ui,

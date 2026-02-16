@@ -40,4 +40,5 @@ pub enum Device {
     Wingtech,
     Pinephone,
     Uz801,
+    Moxee,
 }
