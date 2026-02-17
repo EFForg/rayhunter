@@ -16,23 +16,17 @@ Compared to the TP-Link, it has many downsides:
 
 This device is sold under different names depending on region and carrier. Each
 variant has different frequency bands unlocked (with no clear documentation
-found online) and might be locked to a particular carrier:
-
-| Brand Name | Region | Verified working
-| ---------- | ------ |
-| ZTE MF920V | Global | ✅
-| Vodafone R218 | Europe |
-| DreiPocket | Austria |
-| Megafon MR150-5 | Russia |
-| MTS 835F | Russia |
-| Beeline MF920 | Russia |
-| Tele2 MF920 | Russia |
-| Yota MF920 | Russia |
-| Airtel MF920V | India |
+found online) and might be locked to a particular carrier.
 
 We have not tested Rayhunter on all of these variants.
 
 If you have this device under a different brand name or can confirm it works under one of the above, please add to this document.
+
+| Device Name | Region | Working | Notes
+| ----------- | ------ | ------- | -----
+| MF920V | Global | Yes |
+| MF920U | Global | No | entirely different firmware |
+| Drei 3Pocket | Austria | Yes, with SIM-lock | rebranded MF920V |
 
 ## Installation & Usage
 
