@@ -1,17 +1,15 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 use reqwest::Client;
 use serde::Deserialize;
-use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
 use crate::connection::{TelnetConnection, install_config};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
-use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
+use crate::util::{interactive_shell, telnet_send_command, telnet_send_file, wait_for_telnet};
 
 // Some kajeet devices have password protected telnetd on port 23, so we use port 24 just in case
 const TELNET_PORT: u16 = 24;
@@ -167,31 +165,11 @@ pub async fn install(
     println!("done");
 
     print!("Waiting for telnet to become available... ");
-    wait_for_telnet(&admin_ip).await?;
+    let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
+    wait_for_telnet(addr).await?;
     println!("done");
 
     setup_rayhunter(&admin_ip, reset_config).await
-}
-
-async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
-    let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
-    let timeout = Duration::from_secs(60);
-    let start_time = std::time::Instant::now();
-
-    while telnet_send_command(addr, "true", "exit code 0", false)
-        .await
-        .is_err()
-    {
-        if start_time.elapsed() >= timeout {
-            bail!(
-                "Timeout waiting for telnet to become available after {:?}",
-                timeout
-            );
-        }
-        sleep(Duration::from_secs(1)).await;
-    }
-
-    Ok(())
 }
 
 async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {

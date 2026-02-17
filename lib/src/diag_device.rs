@@ -311,8 +311,8 @@ fn enable_frame_readwrite(fd: i32, mode: u32, configured_device: &Device) -> Dia
                 peripheral_mask: u32::MAX,
                 mode_param: 0,
             }];
-            if configured_device == &Device::Tplink {
-                // tplink M7350 HW revision 3-8 need this mode
+            if matches!(configured_device, Device::Tplink | Device::Zte) {
+                // tplink M7350 HW revision 3-8 and ZTE MF920V need this mode
                 try_params.insert(
                     0,
                     DiagLoggingModeParam {
