@@ -1,0 +1,9 @@
+[package]
+name = "rayhunter-deps"
+version = "0.10.1"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.5.2", features = ["derive"] }
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }

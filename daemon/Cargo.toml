@@ -5,9 +5,16 @@ edition = "2024"
 rust-version = "1.88.0"
 
 [features]
-default = ["rustcrypto-tls"]
+default = ["rustcrypto-tls", "all-devices"]
 rustcrypto-tls = ["reqwest/rustls-tls-webpki-roots-no-provider", "dep:rustls-rustcrypto"]
 ring-tls = ["reqwest/rustls-tls-webpki-roots"]
+all-devices = ["device-orbic", "device-tplink", "device-tmobile", "device-wingtech", "device-uz801", "device-pinephone"]
+device-orbic = []
+device-tplink = []
+device-tmobile = []
+device-wingtech = []
+device-uz801 = []
+device-pinephone = []
 
 [dependencies]
 rayhunter = { path = "../lib" }

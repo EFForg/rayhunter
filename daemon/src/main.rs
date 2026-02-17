@@ -1,6 +1,7 @@
 mod analysis;
 mod battery;
 mod config;
+mod device_capabilities;
 mod diag;
 mod display;
 mod error;
@@ -183,7 +184,8 @@ async fn main() -> Result<(), RayhunterError> {
     let args = parse_args();
 
     loop {
-        let config = parse_config(&args.config_path).await?;
+        let mut config = parse_config(&args.config_path).await?;
+        config.validate_for_device();
         if !run_with_config(&args, config).await? {
             return Ok(());
         }
@@ -240,12 +242,23 @@ async fn run_with_config(
         info!("Starting UI");
 
         let update_ui = match &config.device {
+            #[cfg(feature = "device-orbic")]
             Device::Orbic => display::orbic::update_ui,
+            #[cfg(feature = "device-tplink")]
             Device::Tplink => display::tplink::update_ui,
+            #[cfg(feature = "device-tmobile")]
             Device::Tmobile => display::tmobile::update_ui,
+            #[cfg(feature = "device-wingtech")]
             Device::Wingtech => display::wingtech::update_ui,
+            #[cfg(feature = "device-pinephone")]
             Device::Pinephone => display::headless::update_ui,
+            #[cfg(feature = "device-uz801")]
             Device::Uz801 => display::uz801::update_ui,
+            #[allow(unreachable_patterns)]
+            _ => {
+                log::error!("Device {:?} not compiled in this build", config.device);
+                return Err(RayhunterError::FunctionNotSupportedForDeviceError);
+            }
         };
         update_ui(&task_tracker, &config, shutdown_token.clone(), ui_update_rx);
 

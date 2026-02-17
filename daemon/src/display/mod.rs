@@ -1,15 +1,28 @@
 use rayhunter::analysis::analyzer::EventType;
 use serde::{Deserialize, Serialize};
 
+#[cfg(any(
+    feature = "device-orbic",
+    feature = "device-tplink",
+    feature = "device-wingtech"
+))]
 mod generic_framebuffer;
 
+#[cfg(feature = "device-pinephone")]
 pub mod headless;
+#[cfg(feature = "device-orbic")]
 pub mod orbic;
+#[cfg(feature = "device-tmobile")]
 pub mod tmobile;
+#[cfg(feature = "device-tplink")]
 pub mod tplink;
+#[cfg(feature = "device-tplink")]
 pub mod tplink_framebuffer;
+#[cfg(feature = "device-tplink")]
 pub mod tplink_onebit;
+#[cfg(feature = "device-uz801")]
 pub mod uz801;
+#[cfg(feature = "device-wingtech")]
 pub mod wingtech;
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]

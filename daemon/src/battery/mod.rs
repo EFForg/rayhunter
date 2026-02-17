@@ -1,4 +1,5 @@
-use std::{path::Path, time::Duration};
+use std::path::Path;
+use std::time::Duration;
 
 use log::{info, warn};
 use rayhunter::Device;
@@ -11,9 +12,13 @@ use crate::{
     notifications::{Notification, NotificationType},
 };
 
+#[cfg(feature = "device-orbic")]
 pub mod orbic;
+#[cfg(feature = "device-tmobile")]
 pub mod tmobile;
+#[cfg(feature = "device-tplink")]
 pub mod tplink;
+#[cfg(feature = "device-wingtech")]
 pub mod wingtech;
 
 const LOW_BATTERY_LEVEL: u8 = 10;
@@ -24,6 +29,7 @@ pub struct BatteryState {
     is_plugged_in: bool,
 }
 
+#[allow(dead_code)]
 async fn is_plugged_in_from_file(path: &Path) -> Result<bool, RayhunterError> {
     match tokio::fs::read_to_string(path)
         .await
@@ -37,6 +43,7 @@ async fn is_plugged_in_from_file(path: &Path) -> Result<bool, RayhunterError> {
     }
 }
 
+#[allow(dead_code)]
 async fn get_level_from_percentage_file(path: &Path) -> Result<u8, RayhunterError> {
     tokio::fs::read_to_string(path)
         .await
@@ -47,13 +54,17 @@ async fn get_level_from_percentage_file(path: &Path) -> Result<u8, RayhunterErro
 }
 
 pub async fn get_battery_status(device: &Device) -> Result<BatteryState, RayhunterError> {
-    Ok(match device {
-        Device::Orbic => orbic::get_battery_state().await?,
-        Device::Wingtech => wingtech::get_battery_state().await?,
-        Device::Tmobile => tmobile::get_battery_state().await?,
-        Device::Tplink => tplink::get_battery_state().await?,
-        _ => return Err(RayhunterError::FunctionNotSupportedForDeviceError),
-    })
+    match device {
+        #[cfg(feature = "device-orbic")]
+        Device::Orbic => Ok(orbic::get_battery_state().await?),
+        #[cfg(feature = "device-wingtech")]
+        Device::Wingtech => Ok(wingtech::get_battery_state().await?),
+        #[cfg(feature = "device-tmobile")]
+        Device::Tmobile => Ok(tmobile::get_battery_state().await?),
+        #[cfg(feature = "device-tplink")]
+        Device::Tplink => Ok(tplink::get_battery_state().await?),
+        _ => Err(RayhunterError::FunctionNotSupportedForDeviceError),
+    }
 }
 
 pub fn run_battery_notification_worker(

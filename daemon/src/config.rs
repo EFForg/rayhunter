@@ -1,9 +1,10 @@
-use log::warn;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 
 use rayhunter::Device;
 use rayhunter::analysis::analyzer::AnalyzerConfig;
 
+use crate::device_capabilities::capabilities_for;
 use crate::error::RayhunterError;
 use crate::notifications::NotificationType;
 
@@ -22,6 +23,7 @@ pub struct Config {
     pub analyzers: AnalyzerConfig,
     pub min_space_to_start_recording_mb: u64,
     pub min_space_to_continue_recording_mb: u64,
+    pub force_features: bool,
 }
 
 impl Default for Config {
@@ -39,6 +41,33 @@ impl Default for Config {
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
             min_space_to_start_recording_mb: 1,
             min_space_to_continue_recording_mb: 1,
+            force_features: false,
+        }
+    }
+}
+
+impl Config {
+    pub fn validate_for_device(&mut self) {
+        let caps = capabilities_for(&self.device);
+
+        if !caps.battery_monitoring
+            && self
+                .enabled_notifications
+                .contains(&NotificationType::LowBattery)
+        {
+            if self.force_features {
+                info!(
+                    "Battery monitoring not supported on {:?}, but force_features is set",
+                    self.device
+                );
+            } else {
+                info!(
+                    "Battery monitoring not supported on {:?}, disabling LowBattery notifications",
+                    self.device
+                );
+                self.enabled_notifications
+                    .retain(|n| *n != NotificationType::LowBattery);
+            }
         }
     }
 }

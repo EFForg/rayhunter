@@ -34,6 +34,9 @@ min_space_to_start_recording_mb = 1
 # Minimum free space (MB) to continue recording (stops if below this)
 min_space_to_continue_recording_mb = 1
 
+# Set to true to bypass device capability checks (for testing features on new devices)
+#force_features = false
+
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics
 # See https://github.com/EFForg/rayhunter/blob/main/doc/heuristics.md for details

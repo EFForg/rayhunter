@@ -5,21 +5,27 @@ version = 2
 
 [device.orbic]
 description = "Orbic RC400L"
+rust_variant = "Orbic"
 
 [device.tplink]
 description = "TP-Link M7350"
+rust_variant = "Tplink"
 
 [device.tmobile]
 description = "T-Mobile TMOHS1"
+rust_variant = "Tmobile"
 
 [device.wingtech]
 description = "Wingtech CT2MHS01"
+rust_variant = "Wingtech"
 
 [device.uz801]
 description = "UZ801"
+rust_variant = "Uz801"
 
 [device.pinephone]
 description = "PinePhone"
+rust_variant = "Pinephone"
 
 # ─── Core protocol (lib crate) ────────────────────────────────────
 

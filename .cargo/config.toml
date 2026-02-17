@@ -1,10 +1,17 @@
 [alias]
 # Build the daemon with "firmware" profile and "ring" TLS backend.
 # Requires a cross-compiler (see github actions workflows) and is very slow to build.
-build-daemon-firmware = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls"
+build-daemon-firmware = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls,all-devices"
 # Build the daemon with "firmware-devel" profile and "rustcrypto" backend.
 # Works with just the Rust toolchain, and is medium-slow to build. Binaries are slightly larger.
 build-daemon-firmware-devel = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware-devel"
+# Per-device firmware builds (smaller binaries, only include one device's drivers)
+build-daemon-firmware-orbic = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls,device-orbic"
+build-daemon-firmware-tplink = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls,device-tplink"
+build-daemon-firmware-tmobile = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls,device-tmobile"
+build-daemon-firmware-wingtech = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls,device-wingtech"
+build-daemon-firmware-uz801 = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls,device-uz801"
+build-daemon-firmware-pinephone = "build -p rayhunter-daemon --bin rayhunter-daemon --target armv7-unknown-linux-musleabihf --profile firmware --no-default-features --features ring-tls,device-pinephone"
 # Build rootshell for firmware
 build-rootshell-firmware = "build -p rootshell --bin rootshell --target armv7-unknown-linux-musleabihf --profile firmware"
 # Build rootshell for development
