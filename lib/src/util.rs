@@ -5,6 +5,7 @@ use nix::sys::utsname::uname;
 
 /// Expose binary and system information.
 #[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct RuntimeMetadata {
     /// The cargo package version from this library's cargo.toml, e.g., "1.2.3".
     pub rayhunter_version: String,

@@ -17,8 +17,10 @@ use super::{
     test_analyzer::TestAnalyzer,
 };
 
+/// A list of booleans which stores information about which analyzers are enabled
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct AnalyzerConfig {
     pub diagnostic_analyzer: bool,
     pub connection_redirect_2g_downgrade: bool,
@@ -51,6 +53,7 @@ pub const REPORT_VERSION: u32 = 2;
 ///
 /// Informational does not result in any alert on the display.
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub enum EventType {
     Informational = 0,
     Low = 1,
@@ -140,20 +143,29 @@ pub trait Analyzer {
     fn get_version(&self) -> u32;
 }
 
+/// Specific information on a given analyzer
 #[derive(Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct AnalyzerMetadata {
+    /// The analyzer name
     pub name: String,
+    /// A description of what the analyzer does
     pub description: String,
+    /// The deployed version of the analyzer code
     pub version: u32,
 }
 
+/// The metadata for an analyzed report
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(default)]
 #[derive(Default)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct ReportMetadata {
+    /// A vector array of which analyzers were in use for the analysis
     pub analyzers: Vec<AnalyzerMetadata>,
+    /// The runtime metadata for rayhunter during the recording and analysis
     pub rayhunter: RuntimeMetadata,
-
+    /// The version of the reporting format used
     // anytime the format of the report changes, bump this by 1
     //
     // the default is 0. we consider our legacy (unversioned) heuristics to be v0 -- this'll let us

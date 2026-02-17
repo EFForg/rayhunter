@@ -29,8 +29,10 @@ pub mod diag_device;
 // re-export telcom_parser, since we use its types in our API
 pub use telcom_parser;
 
+/// A list of the internal names of currently implemented devices
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub enum Device {
     Orbic,
     Tplink,
