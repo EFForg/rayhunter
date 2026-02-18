@@ -22,7 +22,10 @@ struct ExploitResponse {
 }
 
 async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Result<()> {
-    let client: Client = Client::new();
+    // Disable connection pooling. The Orbic's web server does not properly support
+    // HTTP/1.1 keep-alive, so reusing connections causes "connection closed before
+    // message completed" errors.
+    let client: Client = Client::builder().pool_max_idle_per_host(0).build()?;
 
     // Step 1: Get login info (priKey and session cookie)
     let login_info_response = client
