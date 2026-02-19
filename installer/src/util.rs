@@ -19,53 +19,57 @@ pub async fn telnet_send_command_with_output(
     command: &str,
     wait_for_prompt: bool,
 ) -> Result<String> {
+    debug_assert!(!command.contains('\n'));
     let stream = TcpStream::connect(addr).await?;
     let (mut reader, mut writer) = stream.into_split();
 
     if wait_for_prompt {
-        // Wait for initial '#' prompt from telnetd
-        loop {
-            let mut next_byte = 0;
-            reader
-                .read_exact(std::slice::from_mut(&mut next_byte))
-                .await?;
-            if next_byte == b'#' {
-                break;
-            }
-        }
+        // Wait for the shell prompt. This also consumes any telnet IAC negotiation
+        // the server sends at connection start, and ensures the shell is ready
+        // for input.
+        while reader.read_u8().await? != b'#' {}
     }
 
-    writer.write_all(command.as_bytes()).await?;
-    // by quoting the 'exit' here, we ensure that we do not read our own command line back as
-    // "output" before we even hit enter, but the actual result of executing the echo.
-    writer
-        .write_all(b"; echo command done, 'exit' code $?\r\n")
-        .await?;
+    // This contraption is there so we clearly know where the command output starts and ends,
+    // skipping telnet echoing the command back using START, and terminating the connection right
+    // after the command exits.
+    //
+    // 'TELNET' is quoted so that when the command gets echoed back, it does not match against
+    // RAYHUNTER_TELNET_COMMAND_DONE search string.
+    writer.write_all(format!("echo RAYHUNTER_'TELNET'_COMMAND_START; {command}; echo RAYHUNTER_'TELNET'_COMMAND_DONE\r\n").as_bytes()).await?;
+
     let mut read_buf = Vec::new();
     let _ = timeout(Duration::from_secs(10), async {
-        let mut buf = [0; 4096];
         loop {
-            let Ok(bytes_read) = reader.read(&mut buf).await else {
+            let Ok(byte) = reader.read_u8().await else {
                 break;
             };
-            let bytes = &buf[..bytes_read];
-            if bytes.is_empty() {
-                continue;
-            }
-            read_buf.extend(bytes);
+            read_buf.push(byte);
 
             // when we see this string we know the command is done and can terminate.
             // even if we sent command; exit, certain "telnet-like" shells (like nc contraptions)
             // may not terminate the connection appropriately on their own.
-            let response = String::from_utf8_lossy(&read_buf);
-            if response.contains("command done, exit code ") {
-                break;
+            if byte == b'\n' {
+                let response = String::from_utf8_lossy(&read_buf);
+                if response.contains("RAYHUNTER_TELNET_COMMAND_DONE") {
+                    break;
+                }
             }
         }
     })
     .await;
-    let string = String::from_utf8_lossy(&read_buf).to_string();
-    Ok(string)
+    let string = String::from_utf8_lossy(&read_buf);
+    let start = string.rfind("RAYHUNTER_TELNET_COMMAND_START");
+    let end = string.rfind("RAYHUNTER_TELNET_COMMAND_DONE");
+    let string = match (start, end) {
+        (Some(start), Some(end)) => {
+            // skip past the START marker and the trailing \r\n of the echoed command line
+            let start = start + "RAYHUNTER_TELNET_COMMAND_START".len();
+            string[start..end].trim_start_matches(['\r', '\n'])
+        }
+        _ => &string,
+    };
+    Ok(string.to_string())
 }
 
 pub async fn telnet_send_command(
@@ -74,7 +78,8 @@ pub async fn telnet_send_command(
     expected_output: &str,
     wait_for_prompt: bool,
 ) -> Result<()> {
-    let output = telnet_send_command_with_output(addr, command, wait_for_prompt).await?;
+    let command = format!("{command}; echo command done, exit code $?");
+    let output = telnet_send_command_with_output(addr, &command, wait_for_prompt).await?;
     if !output.contains(expected_output) {
         bail!("{expected_output:?} not found in: {output}");
     }
