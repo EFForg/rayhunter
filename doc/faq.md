@@ -50,6 +50,14 @@ reboot
 See `/data/usb/boot_hsusb_composition` for a list of USB modes and Android USB gadget settings.
 
 
+### How do I connect my Orbic to an existing WiFi network?
+
+The Orbic (and Moxee) can connect to a nearby WiFi network while still running its own hotspot. This gives the device internet access for ntfy notifications and lets you reach the web UI from your home network. See [WiFi Client Mode](./configuration.md#wifi-client-mode) in the configuration guide for setup instructions. You can also pass `--wifi-ssid` and `--wifi-password` to the installer.
+
+### WiFi client mode is connected but I can't reach the internet
+
+Check that the **DNS Servers** field in the config has valid entries (the default is `8.8.8.8` and `1.1.1.1`). If your home network and the device hotspot use the same subnet (for example, both are on `192.168.1.x`), try restarting the daemon by saving the config again from the web UI.
+
 ### How do I disable the WiFi hotspot on the Orbic RC400L?
 
 To disable both WiFi bands, [first obtain a shell](./orbic.md#shell), then:

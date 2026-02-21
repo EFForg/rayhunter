@@ -43,11 +43,17 @@ pub enum Device {
     Moxee,
 }
 
+fn escape_wpa_value(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace(['\n', '\r'], "")
+}
+
 /// Generate a wpa_supplicant configuration file from an SSID and password.
-/// Escapes backslashes and double quotes in both fields.
+/// Escapes backslashes and double quotes, strips newlines from both fields.
 pub fn format_wpa_conf(ssid: &str, password: &str) -> String {
-    let ssid = ssid.replace('\\', "\\\\").replace('"', "\\\"");
-    let password = password.replace('\\', "\\\\").replace('"', "\\\"");
+    let ssid = escape_wpa_value(ssid);
+    let password = escape_wpa_value(password);
     format!(
         "ctrl_interface=/var/run/wpa_supplicant\nnetwork={{\n    ssid=\"{ssid}\"\n    psk=\"{password}\"\n    key_mgmt=WPA-PSK\n}}\n"
     )
@@ -91,6 +97,16 @@ mod tests {
         let conf = format_wpa_conf("Net\\work", "pass\\word");
         assert!(conf.contains("ssid=\"Net\\\\work\""));
         assert!(conf.contains("psk=\"pass\\\\word\""));
+    }
+
+    #[test]
+    fn test_format_wpa_conf_strips_newlines() {
+        let conf = format_wpa_conf("legit", "pass\n}\nnetwork={\n    ssid=\"evil\"");
+        assert_eq!(
+            conf.lines().count(),
+            format_wpa_conf("legit", "clean").lines().count(),
+            "newlines in password must not inject extra config lines"
+        );
     }
 
     #[test]

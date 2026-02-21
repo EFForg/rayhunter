@@ -22,6 +22,10 @@ pay more than 30 USD for such a device (without shipping).
 | Wifi 5Ghz | a/ac/ax |
 | Wifi 6 | 🮱 |
 
+## WiFi client mode
+
+The Orbic's QCA6174 radio supports running the hotspot and connecting to an external WiFi network at the same time. See [WiFi Client Mode](./configuration.md#wifi-client-mode) for setup.
+
 ## Two kinds of installers
 
 The orbic's installation routine underwent many different changes:

@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -244,6 +245,7 @@ impl WifiClient {
         let resolv = self
             .dns_servers
             .iter()
+            .filter(|s| s.parse::<IpAddr>().is_ok())
             .map(|s| format!("nameserver {s}"))
             .collect::<Vec<_>>()
             .join("\n")

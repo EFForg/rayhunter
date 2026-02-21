@@ -19,6 +19,8 @@ You can access this UI in one of two ways:
   On the **Orbic**, you can find the WiFi network password by going to the Orbic's menu > 2.4 GHz WIFI Info > Enter > find the 8-character password next to the lock 🔒 icon.
   On the **TP-Link**, you can find the WiFi network password by going to the TP-Link's menu > Advanced > Wireless > Basic Settings.
 
+  If [WiFi client mode](./configuration.md#wifi-client-mode) is enabled (Orbic and Moxee only), you can also reach the web UI from any device on that network at `http://<device-ip>:8080`.
+
 * **Connect over USB (Orbic):** Connect your device to your laptop via USB. Run `adb forward tcp:8080 tcp:8080`, then visit <http://localhost:8080>.
     * For this you will need to install the Android Debug Bridge (ADB) on your computer, you can copy the version that was downloaded inside the `releases/platform-tools/` folder to somewhere else in your path or you can install it manually.
     * You can find instructions for doing so on your platform [here](https://www.xda-developers.com/install-adb-windows-macos-linux/#how-to-set-up-adb-on-your-computer), (don't worry about instructions for installing it on a phone/device yet).
