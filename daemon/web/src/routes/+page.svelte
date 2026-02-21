@@ -197,7 +197,7 @@
             </span>
             <span
                 >This webpage is not currently receiving updates from your Rayhunter device. This
-                could be do loss of connection or some issue with your device.</span
+                could be due to loss of connection or some issue with your device.</span
             >
             {#if update_error}
                 <details>
