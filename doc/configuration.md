@@ -32,6 +32,19 @@ On the **Orbic** and **Moxee**, Rayhunter can connect the device to an existing 
 
 After saving, the connection status will show **connecting**, **connected** (with the assigned IP address), or **failed** (with an error message). If the connection fails, check that the SSID and password are correct and that the network is in range.
 
+### Crash Recovery
+
+The Orbic's WiFi kernel module (`wlan.ko`) can occasionally crash or unload, taking both the hotspot and client interfaces down with it. Rayhunter includes a watchdog that detects this and automatically reloads the module, restarts the hotspot, and reconnects to the configured network. During recovery the WiFi status will show **recovering**.
+
+On the first detection of a crash, a diagnostic snapshot is saved to `/data/rayhunter/crash-logs/` on the device. You can pull these logs with `adb pull /data/rayhunter/crash-logs/` and inspect them to understand what went wrong. Each log contains:
+
+- **dmesg** output (kernel messages). Look for backtraces, `BUG:`/`Oops:` lines, or `wlan`/`wcnss` errors. The kernel ring buffer on the Orbic is small and gets overwritten quickly, so crash details may already be gone if the crash happened well before detection.
+- **/proc/modules** snapshot. If `wlan` is absent, the module fully unloaded. If present but interfaces are gone, the driver is stuck.
+- **ip addr** output confirming which network interfaces existed at snapshot time.
+- **ps** output showing which WiFi-related processes (`hostapd`, `wpa_supplicant`, `wland`) were still running.
+
+If recovery fails after 5 attempts, the status will change to **failed**. A reboot of the device will reset WiFi.
+
 You can also configure WiFi during installation:
 
 ```sh

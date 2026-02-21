@@ -18,6 +18,12 @@ pub const WPA_CONF_PATH: &str = "/data/rayhunter/wpa_sta.conf";
 
 const WPA_BIN: &str = "/data/rayhunter/bin/wpa_supplicant";
 const DEFAULT_DNS: &[&str] = &["8.8.8.8", "1.1.1.1"];
+const CRASH_LOG_DIR: &str = "/data/rayhunter/crash-logs";
+const MAX_RECOVERY_ATTEMPTS: u32 = 5;
+const BASE_BACKOFF_SECS: u64 = 30;
+const HOSTAPD_CONF: &str = "/data/misc/wifi/hostapd.conf";
+const AP_IFACE: &str = "wlan0";
+const BRIDGE_IFACE: &str = "bridge0";
 
 #[derive(Clone, Serialize, Default)]
 pub struct WifiStatus {
@@ -369,6 +375,141 @@ impl WifiClient {
             .output()
             .await;
     }
+
+    fn interface_exists(&self) -> bool {
+        Path::new(&format!("/sys/class/net/{}", self.iface)).exists()
+    }
+}
+
+async fn save_crash_diagnostics() -> Result<()> {
+    tokio::fs::create_dir_all(CRASH_LOG_DIR).await?;
+
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+    let path = format!("{CRASH_LOG_DIR}/wifi-crash-{timestamp}.log");
+
+    let dmesg = Command::new("dmesg").output().await;
+    let modules = tokio::fs::read_to_string("/proc/modules").await;
+    let ip_addr = Command::new("ip").args(["addr"]).output().await;
+    let ps = Command::new("ps").output().await;
+
+    let mut report = String::with_capacity(64 * 1024);
+    report.push_str(&format!("WiFi module crash detected at {timestamp}\n\n"));
+
+    report.push_str("=== dmesg ===\n");
+    match &dmesg {
+        Ok(output) => report.push_str(&String::from_utf8_lossy(&output.stdout)),
+        Err(e) => report.push_str(&format!("(failed: {e})\n")),
+    }
+
+    report.push_str("\n=== /proc/modules ===\n");
+    match &modules {
+        Ok(content) => report.push_str(content),
+        Err(e) => report.push_str(&format!("(failed: {e})\n")),
+    }
+
+    report.push_str("\n=== ip addr ===\n");
+    match &ip_addr {
+        Ok(output) => report.push_str(&String::from_utf8_lossy(&output.stdout)),
+        Err(e) => report.push_str(&format!("(failed: {e})\n")),
+    }
+
+    report.push_str("\n=== ps ===\n");
+    match &ps {
+        Ok(output) => report.push_str(&String::from_utf8_lossy(&output.stdout)),
+        Err(e) => report.push_str(&format!("(failed: {e})\n")),
+    }
+
+    tokio::fs::write(&path, report).await?;
+    info!("saved crash diagnostics to {path}");
+    Ok(())
+}
+
+async fn get_module_path() -> Result<String> {
+    let out = Command::new("uname").arg("-r").output().await?;
+    let kver = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let path = format!("/lib/modules/{kver}/extra/wlan.ko");
+    if Path::new(&path).exists() {
+        return Ok(path);
+    }
+    let alt = format!("/usr/lib/modules/{kver}/extra/wlan.ko");
+    if Path::new(&alt).exists() {
+        return Ok(alt);
+    }
+    bail!("wlan.ko not found for kernel {kver}");
+}
+
+async fn reload_wifi_module() -> Result<()> {
+    let module_path = get_module_path().await?;
+
+    let _ = Command::new("killall").arg("hostapd").output().await;
+
+    let rmmod = Command::new("rmmod").arg("wlan").output().await?;
+    if !rmmod.status.success() {
+        warn!(
+            "rmmod wlan (may already be unloaded): {}",
+            String::from_utf8_lossy(&rmmod.stderr).trim()
+        );
+    }
+
+    sleep(Duration::from_secs(2)).await;
+
+    let insmod = Command::new("insmod").arg(&module_path).output().await?;
+    if !insmod.status.success() {
+        bail!(
+            "insmod failed: {}",
+            String::from_utf8_lossy(&insmod.stderr).trim()
+        );
+    }
+
+    sleep(Duration::from_secs(3)).await;
+
+    if !Path::new(&format!("/sys/class/net/{AP_IFACE}")).exists() {
+        bail!("{AP_IFACE} did not appear after insmod");
+    }
+
+    let _ = Command::new("ifconfig")
+        .args([AP_IFACE, "up"])
+        .output()
+        .await;
+    let _ = Command::new("brctl")
+        .args(["addif", BRIDGE_IFACE, AP_IFACE])
+        .output()
+        .await;
+
+    if Path::new(HOSTAPD_CONF).exists() {
+        let hostapd = Command::new("hostapd")
+            .args(["-B", HOSTAPD_CONF])
+            .output()
+            .await?;
+        if !hostapd.status.success() {
+            warn!(
+                "hostapd restart failed: {}",
+                String::from_utf8_lossy(&hostapd.stderr).trim()
+            );
+        }
+    }
+
+    let add_sta = Command::new("iw")
+        .args([
+            "dev",
+            AP_IFACE,
+            "interface",
+            "add",
+            "wlan1",
+            "type",
+            "managed",
+        ])
+        .output()
+        .await?;
+    if !add_sta.status.success() {
+        bail!(
+            "failed to create wlan1: {}",
+            String::from_utf8_lossy(&add_sta.stderr).trim()
+        );
+    }
+
+    info!("WiFi module reloaded and AP restored");
+    Ok(())
 }
 
 pub fn run_wifi_client(
@@ -417,6 +558,9 @@ pub fn run_wifi_client(
             }
         }
 
+        let mut recovery_attempts: u32 = 0;
+        let mut backoff_secs: u64 = BASE_BACKOFF_SECS;
+
         loop {
             tokio::select! {
                 _ = shutdown_token.cancelled() => {
@@ -428,7 +572,85 @@ pub fn run_wifi_client(
                     info!("WiFi client stopped");
                     return;
                 }
-                _ = sleep(Duration::from_secs(30)) => {
+                _ = sleep(Duration::from_secs(backoff_secs)) => {
+                    if !client.interface_exists() {
+                        if recovery_attempts >= MAX_RECOVERY_ATTEMPTS {
+                            error!(
+                                "WiFi module recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts, giving up"
+                            );
+                            client.stop().await;
+                            let mut status = wifi_status.write().await;
+                            status.state = "failed".to_string();
+                            status.error = Some(format!(
+                                "module crash recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts"
+                            ));
+                            return;
+                        }
+
+                        recovery_attempts += 1;
+                        warn!(
+                            "wlan1 interface disappeared, attempting recovery ({recovery_attempts}/{MAX_RECOVERY_ATTEMPTS})"
+                        );
+
+                        {
+                            let mut status = wifi_status.write().await;
+                            status.state = "recovering".to_string();
+                            status.ip = None;
+                            status.error = None;
+                        }
+
+                        if recovery_attempts == 1
+                            && let Err(e) = save_crash_diagnostics().await
+                        {
+                            warn!("failed to save crash diagnostics: {e}");
+                        }
+
+                        client.stop().await;
+
+                        if let Err(e) = reload_wifi_module().await {
+                            error!("module reload failed: {e}");
+                            let mut status = wifi_status.write().await;
+                            status.state = "recovering".to_string();
+                            status.error = Some(format!("{e}"));
+                            backoff_secs = (backoff_secs * 2).min(240);
+                            continue;
+                        }
+
+                        match client.start().await {
+                            Ok(()) => {
+                                let ip = client.get_interface_ip().await.ok();
+                                let mut status = wifi_status.write().await;
+                                status.state = "connected".to_string();
+                                status.ip = ip;
+                                status.error = None;
+                                info!(
+                                    "WiFi client recovered after {recovery_attempts} attempt(s)"
+                                );
+                                recovery_attempts = 0;
+                                backoff_secs = BASE_BACKOFF_SECS;
+                            }
+                            Err(e) => {
+                                error!("WiFi client restart after recovery failed: {e}");
+                                client.stop().await;
+                                let mut status = wifi_status.write().await;
+                                status.state = "recovering".to_string();
+                                status.error = Some(format!("{e}"));
+                                backoff_secs = (backoff_secs * 2).min(240);
+                            }
+                        }
+                        continue;
+                    }
+
+                    if let Some(ref mut child) = client.wpa_child
+                        && let Ok(Some(_)) = child.try_wait()
+                    {
+                        warn!("wpa_supplicant exited, restarting");
+                        client.wpa_child = None;
+                        if let Err(e) = client.start_wpa_supplicant().await {
+                            warn!("wpa_supplicant restart failed: {e}");
+                        }
+                    }
+
                     if let Some(ref mut child) = client.dhcp_child
                         && let Ok(Some(_)) = child.try_wait()
                     {
@@ -440,6 +662,11 @@ pub fn run_wifi_client(
                             let mut status = wifi_status.write().await;
                             status.ip = client.get_interface_ip().await.ok();
                         }
+                    }
+
+                    if recovery_attempts > 0 {
+                        recovery_attempts = 0;
+                        backoff_secs = BASE_BACKOFF_SECS;
                     }
                 }
             }
