@@ -192,14 +192,10 @@ async fn setup_rayhunter(
         install_wifi_creds(&mut conn, wifi_ssid, wifi_password).await?;
     }
 
-    let rayhunter_daemon_init = RAYHUNTER_DAEMON_INIT.replace(
-        "#RAYHUNTER-PRESTART",
-        "pkill -f start_qt_daemon 2>/dev/null || true\n    sleep 1\n    pkill -f qt_daemon 2>/dev/null || true",
-    );
     install_file(
         &mut adb_device,
         "/etc/init.d/rayhunter_daemon",
-        rayhunter_daemon_init.as_bytes(),
+        RAYHUNTER_DAEMON_INIT.as_bytes(),
     )
     .await?;
     install_file(
