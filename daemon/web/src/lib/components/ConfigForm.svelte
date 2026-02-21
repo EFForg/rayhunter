@@ -1,5 +1,14 @@
 <script lang="ts">
-    import { get_config, set_config, test_notification, type Config } from '../utils.svelte';
+    import {
+        get_config,
+        set_config,
+        test_notification,
+        get_wifi_status,
+        scan_wifi_networks,
+        type Config,
+        type WifiStatus,
+        type WifiNetwork,
+    } from '../utils.svelte';
 
     let config = $state<Config | null>(null);
 
@@ -11,13 +20,20 @@
     let testMessage = $state('');
     let testMessageType = $state<'success' | 'error' | null>(null);
     let showConfig = $state(false);
+    let wifiStatus = $state<WifiStatus | null>(null);
+    let wifiStatusTimer = $state<ReturnType<typeof setInterval> | null>(null);
+    let scanning = $state(false);
+    let scanResults = $state<WifiNetwork[]>([]);
+    let dnsServersInput = $state('');
 
     async function load_config() {
         try {
             loading = true;
             config = await get_config();
+            dnsServersInput = config.dns_servers ? config.dns_servers.join(', ') : '';
             message = '';
             messageType = null;
+            poll_wifi_status();
         } catch (error) {
             message = `Failed to load config: ${error}`;
             messageType = 'error';
@@ -28,6 +44,15 @@
 
     async function save_config() {
         if (!config) return;
+
+        const trimmed = dnsServersInput.trim();
+        config.dns_servers =
+            trimmed.length > 0
+                ? trimmed
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter((s) => s.length > 0)
+                : null;
 
         try {
             saving = true;
@@ -40,6 +65,41 @@
             messageType = 'error';
         } finally {
             saving = false;
+        }
+    }
+
+    async function poll_wifi_status() {
+        if (wifiStatusTimer) clearInterval(wifiStatusTimer);
+        try {
+            wifiStatus = await get_wifi_status();
+        } catch {
+            wifiStatus = null;
+        }
+        wifiStatusTimer = setInterval(async () => {
+            try {
+                wifiStatus = await get_wifi_status();
+            } catch {
+                wifiStatus = null;
+            }
+        }, 5000);
+    }
+
+    async function do_scan() {
+        scanning = true;
+        try {
+            scanResults = await scan_wifi_networks();
+        } catch {
+            scanResults = [];
+        } finally {
+            scanning = false;
+        }
+    }
+
+    function select_network(ssid: string) {
+        if (config) {
+            config.wifi_ssid = ssid;
+            config.wifi_password = '';
+            scanResults = [];
         }
     }
 
@@ -62,6 +122,10 @@
     $effect(() => {
         if (showConfig && !config) {
             load_config();
+        }
+        if (!showConfig && wifiStatusTimer) {
+            clearInterval(wifiStatusTimer);
+            wifiStatusTimer = null;
         }
     });
 </script>
@@ -283,46 +347,203 @@
                     </div>
                 </div>
 
+                {#if config.device === 'orbic' || config.device === 'moxee'}
+                    <div class="border-t pt-4 mt-6 space-y-3">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">WiFi Client Mode</h3>
+                        <p class="text-xs text-gray-500">
+                            Connect the device to an existing WiFi network for internet access (e.g.
+                            notifications, remote access). The hotspot AP stays running alongside
+                            WiFi client mode.
+                        </p>
+
+                        <div class="flex items-center">
+                            <input
+                                id="wifi_enabled"
+                                type="checkbox"
+                                bind:checked={config.wifi_enabled}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label for="wifi_enabled" class="ml-2 block text-sm text-gray-700">
+                                Enable WiFi
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-500">
+                            Unchecking stops WiFi without clearing saved credentials.
+                        </p>
+
+                        {#if wifiStatus && config.wifi_enabled}
+                            {#if wifiStatus.state === 'connected'}
+                                <p class="text-xs text-green-600">
+                                    Connected to "{wifiStatus.ssid}" ({wifiStatus.ip})
+                                </p>
+                            {:else if wifiStatus.state === 'connecting'}
+                                <p class="text-xs text-amber-600">Connecting...</p>
+                            {:else if wifiStatus.state === 'failed'}
+                                <p class="text-xs text-red-600">
+                                    Failed: {wifiStatus.error}
+                                </p>
+                            {/if}
+                        {/if}
+
+                        <div>
+                            <label
+                                for="wifi_ssid"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                WiFi Network Name (SSID)
+                            </label>
+                            <div class="flex gap-2">
+                                <input
+                                    id="wifi_ssid"
+                                    type="text"
+                                    bind:value={config.wifi_ssid}
+                                    placeholder="MyWiFiNetwork"
+                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                />
+                                <button
+                                    type="button"
+                                    onclick={do_scan}
+                                    disabled={scanning}
+                                    class="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 border border-gray-300 rounded-md"
+                                >
+                                    {scanning ? 'Scanning...' : 'Scan'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {#if scanResults.length > 0}
+                            <div
+                                class="border border-gray-200 rounded-md max-h-40 overflow-y-auto divide-y"
+                            >
+                                {#each scanResults as network}
+                                    <button
+                                        type="button"
+                                        class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex justify-between"
+                                        onclick={() => select_network(network.ssid)}
+                                    >
+                                        <span>{network.ssid}</span>
+                                        <span class="text-gray-400"
+                                            >{network.signal_dbm} dBm &middot; {network.security}</span
+                                        >
+                                    </button>
+                                {/each}
+                            </div>
+                        {/if}
+
+                        <div>
+                            <label
+                                for="wifi_password"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                WiFi Password
+                            </label>
+                            <input
+                                id="wifi_password"
+                                type="password"
+                                bind:value={config.wifi_password}
+                                placeholder="Enter password"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                Changing the network requires re-entering the password.
+                            </p>
+                        </div>
+
+                        {#if config.wifi_ssid}
+                            <div>
+                                <label
+                                    for="dns_servers"
+                                    class="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    DNS Servers
+                                </label>
+                                <input
+                                    id="dns_servers"
+                                    type="text"
+                                    bind:value={dnsServersInput}
+                                    placeholder="8.8.8.8, 1.1.1.1"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                />
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Comma-separated. Used when WiFi is active. Defaults to 8.8.8.8,
+                                    1.1.1.1.
+                                </p>
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+
                 <div class="border-t pt-4 mt-6 space-y-3">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
-                        WiFi Client Mode (Orbic only)
-                    </h3>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Device Security</h3>
+
+                    <div class="flex items-center">
+                        <input
+                            id="block_ota_daemons"
+                            type="checkbox"
+                            bind:checked={config.block_ota_daemons}
+                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                        />
+                        <label for="block_ota_daemons" class="ml-2 block text-sm text-gray-700">
+                            Block OTA update daemons
+                        </label>
+                    </div>
                     <p class="text-xs text-gray-500">
-                        Connect the device to an existing WiFi network for internet access (e.g.
-                        notifications). The hotspot AP stays running. Leave both fields empty to
-                        disable.
+                        Prevents Verizon's dmclient and upgrade services from running. They are
+                        replaced with stubs at runtime. Disabling requires a reboot to take effect.
                     </p>
 
-                    <div>
-                        <label for="wifi_ssid" class="block text-sm font-medium text-gray-700 mb-1">
-                            WiFi Network Name (SSID)
-                        </label>
+                    <div class="flex items-center">
                         <input
-                            id="wifi_ssid"
-                            type="text"
-                            bind:value={config.wifi_ssid}
-                            placeholder="MyWiFiNetwork"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                            id="firewall_restrict_outbound"
+                            type="checkbox"
+                            bind:checked={config.firewall_restrict_outbound}
+                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
                         />
-                    </div>
-
-                    <div>
                         <label
-                            for="wifi_password"
-                            class="block text-sm font-medium text-gray-700 mb-1"
+                            for="firewall_restrict_outbound"
+                            class="ml-2 block text-sm text-gray-700"
                         >
-                            WiFi Password
+                            Restrict outbound traffic
                         </label>
-                        <input
-                            id="wifi_password"
-                            type="password"
-                            bind:value={config.wifi_password}
-                            placeholder={config.wifi_ssid
-                                ? 'Leave blank to keep current password'
-                                : 'password'}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
-                        />
                     </div>
+                    <p class="text-xs text-gray-500">
+                        Only allows DNS, DHCP, and HTTPS (port 443) outbound. Blocks all other
+                        outbound connections on every interface (WiFi and cellular). Loopback and
+                        hotspot traffic are always allowed. Changes take effect immediately.
+                    </p>
+
+                    {#if config.firewall_restrict_outbound}
+                        <div>
+                            <label
+                                for="firewall_allowed_ports"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Additional Allowed Ports
+                            </label>
+                            <input
+                                id="firewall_allowed_ports"
+                                type="text"
+                                value={config.firewall_allowed_ports
+                                    ? config.firewall_allowed_ports.join(', ')
+                                    : ''}
+                                oninput={(e) => {
+                                    const val = (e.target as HTMLInputElement).value.trim();
+                                    config!.firewall_allowed_ports =
+                                        val.length > 0
+                                            ? val
+                                                  .split(',')
+                                                  .map((s) => parseInt(s.trim()))
+                                                  .filter((n) => !isNaN(n))
+                                            : null;
+                                }}
+                                placeholder="22, 80"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                Comma-separated TCP ports, e.g. 22, 80
+                            </p>
+                        </div>
+                    {/if}
                 </div>
 
                 <div class="border-t pt-4 mt-6">

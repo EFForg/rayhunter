@@ -1,0 +1,13 @@
+#!/bin/sh
+case "$1" in
+  start)
+    if [ -f /data/rayhunter/firewall-enabled ]; then
+        iptables -F OUTPUT
+        iptables -A OUTPUT -o lo -j ACCEPT
+        iptables -A OUTPUT -o bridge0 -j ACCEPT
+        iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+        iptables -A OUTPUT -j DROP
+        echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables
+    fi
+    ;;
+esac

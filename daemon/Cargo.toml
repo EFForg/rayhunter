@@ -43,3 +43,4 @@ reqwest = { version = "0.12.20", default-features = false }
 rustls-rustcrypto = { version = "0.0.2-alpha", optional = true }
 async-trait = "0.1.88"
 utoipa = { version = "5.4.0", optional = true }
+url = "2"

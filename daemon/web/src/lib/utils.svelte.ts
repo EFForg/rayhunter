@@ -19,6 +19,7 @@ export enum enabled_notifications {
 }
 
 export interface Config {
+    device: string;
     ui_level: number;
     colorblind_mode: boolean;
     key_input_mode: number;
@@ -29,6 +30,32 @@ export interface Config {
     min_space_to_continue_recording_mb: number;
     wifi_ssid: string | null;
     wifi_password: string | null;
+    wifi_enabled: boolean;
+    block_ota_daemons: boolean;
+    dns_servers: string[] | null;
+    firewall_restrict_outbound: boolean;
+    firewall_allowed_ports: number[] | null;
+}
+
+export interface WifiStatus {
+    state: string;
+    ssid?: string;
+    ip?: string;
+    error?: string;
+}
+
+export interface WifiNetwork {
+    ssid: string;
+    signal_dbm: number;
+    security: string;
+}
+
+export async function get_wifi_status(): Promise<WifiStatus> {
+    return JSON.parse(await req('GET', '/api/wifi-status'));
+}
+
+export async function scan_wifi_networks(): Promise<WifiNetwork[]> {
+    return JSON.parse(await req('POST', '/api/wifi-scan'));
 }
 
 export async function req(method: string, url: string, json_body?: unknown): Promise<string> {

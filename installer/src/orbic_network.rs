@@ -8,7 +8,9 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{TelnetConnection, install_config, install_wifi_creds, setup_data_directory};
+use crate::connection::{
+    TelnetConnection, install_config, install_wifi_creds, setup_data_directory,
+};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
 use crate::util::{
@@ -204,12 +206,9 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
 }
 
 async fn check_disk_space(addr: SocketAddr, binary_size: usize) -> Result<()> {
-    let df_output = telnet_send_command_with_output(
-        addr,
-        "df /data | tail -1 | awk '{print $4}'",
-        false,
-    )
-    .await?;
+    let df_output =
+        telnet_send_command_with_output(addr, "df /data | tail -1 | awk '{print $4}'", false)
+            .await?;
     let available_kb: usize = df_output
         .lines()
         .find(|l| l.trim().chars().all(|c| c.is_ascii_digit()) && !l.trim().is_empty())
@@ -273,32 +272,20 @@ async fn setup_rayhunter(
     .await?;
     telnet_send_file(
         addr,
-        "/data/rayhunter/scripts/wifi-client.sh",
-        include_bytes!("../../client-mode/scripts/wifi-client.sh"),
-        false,
-    )
-    .await?;
-    telnet_send_file(
-        addr,
         "/data/rayhunter/bin/wpa_supplicant",
         wpa_supplicant_bin,
         false,
     )
     .await?;
-    telnet_send_file(
-        addr,
-        "/data/rayhunter/bin/wpa_cli",
-        wpa_cli_bin,
-        false,
-    )
-    .await?;
+    telnet_send_file(addr, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin, false).await?;
 
-    install_config(&mut conn, "orbic", reset_config).await?;
+    let wifi_enabled = wifi_ssid.is_some() && wifi_password.is_some();
+    install_config(&mut conn, "orbic", reset_config, wifi_enabled).await?;
     install_wifi_creds(&mut conn, wifi_ssid, wifi_password).await?;
 
     let rayhunter_daemon_init = RAYHUNTER_DAEMON_INIT.replace(
         "#RAYHUNTER-PRESTART",
-        "pkill -f start_qt_daemon 2>/dev/null || true; sleep 1; pkill -f qt_daemon 2>/dev/null || true\n    printf '#!/bin/sh\\nwhile true; do sleep 3600; done\\n' > /tmp/daemon-stub\n    chmod 755 /tmp/daemon-stub\n    mount --bind /tmp/daemon-stub /usr/bin/dmclient 2>/dev/null || true\n    mount --bind /tmp/daemon-stub /usr/bin/upgrade 2>/dev/null || true\n    kill -9 $(pidof dmclient) 2>/dev/null || true\n    kill -9 $(pidof upgrade) 2>/dev/null || true\n    sh /data/rayhunter/scripts/wifi-client.sh start 2>/dev/null &",
+        "pkill -f start_qt_daemon 2>/dev/null || true\n    sleep 1\n    pkill -f qt_daemon 2>/dev/null || true",
     );
     telnet_send_file(
         addr,
@@ -312,6 +299,13 @@ async fn setup_rayhunter(
         addr,
         "/etc/init.d/misc-daemon",
         include_bytes!("../../dist/scripts/misc-daemon"),
+        false,
+    )
+    .await?;
+    telnet_send_file(
+        addr,
+        "/etc/init.d/S01iptables",
+        include_bytes!("../../dist/scripts/S01iptables"),
         false,
     )
     .await?;
@@ -333,6 +327,13 @@ async fn setup_rayhunter(
     telnet_send_command(
         addr,
         "chmod 755 /etc/init.d/misc-daemon",
+        "exit code 0",
+        false,
+    )
+    .await?;
+    telnet_send_command(
+        addr,
+        "chmod 755 /etc/init.d/S01iptables",
         "exit code 0",
         false,
     )

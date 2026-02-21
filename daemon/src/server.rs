@@ -37,6 +37,7 @@ pub struct ServerState {
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_token: CancellationToken,
     pub ui_update_sender: Option<Sender<DisplayState>>,
+    pub wifi_status: Arc<RwLock<crate::wifi::WifiStatus>>,
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -177,7 +178,7 @@ pub async fn set_config(
         )
     })?;
 
-    update_wifi_creds(&config).await;
+    crate::wifi::update_wpa_conf(&config).await;
 
     // Trigger daemon restart after writing config
     state.daemon_restart_token.cancel();
@@ -185,50 +186,6 @@ pub async fn set_config(
         StatusCode::ACCEPTED,
         "wrote config and triggered restart".to_string(),
     ))
-}
-
-async fn update_wifi_creds(config: &Config) {
-    let has_ssid = config
-        .wifi_ssid
-        .as_ref()
-        .is_some_and(|s| !s.trim().is_empty());
-    let has_password = config
-        .wifi_password
-        .as_ref()
-        .is_some_and(|s| !s.trim().is_empty());
-
-    let creds_path = crate::config::WIFI_CREDS_PATH;
-
-    if !has_ssid {
-        if tokio::fs::metadata(creds_path).await.is_ok()
-            && let Err(e) = tokio::fs::remove_file(creds_path).await
-        {
-            warn!("failed to remove wifi credentials: {e}");
-        }
-    } else if has_password {
-        let contents = format!(
-            "ssid={}\npassword={}\n",
-            config.wifi_ssid.as_ref().unwrap(),
-            config.wifi_password.as_ref().unwrap()
-        );
-        if let Err(e) = write(creds_path, contents).await {
-            warn!("failed to write wifi credentials: {e}");
-        }
-    } else if let Ok(existing) = tokio::fs::read_to_string(creds_path).await {
-        let existing_password = existing
-            .lines()
-            .find_map(|line| line.strip_prefix("password="));
-        if let Some(password) = existing_password {
-            let contents = format!(
-                "ssid={}\npassword={}\n",
-                config.wifi_ssid.as_ref().unwrap(),
-                password
-            );
-            if let Err(e) = write(creds_path, contents).await {
-                warn!("failed to write wifi credentials: {e}");
-            }
-        }
-    }
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -446,6 +403,27 @@ pub async fn get_zip(
     Ok((headers, body).into_response())
 }
 
+pub async fn get_wifi_status(
+    State(state): State<Arc<ServerState>>,
+) -> Json<crate::wifi::WifiStatus> {
+    let status = state.wifi_status.read().await;
+    Json(status.clone())
+}
+
+pub async fn scan_wifi(
+    State(_state): State<Arc<ServerState>>,
+) -> Result<Json<Vec<crate::wifi::WifiNetwork>>, (StatusCode, String)> {
+    let networks = crate::wifi::scan_wifi_networks("wlan1")
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("WiFi scan failed: {e}"),
+            )
+        })?;
+    Ok(Json(networks))
+}
+
 #[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/debug/display-state",
@@ -550,6 +528,7 @@ mod tests {
             analysis_sender: analysis_tx,
             daemon_restart_token: CancellationToken::new(),
             ui_update_sender: None,
+            wifi_status: Arc::new(RwLock::new(crate::wifi::WifiStatus::default())),
         })
     }
 

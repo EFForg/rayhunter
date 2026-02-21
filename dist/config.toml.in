@@ -34,12 +34,31 @@ min_space_to_start_recording_mb = 1
 # Minimum free space (MB) to continue recording (stops if below this)
 min_space_to_continue_recording_mb = 1
 
-# WiFi Client Mode (Orbic only)
-# Set both wifi_ssid and wifi_password to connect the device to an existing WiFi network.
-# This enables internet access for notifications while keeping the hotspot AP running.
-# Leave unset or empty to disable.
-#wifi_ssid = ""
-#wifi_password = ""
+# WiFi Client Mode
+# Toggle wifi_enabled to connect the device to an existing WiFi network.
+# Credentials are stored separately in wpa_sta.conf and managed via the web UI.
+wifi_enabled = false
+
+# DNS servers to use when WiFi client mode is active.
+# Defaults to ["8.8.8.8", "1.1.1.1"] if not specified.
+# dns_servers = ["8.8.8.8", "1.1.1.1"]
+
+# Device Security
+# Block OTA update daemons (dmclient, upgrade) from phoning home.
+# Uses mount --bind to replace them with sleep stubs at runtime.
+# Changes are runtime-only and revert on reboot.
+block_ota_daemons = false
+
+# Restrict outbound traffic to essential services only (DHCP, DNS,
+# HTTPS, and replies to inbound connections). Applies to all outbound
+# interfaces (WiFi and cellular). Loopback and hotspot bridge traffic
+# are always allowed. Defaults to true (recommended).
+firewall_restrict_outbound = true
+
+# Additional TCP ports to allow outbound when the firewall is active.
+# DHCP (67-68), DNS (53), and HTTPS (443) are always allowed.
+# Example: allow HTTP (80) and SSH (22).
+# firewall_allowed_ports = [80, 22]
 
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics

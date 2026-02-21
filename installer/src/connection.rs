@@ -29,15 +29,25 @@ pub async fn install_config<C: DeviceConnection>(
     conn: &mut C,
     device_type: &str,
     reset_config: bool,
+    wifi_enabled: bool,
 ) -> Result<()> {
     let config_path = "/data/rayhunter/config.toml";
     if reset_config || !file_exists(conn, config_path).await {
-        let config = crate::CONFIG_TOML.replace(
+        let mut config = crate::CONFIG_TOML.replace(
             r#"#device = "orbic""#,
             &format!(r#"device = "{device_type}""#),
         );
+        if wifi_enabled {
+            config = config.replace("wifi_enabled = false", "wifi_enabled = true");
+        }
         conn.write_file(config_path, config.as_bytes()).await?;
     } else {
+        if wifi_enabled {
+            conn.run_command(
+                "sed -i 's/wifi_enabled = false/wifi_enabled = true/' /data/rayhunter/config.toml",
+            )
+            .await?;
+        }
         println!("Config file already exists, skipping (use --reset-config to overwrite)");
     }
     Ok(())
@@ -155,7 +165,7 @@ pub async fn setup_data_directory<C: DeviceConnection>(conn: &mut C, data_dir: &
     Ok(())
 }
 
-const WIFI_CREDS_PATH: &str = "/data/rayhunter/wifi-creds.conf";
+const WPA_CONF_PATH: &str = "/data/rayhunter/wpa_sta.conf";
 
 pub async fn install_wifi_creds<C: DeviceConnection>(
     conn: &mut C,
@@ -164,9 +174,8 @@ pub async fn install_wifi_creds<C: DeviceConnection>(
 ) -> Result<()> {
     match (wifi_ssid, wifi_password) {
         (Some(ssid), Some(password)) if !ssid.is_empty() && !password.is_empty() => {
-            let contents = format!("ssid={ssid}\npassword={password}\n");
-            conn.write_file(WIFI_CREDS_PATH, contents.as_bytes())
-                .await?;
+            let conf = rayhunter::format_wpa_conf(ssid, password);
+            conn.write_file(WPA_CONF_PATH, conf.as_bytes()).await?;
             println!("WiFi client mode credentials written");
         }
         (Some(_), None) | (None, Some(_)) => {

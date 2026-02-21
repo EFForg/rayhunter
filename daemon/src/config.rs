@@ -6,8 +6,7 @@ use rayhunter::analysis::analyzer::AnalyzerConfig;
 
 use crate::error::RayhunterError;
 use crate::notifications::NotificationType;
-
-pub const WIFI_CREDS_PATH: &str = "/data/rayhunter/wifi-creds.conf";
+use crate::wifi::WPA_CONF_PATH;
 
 /// The structure of a valid rayhunter configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -38,6 +37,11 @@ pub struct Config {
     pub min_space_to_continue_recording_mb: u64,
     pub wifi_ssid: Option<String>,
     pub wifi_password: Option<String>,
+    pub wifi_enabled: bool,
+    pub block_ota_daemons: bool,
+    pub dns_servers: Option<Vec<String>>,
+    pub firewall_restrict_outbound: bool,
+    pub firewall_allowed_ports: Option<Vec<u16>>,
 }
 
 impl Default for Config {
@@ -57,6 +61,11 @@ impl Default for Config {
             min_space_to_continue_recording_mb: 1,
             wifi_ssid: None,
             wifi_password: None,
+            wifi_enabled: false,
+            block_ota_daemons: false,
+            dns_servers: None,
+            firewall_restrict_outbound: true,
+            firewall_allowed_ports: None,
         }
     }
 }
@@ -72,12 +81,7 @@ where
         Config::default()
     };
 
-    if let Ok(creds) = tokio::fs::read_to_string(WIFI_CREDS_PATH).await {
-        config.wifi_ssid = creds
-            .lines()
-            .find_map(|line| line.strip_prefix("ssid="))
-            .map(|s| s.to_string());
-    }
+    config.wifi_ssid = rayhunter::read_ssid_from_wpa_conf(WPA_CONF_PATH);
     config.wifi_password = None;
 
     Ok(config)

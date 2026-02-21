@@ -186,7 +186,7 @@ async fn tplink_run_install(
     let mut conn = TelnetConnection::new(addr, true);
     setup_data_directory(&mut conn, &data_dir).await?;
 
-    install_config(&mut conn, "tplink", reset_config).await?;
+    install_config(&mut conn, "tplink", reset_config, false).await?;
 
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 

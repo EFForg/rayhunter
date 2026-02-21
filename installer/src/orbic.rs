@@ -172,12 +172,6 @@ async fn setup_rayhunter(
     .await?;
     install_file(
         &mut adb_device,
-        "/data/rayhunter/scripts/wifi-client.sh",
-        include_bytes!("../../client-mode/scripts/wifi-client.sh"),
-    )
-    .await?;
-    install_file(
-        &mut adb_device,
         "/data/rayhunter/bin/wpa_supplicant",
         wpa_supplicant_bin,
     )
@@ -193,13 +187,14 @@ async fn setup_rayhunter(
         let mut conn = AdbConnection {
             device: &mut adb_device,
         };
-        install_config(&mut conn, "orbic", reset_config).await?;
+        let wifi_enabled = wifi_ssid.is_some() && wifi_password.is_some();
+        install_config(&mut conn, "orbic", reset_config, wifi_enabled).await?;
         install_wifi_creds(&mut conn, wifi_ssid, wifi_password).await?;
     }
 
     let rayhunter_daemon_init = RAYHUNTER_DAEMON_INIT.replace(
         "#RAYHUNTER-PRESTART",
-        "pkill -f start_qt_daemon 2>/dev/null || true; sleep 1; pkill -f qt_daemon 2>/dev/null || true\n    printf '#!/bin/sh\\nwhile true; do sleep 3600; done\\n' > /tmp/daemon-stub\n    chmod 755 /tmp/daemon-stub\n    mount --bind /tmp/daemon-stub /usr/bin/dmclient 2>/dev/null || true\n    mount --bind /tmp/daemon-stub /usr/bin/upgrade 2>/dev/null || true\n    kill -9 $(pidof dmclient) 2>/dev/null || true\n    kill -9 $(pidof upgrade) 2>/dev/null || true\n    sh /data/rayhunter/scripts/wifi-client.sh start 2>/dev/null &",
+        "pkill -f start_qt_daemon 2>/dev/null || true\n    sleep 1\n    pkill -f qt_daemon 2>/dev/null || true",
     );
     install_file(
         &mut adb_device,
@@ -213,8 +208,15 @@ async fn setup_rayhunter(
         include_bytes!("../../dist/scripts/misc-daemon"),
     )
     .await?;
+    install_file(
+        &mut adb_device,
+        "/etc/init.d/S01iptables",
+        include_bytes!("../../dist/scripts/S01iptables"),
+    )
+    .await?;
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/rayhunter_daemon").await?;
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/misc-daemon").await?;
+    adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/S01iptables").await?;
     println!("done");
     print!("Waiting for reboot... ");
     adb_at_syscmd(&mut adb_device, "shutdown -r -t 1 now").await?;

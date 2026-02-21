@@ -2742,6 +2742,7 @@ dependencies = [
  "md5 0.7.0",
  "md5crypt",
  "nusb",
+ "rayhunter",
  "reqwest",
  "serde",
  "sha2",
@@ -4689,6 +4690,7 @@ dependencies = [
  "serde",
  "serde_json",
  "telcom-parser",
+ "tempfile",
  "thiserror 1.0.69",
  "tokio",
  "utoipa",
@@ -4733,6 +4735,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "toml 0.8.22",
+ "url",
  "utoipa",
 ]
 
