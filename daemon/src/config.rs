@@ -26,6 +26,8 @@ pub struct Config {
     pub colorblind_mode: bool,
     /// Key input mode
     pub key_input_mode: u8,
+    /// Keep the device screen awake (device-specific; currently Orbic)
+    pub keep_screen_on: bool,
     /// ntfy.sh URL
     pub ntfy_url: Option<String>,
     /// Vector containing the types of enabled notifications
@@ -46,6 +48,7 @@ impl Default for Config {
             ui_level: 1,
             colorblind_mode: false,
             key_input_mode: 0,
+            keep_screen_on: false,
             analyzers: AnalyzerConfig::default(),
             ntfy_url: None,
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
