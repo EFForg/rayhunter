@@ -66,12 +66,14 @@ pub async fn readlink<C: DeviceConnection>(conn: &mut C, path: &str) -> Result<S
     let output = conn
         .run_command(&format!("echo RL:$(readlink {path})"))
         .await?;
-    let result = output
-        .lines()
-        .find_map(|line| line.trim().strip_prefix("RL:"))
-        .unwrap_or("")
-        .to_string();
-    Ok(result)
+
+    for line in output.lines() {
+        if let Some(target) = line.trim().strip_prefix("RL:") {
+            return Ok(target.to_string());
+        }
+    }
+
+    bail!("unexpected readlink output: {output:?}");
 }
 
 /// Set up the data directory at `data_dir` and create a symlink from `/data/rayhunter` to it.
