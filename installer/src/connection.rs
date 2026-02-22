@@ -17,7 +17,7 @@ pub trait DeviceConnection {
 
 /// Check if a file exists using a DeviceConnection
 pub async fn file_exists<C: DeviceConnection>(conn: &mut C, path: &str) -> bool {
-    conn.run_command(&format!("test -f {path} && echo exists || echo missing"))
+    conn.run_command(&format!("test -f '{path}' && echo exists || echo missing"))
         .await
         .map(|output| output.contains("exists"))
         .unwrap_or(false)
@@ -45,7 +45,7 @@ pub async fn install_config<C: DeviceConnection>(
 
 /// Check if a directory exists using a DeviceConnection
 pub async fn dir_exists<C: DeviceConnection>(conn: &mut C, path: &str) -> bool {
-    conn.run_command(&format!("test -d {path} && echo exists || echo missing"))
+    conn.run_command(&format!("test -d '{path}' && echo exists || echo missing"))
         .await
         .map(|output| output.contains("exists"))
         .unwrap_or(false)
@@ -53,7 +53,7 @@ pub async fn dir_exists<C: DeviceConnection>(conn: &mut C, path: &str) -> bool {
 
 /// Check if a path is a symlink using a DeviceConnection
 pub async fn is_symlink<C: DeviceConnection>(conn: &mut C, path: &str) -> bool {
-    conn.run_command(&format!("test -L {path} && echo yes || echo no"))
+    conn.run_command(&format!("test -L '{path}' && echo yes || echo no"))
         .await
         .map(|output| output.contains("yes"))
         .unwrap_or(false)
@@ -64,7 +64,7 @@ pub async fn readlink<C: DeviceConnection>(conn: &mut C, path: &str) -> Result<S
     // Use a prefix marker to find the actual output line, since some shells (TP-Link) echo
     // back the command and run_command appends protocol lines.
     let output = conn
-        .run_command(&format!("echo RL:$(readlink {path})"))
+        .run_command(&format!("echo RL:$(readlink '{path}')"))
         .await?;
 
     for line in output.lines() {
@@ -86,6 +86,10 @@ pub async fn readlink<C: DeviceConnection>(conn: &mut C, path: &str) -> Result<S
 pub async fn setup_data_directory<C: DeviceConnection>(conn: &mut C, data_dir: &str) -> Result<()> {
     if data_dir == "/data/rayhunter" {
         bail!("data_dir must not be /data/rayhunter");
+    }
+
+    if data_dir.contains("'") {
+        bail!("data_dir must not contain an apostrophe (')");
     }
 
     // Determine where old data lives, if anywhere
@@ -129,7 +133,7 @@ pub async fn setup_data_directory<C: DeviceConnection>(conn: &mut C, data_dir: &
         // XXX: DeviceConnection::run_command does not expose the exit code of the ran command. It
         // probably should, or a utility for it should exist?
         let mv_output = conn
-            .run_command(&format!("mv {old_source} {data_dir} && echo MV_OK"))
+            .run_command(&format!("mv {old_source} '{data_dir}' && echo MV_OK"))
             .await?;
         if mv_output.contains("MV_OK") {
             println!("ok");
@@ -138,13 +142,13 @@ pub async fn setup_data_directory<C: DeviceConnection>(conn: &mut C, data_dir: &
         }
     } else {
         // No migration needed, just ensure the target directory exists
-        conn.run_command(&format!("mkdir -p {data_dir}")).await?;
+        conn.run_command(&format!("mkdir -p '{data_dir}'")).await?;
     }
 
     // Create the symlink
     print!("Creating symlink /data/rayhunter -> {data_dir} ... ");
     conn.run_command("mkdir -p /data").await?;
-    conn.run_command(&format!("ln -sf {data_dir} /data/rayhunter"))
+    conn.run_command(&format!("ln -sf '{data_dir}' /data/rayhunter"))
         .await?;
     println!("ok");
 
