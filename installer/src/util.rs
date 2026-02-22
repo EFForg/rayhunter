@@ -19,7 +19,10 @@ pub async fn telnet_send_command_with_output(
     command: &str,
     wait_for_prompt: bool,
 ) -> Result<String> {
-    debug_assert!(!command.contains('\n'));
+    if command.contains('\n') {
+        bail!("multi-line commands are not allowed");
+    }
+
     let stream = TcpStream::connect(addr).await?;
     let (mut reader, mut writer) = stream.into_split();
 
