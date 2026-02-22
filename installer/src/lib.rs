@@ -89,7 +89,8 @@ struct InstallTpLink {
     reset_config: bool,
 
     /// Override the data directory path. Defaults to /cache/rayhunter-data (or SD card path when
-    /// SD card is used). Must not be /data/rayhunter.
+    /// SD card is used). Must not be /data/rayhunter, which lives on a storage partition that's
+    ///  too small for normal Rayhunter operation.
     #[arg(long)]
     data_dir: Option<String>,
 }
