@@ -8,7 +8,7 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{TelnetConnection, install_config};
+use crate::connection::{TelnetConnection, install_config, setup_data_directory};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
 use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
@@ -147,6 +147,7 @@ pub async fn install(
     admin_username: String,
     admin_password: Option<String>,
     reset_config: bool,
+    data_dir: Option<String>,
 ) -> Result<()> {
     let Some(admin_password) = admin_password else {
         eprintln!(
@@ -170,7 +171,8 @@ pub async fn install(
     wait_for_telnet(&admin_ip).await?;
     println!("done");
 
-    setup_rayhunter(&admin_ip, reset_config).await
+    let data_dir = data_dir.unwrap_or_else(|| "/data/rayhunter-data".to_string());
+    setup_rayhunter(&admin_ip, reset_config, &data_dir).await
 }
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
@@ -194,7 +196,7 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
     Ok(())
 }
 
-async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
+async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
@@ -208,7 +210,8 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
     )
     .await?;
 
-    telnet_send_command(addr, "mkdir -p /data/rayhunter", "exit code 0", false).await?;
+    let mut conn = TelnetConnection::new(addr, false);
+    setup_data_directory(&mut conn, data_dir).await?;
 
     telnet_send_file(
         addr,
@@ -218,14 +221,7 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool) -> Result<()> {
     )
     .await?;
 
-    let mut conn = TelnetConnection::new(addr, false);
-    install_config(
-        &mut conn,
-        "/data/rayhunter/config.toml",
-        "orbic",
-        reset_config,
-    )
-    .await?;
+    install_config(&mut conn, "orbic", reset_config).await?;
 
     telnet_send_file(
         addr,
