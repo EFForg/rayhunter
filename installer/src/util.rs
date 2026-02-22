@@ -70,7 +70,7 @@ pub async fn telnet_send_command_with_output(
             let start = start + "RAYHUNTER_TELNET_COMMAND_START".len();
             string[start..end].trim_start_matches(['\r', '\n'])
         }
-        _ => &string,
+        _ => bail!("failed to parse command output from string: {string:?}"),
     };
     Ok(string.to_string())
 }
