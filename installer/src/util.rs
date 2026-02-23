@@ -147,7 +147,10 @@ pub async fn telnet_send_file(
             drop(stream);
         }
 
-        handle.await??
+        handle
+            .await
+            .context("background nc writer failed")?
+            .context("background nc writer failed")?
     };
 
     let checksum = md5::compute(payload);
