@@ -133,7 +133,7 @@ pub async fn setup_data_directory<C: DeviceConnection>(conn: &mut C, data_dir: &
         // XXX: DeviceConnection::run_command does not expose the exit code of the ran command. It
         // probably should, or a utility for it should exist?
         let mv_output = conn
-            .run_command(&format!("mv {old_source} '{data_dir}' && echo MV_OK"))
+            .run_command(&format!("mv '{old_source}' '{data_dir}' && echo MV_OK"))
             .await?;
         if mv_output.contains("MV_OK") {
             println!("ok");
