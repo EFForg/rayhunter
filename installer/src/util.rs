@@ -158,6 +158,8 @@ pub async fn telnet_send_file(
                 nc_output.trim()
             );
         }
+
+        nc_output
     };
 
     let checksum = md5::compute(payload);
