@@ -47,20 +47,6 @@ API_TARGET=http://192.168.1.1:8080 npm run dev
 The UI will listen on `localhost:5173` and instantly show any frontend changes
 you make. Backend changes require building everything from the top (daemon and installer).
 
-You may need to turn off your VPN in order to load the frontend succesfully - even with local network sharing enabled, VPNs can interfere with the connection to the backend.
-
-Specifically for WSL users:
-
-- The HyperV firewall also tends to interfere with the connection between frontend and backend. You can turn it off in your WSL settings.
-
-- WSL2 has a known compatibility issue which may prevent vite from detecting file system changes and therefore affects HMR (hot module replacement).
-If your hot reloading does not work, some have success using polling to detect changes. To do so, specify the following setting in vite.config.ts:
-```ts
-server: {
-    watch: { usePolling: true }
-}
-```
-
 ## Installer utils, getting a shell
 
 Check `./scripts/install-dev.sh util --help`
@@ -90,3 +76,19 @@ Note though that we can't assist with any issues setting ADB up, _especially
 not_ on Windows. There have been too many driver issues to make this the
 "golden path" for most users or contributors. There have been instances where
 people managed to brick their orbic devices using ADB on Windows.
+
+## Troubleshooting
+
+You may need to turn off your VPN in order to load the frontend succesfully - even with local network sharing enabled, VPNs can interfere with the connection to the backend.
+
+Specifically for WSL users:
+
+- The HyperV firewall also tends to interfere with the connection between frontend and backend. You can turn it off in your WSL settings.
+
+- WSL2 has a known compatibility issue which may prevent vite from detecting file system changes and therefore affects HMR (hot module replacement).
+If your hot reloading does not work, some have success using polling to detect changes. To do so, specify the following setting in vite.config.ts:
+```ts
+server: {
+    watch: { usePolling: true }
+}
+```
