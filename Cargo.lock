@@ -2725,7 +2725,7 @@ dependencies = [
 
 [[package]]
 name = "installer"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "adb_client",
  "aes",
@@ -4672,7 +4672,7 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
 name = "rayhunter"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "bytes",
  "chrono",
@@ -4696,7 +4696,7 @@ dependencies = [
 
 [[package]]
 name = "rayhunter-check"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "clap",
  "futures",
@@ -4709,7 +4709,7 @@ dependencies = [
 
 [[package]]
 name = "rayhunter-daemon"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4898,7 +4898,7 @@ dependencies = [
 
 [[package]]
 name = "rootshell"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "nix 0.29.0",
 ]
@@ -5954,7 +5954,7 @@ dependencies = [
 
 [[package]]
 name = "telcom-parser"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "asn1-codecs",
  "asn1-compiler",

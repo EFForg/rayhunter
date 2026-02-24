@@ -1,6 +1,6 @@
 [package]
 name = "rayhunter-daemon"
-version = "0.10.1"
+version = "0.10.2"
 edition = "2024"
 rust-version = "1.88.0"
 
@@ -36,7 +36,7 @@ tokio-stream = { version = "0.1.14", default-features = false, features = ["io-u
 futures = { version = "0.3.30", default-features = false }
 serde_json = "1.0.114"
 image = { version =  "0.25.1", default-features = false, features = ["png", "gif"] }
-tempfile = "3.10.1"
+tempfile = "3.10.2"
 async_zip = { version = "0.0.17", features = ["tokio"] }
 anyhow = "1.0.98"
 reqwest = { version = "0.12.20", default-features = false }
