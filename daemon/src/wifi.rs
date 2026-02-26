@@ -17,17 +17,29 @@ use crate::config::Config;
 pub const WPA_CONF_PATH: &str = "/data/rayhunter/wpa_sta.conf";
 
 const WPA_BIN: &str = "/data/rayhunter/bin/wpa_supplicant";
-const DEFAULT_DNS: &[&str] = &["8.8.8.8", "1.1.1.1"];
+const DEFAULT_DNS: &[&str] = &["9.9.9.9", "149.112.112.112"];
 const CRASH_LOG_DIR: &str = "/data/rayhunter/crash-logs";
 const MAX_RECOVERY_ATTEMPTS: u32 = 5;
 const BASE_BACKOFF_SECS: u64 = 30;
 const HOSTAPD_CONF: &str = "/data/misc/wifi/hostapd.conf";
 const AP_IFACE: &str = "wlan0";
 const BRIDGE_IFACE: &str = "bridge0";
+pub const STA_IFACE: &str = "wlan1";
+
+#[derive(Clone, Copy, PartialEq, Serialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum WifiState {
+    #[default]
+    Disabled,
+    Connecting,
+    Connected,
+    Failed,
+    Recovering,
+}
 
 #[derive(Clone, Serialize, Default)]
 pub struct WifiStatus {
-    pub state: String,
+    pub state: WifiState,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ssid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -49,7 +61,7 @@ struct WifiClient {
 impl WifiClient {
     fn new(dns_servers: Vec<String>) -> Self {
         WifiClient {
-            iface: "wlan1".to_string(),
+            iface: STA_IFACE.to_string(),
             wpa_child: None,
             dhcp_child: None,
             rt_table: 100,
@@ -321,7 +333,9 @@ impl WifiClient {
         // inferring the gateway as .1 from the kernel subnet route.
         let ip = self.get_interface_ip().await?;
         if let Some(last_dot) = ip.rfind('.') {
-            return Ok(format!("{}.1", &ip[..last_dot]));
+            let gw = format!("{}.1", &ip[..last_dot]);
+            warn!("no explicit gateway for {}, assuming {gw}", self.iface);
+            return Ok(gw);
         }
 
         bail!("no default gateway for interface")
@@ -495,7 +509,7 @@ async fn reload_wifi_module() -> Result<()> {
             AP_IFACE,
             "interface",
             "add",
-            "wlan1",
+            STA_IFACE,
             "type",
             "managed",
         ])
@@ -503,7 +517,7 @@ async fn reload_wifi_module() -> Result<()> {
         .await?;
     if !add_sta.status.success() {
         bail!(
-            "failed to create wlan1: {}",
+            "failed to create {STA_IFACE}: {}",
             String::from_utf8_lossy(&add_sta.stderr).trim()
         );
     }
@@ -533,7 +547,7 @@ pub fn run_wifi_client(
     task_tracker.spawn(async move {
         {
             let mut status = wifi_status.write().await;
-            status.state = "connecting".to_string();
+            status.state = WifiState::Connecting;
             status.ssid = ssid.clone();
         }
 
@@ -542,7 +556,7 @@ pub fn run_wifi_client(
             Ok(()) => {
                 let ip = client.get_interface_ip().await.ok();
                 let mut status = wifi_status.write().await;
-                status.state = "connected".to_string();
+                status.state = WifiState::Connected;
                 status.ssid = ssid.clone();
                 status.ip = ip;
                 status.error = None;
@@ -551,7 +565,7 @@ pub fn run_wifi_client(
             Err(e) => {
                 client.stop().await;
                 let mut status = wifi_status.write().await;
-                status.state = "failed".to_string();
+                status.state = WifiState::Failed;
                 status.error = Some(format!("{e}"));
                 error!("WiFi client failed to start: {e}");
                 return;
@@ -566,7 +580,7 @@ pub fn run_wifi_client(
                 _ = shutdown_token.cancelled() => {
                     client.stop().await;
                     let mut status = wifi_status.write().await;
-                    status.state = "disabled".to_string();
+                    status.state = WifiState::Disabled;
                     status.ip = None;
                     status.error = None;
                     info!("WiFi client stopped");
@@ -580,7 +594,7 @@ pub fn run_wifi_client(
                             );
                             client.stop().await;
                             let mut status = wifi_status.write().await;
-                            status.state = "failed".to_string();
+                            status.state = WifiState::Failed;
                             status.error = Some(format!(
                                 "module crash recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts"
                             ));
@@ -589,12 +603,12 @@ pub fn run_wifi_client(
 
                         recovery_attempts += 1;
                         warn!(
-                            "wlan1 interface disappeared, attempting recovery ({recovery_attempts}/{MAX_RECOVERY_ATTEMPTS})"
+                            "{STA_IFACE} interface disappeared, attempting recovery ({recovery_attempts}/{MAX_RECOVERY_ATTEMPTS})"
                         );
 
                         {
                             let mut status = wifi_status.write().await;
-                            status.state = "recovering".to_string();
+                            status.state = WifiState::Recovering;
                             status.ip = None;
                             status.error = None;
                         }
@@ -610,7 +624,7 @@ pub fn run_wifi_client(
                         if let Err(e) = reload_wifi_module().await {
                             error!("module reload failed: {e}");
                             let mut status = wifi_status.write().await;
-                            status.state = "recovering".to_string();
+                            status.state = WifiState::Recovering;
                             status.error = Some(format!("{e}"));
                             backoff_secs = (backoff_secs * 2).min(240);
                             continue;
@@ -620,7 +634,7 @@ pub fn run_wifi_client(
                             Ok(()) => {
                                 let ip = client.get_interface_ip().await.ok();
                                 let mut status = wifi_status.write().await;
-                                status.state = "connected".to_string();
+                                status.state = WifiState::Connected;
                                 status.ip = ip;
                                 status.error = None;
                                 info!(
@@ -633,7 +647,7 @@ pub fn run_wifi_client(
                                 error!("WiFi client restart after recovery failed: {e}");
                                 client.stop().await;
                                 let mut status = wifi_status.write().await;
-                                status.state = "recovering".to_string();
+                                status.state = WifiState::Recovering;
                                 status.error = Some(format!("{e}"));
                                 backoff_secs = (backoff_secs * 2).min(240);
                             }
@@ -675,6 +689,10 @@ pub fn run_wifi_client(
 }
 
 pub async fn update_wpa_conf(config: &Config) {
+    update_wpa_conf_at(config, WPA_CONF_PATH).await;
+}
+
+async fn update_wpa_conf_at(config: &Config, path: &str) {
     let has_ssid = config
         .wifi_ssid
         .as_ref()
@@ -689,18 +707,18 @@ pub async fn update_wpa_conf(config: &Config) {
             config.wifi_ssid.as_ref().unwrap(),
             config.wifi_password.as_ref().unwrap(),
         );
-        if let Err(e) = tokio::fs::write(WPA_CONF_PATH, conf).await {
+        if let Err(e) = tokio::fs::write(path, conf).await {
             warn!("failed to write wpa_supplicant config: {e}");
         }
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let _ =
-                tokio::fs::set_permissions(WPA_CONF_PATH, std::fs::Permissions::from_mode(0o600))
-                    .await;
+            let _ = tokio::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).await;
         }
     } else if !has_ssid {
-        let _ = tokio::fs::remove_file(WPA_CONF_PATH).await;
+        let _ = tokio::fs::remove_file(path).await;
+    } else {
+        warn!("wifi_ssid set without wifi_password, skipping wpa_supplicant config");
     }
 }
 
@@ -738,10 +756,10 @@ pub async fn scan_wifi_networks(iface: &str) -> Result<Vec<WifiNetwork>> {
         .args(["dev", iface, "scan"])
         .output()
         .await?;
-    parse_iw_scan(&String::from_utf8_lossy(&out.stdout))
+    Ok(parse_iw_scan(&String::from_utf8_lossy(&out.stdout)))
 }
 
-fn parse_iw_scan(output: &str) -> Result<Vec<WifiNetwork>> {
+fn parse_iw_scan(output: &str) -> Vec<WifiNetwork> {
     let mut networks: Vec<WifiNetwork> = Vec::new();
     let mut current_ssid: Option<String> = None;
     let mut current_signal: i32 = -100;
@@ -777,7 +795,7 @@ fn parse_iw_scan(output: &str) -> Result<Vec<WifiNetwork>> {
     }
 
     networks.sort_by(|a, b| b.signal_dbm.cmp(&a.signal_dbm));
-    Ok(networks)
+    networks
 }
 
 fn push_or_update(networks: &mut Vec<WifiNetwork>, ssid: String, signal: i32, security: &str) {
@@ -816,7 +834,7 @@ BSS 11:22:33:44:55:66(on wlan1)
 \tSSID: OtherNet
 \tWPA:\t * Version: 1
 ";
-        let networks = parse_iw_scan(output).unwrap();
+        let networks = parse_iw_scan(output);
         assert_eq!(networks.len(), 2);
         assert_eq!(networks[0].ssid, "MyNetwork");
         assert_eq!(networks[0].signal_dbm, -45);
@@ -838,7 +856,7 @@ BSS 11:22:33:44:55:66(on wlan1)
 \tSSID: DupNet
 \tRSN:\t * Version: 1
 ";
-        let networks = parse_iw_scan(output).unwrap();
+        let networks = parse_iw_scan(output);
         assert_eq!(networks.len(), 1);
         assert_eq!(networks[0].ssid, "DupNet");
         assert_eq!(networks[0].signal_dbm, -50);
@@ -851,7 +869,7 @@ BSS aa:bb:cc:dd:ee:ff(on wlan1)
 \tsignal: -45.00 dBm
 \tSSID:
 ";
-        let networks = parse_iw_scan(output).unwrap();
+        let networks = parse_iw_scan(output);
         assert_eq!(networks.len(), 0);
     }
 
@@ -862,7 +880,7 @@ BSS aa:bb:cc:dd:ee:ff(on wlan1)
 \tsignal: -60.00 dBm
 \tSSID: OpenCafe
 ";
-        let networks = parse_iw_scan(output).unwrap();
+        let networks = parse_iw_scan(output);
         assert_eq!(networks.len(), 1);
         assert_eq!(networks[0].security, "Open");
     }
@@ -871,24 +889,35 @@ BSS aa:bb:cc:dd:ee:ff(on wlan1)
     async fn test_update_wpa_conf_writes_and_removes() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("wpa_sta.conf");
+        let path_str = path.to_str().unwrap();
 
         let mut config = Config::default();
         config.wifi_ssid = Some("TestNet".to_string());
         config.wifi_password = Some("pass123".to_string());
 
-        tokio::fs::write(&path, "").await.unwrap();
-
-        let conf = rayhunter::format_wpa_conf(
-            config.wifi_ssid.as_ref().unwrap(),
-            config.wifi_password.as_ref().unwrap(),
-        );
-        tokio::fs::write(&path, &conf).await.unwrap();
+        update_wpa_conf_at(&config, path_str).await;
 
         let content = tokio::fs::read_to_string(&path).await.unwrap();
         assert!(content.contains("ssid=\"TestNet\""));
         assert!(content.contains("psk=\"pass123\""));
 
-        tokio::fs::remove_file(&path).await.unwrap();
+        config.wifi_ssid = None;
+        config.wifi_password = None;
+        update_wpa_conf_at(&config, path_str).await;
+        assert!(!path.exists());
+    }
+
+    #[tokio::test]
+    async fn test_update_wpa_conf_ssid_without_password_is_noop() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("wpa_sta.conf");
+        let path_str = path.to_str().unwrap();
+
+        let mut config = Config::default();
+        config.wifi_ssid = Some("TestNet".to_string());
+        config.wifi_password = None;
+
+        update_wpa_conf_at(&config, path_str).await;
         assert!(!path.exists());
     }
 }

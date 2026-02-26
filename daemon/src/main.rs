@@ -312,6 +312,7 @@ async fn run_with_config(
         daemon_restart_token: restart_token.clone(),
         ui_update_sender: Some(ui_update_tx),
         wifi_status,
+        wifi_scan_lock: tokio::sync::Mutex::new(()),
     });
     run_server(&task_tracker, state, shutdown_token.clone()).await;
 

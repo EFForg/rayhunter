@@ -38,6 +38,7 @@ pub struct ServerState {
     pub daemon_restart_token: CancellationToken,
     pub ui_update_sender: Option<Sender<DisplayState>>,
     pub wifi_status: Arc<RwLock<crate::wifi::WifiStatus>>,
+    pub wifi_scan_lock: tokio::sync::Mutex<()>,
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -411,9 +412,15 @@ pub async fn get_wifi_status(
 }
 
 pub async fn scan_wifi(
-    State(_state): State<Arc<ServerState>>,
+    State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Vec<crate::wifi::WifiNetwork>>, (StatusCode, String)> {
-    let networks = crate::wifi::scan_wifi_networks("wlan1")
+    let _guard = state.wifi_scan_lock.try_lock().map_err(|_| {
+        (
+            StatusCode::TOO_MANY_REQUESTS,
+            "WiFi scan already in progress".to_string(),
+        )
+    })?;
+    let networks = crate::wifi::scan_wifi_networks(crate::wifi::STA_IFACE)
         .await
         .map_err(|e| {
             (
@@ -529,6 +536,7 @@ mod tests {
             daemon_restart_token: CancellationToken::new(),
             ui_update_sender: None,
             wifi_status: Arc::new(RwLock::new(crate::wifi::WifiStatus::default())),
+            wifi_scan_lock: tokio::sync::Mutex::new(()),
         })
     }
 

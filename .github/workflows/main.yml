@@ -11,8 +11,6 @@ env:
   CARGO_TERM_COLOR: always
   FILE_ROOTSHELL: ../../rootshell/rootshell
   FILE_RAYHUNTER_DAEMON: ../../rayhunter-daemon/rayhunter-daemon
-  FILE_WPA_SUPPLICANT: ../../rayhunter-daemon/rayhunter-daemon
-  FILE_WPA_CLI: ../../rayhunter-daemon/rayhunter-daemon
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
