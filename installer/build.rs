@@ -18,9 +18,12 @@ fn main() {
     set_binary_var(&include_dir, "FILE_ROOTSHELL", "rootshell");
     set_binary_var(&include_dir, "FILE_RAYHUNTER_DAEMON", "rayhunter-daemon");
 
-    let wpa_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../tools/build-wpa-supplicant/out");
-    set_binary_var(&wpa_dir, "FILE_WPA_SUPPLICANT", "wpa_supplicant");
-    set_binary_var(&wpa_dir, "FILE_WPA_CLI", "wpa_cli");
+    if std::env::var("CARGO_FEATURE_WIFI_CLIENT").is_ok() {
+        let wpa_dir =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../tools/build-wpa-supplicant/out");
+        set_binary_var(&wpa_dir, "FILE_WPA_SUPPLICANT", "wpa_supplicant");
+        set_binary_var(&wpa_dir, "FILE_WPA_CLI", "wpa_cli");
+    }
 }
 
 fn set_binary_var(include_dir: &Path, var: &str, file: &str) {

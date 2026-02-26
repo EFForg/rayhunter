@@ -236,8 +236,6 @@ async fn setup_rayhunter(
 ) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
-    let wpa_supplicant_bin = include_bytes!(env!("FILE_WPA_SUPPLICANT"));
-    let wpa_cli_bin = include_bytes!(env!("FILE_WPA_CLI"));
 
     // Remount filesystem as read-write to allow modifications
     // This is really only necessary for the Moxee Hotspot
@@ -270,14 +268,19 @@ async fn setup_rayhunter(
         false,
     )
     .await?;
-    telnet_send_file(
-        addr,
-        "/data/rayhunter/bin/wpa_supplicant",
-        wpa_supplicant_bin,
-        false,
-    )
-    .await?;
-    telnet_send_file(addr, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin, false).await?;
+    #[cfg(feature = "wifi-client")]
+    {
+        let wpa_supplicant_bin = include_bytes!(env!("FILE_WPA_SUPPLICANT"));
+        let wpa_cli_bin = include_bytes!(env!("FILE_WPA_CLI"));
+        telnet_send_file(
+            addr,
+            "/data/rayhunter/bin/wpa_supplicant",
+            wpa_supplicant_bin,
+            false,
+        )
+        .await?;
+        telnet_send_file(addr, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin, false).await?;
+    }
 
     let wifi_enabled = wifi_ssid.is_some() && wifi_password.is_some();
     install_config(&mut conn, "orbic", reset_config, wifi_enabled).await?;
@@ -308,7 +311,15 @@ async fn setup_rayhunter(
 
     telnet_send_command(
         addr,
-        "chmod +x /data/rayhunter/rayhunter-daemon /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli",
+        "chmod +x /data/rayhunter/rayhunter-daemon",
+        "exit code 0",
+        false,
+    )
+    .await?;
+    #[cfg(feature = "wifi-client")]
+    telnet_send_command(
+        addr,
+        "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli",
         "exit code 0",
         false,
     )

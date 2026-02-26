@@ -3,6 +3,9 @@ name = "installer"
 version = "0.10.2"
 edition = "2024"
 
+[features]
+wifi-client = []
+
 [lib]
 name = "installer"
 crate-type = ["rlib"]

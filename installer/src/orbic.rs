@@ -156,9 +156,6 @@ async fn setup_rayhunter(
 ) -> Result<ADBUSBDevice> {
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
-    let wpa_supplicant_bin = include_bytes!(env!("FILE_WPA_SUPPLICANT"));
-    let wpa_cli_bin = include_bytes!(env!("FILE_WPA_CLI"));
-
     adb_at_syscmd(
         &mut adb_device,
         "mkdir -p /data/rayhunter/scripts /data/rayhunter/bin",
@@ -170,18 +167,23 @@ async fn setup_rayhunter(
         rayhunter_daemon_bin,
     )
     .await?;
-    install_file(
-        &mut adb_device,
-        "/data/rayhunter/bin/wpa_supplicant",
-        wpa_supplicant_bin,
-    )
-    .await?;
-    install_file(&mut adb_device, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin).await?;
-    adb_at_syscmd(
-        &mut adb_device,
-        "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli",
-    )
-    .await?;
+    #[cfg(feature = "wifi-client")]
+    {
+        let wpa_supplicant_bin = include_bytes!(env!("FILE_WPA_SUPPLICANT"));
+        let wpa_cli_bin = include_bytes!(env!("FILE_WPA_CLI"));
+        install_file(
+            &mut adb_device,
+            "/data/rayhunter/bin/wpa_supplicant",
+            wpa_supplicant_bin,
+        )
+        .await?;
+        install_file(&mut adb_device, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin).await?;
+        adb_at_syscmd(
+            &mut adb_device,
+            "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli",
+        )
+        .await?;
+    }
 
     {
         let mut conn = AdbConnection {

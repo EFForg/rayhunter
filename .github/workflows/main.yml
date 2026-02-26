@@ -11,6 +11,8 @@ env:
   CARGO_TERM_COLOR: always
   FILE_ROOTSHELL: ../../rootshell/rootshell
   FILE_RAYHUNTER_DAEMON: ../../rayhunter-daemon/rayhunter-daemon
+  FILE_WPA_SUPPLICANT: ../../wpa-supplicant/wpa_supplicant
+  FILE_WPA_CLI: ../../wpa-supplicant/wpa_cli
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
@@ -301,6 +303,27 @@ jobs:
           path: target/armv7-unknown-linux-musleabihf/firmware/rootshell
           if-no-files-found: error
 
+  build_wpa_supplicant:
+    if: needs.files_changed.outputs.installer_changed == 'true'
+    needs:
+      - files_changed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build wpa_supplicant (armv7)
+        run: docker build --target export --output tools/build-wpa-supplicant/out tools/build-wpa-supplicant
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wpa-supplicant
+          path: |
+            tools/build-wpa-supplicant/out/wpa_supplicant
+            tools/build-wpa-supplicant/out/wpa_cli
+          if-no-files-found: error
+
   build_rayhunter:
     if: needs.files_changed.outputs.daemon_needed == 'true'
     needs:
@@ -349,6 +372,7 @@ jobs:
     needs:
       - build_rayhunter
       - build_rootshell
+      - build_wpa_supplicant
       - files_changed
       - windows_installer_check_and_test
     strategy:
@@ -382,7 +406,7 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --package installer --bin installer --release --target ${{ matrix.platform.target }}
+      - run: cargo build --package installer --bin installer --release --features wifi-client --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.platform.name }}
