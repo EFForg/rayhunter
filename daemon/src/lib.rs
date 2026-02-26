@@ -4,12 +4,14 @@ pub mod config;
 pub mod diag;
 pub mod display;
 pub mod error;
+pub mod firewall;
 pub mod key_input;
 pub mod notifications;
 pub mod pcap;
 pub mod qmdl_store;
 pub mod server;
 pub mod stats;
+pub mod wifi;
 
 #[cfg(feature = "apidocs")]
 use utoipa::OpenApi;
