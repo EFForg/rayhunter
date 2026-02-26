@@ -1,14 +1,61 @@
-# To use: navigate on Github to Actions, select "Release rayhunter" on the left, click "Run workflow" > "Run workflow" on the right.
+# To use: navigate on Github to Actions, select "Release rayhunter" on the left, click "Run workflow".
+# Optionally enter a version (e.g. 0.10.3) to bump all Cargo.toml files before building.
+# If no version is specified, the version already in the Cargo.toml files is used.
 # https://github.com/EFForg/rayhunter/actions/workflows/release.yml
 name: Release rayhunter
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 0.10.3), or leave empty to use current Cargo.toml version'
+        required: false
+        type: string
 
 env:
   GH_TOKEN: ${{ github.token }}
 
 jobs:
+  bump_version:
+    if: inputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate version format
+        run: |
+          if ! echo "${{ inputs.version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid version format. Expected X.Y.Z (e.g. 0.10.3)"
+            exit 1
+          fi
+      - name: Bump all Cargo.toml versions
+        run: |
+          for toml in lib/Cargo.toml daemon/Cargo.toml check/Cargo.toml \
+                      installer/Cargo.toml rootshell/Cargo.toml \
+                      telcom-parser/Cargo.toml installer-gui/src-tauri/Cargo.toml; do
+            sed -i '0,/^version = ".*"/{s/^version = ".*"/version = "${{ inputs.version }}"/}' "$toml"
+          done
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Update Cargo.lock
+        run: cargo update --workspace
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/Cargo.toml daemon/Cargo.toml check/Cargo.toml \
+                  installer/Cargo.toml rootshell/Cargo.toml \
+                  telcom-parser/Cargo.toml installer-gui/src-tauri/Cargo.toml \
+                  Cargo.lock
+          git commit -m "release: bump to v${{ inputs.version }}"
+          git push
+      - name: Re-trigger release on bumped commit
+        run: |
+          echo "::notice::Bumped to v${{ inputs.version }}. Triggering release build on new commit."
+          gh workflow run release.yml
+
   check_version_same:
+    if: inputs.version == ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,6 +75,7 @@ jobs:
           fi
 
   main:
+    if: inputs.version == ''
     needs: check_version_same
     permissions:
       contents: write
@@ -37,6 +85,7 @@ jobs:
     uses: ./.github/workflows/main.yml
 
   release:
+    if: inputs.version == ''
     runs-on: ubuntu-latest
     needs: main
     permissions:
