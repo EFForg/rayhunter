@@ -206,8 +206,9 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
 }
 
 async fn check_disk_space(addr: SocketAddr, binary_size: usize) -> Result<()> {
+    // Use /data/rayhunter to resolve through symlink (may point to /cache/rayhunter-data)
     let df_output =
-        telnet_send_command_with_output(addr, "df /data | tail -1 | awk '{print $4}'", false)
+        telnet_send_command_with_output(addr, "df /data/rayhunter | tail -1 | awk '{print $4}'", false)
             .await?;
     let available_kb: usize = df_output
         .lines()
