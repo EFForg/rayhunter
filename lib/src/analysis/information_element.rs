@@ -4,7 +4,7 @@
 //! standard.
 
 use crate::gsmtap::{GsmtapMessage, GsmtapType, UmSubtype, LteNasSubtype, LteRrcSubtype,};
-use crate::gsm_um::layer3::{L3Frame, parse_l3};
+use crate::gsm::layer3::{L3Frame, parse_l3};
 use pycrate_rs::nas::NASMessage;
 use telcom_parser::{decode, lte_rrc};
 use thiserror::Error;
@@ -36,6 +36,7 @@ pub enum InformationElement {
 #[derive(Debug)]
 pub enum GsmInformationElement {
     Ccch(L3Frame),
+    DTAP(L3Frame),
 }
 
 #[derive(Debug)]
@@ -75,11 +76,13 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
 
     fn try_from(gsmtap_msg: &GsmtapMessage) -> Result<Self, Self::Error> {
         match gsmtap_msg.header.gsmtap_type {
+            GsmtapType::Abis => {
+                let gsm = GsmInformationElement::DTAP(parse_l3(&gsmtap_msg.payload, false)?);
+                Ok(InformationElement::GSM(Box::new(gsm)))
+            }
             GsmtapType::Um(um_subtype) => {
-                use GsmInformationElement as R;
-                use UmSubtype as L;
                 let gsm = match um_subtype {
-                    L::Ccch => R::Ccch(parse_l3(&gsmtap_msg.payload)?),
+                    UmSubtype::Ccch => GsmInformationElement::Ccch(parse_l3(&gsmtap_msg.payload, true)?),
                     _ => {
                         return Err(InformationElementError::UnsupportedGsmtapType(
                             gsmtap_msg.header.gsmtap_type,

@@ -2,8 +2,9 @@ use std::borrow::Cow;
 
 use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, GsmInformationElement};
-use crate::gsm_um::layer3::{L3Message};
-use crate::gsm_um::information_elements::{OptionalSelectionParameters};
+use crate::gsm::layer3::{ProtocolDiscrimiminatedMessage};
+use crate::gsm::radio_resource_management::{RadioResourceManagementMessage};
+use crate::gsm::information_elements::{OptionalSelectionParameters};
 
 pub struct GsmCellReselectionOffsetAnalyzer {}
 
@@ -31,7 +32,9 @@ impl Analyzer for GsmCellReselectionOffsetAnalyzer {
     ) -> Option<super::analyzer::Event> {
         if let InformationElement::GSM(gsm_ie) = ie
             && let GsmInformationElement::Ccch(l3_frame) = &**gsm_ie
-            && let L3Message::SystemInformationType3(si3) = &l3_frame.message
+            && let ProtocolDiscrimiminatedMessage::RadioResourceManagement(
+                RadioResourceManagementMessage::SystemInformationType3(si3),
+            ) = &l3_frame.protocol_discriminated_messages
         {
             if let OptionalSelectionParameters::Present(selection_parameters) = &si3.si3_rest_octets.optional_selection_parameters {
                 let event_type = match selection_parameters.cell_reselect_offset {

@@ -1,5 +1,6 @@
 use deku::prelude::*;
-// see GSM 04.08 version 5.0.0
+// 3GPP TS 44.018 V8.17.0
+// 3GPP TS 24.008 V8.20.0
 
 // 10.5.1.3
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
@@ -103,6 +104,40 @@ pub struct PowerOffset {
     #[deku(bits = 2)] pub power_offset: u8,
 }
 
+// 10.5.2.9
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(id_type = "u8", bits = 4)]
+pub enum CipherModeSetting {
+    #[deku(id = 0b0001)]
+    A5_1,
+    #[deku(id = 0b0011)]
+    A5_2,
+    #[deku(id = 0b0101)]
+    A5_3,
+    #[deku(id = 0b0111)]
+    A5_4,
+    #[deku(id = 0b1001)]
+    A5_5,
+    #[deku(id = 0b1011)]
+    A5_6,
+    #[deku(id = 0b1101)]
+    A5_7,
+    #[deku(id = 0b1111)]
+    Reserved,
+    #[deku(id_pat = "_")]
+    NoCiphering
+}
+
+// 10.5.2.10
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(id_type = "u8", bits = 1)]
+pub enum CipherResponse {
+    #[deku(id = 0b0)]
+    IncludeIMEISV,
+    #[deku(id = 0b1)]
+    DoNotIncludeIMEISV,
+}
+
 // 10.5.2.34
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 pub struct SI3RestOctets {
@@ -112,4 +147,74 @@ pub struct SI3RestOctets {
     pub system_information_2ter_indicator: u8,
     #[deku(bits = 1)]
     pub early_classmark_sending_control: u8,
+}
+
+// 10.5.3.4
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(id_type = "u8", bits = 3)]
+pub enum IdentityType {
+    #[deku(id = 0b001)]
+    IMSI,
+    #[deku(id = 0b010)]
+    IMEI,
+    #[deku(id = 0b011)]
+    IMEISV,
+    #[deku(id = 0b100)]
+    TMSI
+}
+
+// 10.5.5.3
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(id_type = "u8", bits = 3)]
+pub enum CipheringAlgorithm {
+    #[deku(id = 0b000)]
+    CipheringNotUsed,
+    #[deku(id = 0b001)]
+    GEA1,
+    #[deku(id = 0b010)]
+    GEA2,
+    #[deku(id = 0b011)]
+    GEA3,
+    #[deku(id = 0b100)]
+    GEA4,
+    #[deku(id = 0b101)]
+    GEA5,
+    #[deku(id = 0b110)]
+    GEA6,
+    #[deku(id = 0b111)]
+    GEA7,
+}
+
+// 10.5.5.7
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(id_type = "u8", bits = 3)]
+pub enum ForceToStandby {
+    #[deku(id = 0b000)]
+    NotIndicated,
+    #[deku(id = 0b001)]
+    Indicated
+}
+
+// 10.5.5.9
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(id_type = "u8", bits = 3)]
+pub enum IdentityType2 {
+    #[deku(id = 0b001)]
+    IMSI,
+    #[deku(id = 0b010)]
+    IMEI,
+    #[deku(id = 0b011)]
+    IMEISV,
+    #[deku(id = 0b100)]
+    TMSI
+}
+
+// 10.5.5.10
+#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[deku(id_type = "u8", bits = 3)]
+pub enum IMEISVRequest {
+    #[deku(id = 0b000)]
+    IMEINotRequested,
+    #[deku(id = 0b001)]
+    IMEIRequested
 }
