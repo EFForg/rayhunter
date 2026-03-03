@@ -20,6 +20,7 @@ pub async fn install(
     Args {
         admin_ip,
         admin_password,
+        ..
     }: Args,
 ) -> Result<()> {
     run_install(admin_ip, admin_password).await
