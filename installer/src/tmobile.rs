@@ -12,7 +12,6 @@ use anyhow::Result;
 use tokio::time::sleep;
 
 use crate::TmobileArgs as Args;
-use crate::connection::{TelnetConnection, install_config, install_wifi_creds};
 use crate::output::{print, println};
 use crate::util::{http_ok_every, telnet_send_command, telnet_send_file};
 use crate::wingtech::start_telnet;
@@ -21,25 +20,12 @@ pub async fn install(
     Args {
         admin_ip,
         admin_password,
-        wifi_ssid,
-        wifi_password,
     }: Args,
 ) -> Result<()> {
-    run_install(
-        admin_ip,
-        admin_password,
-        wifi_ssid.as_deref(),
-        wifi_password.as_deref(),
-    )
-    .await
+    run_install(admin_ip, admin_password).await
 }
 
-async fn run_install(
-    admin_ip: String,
-    admin_password: String,
-    wifi_ssid: Option<&str>,
-    wifi_password: Option<&str>,
-) -> Result<()> {
+async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
     print!("Starting telnet ... ");
     start_telnet(&admin_ip, &admin_password).await?;
     sleep(Duration::from_millis(200)).await;
@@ -52,10 +38,15 @@ async fn run_install(
 
     telnet_send_command(addr, "mount -o remount,rw /", "exit code 0", true).await?;
 
-    let mut conn = TelnetConnection::new(addr, true);
-    let wifi_enabled = wifi_ssid.is_some() && wifi_password.is_some();
-    install_config(&mut conn, "tmobile", false, wifi_enabled).await?;
-    install_wifi_creds(&mut conn, wifi_ssid, wifi_password).await?;
+    telnet_send_file(
+        addr,
+        "/data/rayhunter/config.toml",
+        crate::CONFIG_TOML
+            .replace("#device = \"orbic\"", "device = \"tmobile\"")
+            .as_bytes(),
+        true,
+    )
+    .await?;
 
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
     telnet_send_file(
@@ -72,34 +63,6 @@ async fn run_install(
         true,
     )
     .await?;
-    #[cfg(feature = "wifi-client")]
-    {
-        telnet_send_command(addr, "mkdir -p /data/rayhunter/bin", "exit code 0", true).await?;
-        let wpa_supplicant_bin = include_bytes!(env!("FILE_WPA_SUPPLICANT"));
-        let wpa_cli_bin = include_bytes!(env!("FILE_WPA_CLI"));
-        telnet_send_file(
-            addr,
-            "/data/rayhunter/bin/wpa_supplicant",
-            wpa_supplicant_bin,
-            true,
-        )
-        .await?;
-        telnet_send_file(addr, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin, true).await?;
-        telnet_send_file(
-            addr,
-            "/data/rayhunter/udhcpc-hook.sh",
-            include_bytes!("../../dist/scripts/udhcpc-hook.sh"),
-            true,
-        )
-        .await?;
-        telnet_send_command(
-            addr,
-            "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli /data/rayhunter/udhcpc-hook.sh",
-            "exit code 0",
-            true,
-        )
-        .await?;
-    }
     telnet_send_file(
         addr,
         "/etc/init.d/misc-daemon",
@@ -124,20 +87,6 @@ async fn run_install(
     telnet_send_command(
         addr,
         "chmod 755 /etc/init.d/rayhunter_daemon",
-        "exit code 0",
-        true,
-    )
-    .await?;
-    telnet_send_file(
-        addr,
-        "/etc/init.d/S01iptables",
-        include_bytes!("../../dist/scripts/S01iptables"),
-        true,
-    )
-    .await?;
-    telnet_send_command(
-        addr,
-        "chmod 755 /etc/init.d/S01iptables",
         "exit code 0",
         true,
     )
