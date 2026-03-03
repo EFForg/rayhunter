@@ -7,6 +7,7 @@ Rayhunter is already officially supported on [several devices](./supported-devic
 * The device is significantly cheaper or more available in a specific region than any device we already support.
 * The device supports 5G and costs less than 100 USD.
 * You're willing to commit to supporting this device and handling bug reports.
+* The device has support for all cellular bands and can work in any country.
 
 We want to avoid a situation where the list of supported devices keeps growing but the number of recurring contributors and maintainers stays the same.
 
