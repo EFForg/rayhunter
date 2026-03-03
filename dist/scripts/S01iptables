@@ -6,8 +6,11 @@ case "$1" in
         iptables -A OUTPUT -o lo -j ACCEPT
         iptables -A OUTPUT -o bridge0 -j ACCEPT
         iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+        iptables -A OUTPUT -p udp --dport 67:68 -j ACCEPT
+        iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
+        iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT
         iptables -A OUTPUT -j DROP
-        echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables
+        echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables 2>/dev/null
     fi
     ;;
 esac

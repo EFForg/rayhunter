@@ -17,6 +17,8 @@ use crate::config::Config;
 pub const WPA_CONF_PATH: &str = "/data/rayhunter/wpa_sta.conf";
 
 const WPA_BIN: &str = "/data/rayhunter/bin/wpa_supplicant";
+const UDHCPC_HOOK: &str = "/data/rayhunter/udhcpc-hook.sh";
+const DHCP_LEASE_FILE: &str = "/data/rayhunter/dhcp_lease";
 const DEFAULT_DNS: &[&str] = &["9.9.9.9", "149.112.112.112"];
 const CRASH_LOG_DIR: &str = "/data/rayhunter/crash-logs";
 const MAX_RECOVERY_ATTEMPTS: u32 = 5;
@@ -27,7 +29,7 @@ const BRIDGE_IFACE: &str = "bridge0";
 pub const STA_IFACE: &str = "wlan1";
 
 #[derive(Clone, Copy, PartialEq, Serialize, Default)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 pub enum WifiState {
     #[default]
     Disabled,
@@ -35,9 +37,11 @@ pub enum WifiState {
     Connected,
     Failed,
     Recovering,
+    DataPathDead,
 }
 
 #[derive(Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct WifiStatus {
     pub state: WifiState,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -46,7 +50,11 @@ pub struct WifiStatus {
     pub ip: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tx_packets: Option<u64>,
 }
+
+const TX_STALL_THRESHOLD: u32 = 3;
 
 struct WifiClient {
     iface: String,
@@ -55,7 +63,9 @@ struct WifiClient {
     rt_table: u32,
     dns_servers: Vec<String>,
     saved_resolv: Option<String>,
-    saved_default_route: Option<String>,
+    last_tx_packets: Option<u64>,
+    last_rx_packets: Option<u64>,
+    tx_stall_count: u32,
 }
 
 impl WifiClient {
@@ -67,7 +77,9 @@ impl WifiClient {
             rt_table: 100,
             dns_servers,
             saved_resolv: None,
-            saved_default_route: None,
+            last_tx_packets: None,
+            last_rx_packets: None,
+            tx_stall_count: 0,
         }
     }
 
@@ -92,14 +104,10 @@ impl WifiClient {
         self.cleanup_routing().await;
         self.interface_down().await;
 
+        restore_cellular_default().await;
+
         if let Some(resolv) = self.saved_resolv.take() {
             let _ = tokio::fs::write("/etc/resolv.conf", resolv).await;
-        }
-        if let Some(route) = self.saved_default_route.take() {
-            let args: Vec<&str> = route.split_whitespace().collect();
-            let mut cmd_args = vec!["route", "add"];
-            cmd_args.extend(&args);
-            let _ = Command::new("ip").args(&cmd_args).output().await;
         }
     }
 
@@ -145,18 +153,32 @@ impl WifiClient {
             .stderr(Stdio::null())
             .spawn()?;
         self.wpa_child = Some(child);
-        sleep(Duration::from_secs(5)).await;
-        Ok(())
+        self.wait_for_association().await
+    }
+
+    async fn wait_for_association(&self) -> Result<()> {
+        let operstate_path = format!("/sys/class/net/{}/operstate", self.iface);
+        for i in 0..30 {
+            if let Ok(state) = tokio::fs::read_to_string(&operstate_path).await
+                && state.trim() == "up"
+            {
+                info!("wpa_supplicant associated after {}s", i + 1);
+                return Ok(());
+            }
+            sleep(Duration::from_secs(1)).await;
+        }
+        bail!("wpa_supplicant did not associate within 30s");
     }
 
     async fn start_dhcp(&mut self) -> Result<()> {
         use std::process::Stdio;
+        let _ = tokio::fs::remove_file(DHCP_LEASE_FILE).await;
         let child = Command::new("udhcpc")
             .args([
                 "-i",
                 &self.iface,
                 "-s",
-                "/etc/udhcpc.d/50default",
+                UDHCPC_HOOK,
                 "-t",
                 "10",
                 "-A",
@@ -168,31 +190,19 @@ impl WifiClient {
             .spawn()?;
         self.dhcp_child = Some(child);
 
-        for _ in 0..15 {
+        for _ in 0..30 {
             sleep(Duration::from_secs(1)).await;
-            if self.get_interface_ip().await.is_ok() {
+            if tokio::fs::metadata(DHCP_LEASE_FILE).await.is_ok() {
                 return Ok(());
             }
         }
-        bail!("DHCP did not assign an address within 15s");
+        bail!("DHCP did not assign an address within 30s");
     }
 
     async fn setup_routing(&mut self) -> Result<()> {
         if self.saved_resolv.is_none() {
             self.saved_resolv = tokio::fs::read_to_string("/etc/resolv.conf").await.ok();
         }
-        if self.saved_default_route.is_none() {
-            let out = Command::new("ip")
-                .args(["route", "show", "default"])
-                .output()
-                .await;
-            if let Ok(o) = out {
-                let stdout = String::from_utf8_lossy(&o.stdout);
-                self.saved_default_route = stdout.lines().next().map(|s| s.to_string());
-            }
-        }
-
-        self.cleanup_routing().await;
 
         let ip = self
             .get_interface_ip()
@@ -207,11 +217,10 @@ impl WifiClient {
             .await
             .context("failed to get gateway after DHCP")?;
 
-        let _ = Command::new("ip")
-            .args(["route", "del", "default", "dev", "bridge0"])
-            .output()
-            .await;
-        let _ = Command::new("ip")
+        self.cleanup_routing().await;
+
+        demote_cellular_default().await;
+        let out = Command::new("ip")
             .args([
                 "route",
                 "replace",
@@ -225,45 +234,61 @@ impl WifiClient {
             ])
             .output()
             .await;
+        if let Ok(o) = &out
+            && !o.status.success()
+        {
+            warn!(
+                "failed to add WiFi default route: {}",
+                String::from_utf8_lossy(&o.stderr).trim()
+            );
+        }
 
         let table = self.rt_table.to_string();
-        let _ = Command::new("ip")
-            .args(["rule", "add", "from", &ip, "table", &table])
-            .output()
-            .await;
-        let _ = Command::new("ip")
-            .args([
-                "route",
-                "add",
-                &subnet,
-                "dev",
-                &self.iface,
-                "src",
-                &ip,
-                "table",
-                &table,
-            ])
-            .output()
-            .await;
-        let _ = Command::new("ip")
-            .args([
-                "route",
-                "add",
-                "default",
-                "via",
-                &gateway,
-                "dev",
-                &self.iface,
-                "table",
-                &table,
-            ])
-            .output()
-            .await;
+        run_ip(&["rule", "add", "from", &ip, "table", &table]).await;
+        run_ip(&[
+            "route",
+            "add",
+            &subnet,
+            "dev",
+            &self.iface,
+            "src",
+            &ip,
+            "table",
+            &table,
+        ])
+        .await;
+        run_ip(&[
+            "route",
+            "add",
+            "default",
+            "via",
+            &gateway,
+            "dev",
+            &self.iface,
+            "table",
+            &table,
+        ])
+        .await;
 
-        let resolv = self
-            .dns_servers
+        let mut dns: Vec<String> = Vec::new();
+        if let Some(dhcp_dns) = read_lease_field("dns").await {
+            dns.extend(
+                dhcp_dns
+                    .split_whitespace()
+                    .filter(|s| s.parse::<IpAddr>().is_ok())
+                    .map(|s| s.to_string()),
+            );
+        }
+        if dns.is_empty() {
+            dns.extend(
+                self.dns_servers
+                    .iter()
+                    .filter(|s| s.parse::<IpAddr>().is_ok())
+                    .cloned(),
+            );
+        }
+        let resolv = dns
             .iter()
-            .filter(|s| s.parse::<IpAddr>().is_ok())
             .map(|s| format!("nameserver {s}"))
             .collect::<Vec<_>>()
             .join("\n")
@@ -310,7 +335,6 @@ impl WifiClient {
     }
 
     async fn get_interface_gateway(&self) -> Result<String> {
-        // First try an explicit default route on this interface
         let out = Command::new("ip")
             .args(["route", "show", "dev", &self.iface, "default"])
             .output()
@@ -328,13 +352,8 @@ impl WifiClient {
             return Ok(gw);
         }
 
-        // When subnets overlap (e.g. bridge0 and wlan1 both on 192.168.1.0/24),
-        // udhcpc may not add an explicit default route for wlan1. Fall back to
-        // inferring the gateway as .1 from the kernel subnet route.
-        let ip = self.get_interface_ip().await?;
-        if let Some(last_dot) = ip.rfind('.') {
-            let gw = format!("{}.1", &ip[..last_dot]);
-            warn!("no explicit gateway for {}, assuming {gw}", self.iface);
+        if let Some(gw) = read_lease_field("gateway").await {
+            info!("using DHCP-provided gateway {gw} from lease file");
             return Ok(gw);
         }
 
@@ -343,14 +362,25 @@ impl WifiClient {
 
     async fn cleanup_routing(&self) {
         let table = self.rt_table.to_string();
-        let _ = Command::new("ip")
-            .args(["rule", "del", "table", &table])
-            .output()
-            .await;
+        loop {
+            let out = Command::new("ip")
+                .args(["rule", "del", "table", &table])
+                .output()
+                .await;
+            match out {
+                Ok(o) if o.status.success() => continue,
+                _ => break,
+            }
+        }
         let _ = Command::new("ip")
             .args(["route", "flush", "table", &table])
             .output()
             .await;
+        let _ = Command::new("ip")
+            .args(["route", "del", "default", "dev", &self.iface])
+            .output()
+            .await;
+        let _ = tokio::fs::remove_file(DHCP_LEASE_FILE).await;
     }
 
     async fn allow_inbound(&self) {
@@ -363,11 +393,19 @@ impl WifiClient {
             .output()
             .await;
         let _ = Command::new("iptables")
+            .args(["-D", "FORWARD", "-o", &self.iface, "-j", "ACCEPT"])
+            .output()
+            .await;
+        let _ = Command::new("iptables")
             .args(["-I", "INPUT", "-i", &self.iface, "-j", "ACCEPT"])
             .output()
             .await;
         let _ = Command::new("iptables")
             .args(["-I", "FORWARD", "-i", &self.iface, "-j", "ACCEPT"])
+            .output()
+            .await;
+        let _ = Command::new("iptables")
+            .args(["-I", "FORWARD", "-o", &self.iface, "-j", "ACCEPT"])
             .output()
             .await;
     }
@@ -379,6 +417,10 @@ impl WifiClient {
             .await;
         let _ = Command::new("iptables")
             .args(["-D", "FORWARD", "-i", &self.iface, "-j", "ACCEPT"])
+            .output()
+            .await;
+        let _ = Command::new("iptables")
+            .args(["-D", "FORWARD", "-o", &self.iface, "-j", "ACCEPT"])
             .output()
             .await;
     }
@@ -393,48 +435,272 @@ impl WifiClient {
     fn interface_exists(&self) -> bool {
         Path::new(&format!("/sys/class/net/{}", self.iface)).exists()
     }
+
+    async fn read_tx_packets(&self) -> Option<u64> {
+        let path = format!("/sys/class/net/{}/statistics/tx_packets", self.iface);
+        tokio::fs::read_to_string(&path)
+            .await
+            .ok()?
+            .trim()
+            .parse()
+            .ok()
+    }
+
+    async fn read_rx_packets(&self) -> Option<u64> {
+        let path = format!("/sys/class/net/{}/statistics/rx_packets", self.iface);
+        tokio::fs::read_to_string(&path)
+            .await
+            .ok()?
+            .trim()
+            .parse()
+            .ok()
+    }
+
+    async fn check_tx_advancing(&self) -> bool {
+        let first = self.read_tx_packets().await;
+        sleep(Duration::from_secs(5)).await;
+        let second = self.read_tx_packets().await;
+        match (first, second) {
+            (Some(a), Some(b)) => b > a,
+            _ => false,
+        }
+    }
 }
 
-async fn save_crash_diagnostics() -> Result<()> {
+async fn run_ip(args: &[&str]) {
+    let out = Command::new("ip").args(args).output().await;
+    match out {
+        Ok(o) if !o.status.success() => {
+            warn!(
+                "ip {} failed: {}",
+                args.join(" "),
+                String::from_utf8_lossy(&o.stderr).trim()
+            );
+        }
+        Err(e) => warn!("ip {} exec error: {e}", args.join(" ")),
+        _ => {}
+    }
+}
+
+/// Parse the gateway and device from an `ip route show default` line.
+fn parse_default_route(line: &str) -> Option<(String, String)> {
+    let mut parts = line.split_whitespace();
+    let mut gw = None;
+    let mut dev = None;
+    while let Some(word) = parts.next() {
+        match word {
+            "via" => gw = parts.next().map(|s| s.to_string()),
+            "dev" => dev = parts.next().map(|s| s.to_string()),
+            _ => {}
+        }
+    }
+    Some((gw?, dev?))
+}
+
+/// Demote cellular default route to metric 1000 so WiFi takes priority.
+async fn demote_cellular_default() {
+    let out = Command::new("ip")
+        .args(["route", "show", "default"])
+        .output()
+        .await;
+    let Ok(o) = out else { return };
+    let stdout = String::from_utf8_lossy(&o.stdout);
+    for line in stdout.lines() {
+        if let Some((gw, dev)) = parse_default_route(line) {
+            if dev == STA_IFACE {
+                continue;
+            }
+            let _ = Command::new("ip")
+                .args(["route", "del", "default", "via", &gw, "dev", &dev])
+                .output()
+                .await;
+            let _ = Command::new("ip")
+                .args([
+                    "route", "add", "default", "via", &gw, "dev", &dev, "metric", "1000",
+                ])
+                .output()
+                .await;
+        }
+    }
+}
+
+/// Restore demoted cellular default route to its original metric.
+async fn restore_cellular_default() {
+    let out = Command::new("ip")
+        .args(["route", "show", "default"])
+        .output()
+        .await;
+    let Ok(o) = out else { return };
+    let stdout = String::from_utf8_lossy(&o.stdout);
+    for line in stdout.lines() {
+        if line.contains("metric 1000")
+            && let Some((gw, dev)) = parse_default_route(line)
+        {
+            let _ = Command::new("ip")
+                .args([
+                    "route", "del", "default", "via", &gw, "dev", &dev, "metric", "1000",
+                ])
+                .output()
+                .await;
+            let _ = Command::new("ip")
+                .args(["route", "add", "default", "via", &gw, "dev", &dev])
+                .output()
+                .await;
+        }
+    }
+}
+
+async fn read_lease_field(field: &str) -> Option<String> {
+    let content = tokio::fs::read_to_string(DHCP_LEASE_FILE).await.ok()?;
+    let prefix = format!("{field}=");
+    content.lines().find_map(|line| {
+        line.strip_prefix(&prefix)
+            .filter(|v| !v.is_empty())
+            .map(|v| v.to_string())
+    })
+}
+
+async fn save_wifi_diagnostics(reason: &str) -> Result<()> {
     tokio::fs::create_dir_all(CRASH_LOG_DIR).await?;
 
+    if let Ok(mut entries) = tokio::fs::read_dir(CRASH_LOG_DIR).await {
+        let mut files = Vec::new();
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with("wifi-diag-") || name.starts_with("wifi-crash-") {
+                files.push(entry.path());
+            }
+        }
+        if files.len() >= 10 {
+            files.sort();
+            for old in &files[..files.len() - 9] {
+                let _ = tokio::fs::remove_file(old).await;
+            }
+        }
+    }
+
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let path = format!("{CRASH_LOG_DIR}/wifi-crash-{timestamp}.log");
+    let path = format!("{CRASH_LOG_DIR}/wifi-diag-{timestamp}.log");
 
-    let dmesg = Command::new("dmesg").output().await;
-    let modules = tokio::fs::read_to_string("/proc/modules").await;
-    let ip_addr = Command::new("ip").args(["addr"]).output().await;
-    let ps = Command::new("ps").output().await;
+    let iface = STA_IFACE;
+    let (
+        dmesg,
+        iw_link,
+        iw_station,
+        proc_net_dev,
+        wpa_status,
+        proc_arp,
+        ip_route,
+        brctl,
+        iptables,
+        modules,
+        ip_addr,
+        ps,
+    ) = tokio::join!(
+        Command::new("dmesg").output(),
+        Command::new("iw").args(["dev", iface, "link"]).output(),
+        Command::new("iw")
+            .args(["dev", iface, "station", "dump"])
+            .output(),
+        tokio::fs::read_to_string("/proc/net/dev"),
+        Command::new("wpa_cli")
+            .args(["-i", iface, "status"])
+            .output(),
+        tokio::fs::read_to_string("/proc/net/arp"),
+        Command::new("ip")
+            .args(["route", "show", "table", "all"])
+            .output(),
+        Command::new("brctl").args(["show"]).output(),
+        Command::new("iptables").args(["-L", "-v", "-n"]).output(),
+        tokio::fs::read_to_string("/proc/modules"),
+        Command::new("ip").args(["addr"]).output(),
+        Command::new("ps").output(),
+    );
 
-    let mut report = String::with_capacity(64 * 1024);
-    report.push_str(&format!("WiFi module crash detected at {timestamp}\n\n"));
-
-    report.push_str("=== dmesg ===\n");
-    match &dmesg {
-        Ok(output) => report.push_str(&String::from_utf8_lossy(&output.stdout)),
-        Err(e) => report.push_str(&format!("(failed: {e})\n")),
+    let operstate = tokio::fs::read_to_string(format!("/sys/class/net/{iface}/operstate")).await;
+    let sysfs_stats = [
+        "tx_packets",
+        "tx_errors",
+        "tx_dropped",
+        "rx_packets",
+        "rx_errors",
+        "rx_dropped",
+    ];
+    let mut sysfs_report = String::new();
+    for stat in &sysfs_stats {
+        let val =
+            tokio::fs::read_to_string(format!("/sys/class/net/{iface}/statistics/{stat}")).await;
+        sysfs_report.push_str(&format!(
+            "  {stat}: {}\n",
+            match &val {
+                Ok(v) => v.trim().to_string(),
+                Err(e) => format!("(failed: {e})"),
+            }
+        ));
     }
 
-    report.push_str("\n=== /proc/modules ===\n");
-    match &modules {
-        Ok(content) => report.push_str(content),
-        Err(e) => report.push_str(&format!("(failed: {e})\n")),
+    let mut report = String::with_capacity(128 * 1024);
+    report.push_str(&format!(
+        "WiFi diagnostics: {reason}\nTimestamp: {timestamp}\n\n"
+    ));
+
+    fn append_cmd(
+        report: &mut String,
+        label: &str,
+        result: &Result<std::process::Output, std::io::Error>,
+    ) {
+        report.push_str(&format!("=== {label} ===\n"));
+        match result {
+            Ok(o) => report.push_str(&String::from_utf8_lossy(&o.stdout)),
+            Err(e) => report.push_str(&format!("(failed: {e})\n")),
+        }
+        report.push('\n');
     }
 
-    report.push_str("\n=== ip addr ===\n");
-    match &ip_addr {
-        Ok(output) => report.push_str(&String::from_utf8_lossy(&output.stdout)),
-        Err(e) => report.push_str(&format!("(failed: {e})\n")),
+    fn append_file(report: &mut String, label: &str, result: &Result<String, std::io::Error>) {
+        report.push_str(&format!("=== {label} ===\n"));
+        match result {
+            Ok(s) => report.push_str(s),
+            Err(e) => report.push_str(&format!("(failed: {e})\n")),
+        }
+        report.push('\n');
     }
 
-    report.push_str("\n=== ps ===\n");
-    match &ps {
-        Ok(output) => report.push_str(&String::from_utf8_lossy(&output.stdout)),
-        Err(e) => report.push_str(&format!("(failed: {e})\n")),
-    }
+    append_cmd(&mut report, "dmesg", &dmesg);
+    append_cmd(&mut report, &format!("iw dev {iface} link"), &iw_link);
+    append_cmd(
+        &mut report,
+        &format!("iw dev {iface} station dump"),
+        &iw_station,
+    );
+    append_file(&mut report, "/proc/net/dev", &proc_net_dev);
+
+    report.push_str(&format!("=== {iface} sysfs ===\n"));
+    report.push_str(&format!(
+        "  operstate: {}\n",
+        match &operstate {
+            Ok(v) => v.trim().to_string(),
+            Err(e) => format!("(failed: {e})"),
+        }
+    ));
+    report.push_str(&sysfs_report);
+    report.push('\n');
+
+    append_cmd(
+        &mut report,
+        &format!("wpa_cli -i {iface} status"),
+        &wpa_status,
+    );
+    append_file(&mut report, "/proc/net/arp", &proc_arp);
+    append_cmd(&mut report, "ip route show table all", &ip_route);
+    append_cmd(&mut report, "brctl show", &brctl);
+    append_cmd(&mut report, "iptables -L -v -n", &iptables);
+    append_file(&mut report, "/proc/modules", &modules);
+    append_cmd(&mut report, "ip addr", &ip_addr);
+    append_cmd(&mut report, "ps", &ps);
 
     tokio::fs::write(&path, report).await?;
-    info!("saved crash diagnostics to {path}");
+    info!("saved wifi diagnostics to {path}");
     Ok(())
 }
 
@@ -526,6 +792,91 @@ async fn reload_wifi_module() -> Result<()> {
     Ok(())
 }
 
+/// Returns true if TX counter starts advancing after any step.
+async fn attempt_data_path_recovery(
+    client: &mut WifiClient,
+    wifi_status: &Arc<RwLock<WifiStatus>>,
+    shutdown_token: &CancellationToken,
+) -> bool {
+    info!("data path recovery step 1: wpa_cli reassociate");
+    let _ = Command::new("wpa_cli")
+        .args(["-i", STA_IFACE, "reassociate"])
+        .output()
+        .await;
+    tokio::select! {
+        _ = shutdown_token.cancelled() => return false,
+        _ = sleep(Duration::from_secs(10)) => {}
+    }
+    if client.check_tx_advancing().await {
+        let mut status = wifi_status.write().await;
+        status.state = WifiState::Connected;
+        status.error = None;
+        return true;
+    }
+
+    info!("data path recovery step 2: restart wpa_supplicant");
+    if let Some(ref mut child) = client.wpa_child {
+        let _ = child.kill().await;
+        let _ = child.wait().await;
+    }
+    client.wpa_child = None;
+    if let Err(e) = client.start_wpa_supplicant().await {
+        warn!("wpa_supplicant restart failed in recovery: {e}");
+    } else {
+        tokio::select! {
+            _ = shutdown_token.cancelled() => return false,
+            _ = sleep(Duration::from_secs(10)) => {}
+        }
+        if client.check_tx_advancing().await {
+            let mut status = wifi_status.write().await;
+            status.state = WifiState::Connected;
+            status.error = None;
+            return true;
+        }
+    }
+
+    if shutdown_token.is_cancelled() {
+        return false;
+    }
+
+    info!("data path recovery step 3: interface cycle");
+    client.stop().await;
+    let _ = Command::new("ip")
+        .args(["link", "set", STA_IFACE, "down"])
+        .output()
+        .await;
+    tokio::select! {
+        _ = shutdown_token.cancelled() => return false,
+        _ = sleep(Duration::from_secs(2)) => {}
+    }
+    let _ = Command::new("ip")
+        .args(["link", "set", STA_IFACE, "up"])
+        .output()
+        .await;
+    tokio::select! {
+        _ = shutdown_token.cancelled() => return false,
+        _ = sleep(Duration::from_secs(2)) => {}
+    }
+    if let Err(e) = client.start().await {
+        warn!("full restart failed in recovery step 3: {e}");
+        return false;
+    }
+    tokio::select! {
+        _ = shutdown_token.cancelled() => return false,
+        _ = sleep(Duration::from_secs(10)) => {}
+    }
+    if client.check_tx_advancing().await {
+        let mut status = wifi_status.write().await;
+        status.state = WifiState::Connected;
+        status.ip = client.get_interface_ip().await.ok();
+        status.error = None;
+        return true;
+    }
+
+    // Module reload handled by caller
+    false
+}
+
 pub fn run_wifi_client(
     task_tracker: &TaskTracker,
     config: &Config,
@@ -555,10 +906,13 @@ pub fn run_wifi_client(
         match client.start().await {
             Ok(()) => {
                 let ip = client.get_interface_ip().await.ok();
+                client.last_tx_packets = client.read_tx_packets().await;
+                client.last_rx_packets = client.read_rx_packets().await;
                 let mut status = wifi_status.write().await;
                 status.state = WifiState::Connected;
                 status.ssid = ssid.clone();
                 status.ip = ip;
+                status.tx_packets = client.last_tx_packets;
                 status.error = None;
                 info!("WiFi client connected");
             }
@@ -614,9 +968,9 @@ pub fn run_wifi_client(
                         }
 
                         if recovery_attempts == 1
-                            && let Err(e) = save_crash_diagnostics().await
+                            && let Err(e) = save_wifi_diagnostics("interface disappeared").await
                         {
-                            warn!("failed to save crash diagnostics: {e}");
+                            warn!("failed to save wifi diagnostics: {e}");
                         }
 
                         client.stop().await;
@@ -677,6 +1031,95 @@ pub fn run_wifi_client(
                             status.ip = client.get_interface_ip().await.ok();
                         }
                     }
+
+                    // Only flag a stall when BOTH TX and RX
+                    // are frozen. RX always advances on a healthy link (beacons,
+                    // broadcast ARP, etc.), so TX-only stall = idle device.
+                    let tx_now = client.read_tx_packets().await;
+                    let rx_now = client.read_rx_packets().await;
+                    {
+                        let mut status = wifi_status.write().await;
+                        status.tx_packets = tx_now;
+                    }
+                    let tx_stalled = matches!((tx_now, client.last_tx_packets), (Some(a), Some(b)) if a == b);
+                    let rx_stalled = matches!((rx_now, client.last_rx_packets), (Some(a), Some(b)) if a == b);
+                    if tx_stalled && rx_stalled {
+                        client.tx_stall_count += 1;
+                        warn!(
+                            "data path stall: tx={} rx={} unchanged for {} polls",
+                            tx_now.unwrap_or(0),
+                            rx_now.unwrap_or(0),
+                            client.tx_stall_count
+                        );
+                        if client.tx_stall_count >= TX_STALL_THRESHOLD {
+                            warn!("stall count reached {TX_STALL_THRESHOLD}, attempting data path recovery");
+                            {
+                                let mut status = wifi_status.write().await;
+                                status.state = WifiState::DataPathDead;
+                            }
+                            if let Err(e) = save_wifi_diagnostics("TX+RX data path stall").await {
+                                warn!("failed to save wifi diagnostics: {e}");
+                            }
+                            if attempt_data_path_recovery(&mut client, &wifi_status, &shutdown_token).await {
+                                info!("data path recovery succeeded");
+                                client.tx_stall_count = 0;
+                                client.last_tx_packets = client.read_tx_packets().await;
+                                client.last_rx_packets = client.read_rx_packets().await;
+                            } else {
+                                error!("data path recovery failed, falling through to module reload");
+                                client.tx_stall_count = 0;
+                                client.last_tx_packets = None;
+                                client.last_rx_packets = None;
+                                recovery_attempts += 1;
+                                if recovery_attempts >= MAX_RECOVERY_ATTEMPTS {
+                                    error!("module recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts, giving up");
+                                    client.stop().await;
+                                    let mut status = wifi_status.write().await;
+                                    status.state = WifiState::Failed;
+                                    status.error = Some(format!(
+                                        "data path recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts"
+                                    ));
+                                    return;
+                                }
+                                warn!("module reload attempt {recovery_attempts}/{MAX_RECOVERY_ATTEMPTS}");
+                                client.stop().await;
+                                if let Err(e) = reload_wifi_module().await {
+                                    error!("module reload failed: {e}");
+                                    let mut status = wifi_status.write().await;
+                                    status.state = WifiState::Recovering;
+                                    status.error = Some(format!("{e}"));
+                                    backoff_secs = (backoff_secs * 2).min(240);
+                                    continue;
+                                }
+                                match client.start().await {
+                                    Ok(()) => {
+                                        let ip = client.get_interface_ip().await.ok();
+                                        let mut status = wifi_status.write().await;
+                                        status.state = WifiState::Connected;
+                                        status.ip = ip;
+                                        status.error = None;
+                                        info!("WiFi client recovered via module reload");
+                                    }
+                                    Err(e) => {
+                                        error!("WiFi restart after module reload failed: {e}");
+                                        client.stop().await;
+                                        let mut status = wifi_status.write().await;
+                                        status.state = WifiState::Failed;
+                                        status.error = Some(format!("{e}"));
+                                        backoff_secs = (backoff_secs * 2).min(240);
+                                    }
+                                }
+                            }
+                            continue;
+                        }
+                    } else {
+                        if client.tx_stall_count > 0 {
+                            info!("data path advancing again (was stalled for {} polls)", client.tx_stall_count);
+                        }
+                        client.tx_stall_count = 0;
+                    }
+                    client.last_tx_packets = tx_now;
+                    client.last_rx_packets = rx_now;
 
                     if recovery_attempts > 0 {
                         recovery_attempts = 0;
@@ -919,5 +1362,20 @@ BSS aa:bb:cc:dd:ee:ff(on wlan1)
 
         update_wpa_conf_at(&config, path_str).await;
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn test_parse_default_route() {
+        let (gw, dev) = parse_default_route("default via 192.168.1.1 dev bridge0").unwrap();
+        assert_eq!(gw, "192.168.1.1");
+        assert_eq!(dev, "bridge0");
+
+        let (gw, dev) =
+            parse_default_route("default via 10.0.0.1 dev rmnet_data0 metric 100").unwrap();
+        assert_eq!(gw, "10.0.0.1");
+        assert_eq!(dev, "rmnet_data0");
+
+        assert!(parse_default_route("default dev bridge0 scope link").is_none());
+        assert!(parse_default_route("").is_none());
     }
 }
