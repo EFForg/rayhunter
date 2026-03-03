@@ -238,6 +238,14 @@ struct TmobileArgs {
     /// Web portal admin password.
     #[arg(long)]
     admin_password: String,
+
+    /// WiFi network name to connect to (enables WiFi client mode).
+    #[arg(long)]
+    wifi_ssid: Option<String>,
+
+    /// WiFi network password.
+    #[arg(long)]
+    wifi_password: Option<String>,
 }
 
 #[derive(Parser, Debug)]
@@ -285,6 +293,14 @@ struct WingtechArgs {
     /// Web portal admin password.
     #[arg(long)]
     admin_password: String,
+
+    /// WiFi network name to connect to (enables WiFi client mode).
+    #[arg(long)]
+    wifi_ssid: Option<String>,
+
+    /// WiFi network password.
+    #[arg(long)]
+    wifi_password: Option<String>,
 }
 
 #[derive(Parser, Debug)]

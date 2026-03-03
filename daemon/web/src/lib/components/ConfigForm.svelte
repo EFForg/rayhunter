@@ -378,6 +378,12 @@
                                 </p>
                             {:else if wifiStatus.state === 'connecting'}
                                 <p class="text-xs text-amber-600">Connecting...</p>
+                            {:else if wifiStatus.state === 'recovering'}
+                                <p class="text-xs text-amber-600">Recovering connection...</p>
+                            {:else if wifiStatus.state === 'dataPathDead'}
+                                <p class="text-xs text-amber-600">
+                                    Data path stalled, attempting recovery...
+                                </p>
                             {:else if wifiStatus.state === 'failed'}
                                 <p class="text-xs text-red-600">
                                     Failed: {wifiStatus.error}

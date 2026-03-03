@@ -207,9 +207,12 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
 
 async fn check_disk_space(addr: SocketAddr, binary_size: usize) -> Result<()> {
     // Use /data/rayhunter to resolve through symlink (may point to /cache/rayhunter-data)
-    let df_output =
-        telnet_send_command_with_output(addr, "df /data/rayhunter | tail -1 | awk '{print $4}'", false)
-            .await?;
+    let df_output = telnet_send_command_with_output(
+        addr,
+        "df /data/rayhunter | tail -1 | awk '{print $4}'",
+        false,
+    )
+    .await?;
     let available_kb: usize = df_output
         .lines()
         .find(|l| l.trim().chars().all(|c| c.is_ascii_digit()) && !l.trim().is_empty())
@@ -281,6 +284,13 @@ async fn setup_rayhunter(
         )
         .await?;
         telnet_send_file(addr, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin, false).await?;
+        telnet_send_file(
+            addr,
+            "/data/rayhunter/udhcpc-hook.sh",
+            include_bytes!("../../dist/scripts/udhcpc-hook.sh"),
+            false,
+        )
+        .await?;
     }
 
     let wifi_enabled = wifi_ssid.is_some() && wifi_password.is_some();
@@ -320,7 +330,7 @@ async fn setup_rayhunter(
     #[cfg(feature = "wifi-client")]
     telnet_send_command(
         addr,
-        "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli",
+        "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli /data/rayhunter/udhcpc-hook.sh",
         "exit code 0",
         false,
     )

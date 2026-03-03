@@ -178,9 +178,15 @@ async fn setup_rayhunter(
         )
         .await?;
         install_file(&mut adb_device, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin).await?;
+        install_file(
+            &mut adb_device,
+            "/data/rayhunter/udhcpc-hook.sh",
+            include_bytes!("../../dist/scripts/udhcpc-hook.sh"),
+        )
+        .await?;
         adb_at_syscmd(
             &mut adb_device,
-            "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli",
+            "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli /data/rayhunter/udhcpc-hook.sh",
         )
         .await?;
     }
