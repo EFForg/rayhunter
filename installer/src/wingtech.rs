@@ -30,6 +30,7 @@ pub async fn install(
     Args {
         admin_ip,
         admin_password,
+        ..
     }: Args,
 ) -> Result<()> {
     wingtech_run_install(admin_ip, admin_password).await
