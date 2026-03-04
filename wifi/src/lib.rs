@@ -30,6 +30,7 @@ const CRASH_LOG_DIR: &str = "/data/rayhunter/crash-logs";
 const MAX_RECOVERY_ATTEMPTS: u32 = 5;
 const BASE_BACKOFF_SECS: u64 = 30;
 const HOSTAPD_CONF: &str = "/data/misc/wifi/hostapd.conf";
+const WAKELOCK_NAME: &[u8] = b"rayhunter";
 const AP_IFACE: &str = "wlan0";
 const BRIDGE_IFACE: &str = "bridge0";
 pub const STA_IFACE: &str = "wlan1";
@@ -547,6 +548,27 @@ async fn demote_cellular_default() {
 }
 
 /// Restore demoted cellular default route to its original metric.
+struct WakelockGuard;
+
+impl WakelockGuard {
+    async fn acquire() -> Self {
+        match tokio::fs::write("/sys/power/wake_lock", WAKELOCK_NAME).await {
+            Ok(()) => info!("acquired kernel wakelock"),
+            Err(e) => warn!("failed to acquire wakelock: {e}"),
+        }
+        WakelockGuard
+    }
+}
+
+impl Drop for WakelockGuard {
+    fn drop(&mut self) {
+        match std::fs::write("/sys/power/wake_unlock", WAKELOCK_NAME) {
+            Ok(()) => info!("released kernel wakelock"),
+            Err(e) => warn!("failed to release wakelock: {e}"),
+        }
+    }
+}
+
 async fn restore_cellular_default() {
     let out = Command::new("ip")
         .args(["route", "show", "default"])
@@ -924,6 +946,8 @@ pub fn run_wifi_client(
             status.ssid = ssid.clone();
         }
 
+        let _wakelock = WakelockGuard::acquire().await;
+
         let mut client = WifiClient::new(dns_servers);
         match client.start().await {
             Ok(()) => {
@@ -955,7 +979,7 @@ pub fn run_wifi_client(
             tokio::select! {
                 _ = shutdown_token.cancelled() => {
                     client.stop().await;
-                    let mut status = wifi_status.write().await;
+                        let mut status = wifi_status.write().await;
                     status.state = WifiState::Disabled;
                     status.ip = None;
                     status.error = None;
@@ -969,7 +993,7 @@ pub fn run_wifi_client(
                                 "WiFi module recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts, giving up"
                             );
                             client.stop().await;
-                            let mut status = wifi_status.write().await;
+                                        let mut status = wifi_status.write().await;
                             status.state = WifiState::Failed;
                             status.error = Some(format!(
                                 "module crash recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts"
@@ -1096,7 +1120,7 @@ pub fn run_wifi_client(
                                 if recovery_attempts >= MAX_RECOVERY_ATTEMPTS {
                                     error!("module recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts, giving up");
                                     client.stop().await;
-                                    let mut status = wifi_status.write().await;
+                                                        let mut status = wifi_status.write().await;
                                     status.state = WifiState::Failed;
                                     status.error = Some(format!(
                                         "data path recovery failed after {MAX_RECOVERY_ATTEMPTS} attempts"
