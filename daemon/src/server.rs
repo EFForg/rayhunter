@@ -37,7 +37,7 @@ pub struct ServerState {
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_token: CancellationToken,
     pub ui_update_sender: Option<Sender<DisplayState>>,
-    pub wifi_status: Arc<RwLock<crate::wifi::WifiStatus>>,
+    pub wifi_status: Arc<RwLock<rayhunter_wifi::WifiStatus>>,
     pub wifi_scan_lock: tokio::sync::Mutex<()>,
 }
 
@@ -179,7 +179,7 @@ pub async fn set_config(
         )
     })?;
 
-    crate::wifi::update_wpa_conf(&config).await;
+    rayhunter_wifi::update_wpa_conf(&config.wifi_config()).await;
 
     // Trigger daemon restart after writing config
     state.daemon_restart_token.cancel();
@@ -406,21 +406,21 @@ pub async fn get_zip(
 
 pub async fn get_wifi_status(
     State(state): State<Arc<ServerState>>,
-) -> Json<crate::wifi::WifiStatus> {
+) -> Json<rayhunter_wifi::WifiStatus> {
     let status = state.wifi_status.read().await;
     Json(status.clone())
 }
 
 pub async fn scan_wifi(
     State(state): State<Arc<ServerState>>,
-) -> Result<Json<Vec<crate::wifi::WifiNetwork>>, (StatusCode, String)> {
+) -> Result<Json<Vec<rayhunter_wifi::WifiNetwork>>, (StatusCode, String)> {
     let _guard = state.wifi_scan_lock.try_lock().map_err(|_| {
         (
             StatusCode::TOO_MANY_REQUESTS,
             "WiFi scan already in progress".to_string(),
         )
     })?;
-    let networks = crate::wifi::scan_wifi_networks(crate::wifi::STA_IFACE)
+    let networks = rayhunter_wifi::scan_wifi_networks(rayhunter_wifi::STA_IFACE)
         .await
         .map_err(|e| {
             (
@@ -535,7 +535,7 @@ mod tests {
             analysis_sender: analysis_tx,
             daemon_restart_token: CancellationToken::new(),
             ui_update_sender: None,
-            wifi_status: Arc::new(RwLock::new(crate::wifi::WifiStatus::default())),
+            wifi_status: Arc::new(RwLock::new(rayhunter_wifi::WifiStatus::default())),
             wifi_scan_lock: tokio::sync::Mutex::new(()),
         })
     }

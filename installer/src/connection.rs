@@ -174,7 +174,7 @@ pub async fn install_wifi_creds<C: DeviceConnection>(
 ) -> Result<()> {
     match (wifi_ssid, wifi_password) {
         (Some(ssid), Some(password)) if !ssid.is_empty() && !password.is_empty() => {
-            let conf = rayhunter::format_wpa_conf(ssid, password);
+            let conf = rayhunter_wifi::format_wpa_conf(ssid, password);
             conn.write_file(WPA_CONF_PATH, conf.as_bytes()).await?;
             println!("WiFi client mode credentials written");
         }

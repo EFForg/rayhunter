@@ -2743,6 +2743,7 @@ dependencies = [
  "md5crypt",
  "nusb",
  "rayhunter",
+ "rayhunter-wifi",
  "reqwest",
  "serde",
  "sha2",
@@ -4725,6 +4726,7 @@ dependencies = [
  "libc",
  "log",
  "rayhunter",
+ "rayhunter-wifi",
  "reqwest",
  "rustls-rustcrypto",
  "serde",
@@ -4737,6 +4739,19 @@ dependencies = [
  "toml 0.8.22",
  "url",
  "utoipa",
+]
+
+[[package]]
+name = "rayhunter-wifi"
+version = "0.10.1"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "log",
+ "serde",
+ "tempfile",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]

@@ -11,7 +11,6 @@ pub mod pcap;
 pub mod qmdl_store;
 pub mod server;
 pub mod stats;
-pub mod wifi;
 
 #[cfg(feature = "apidocs")]
 use utoipa::OpenApi;

@@ -11,8 +11,6 @@ mod pcap;
 mod qmdl_store;
 mod server;
 mod stats;
-mod wifi;
-
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -28,7 +26,7 @@ use crate::server::{
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
 };
 use crate::stats::{get_qmdl_manifest, get_system_stats};
-use crate::wifi::WifiStatus;
+use rayhunter_wifi::WifiStatus;
 
 use analysis::{
     AnalysisCtrlMessage, AnalysisStatus, get_analysis_status, run_analysis_thread, start_analysis,
@@ -294,9 +292,9 @@ async fn run_with_config(
     );
 
     let wifi_status = Arc::new(RwLock::new(WifiStatus::default()));
-    wifi::run_wifi_client(
+    rayhunter_wifi::run_wifi_client(
         &task_tracker,
-        &config,
+        &config.wifi_config(),
         shutdown_token.clone(),
         wifi_status.clone(),
     );
