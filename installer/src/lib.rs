@@ -221,6 +221,11 @@ struct Uz801Args {
     /// IP address for Uz801 admin interface, if custom.
     #[arg(long, default_value = "192.168.100.1")]
     admin_ip: String,
+
+    /// Skip the USB debug backdoor activation step. Use this if your device
+    /// already has ADB enabled or uses different firmware.
+    #[arg(long)]
+    skip_backdoor: bool,
 }
 
 #[derive(Parser, Debug)]
