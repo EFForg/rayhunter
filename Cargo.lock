@@ -1655,6 +1655,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "escape8259"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5692dd7b5a1978a5aeb0ce83b7655c58ca8efdcb79d21036ea249da95afec2c6"
+
+[[package]]
 name = "event-listener"
 version = "5.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3072,6 +3078,18 @@ checksum = "416f7e718bdb06000964960ffa43b4335ad4012ae8b99060261aa4a8088d5ccb"
 dependencies = [
  "bitflags 2.9.1",
  "libc",
+]
+
+[[package]]
+name = "libtest-mimic"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5297962ef19edda4ce33aaa484386e0a5b3d7f2f4e037cbeee00503ef6b29d33"
+dependencies = [
+ "anstream",
+ "anstyle",
+ "clap",
+ "escape8259",
 ]
 
 [[package]]
@@ -4734,6 +4752,19 @@ dependencies = [
  "tokio-util",
  "toml 0.8.22",
  "utoipa",
+]
+
+[[package]]
+name = "rayhunter-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "libtest-mimic",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

@@ -8,6 +8,7 @@ members = [
     "telcom-parser",
     "installer",
     "installer-gui/src-tauri",
+    "test",
 ]
 # at least for now, let's keep installer-gui out of the list of default
 # packages. installer-gui is still experimental and requires many new packages
