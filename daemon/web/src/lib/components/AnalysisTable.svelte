@@ -11,7 +11,7 @@
         dateStyle: 'short',
     });
 
-    const analyzers = report.metadata.analyzers;
+    const analyzers = $derived(report.metadata.analyzers);
 
     const skipped_messages: Map<string, number> = $derived.by(() => {
         let map = new Map();
