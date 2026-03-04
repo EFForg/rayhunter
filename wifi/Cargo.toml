@@ -1,0 +1,16 @@
+[package]
+name = "rayhunter-wifi"
+version = "0.10.1"
+edition = "2024"
+rust-version = "1.88.0"
+
+[dependencies]
+anyhow = "1.0.98"
+chrono = "0.4.31"
+log = "0.4.20"
+serde = { version = "1.0.193", features = ["derive"] }
+tokio = { version = "1.44.2", default-features = false, features = ["fs", "process", "rt", "time"] }
+tokio-util = { version = "0.7.10", features = ["rt"] }
+
+[dev-dependencies]
+tempfile = "3"

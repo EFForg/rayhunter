@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 use rayhunter::Device;
 use rayhunter::analysis::analyzer::AnalyzerConfig;
 
+use rayhunter_wifi::WPA_CONF_PATH;
+
 use crate::error::RayhunterError;
 use crate::notifications::NotificationType;
-use crate::wifi::WPA_CONF_PATH;
 
 /// The structure of a valid rayhunter configuration
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -70,6 +71,17 @@ impl Default for Config {
     }
 }
 
+impl Config {
+    pub fn wifi_config(&self) -> rayhunter_wifi::WifiConfig {
+        rayhunter_wifi::WifiConfig {
+            wifi_enabled: self.wifi_enabled,
+            dns_servers: self.dns_servers.clone(),
+            wifi_ssid: self.wifi_ssid.clone(),
+            wifi_password: self.wifi_password.clone(),
+        }
+    }
+}
+
 pub async fn parse_config<P>(path: P) -> Result<Config, RayhunterError>
 where
     P: AsRef<std::path::Path>,
@@ -81,7 +93,7 @@ where
         Config::default()
     };
 
-    config.wifi_ssid = rayhunter::read_ssid_from_wpa_conf(WPA_CONF_PATH);
+    config.wifi_ssid = rayhunter_wifi::read_ssid_from_wpa_conf(WPA_CONF_PATH);
     config.wifi_password = None;
 
     Ok(config)

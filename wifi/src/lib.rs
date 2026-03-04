@@ -12,7 +12,13 @@ use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::config::Config;
+#[derive(Clone, Default)]
+pub struct WifiConfig {
+    pub wifi_enabled: bool,
+    pub dns_servers: Option<Vec<String>>,
+    pub wifi_ssid: Option<String>,
+    pub wifi_password: Option<String>,
+}
 
 pub const WPA_CONF_PATH: &str = "/data/rayhunter/wpa_sta.conf";
 
@@ -879,7 +885,7 @@ async fn attempt_data_path_recovery(
 
 pub fn run_wifi_client(
     task_tracker: &TaskTracker,
-    config: &Config,
+    config: &WifiConfig,
     shutdown_token: CancellationToken,
     wifi_status: Arc<RwLock<WifiStatus>>,
 ) {
@@ -893,7 +899,7 @@ pub fn run_wifi_client(
         .filter(|v| !v.is_empty())
         .unwrap_or_else(|| DEFAULT_DNS.iter().map(|s| s.to_string()).collect());
 
-    let ssid = rayhunter::read_ssid_from_wpa_conf(WPA_CONF_PATH);
+    let ssid = read_ssid_from_wpa_conf(WPA_CONF_PATH);
 
     task_tracker.spawn(async move {
         {
@@ -1131,11 +1137,11 @@ pub fn run_wifi_client(
     });
 }
 
-pub async fn update_wpa_conf(config: &Config) {
+pub async fn update_wpa_conf(config: &WifiConfig) {
     update_wpa_conf_at(config, WPA_CONF_PATH).await;
 }
 
-async fn update_wpa_conf_at(config: &Config, path: &str) {
+async fn update_wpa_conf_at(config: &WifiConfig, path: &str) {
     let has_ssid = config
         .wifi_ssid
         .as_ref()
@@ -1146,7 +1152,7 @@ async fn update_wpa_conf_at(config: &Config, path: &str) {
         .is_some_and(|s| !s.trim().is_empty());
 
     if has_ssid && has_password {
-        let conf = rayhunter::format_wpa_conf(
+        let conf = format_wpa_conf(
             config.wifi_ssid.as_ref().unwrap(),
             config.wifi_password.as_ref().unwrap(),
         );
@@ -1259,6 +1265,35 @@ fn push_or_update(networks: &mut Vec<WifiNetwork>, ssid: String, signal: i32, se
     }
 }
 
+fn escape_wpa_value(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace(['\n', '\r'], "")
+}
+
+/// Generate a wpa_supplicant configuration file from an SSID and password.
+/// Escapes backslashes and double quotes, strips newlines from both fields.
+pub fn format_wpa_conf(ssid: &str, password: &str) -> String {
+    let ssid = escape_wpa_value(ssid);
+    let password = escape_wpa_value(password);
+    format!(
+        "ctrl_interface=/var/run/wpa_supplicant\nnetwork={{\n    ssid=\"{ssid}\"\n    psk=\"{password}\"\n    key_mgmt=WPA-PSK\n}}\n"
+    )
+}
+
+/// Read the SSID from a wpa_supplicant configuration file.
+/// Returns None if the file doesn't exist or has no ssid line.
+pub fn read_ssid_from_wpa_conf(path: &str) -> Option<String> {
+    let content = std::fs::read_to_string(path).ok()?;
+    content.lines().find_map(|line| {
+        let trimmed = line.trim();
+        trimmed
+            .strip_prefix("ssid=\"")
+            .and_then(|s| s.strip_suffix('"'))
+            .map(|s| s.replace("\\\"", "\"").replace("\\\\", "\\"))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1334,7 +1369,7 @@ BSS aa:bb:cc:dd:ee:ff(on wlan1)
         let path = dir.path().join("wpa_sta.conf");
         let path_str = path.to_str().unwrap();
 
-        let mut config = Config::default();
+        let mut config = WifiConfig::default();
         config.wifi_ssid = Some("TestNet".to_string());
         config.wifi_password = Some("pass123".to_string());
 
@@ -1356,7 +1391,7 @@ BSS aa:bb:cc:dd:ee:ff(on wlan1)
         let path = dir.path().join("wpa_sta.conf");
         let path_str = path.to_str().unwrap();
 
-        let mut config = Config::default();
+        let mut config = WifiConfig::default();
         config.wifi_ssid = Some("TestNet".to_string());
         config.wifi_password = None;
 
@@ -1377,5 +1412,65 @@ BSS aa:bb:cc:dd:ee:ff(on wlan1)
 
         assert!(parse_default_route("default dev bridge0 scope link").is_none());
         assert!(parse_default_route("").is_none());
+    }
+
+    #[test]
+    fn test_format_wpa_conf_basic() {
+        let conf = format_wpa_conf("MyNetwork", "mypassword");
+        assert!(conf.contains("ssid=\"MyNetwork\""));
+        assert!(conf.contains("psk=\"mypassword\""));
+        assert!(conf.contains("key_mgmt=WPA-PSK"));
+        assert!(conf.starts_with("ctrl_interface=/var/run/wpa_supplicant\n"));
+    }
+
+    #[test]
+    fn test_format_wpa_conf_escapes_quotes() {
+        let conf = format_wpa_conf("My\"Net", "pass\"word");
+        assert!(conf.contains("ssid=\"My\\\"Net\""));
+        assert!(conf.contains("psk=\"pass\\\"word\""));
+    }
+
+    #[test]
+    fn test_format_wpa_conf_escapes_backslashes() {
+        let conf = format_wpa_conf("Net\\work", "pass\\word");
+        assert!(conf.contains("ssid=\"Net\\\\work\""));
+        assert!(conf.contains("psk=\"pass\\\\word\""));
+    }
+
+    #[test]
+    fn test_format_wpa_conf_strips_newlines() {
+        let conf = format_wpa_conf("legit", "pass\n}\nnetwork={\n    ssid=\"evil\"");
+        assert_eq!(
+            conf.lines().count(),
+            format_wpa_conf("legit", "clean").lines().count(),
+            "newlines in password must not inject extra config lines"
+        );
+    }
+
+    #[test]
+    fn test_read_ssid_from_wpa_conf() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("wpa.conf");
+        let conf = format_wpa_conf("TestSSID", "password123");
+        std::fs::write(&path, conf).unwrap();
+
+        let ssid = read_ssid_from_wpa_conf(path.to_str().unwrap());
+        assert_eq!(ssid, Some("TestSSID".to_string()));
+    }
+
+    #[test]
+    fn test_read_ssid_roundtrips_special_chars() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("wpa.conf");
+        let conf = format_wpa_conf("My\"Net\\work", "pass");
+        std::fs::write(&path, conf).unwrap();
+
+        let ssid = read_ssid_from_wpa_conf(path.to_str().unwrap());
+        assert_eq!(ssid, Some("My\"Net\\work".to_string()));
+    }
+
+    #[test]
+    fn test_read_ssid_missing_file() {
+        assert_eq!(read_ssid_from_wpa_conf("/nonexistent/path"), None);
     }
 }

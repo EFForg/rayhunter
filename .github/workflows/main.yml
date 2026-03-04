@@ -56,8 +56,8 @@ jobs:
             echo installer_gui_count=forced >> "$GITHUB_OUTPUT"
             echo rootshell_count=forced >> "$GITHUB_OUTPUT"
           else
-            echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^installer -e ^check -e ^lib -e ^rootshell -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
-            echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^lib -e ^telcom-parser | wc -l)" >> "$GITHUB_OUTPUT"
+            echo "code_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^installer -e ^check -e ^lib -e ^rootshell -e ^telcom-parser -e ^wifi | wc -l)" >> "$GITHUB_OUTPUT"
+            echo "daemon_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon -e ^lib -e ^telcom-parser -e ^wifi | wc -l)" >> "$GITHUB_OUTPUT"
             echo "web_count=$(git diff --name-only $lcommit...HEAD | grep -e ^daemon/web | wc -l)" >> "$GITHUB_OUTPUT"
             echo "docs_count=$(git diff --name-only $lcommit...HEAD | grep -e ^book.toml -e ^doc | wc -l)" >> "$GITHUB_OUTPUT"
             echo "rootshell_count=$(git diff --name-only $lcommit...HEAD | grep -e ^rootshell | wc -l)" >> "$GITHUB_OUTPUT"
