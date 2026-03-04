@@ -276,6 +276,22 @@ impl WifiClient {
         ])
         .await;
 
+        let gw_host = format!("{gateway}/32");
+        run_ip(&["route", "replace", &gw_host, "dev", &self.iface]).await;
+        run_ip(&[
+            "route",
+            "replace",
+            &gw_host,
+            "dev",
+            &self.iface,
+            "table",
+            &table,
+        ])
+        .await;
+
+        let arp_path = format!("/proc/sys/net/ipv4/conf/{}/arp_filter", self.iface);
+        let _ = tokio::fs::write(&arp_path, "1").await;
+
         let mut dns: Vec<String> = Vec::new();
         if let Some(dhcp_dns) = read_lease_field("dns").await {
             dns.extend(
