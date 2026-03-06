@@ -36,6 +36,10 @@ According to FCC ID 2APXW-TMOHS1 Test Report No. I20Z61602-WMD02 ([part 1](https
 |   66 | 1700 MHz (E-AWS) |
 |   71 | 600 MHz (USDD)   |
 
+## WiFi client mode
+
+The TMOHS1 supports WiFi client mode, allowing Rayhunter to connect to an existing WiFi network while keeping the hotspot running. See [WiFi Client Mode](./configuration.md#wifi-client-mode) for setup.
+
 ## Installing
 Connect to the TMOHS1's network over WiFi or USB tethering.
 

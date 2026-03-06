@@ -28,6 +28,10 @@ Wingtechs are abundant on ebay and can also be found on Amazon:
 - <https://www.ebay.com/itm/127147132518>
 - <https://www.amazon.com/AT-Turbo-Hotspot-256-Black/dp/B09YWLXVWT>
 
+## WiFi client mode
+
+The Wingtech supports WiFi client mode, allowing Rayhunter to connect to an existing WiFi network while keeping the hotspot running. See [WiFi Client Mode](./configuration.md#wifi-client-mode) for setup.
+
 ## Installing
 Connect to the Wingtech's network over WiFi or USB tethering, then run the installer:
 

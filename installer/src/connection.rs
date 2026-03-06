@@ -29,25 +29,15 @@ pub async fn install_config<C: DeviceConnection>(
     conn: &mut C,
     device_type: &str,
     reset_config: bool,
-    wifi_enabled: bool,
 ) -> Result<()> {
     let config_path = "/data/rayhunter/config.toml";
     if reset_config || !file_exists(conn, config_path).await {
-        let mut config = crate::CONFIG_TOML.replace(
+        let config = crate::CONFIG_TOML.replace(
             r#"#device = "orbic""#,
             &format!(r#"device = "{device_type}""#),
         );
-        if wifi_enabled {
-            config = config.replace("wifi_enabled = false", "wifi_enabled = true");
-        }
         conn.write_file(config_path, config.as_bytes()).await?;
     } else {
-        if wifi_enabled {
-            conn.run_command(
-                "sed -i 's/wifi_enabled = false/wifi_enabled = true/' /data/rayhunter/config.toml",
-            )
-            .await?;
-        }
         println!("Config file already exists, skipping (use --reset-config to overwrite)");
     }
     Ok(())
@@ -165,27 +155,6 @@ pub async fn setup_data_directory<C: DeviceConnection>(conn: &mut C, data_dir: &
     Ok(())
 }
 
-const WPA_CONF_PATH: &str = "/data/rayhunter/wpa_sta.conf";
-
-pub async fn install_wifi_creds<C: DeviceConnection>(
-    conn: &mut C,
-    wifi_ssid: Option<&str>,
-    wifi_password: Option<&str>,
-) -> Result<()> {
-    match (wifi_ssid, wifi_password) {
-        (Some(ssid), Some(password)) if !ssid.is_empty() && !password.is_empty() => {
-            let conf = rayhunter_wifi::format_wpa_conf(ssid, password);
-            conn.write_file(WPA_CONF_PATH, conf.as_bytes()).await?;
-            println!("WiFi client mode credentials written");
-        }
-        (Some(_), None) | (None, Some(_)) => {
-            println!("Both --wifi-ssid and --wifi-password are required, skipping WiFi setup");
-        }
-        _ => {}
-    }
-    Ok(())
-}
-
 /// Telnet-based connection wrapper
 pub struct TelnetConnection {
     pub addr: SocketAddr,
@@ -208,5 +177,239 @@ impl DeviceConnection for TelnetConnection {
 
     async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {
         crate::util::telnet_send_file(self.addr, path, content, self.wait_for_prompt).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    struct MockConnection {
+        responses: HashMap<String, String>,
+        commands: Vec<String>,
+        files: Vec<(String, Vec<u8>)>,
+    }
+
+    impl MockConnection {
+        fn new(responses: Vec<(&str, &str)>) -> Self {
+            Self {
+                responses: responses
+                    .into_iter()
+                    .map(|(k, v)| (k.into(), v.into()))
+                    .collect(),
+                commands: Vec::new(),
+                files: Vec::new(),
+            }
+        }
+    }
+
+    impl DeviceConnection for MockConnection {
+        async fn run_command(&mut self, command: &str) -> Result<String> {
+            self.commands.push(command.to_string());
+            Ok(self.responses.get(command).cloned().unwrap_or_default())
+        }
+
+        async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {
+            self.files.push((path.to_string(), content.to_vec()));
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_install_config_writes_when_missing() {
+        let mut conn = MockConnection::new(vec![(
+            "test -f '/data/rayhunter/config.toml' && echo exists || echo missing",
+            "missing",
+        )]);
+        install_config(&mut conn, "tplink", false).await.unwrap();
+        assert_eq!(conn.files.len(), 1);
+        assert_eq!(conn.files[0].0, "/data/rayhunter/config.toml");
+        let content = String::from_utf8(conn.files[0].1.clone()).unwrap();
+        assert!(content.contains(r#"device = "tplink""#));
+        assert!(!content.contains(r#"#device = "orbic""#));
+    }
+
+    #[tokio::test]
+    async fn test_install_config_skips_when_exists() {
+        let mut conn = MockConnection::new(vec![(
+            "test -f '/data/rayhunter/config.toml' && echo exists || echo missing",
+            "exists",
+        )]);
+        install_config(&mut conn, "tplink", false).await.unwrap();
+        assert!(conn.files.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_install_config_overwrites_with_reset() {
+        let mut conn = MockConnection::new(vec![(
+            "test -f '/data/rayhunter/config.toml' && echo exists || echo missing",
+            "exists",
+        )]);
+        install_config(&mut conn, "orbic", true).await.unwrap();
+        assert_eq!(conn.files.len(), 1);
+        let content = String::from_utf8(conn.files[0].1.clone()).unwrap();
+        assert!(content.contains(r#"device = "orbic""#));
+    }
+
+    #[tokio::test]
+    async fn test_setup_data_dir_rejects_data_rayhunter() {
+        let mut conn = MockConnection::new(vec![]);
+        let err = setup_data_directory(&mut conn, "/data/rayhunter").await;
+        assert!(
+            err.unwrap_err()
+                .to_string()
+                .contains("must not be /data/rayhunter")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_setup_data_dir_rejects_apostrophe() {
+        let mut conn = MockConnection::new(vec![]);
+        let err = setup_data_directory(&mut conn, "/cache/it's-data").await;
+        assert!(err.unwrap_err().to_string().contains("apostrophe"));
+    }
+
+    #[tokio::test]
+    async fn test_setup_data_dir_fresh_install() {
+        let mut conn = MockConnection::new(vec![
+            ("test -L '/data/rayhunter' && echo yes || echo no", "no"),
+            (
+                "test -d '/data/rayhunter' && echo exists || echo missing",
+                "missing",
+            ),
+        ]);
+        setup_data_directory(&mut conn, "/cache/rayhunter-data")
+            .await
+            .unwrap();
+        assert!(
+            conn.commands
+                .contains(&"mkdir -p '/cache/rayhunter-data'".to_string())
+        );
+        assert!(conn.commands.contains(&"mkdir -p /data".to_string()));
+        assert!(
+            conn.commands
+                .contains(&"ln -sf '/cache/rayhunter-data' /data/rayhunter".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_setup_data_dir_already_configured() {
+        let mut conn = MockConnection::new(vec![
+            ("test -L '/data/rayhunter' && echo yes || echo no", "yes"),
+            (
+                "echo RL:$(readlink '/data/rayhunter')",
+                "RL:/cache/rayhunter-data",
+            ),
+        ]);
+        setup_data_directory(&mut conn, "/cache/rayhunter-data")
+            .await
+            .unwrap();
+        // Should return early without creating symlink
+        assert!(
+            !conn
+                .commands
+                .contains(&"ln -sf '/cache/rayhunter-data' /data/rayhunter".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_setup_data_dir_migrates_real_directory() {
+        let mut conn = MockConnection::new(vec![
+            ("test -L '/data/rayhunter' && echo yes || echo no", "no"),
+            (
+                "test -d '/data/rayhunter' && echo exists || echo missing",
+                "exists",
+            ),
+            (
+                "test -d '/cache/rayhunter-data' && echo exists || echo missing",
+                "missing",
+            ),
+            ("/etc/init.d/rayhunter_daemon stop 2>/dev/null; true", ""),
+            (
+                "mv '/data/rayhunter' '/cache/rayhunter-data' && echo MV_OK",
+                "MV_OK",
+            ),
+        ]);
+        setup_data_directory(&mut conn, "/cache/rayhunter-data")
+            .await
+            .unwrap();
+        assert!(
+            conn.commands.contains(
+                &"mv '/data/rayhunter' '/cache/rayhunter-data' && echo MV_OK".to_string()
+            )
+        );
+        assert!(
+            conn.commands
+                .contains(&"ln -sf '/cache/rayhunter-data' /data/rayhunter".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_setup_data_dir_migrates_from_old_symlink() {
+        let mut conn = MockConnection::new(vec![
+            ("test -L '/data/rayhunter' && echo yes || echo no", "yes"),
+            ("echo RL:$(readlink '/data/rayhunter')", "RL:/old/path"),
+            (
+                "test -d '/old/path' && echo exists || echo missing",
+                "exists",
+            ),
+            ("/etc/init.d/rayhunter_daemon stop 2>/dev/null; true", ""),
+            (
+                "mv '/old/path' '/cache/rayhunter-data' && echo MV_OK",
+                "MV_OK",
+            ),
+        ]);
+        setup_data_directory(&mut conn, "/cache/rayhunter-data")
+            .await
+            .unwrap();
+        assert!(conn.commands.contains(&"rm -f /data/rayhunter".to_string()));
+        assert!(
+            conn.commands
+                .contains(&"mv '/old/path' '/cache/rayhunter-data' && echo MV_OK".to_string())
+        );
+        assert!(
+            conn.commands
+                .contains(&"ln -sf '/cache/rayhunter-data' /data/rayhunter".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_setup_data_dir_both_exist_errors() {
+        let mut conn = MockConnection::new(vec![
+            ("test -L '/data/rayhunter' && echo yes || echo no", "no"),
+            (
+                "test -d '/data/rayhunter' && echo exists || echo missing",
+                "exists",
+            ),
+            (
+                "test -d '/cache/rayhunter-data' && echo exists || echo missing",
+                "exists",
+            ),
+        ]);
+        let err = setup_data_directory(&mut conn, "/cache/rayhunter-data").await;
+        assert!(err.unwrap_err().to_string().contains("Both"));
+    }
+
+    #[tokio::test]
+    async fn test_setup_data_dir_move_failure() {
+        let mut conn = MockConnection::new(vec![
+            ("test -L '/data/rayhunter' && echo yes || echo no", "no"),
+            (
+                "test -d '/data/rayhunter' && echo exists || echo missing",
+                "exists",
+            ),
+            (
+                "test -d '/cache/rayhunter-data' && echo exists || echo missing",
+                "missing",
+            ),
+            ("/etc/init.d/rayhunter_daemon stop 2>/dev/null; true", ""),
+            (
+                "mv '/data/rayhunter' '/cache/rayhunter-data' && echo MV_OK",
+                "mv: cross-device move not supported",
+            ),
+        ]);
+        let err = setup_data_directory(&mut conn, "/cache/rayhunter-data").await;
+        assert!(err.unwrap_err().to_string().contains("Failed to move"));
     }
 }

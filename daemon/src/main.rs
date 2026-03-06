@@ -7,6 +7,7 @@ mod error;
 mod firewall;
 mod key_input;
 mod notifications;
+mod ota;
 mod pcap;
 mod qmdl_store;
 mod server;
@@ -26,7 +27,7 @@ use crate::server::{
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
 };
 use crate::stats::{get_qmdl_manifest, get_system_stats};
-use rayhunter_wifi::WifiStatus;
+use wifi_station::WifiStatus;
 
 use analysis::{
     AnalysisCtrlMessage, AnalysisStatus, get_analysis_status, run_analysis_thread, start_analysis,
@@ -292,7 +293,7 @@ async fn run_with_config(
     );
 
     let wifi_status = Arc::new(RwLock::new(WifiStatus::default()));
-    rayhunter_wifi::run_wifi_client(
+    wifi_station::run_wifi_client(
         &task_tracker,
         &config.wifi_config(),
         shutdown_token.clone(),

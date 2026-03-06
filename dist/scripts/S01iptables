@@ -4,7 +4,9 @@ case "$1" in
     if [ -f /data/rayhunter/firewall-enabled ]; then
         iptables -F OUTPUT
         iptables -A OUTPUT -o lo -j ACCEPT
-        iptables -A OUTPUT -o bridge0 -j ACCEPT
+        for br in bridge0 br0; do
+            [ -d "/sys/class/net/$br" ] && iptables -A OUTPUT -o "$br" -j ACCEPT
+        done
         iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
         iptables -A OUTPUT -p udp --dport 67:68 -j ACCEPT
         iptables -A OUTPUT -p udp --dport 53 -j ACCEPT

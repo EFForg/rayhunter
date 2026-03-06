@@ -20,7 +20,6 @@ pub async fn install(
     Args {
         admin_ip,
         admin_password,
-        ..
     }: Args,
 ) -> Result<()> {
     run_install(admin_ip, admin_password).await
@@ -39,12 +38,20 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
 
     telnet_send_command(addr, "mount -o remount,rw /", "exit code 0", true).await?;
 
+    let config = crate::CONFIG_TOML.replace("#device = \"orbic\"", "device = \"tmobile\"");
+    telnet_send_file(addr, "/data/rayhunter/config.toml", config.as_bytes(), true).await?;
+
     telnet_send_file(
         addr,
-        "/data/rayhunter/config.toml",
-        crate::CONFIG_TOML
-            .replace("#device = \"orbic\"", "device = \"tmobile\"")
-            .as_bytes(),
+        "/data/rayhunter/udhcpc-hook.sh",
+        include_bytes!("../../dist/scripts/udhcpc-hook.sh"),
+        true,
+    )
+    .await?;
+    telnet_send_command(
+        addr,
+        "chmod 755 /data/rayhunter/udhcpc-hook.sh",
+        "exit code 0",
         true,
     )
     .await?;

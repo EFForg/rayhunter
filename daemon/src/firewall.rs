@@ -2,6 +2,8 @@ use anyhow::{Result, bail};
 use log::{info, warn};
 use tokio::process::Command;
 
+use wifi_station::detect_bridge_iface;
+
 use crate::config::Config;
 
 const FIREWALL_FLAG: &str = "/data/rayhunter/firewall-enabled";
@@ -20,7 +22,7 @@ async fn run_iptables(args: &[&str]) -> Result<()> {
 
 pub async fn apply(config: &Config) {
     if config.block_ota_daemons {
-        block_ota_daemons().await;
+        crate::ota::block_ota_daemons().await;
     }
 
     let _ = Command::new("iptables")
@@ -41,33 +43,12 @@ pub async fn apply(config: &Config) {
     }
 }
 
-async fn block_ota_daemons() {
-    let stub = "#!/bin/sh\nwhile true; do sleep 3600; done\n";
-    if let Err(e) = tokio::fs::write("/tmp/daemon-stub", stub).await {
-        warn!("failed to write daemon stub: {e}");
-        return;
-    }
-    let _ = Command::new("chmod")
-        .args(["755", "/tmp/daemon-stub"])
-        .output()
-        .await;
-
-    for daemon in &["dmclient", "upgrade"] {
-        let path = format!("/usr/bin/{daemon}");
-        let _ = Command::new("mount")
-            .args(["--bind", "/tmp/daemon-stub", &path])
-            .output()
-            .await;
-        let _ = Command::new("pkill").args(["-9", daemon]).output().await;
-    }
-}
-
 async fn setup_outbound_whitelist(
     extra_ports: &Option<Vec<u16>>,
     ntfy_url: &Option<String>,
 ) -> Result<()> {
     run_iptables(&["-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"]).await?;
-    run_iptables(&["-A", "OUTPUT", "-o", "bridge0", "-j", "ACCEPT"]).await?;
+    run_iptables(&["-A", "OUTPUT", "-o", detect_bridge_iface(), "-j", "ACCEPT"]).await?;
     run_iptables(&[
         "-A",
         "OUTPUT",

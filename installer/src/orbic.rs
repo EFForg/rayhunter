@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{DeviceConnection, install_config, install_wifi_creds};
+use crate::connection::{DeviceConnection, install_config};
 use crate::output::{print, println};
 use crate::util::open_usb_device;
 
@@ -77,11 +77,7 @@ async fn confirm() -> Result<bool> {
     Ok(input.trim() == "yes")
 }
 
-pub async fn install(
-    reset_config: bool,
-    wifi_ssid: Option<&str>,
-    wifi_password: Option<&str>,
-) -> Result<()> {
+pub async fn install(reset_config: bool) -> Result<()> {
     println!(
         "WARNING: The orbic USB installer is not recommended for most usecases. Consider using ./installer orbic instead, unless you want ADB access for other purposes."
     );
@@ -100,8 +96,7 @@ pub async fn install(
     setup_rootshell(&mut adb_device).await?;
     println!("done");
     print!("Installing rayhunter... ");
-    let mut adb_device =
-        setup_rayhunter(adb_device, reset_config, wifi_ssid, wifi_password).await?;
+    let mut adb_device = setup_rayhunter(adb_device, reset_config).await?;
     println!("done");
     print!("Testing rayhunter... ");
     test_rayhunter(&mut adb_device).await?;
@@ -148,12 +143,7 @@ async fn setup_rootshell(adb_device: &mut ADBUSBDevice) -> Result<()> {
     Ok(())
 }
 
-async fn setup_rayhunter(
-    mut adb_device: ADBUSBDevice,
-    reset_config: bool,
-    wifi_ssid: Option<&str>,
-    wifi_password: Option<&str>,
-) -> Result<ADBUSBDevice> {
+async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Result<ADBUSBDevice> {
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
     adb_at_syscmd(
@@ -167,37 +157,12 @@ async fn setup_rayhunter(
         rayhunter_daemon_bin,
     )
     .await?;
-    #[cfg(feature = "wifi-client")]
-    {
-        let wpa_supplicant_bin = include_bytes!(env!("FILE_WPA_SUPPLICANT"));
-        let wpa_cli_bin = include_bytes!(env!("FILE_WPA_CLI"));
-        install_file(
-            &mut adb_device,
-            "/data/rayhunter/bin/wpa_supplicant",
-            wpa_supplicant_bin,
-        )
-        .await?;
-        install_file(&mut adb_device, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin).await?;
-        install_file(
-            &mut adb_device,
-            "/data/rayhunter/udhcpc-hook.sh",
-            include_bytes!("../../dist/scripts/udhcpc-hook.sh"),
-        )
-        .await?;
-        adb_at_syscmd(
-            &mut adb_device,
-            "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli /data/rayhunter/udhcpc-hook.sh",
-        )
-        .await?;
-    }
 
     {
         let mut conn = AdbConnection {
             device: &mut adb_device,
         };
-        let wifi_enabled = wifi_ssid.is_some() && wifi_password.is_some();
-        install_config(&mut conn, "orbic", reset_config, wifi_enabled).await?;
-        install_wifi_creds(&mut conn, wifi_ssid, wifi_password).await?;
+        install_config(&mut conn, "orbic", reset_config).await?;
     }
 
     install_file(

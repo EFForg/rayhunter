@@ -21,7 +21,7 @@ apidocs = ["dep:utoipa"]
 
 [dependencies]
 rayhunter = { path = "../lib" }
-rayhunter-wifi = { path = "../wifi" }
+wifi-station = { git = "https://github.com/BeigeBox/wifi-station", rev = "d190734" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
 tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt"] }

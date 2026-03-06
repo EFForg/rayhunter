@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use rayhunter::Device;
 use rayhunter::analysis::analyzer::AnalyzerConfig;
 
-use rayhunter_wifi::WPA_CONF_PATH;
+use wifi_station::WPA_CONF_PATH;
 
 use crate::error::RayhunterError;
 use crate::notifications::NotificationType;
@@ -72,12 +72,28 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn wifi_config(&self) -> rayhunter_wifi::WifiConfig {
-        rayhunter_wifi::WifiConfig {
+    pub fn wifi_config(&self) -> wifi_station::WifiConfig {
+        let (wpa_bin, hostapd_conf, ctrl_interface) = match self.device {
+            Device::Tmobile | Device::Wingtech => (
+                Some("/usr/sbin/wpa_supplicant".into()),
+                Some("/data/configs/hostapd.conf".into()),
+                None,
+            ),
+            Device::Uz801 => (
+                Some("/system/bin/wpa_supplicant".into()),
+                Some("/data/misc/wifi/hostapd.conf".into()),
+                Some("/data/misc/wifi/sockets".into()),
+            ),
+            _ => (None, None, None),
+        };
+        wifi_station::WifiConfig {
             wifi_enabled: self.wifi_enabled,
             dns_servers: self.dns_servers.clone(),
             wifi_ssid: self.wifi_ssid.clone(),
             wifi_password: self.wifi_password.clone(),
+            wpa_supplicant_bin: wpa_bin,
+            hostapd_conf,
+            ctrl_interface,
         }
     }
 }
@@ -93,7 +109,7 @@ where
         Config::default()
     };
 
-    config.wifi_ssid = rayhunter_wifi::read_ssid_from_wpa_conf(WPA_CONF_PATH);
+    config.wifi_ssid = wifi_station::read_ssid_from_wpa_conf(WPA_CONF_PATH);
     config.wifi_password = None;
 
     Ok(config)

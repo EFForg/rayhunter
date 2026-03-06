@@ -7,6 +7,7 @@ pub mod error;
 pub mod firewall;
 pub mod key_input;
 pub mod notifications;
+pub mod ota;
 pub mod pcap;
 pub mod qmdl_store;
 pub mod server;
