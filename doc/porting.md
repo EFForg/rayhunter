@@ -17,7 +17,9 @@ Please don't open issues about supporting a new device, use GitHub discussions i
 
 ## Prerequisites: root shell, and /dev/diag
 
-Rayhunter is a Linux binary that reads traffic from `/dev/diag`, which requires root. If either of those isn't available, Rayhunter can't work. Everything else (displays, buttons) is secondary, and we can deal with it later.
+Rayhunter is a Linux binary that reads traffic from the Qualcomm diagnostic interface, which requires root. If either of those isn't available, Rayhunter can't work. Everything else (displays, buttons) is secondary, and we can deal with it later.
+
+In the devices we currently support `/dev/diag` is the interface for Qualcomm diagnostics and devices with this will be easiest to support. Newer Qualcomm modems expose the diagnostic interface over a USB gadget which is something we are working on support for, but do not currently have. Thus devices with the former diagnostic interface will be easier to port Rayhunter to.
 
 You can check ahead of purchase whether `/dev/diag` is available by ensuring the device has a Qualcomm MDM* chip. Other Qualcomm LTE chips might work but we haven't encountered one yet. Typically you will be able to get this information from [fcc.report](https://fcc.report), where either the chip is written down in some PDF or at least plainly visible in one of the teardown photos. Sometimes this information can also be found through teardown videos on YouTube. If you find that chip, there's a good chance (but no guarantee) `/dev/diag` is available.
 
