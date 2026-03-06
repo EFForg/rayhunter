@@ -50,9 +50,9 @@ reboot
 See `/data/usb/boot_hsusb_composition` for a list of USB modes and Android USB gadget settings.
 
 
-### How do I connect my Orbic to an existing WiFi network?
+### How do I connect my device to an existing WiFi network?
 
-The Orbic (and Moxee) can connect to a nearby WiFi network while still running its own hotspot. This gives the device internet access for ntfy notifications and lets you reach the web UI from your home network. See [WiFi Client Mode](./configuration.md#wifi-client-mode) in the configuration guide for setup instructions. You can also pass `--wifi-ssid` and `--wifi-password` to the installer.
+The Orbic, Moxee, UZ801, and TMOHS1 can connect to a nearby WiFi network while still running their own hotspot. This gives the device internet access for ntfy notifications and lets you reach the web UI from your home network. See [WiFi Client Mode](./configuration.md#wifi-client-mode) in the configuration guide for setup instructions. You can also pass `--wifi-ssid` and `--wifi-password` to the installer.
 
 ### WiFi client mode is connected but I can't reach the internet
 

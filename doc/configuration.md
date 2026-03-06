@@ -23,7 +23,7 @@ Through web UI you can set:
 
 ## WiFi Client Mode
 
-On the **Orbic** and **Moxee**, Rayhunter can connect the device to an existing WiFi network while keeping the hotspot running. This gives the device internet access for [notifications](https://docs.ntfy.sh/) and lets you reach the web UI from any device on that network.
+On the **Orbic**, **Moxee**, **UZ801**, **TMOHS1**, and **Wingtech**, Rayhunter can connect the device to an existing WiFi network while keeping the hotspot running. This gives the device internet access for [notifications](https://docs.ntfy.sh/) and lets you reach the web UI from any device on that network.
 
 - **Enable WiFi** turns WiFi client mode on or off. Disabling it does not erase saved credentials.
 - **Scan** searches for nearby networks. Select one from the dropdown, or type an SSID manually.
@@ -34,11 +34,11 @@ After saving, the connection status will show **connecting**, **connected** (wit
 
 ### Crash Recovery
 
-The Orbic's WiFi kernel module (`wlan.ko`) can occasionally crash or unload, taking both the hotspot and client interfaces down with it. Rayhunter includes a watchdog that detects this and automatically reloads the module, restarts the hotspot, and reconnects to the configured network. During recovery the WiFi status will show **recovering**.
+The WiFi kernel module (`wlan.ko`) can occasionally crash or unload, taking both the hotspot and client interfaces down with it. Rayhunter includes a watchdog that detects this and automatically reloads the module, restarts the hotspot, and reconnects to the configured network. During recovery the WiFi status will show **recovering**.
 
 On the first detection of a crash, a diagnostic snapshot is saved to `/data/rayhunter/crash-logs/` on the device. You can pull these logs with `adb pull /data/rayhunter/crash-logs/` and inspect them to understand what went wrong. Each log contains:
 
-- **dmesg** output (kernel messages). Look for backtraces, `BUG:`/`Oops:` lines, or `wlan`/`wcnss` errors. The kernel ring buffer on the Orbic is small and gets overwritten quickly, so crash details may already be gone if the crash happened well before detection.
+- **dmesg** output (kernel messages). Look for backtraces, `BUG:`/`Oops:` lines, or `wlan`/`wcnss` errors. The kernel ring buffer is small and gets overwritten quickly, so crash details may already be gone if the crash happened well before detection.
 - **/proc/modules** snapshot. If `wlan` is absent, the module fully unloaded. If present but interfaces are gone, the driver is stuck.
 - **ip addr** output confirming which network interfaces existed at snapshot time.
 - **ps** output showing which WiFi-related processes (`hostapd`, `wpa_supplicant`, `wland`) were still running.

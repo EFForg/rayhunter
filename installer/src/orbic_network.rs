@@ -8,9 +8,7 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{
-    TelnetConnection, install_config, install_wifi_creds, setup_data_directory,
-};
+use crate::connection::{TelnetConnection, install_config, setup_data_directory};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
 use crate::util::{
@@ -155,8 +153,6 @@ pub async fn install(
     admin_password: Option<String>,
     reset_config: bool,
     data_dir: Option<String>,
-    wifi_ssid: Option<&str>,
-    wifi_password: Option<&str>,
 ) -> Result<()> {
     let Some(admin_password) = admin_password else {
         eprintln!(
@@ -181,7 +177,7 @@ pub async fn install(
     println!("done");
 
     let data_dir = data_dir.unwrap_or_else(|| "/data/rayhunter-data".to_string());
-    setup_rayhunter(&admin_ip, reset_config, &data_dir, wifi_ssid, wifi_password).await
+    setup_rayhunter(&admin_ip, reset_config, &data_dir).await
 }
 
 async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
@@ -231,13 +227,7 @@ async fn check_disk_space(addr: SocketAddr, binary_size: usize) -> Result<()> {
     Ok(())
 }
 
-async fn setup_rayhunter(
-    admin_ip: &str,
-    reset_config: bool,
-    data_dir: &str,
-    wifi_ssid: Option<&str>,
-    wifi_password: Option<&str>,
-) -> Result<()> {
+async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
@@ -272,30 +262,8 @@ async fn setup_rayhunter(
         false,
     )
     .await?;
-    #[cfg(feature = "wifi-client")]
-    {
-        let wpa_supplicant_bin = include_bytes!(env!("FILE_WPA_SUPPLICANT"));
-        let wpa_cli_bin = include_bytes!(env!("FILE_WPA_CLI"));
-        telnet_send_file(
-            addr,
-            "/data/rayhunter/bin/wpa_supplicant",
-            wpa_supplicant_bin,
-            false,
-        )
-        .await?;
-        telnet_send_file(addr, "/data/rayhunter/bin/wpa_cli", wpa_cli_bin, false).await?;
-        telnet_send_file(
-            addr,
-            "/data/rayhunter/udhcpc-hook.sh",
-            include_bytes!("../../dist/scripts/udhcpc-hook.sh"),
-            false,
-        )
-        .await?;
-    }
 
-    let wifi_enabled = wifi_ssid.is_some() && wifi_password.is_some();
-    install_config(&mut conn, "orbic", reset_config, wifi_enabled).await?;
-    install_wifi_creds(&mut conn, wifi_ssid, wifi_password).await?;
+    install_config(&mut conn, "orbic", reset_config).await?;
 
     telnet_send_file(
         addr,
@@ -323,14 +291,6 @@ async fn setup_rayhunter(
     telnet_send_command(
         addr,
         "chmod +x /data/rayhunter/rayhunter-daemon",
-        "exit code 0",
-        false,
-    )
-    .await?;
-    #[cfg(feature = "wifi-client")]
-    telnet_send_command(
-        addr,
-        "chmod +x /data/rayhunter/bin/wpa_supplicant /data/rayhunter/bin/wpa_cli /data/rayhunter/udhcpc-hook.sh",
         "exit code 0",
         false,
     )

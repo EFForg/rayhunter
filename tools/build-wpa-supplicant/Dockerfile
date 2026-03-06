@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 AS builder
+FROM --platform=linux/amd64 ubuntu:20.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN dpkg --add-architecture armhf && \
