@@ -148,6 +148,21 @@
                     </div>
                 </div>
 
+                <div class="flex items-center">
+                    <input
+                        id="keep_screen_on"
+                        type="checkbox"
+                        bind:checked={config.keep_screen_on}
+                        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                    />
+                    <label for="keep_screen_on" class="ml-2 block text-sm text-gray-700">
+                        Keep screen on (Orbic)
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500">
+                    Prevents the Orbic display from blanking by re-enabling backlight/display when it sleeps.
+                </p>
+
                 <div class="border-t pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
                     <div>
