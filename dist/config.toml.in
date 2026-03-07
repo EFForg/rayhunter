@@ -40,8 +40,8 @@ min_space_to_continue_recording_mb = 1
 wifi_enabled = false
 
 # DNS servers to use when WiFi client mode is active.
-# Defaults to ["8.8.8.8", "1.1.1.1"] if not specified.
-# dns_servers = ["8.8.8.8", "1.1.1.1"]
+# Defaults to ["9.9.9.9", "149.112.112.112"] (Quad9) if not specified.
+# dns_servers = ["9.9.9.9", "149.112.112.112"]
 
 # Device Security
 # Block OTA update daemons (dmclient, upgrade) from phoning home.

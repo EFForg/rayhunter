@@ -41,21 +41,6 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
     let config = crate::CONFIG_TOML.replace("#device = \"orbic\"", "device = \"tmobile\"");
     telnet_send_file(addr, "/data/rayhunter/config.toml", config.as_bytes(), true).await?;
 
-    telnet_send_file(
-        addr,
-        "/data/rayhunter/udhcpc-hook.sh",
-        include_bytes!("../../dist/scripts/udhcpc-hook.sh"),
-        true,
-    )
-    .await?;
-    telnet_send_command(
-        addr,
-        "chmod 755 /data/rayhunter/udhcpc-hook.sh",
-        "exit code 0",
-        true,
-    )
-    .await?;
-
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
     telnet_send_file(
         addr,

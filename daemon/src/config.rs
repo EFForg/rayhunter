@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 use rayhunter::Device;
 use rayhunter::analysis::analyzer::AnalyzerConfig;
 
-use wifi_station::WPA_CONF_PATH;
-
 use crate::error::RayhunterError;
 use crate::notifications::NotificationType;
 
@@ -94,6 +92,12 @@ impl Config {
             wpa_supplicant_bin: wpa_bin,
             hostapd_conf,
             ctrl_interface,
+            udhcpc_hook_path: Some("/data/rayhunter/udhcpc-hook.sh".into()),
+            dhcp_lease_path: Some("/data/rayhunter/dhcp_lease".into()),
+            wpa_conf_path: Some("/data/rayhunter/wpa_sta.conf".into()),
+            iw_bin: Some("/data/rayhunter/bin/iw".into()),
+            crash_log_dir: Some("/data/rayhunter/crash-logs".into()),
+            wakelock_name: Some("rayhunter".into()),
         }
     }
 }
@@ -109,7 +113,7 @@ where
         Config::default()
     };
 
-    config.wifi_ssid = wifi_station::read_ssid_from_wpa_conf(WPA_CONF_PATH);
+    config.wifi_ssid = wifi_station::read_ssid_from_wpa_conf("/data/rayhunter/wpa_sta.conf");
     config.wifi_password = None;
 
     Ok(config)
