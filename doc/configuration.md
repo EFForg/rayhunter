@@ -28,7 +28,7 @@ On the **Orbic**, **Moxee**, **UZ801**, **TMOHS1**, and **Wingtech**, Rayhunter 
 - **Enable WiFi** turns WiFi client mode on or off. Disabling it does not erase saved credentials.
 - **Scan** searches for nearby networks. Select one from the dropdown, or type an SSID manually.
 - **Password** is required for WPA/WPA2 networks. The password is stored separately from `config.toml` (in `wpa_sta.conf` on the device) and is never exposed through the API.
-- **DNS Servers** lets you override the DNS servers used when connected. Defaults to `8.8.8.8` and `1.1.1.1` if not set.
+- **DNS Servers** lets you override the DNS servers used when connected. Defaults to `9.9.9.9` and `149.112.112.112` (Quad9) if not set.
 
 After saving, the connection status will show **connecting**, **connected** (with the assigned IP address), or **failed** (with an error message). If the connection fails, check that the SSID and password are correct and that the network is in range.
 
