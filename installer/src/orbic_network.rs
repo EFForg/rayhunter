@@ -11,7 +11,9 @@ use crate::RAYHUNTER_DAEMON_INIT;
 use crate::connection::{TelnetConnection, install_config, setup_data_directory};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
-use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
+use crate::util::{
+    interactive_shell, telnet_send_command, telnet_send_command_with_output, telnet_send_file,
+};
 
 // Some kajeet devices have password protected telnetd on port 23, so we use port 24 just in case
 const TELNET_PORT: u16 = 24;
@@ -199,6 +201,32 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
     Ok(())
 }
 
+async fn check_disk_space(addr: SocketAddr, binary_size: usize) -> Result<()> {
+    // Use /data/rayhunter to resolve through symlink (may point to /cache/rayhunter-data)
+    let df_output = telnet_send_command_with_output(
+        addr,
+        "df /data/rayhunter | tail -1 | awk '{print $4}'",
+        false,
+    )
+    .await?;
+    let available_kb: usize = df_output
+        .lines()
+        .find(|l| l.trim().chars().all(|c| c.is_ascii_digit()) && !l.trim().is_empty())
+        .and_then(|l| l.trim().parse().ok())
+        .unwrap_or(0);
+    let needed_kb = binary_size / 1024 + 1024; // binary + 1 MB headroom for config/logs
+    if available_kb < needed_kb {
+        bail!(
+            "Not enough space on /data: need ~{} KB but only {} KB available.\n\
+             The firmware-devel binary is too large for this device.\n\
+             Build with the firmware profile: cargo build-daemon-firmware",
+            needed_kb,
+            available_kb
+        );
+    }
+    Ok(())
+}
+
 async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
@@ -213,8 +241,19 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
     )
     .await?;
 
+    check_disk_space(addr, rayhunter_daemon_bin.len()).await?;
+
     let mut conn = TelnetConnection::new(addr, false);
     setup_data_directory(&mut conn, data_dir).await?;
+
+    // Ensure bin and scripts directories exist under the data dir (via symlink)
+    telnet_send_command(
+        addr,
+        "mkdir -p /data/rayhunter/scripts /data/rayhunter/bin",
+        "exit code 0",
+        false,
+    )
+    .await?;
 
     telnet_send_file(
         addr,
@@ -241,6 +280,13 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
         false,
     )
     .await?;
+    telnet_send_file(
+        addr,
+        "/etc/init.d/S01iptables",
+        include_bytes!("../../dist/scripts/S01iptables"),
+        false,
+    )
+    .await?;
 
     telnet_send_command(
         addr,
@@ -259,6 +305,13 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
     telnet_send_command(
         addr,
         "chmod 755 /etc/init.d/misc-daemon",
+        "exit code 0",
+        false,
+    )
+    .await?;
+    telnet_send_command(
+        addr,
+        "chmod 755 /etc/init.d/S01iptables",
         "exit code 0",
         false,
     )

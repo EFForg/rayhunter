@@ -12,6 +12,7 @@ name = "installer"
 path = "src/main.rs"
 
 [dependencies]
+rayhunter = { path = "../lib" }
 aes = "0.8.4"
 anyhow = "1.0.98"
 axum = { version = "0.8.3", features = ["http1", "tokio"], default-features = false }

@@ -34,6 +34,13 @@ pub struct Config {
     pub analyzers: AnalyzerConfig,
     pub min_space_to_start_recording_mb: u64,
     pub min_space_to_continue_recording_mb: u64,
+    pub wifi_ssid: Option<String>,
+    pub wifi_password: Option<String>,
+    pub wifi_enabled: bool,
+    pub block_ota_daemons: bool,
+    pub dns_servers: Option<Vec<String>>,
+    pub firewall_restrict_outbound: bool,
+    pub firewall_allowed_ports: Option<Vec<u16>>,
 }
 
 impl Default for Config {
@@ -51,6 +58,46 @@ impl Default for Config {
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
             min_space_to_start_recording_mb: 1,
             min_space_to_continue_recording_mb: 1,
+            wifi_ssid: None,
+            wifi_password: None,
+            wifi_enabled: false,
+            block_ota_daemons: false,
+            dns_servers: None,
+            firewall_restrict_outbound: true,
+            firewall_allowed_ports: None,
+        }
+    }
+}
+
+impl Config {
+    pub fn wifi_config(&self) -> wifi_station::WifiConfig {
+        let (wpa_bin, hostapd_conf, ctrl_interface) = match self.device {
+            Device::Tmobile | Device::Wingtech => (
+                Some("/usr/sbin/wpa_supplicant".into()),
+                Some("/data/configs/hostapd.conf".into()),
+                None,
+            ),
+            Device::Uz801 => (
+                Some("/system/bin/wpa_supplicant".into()),
+                Some("/data/misc/wifi/hostapd.conf".into()),
+                Some("/data/misc/wifi/sockets".into()),
+            ),
+            _ => (None, None, None),
+        };
+        wifi_station::WifiConfig {
+            wifi_enabled: self.wifi_enabled,
+            dns_servers: self.dns_servers.clone(),
+            wifi_ssid: self.wifi_ssid.clone(),
+            wifi_password: self.wifi_password.clone(),
+            wpa_supplicant_bin: wpa_bin,
+            hostapd_conf,
+            ctrl_interface,
+            udhcpc_hook_path: Some("/data/rayhunter/udhcpc-hook.sh".into()),
+            dhcp_lease_path: Some("/data/rayhunter/dhcp_lease".into()),
+            wpa_conf_path: Some("/data/rayhunter/wpa_sta.conf".into()),
+            iw_bin: Some("/data/rayhunter/bin/iw".into()),
+            crash_log_dir: Some("/data/rayhunter/crash-logs".into()),
+            wakelock_name: Some("rayhunter".into()),
         }
     }
 }
@@ -59,12 +106,17 @@ pub async fn parse_config<P>(path: P) -> Result<Config, RayhunterError>
 where
     P: AsRef<std::path::Path>,
 {
-    if let Ok(config_file) = tokio::fs::read_to_string(&path).await {
-        Ok(toml::from_str(&config_file).map_err(RayhunterError::ConfigFileParsingError)?)
+    let mut config = if let Ok(config_file) = tokio::fs::read_to_string(&path).await {
+        toml::from_str(&config_file).map_err(RayhunterError::ConfigFileParsingError)?
     } else {
         warn!("unable to read config file, using default config");
-        Ok(Config::default())
-    }
+        Config::default()
+    };
+
+    config.wifi_ssid = wifi_station::read_ssid_from_wpa_conf("/data/rayhunter/wpa_sta.conf");
+    config.wifi_password = None;
+
+    Ok(config)
 }
 
 pub struct Args {
