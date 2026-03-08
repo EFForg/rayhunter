@@ -8,9 +8,16 @@ use rayhunter::{
     gsmtap_parser,
     pcap::GsmtapPcapWriter,
     qmdl::QmdlReader,
+    serde_json,
 };
-use std::{collections::HashMap, future, path::PathBuf, pin::pin};
+use std::{
+    collections::HashMap,
+    future,
+    path::{Path, PathBuf},
+    pin::pin,
+};
 use tokio::fs::File;
+use tokio::io::{AsyncWrite, AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
 
 #[derive(Parser, Debug)]
@@ -24,6 +31,21 @@ struct Args {
 
     #[arg(long, help = "Show why some packets were skipped during analysis")]
     show_skipped: bool,
+
+    #[arg(
+        long,
+        default_value = "text",
+        value_name = "FORMAT",
+        help = "Output format: 'text' or 'json' (NDJSON; requires --output)"
+    )]
+    format: String,
+
+    #[arg(
+        short = 'o',
+        long,
+        help = "Write output files to this directory (required for --format json and --pcapify)"
+    )]
+    output: Option<PathBuf>,
 
     #[arg(short, long, help = "Only print warnings/errors to stdout")]
     quiet: bool,
@@ -49,14 +71,14 @@ impl Report {
         }
     }
 
-    fn process_row(&mut self, row: AnalysisRow) {
+    fn process_row(&mut self, row: &AnalysisRow) {
         self.total_messages += 1;
-        if let Some(reason) = row.skipped_message_reason {
-            *self.skipped_reasons.entry(reason).or_insert(0) += 1;
+        if let Some(ref reason) = row.skipped_message_reason {
+            *self.skipped_reasons.entry(reason.clone()).or_insert(0) += 1;
             self.skipped += 1;
             return;
         }
-        for maybe_event in row.events {
+        for maybe_event in &row.events {
             let Some(event) = maybe_event else { continue };
             let Some(timestamp) = row.packet_timestamp else {
                 continue;
@@ -90,13 +112,62 @@ impl Report {
     }
 }
 
-async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
+/// Writes one NDJSON line for a row when it is non-empty. Uses `buf` as scratch to avoid allocating per row.
+async fn write_ndjson_row<W: AsyncWrite + Unpin>(
+    writer: &mut W,
+    row: &AnalysisRow,
+    buf: &mut Vec<u8>,
+) -> std::io::Result<()> {
+    if !row.is_empty() {
+        buf.clear();
+        serde_json::to_writer(&mut *buf, row)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        buf.push(b'\n');
+        AsyncWriteExt::write_all(writer, buf).await?;
+    }
+    Ok(())
+}
+
+/// Creates an NDJSON file in output_dir named from input_path, writes metadata line, returns (writer, path).
+async fn open_ndjson_file(
+    output_dir: &Path,
+    input_path: &str,
+    harness: &Harness,
+) -> (BufWriter<File>, PathBuf) {
+    let out_path = output_dir
+        .join(Path::new(input_path).file_stem().unwrap())
+        .with_extension("ndjson");
+    let f = File::create(&out_path)
+        .await
+        .expect("failed to create ndjson file");
+    let mut writer = BufWriter::new(f);
+    let line = serde_json::to_string(&harness.get_metadata()).unwrap() + "\n";
+    AsyncWriteExt::write_all(&mut writer, line.as_bytes())
+        .await
+        .expect("failed to write metadata");
+    (writer, out_path)
+}
+
+async fn analyze_pcap(
+    pcap_path: &str,
+    show_skipped: bool,
+    format_json: bool,
+    output_dir: Option<&Path>,
+) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
-    let pcap_file = &mut File::open(&pcap_path).await.expect("failed to open file");
+    let pcap_file = &mut File::open(pcap_path).await.expect("failed to open file");
     let mut pcap_reader = PcapNgReader::new(pcap_file)
         .await
         .expect("failed to read PCAP file");
-    let mut report = Report::new(pcap_path);
+
+    let (mut ndjson, mut report) = if format_json {
+        let d = output_dir.expect("--output required for json");
+        (Some(open_ndjson_file(d, pcap_path, &harness).await), None)
+    } else {
+        (None, Some(Report::new(pcap_path)))
+    };
+    let mut json_buf = Vec::with_capacity(1024);
+
     while let Some(Ok(block)) = pcap_reader.next_block().await {
         let row = match block {
             Block::EnhancedPacket(packet) => harness.analyze_pcap_packet(packet),
@@ -105,14 +176,28 @@ async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
                 continue;
             }
         };
-        report.process_row(row);
+        match &mut ndjson {
+            Some((w, _)) => write_ndjson_row(w, &row, &mut json_buf).await.expect("write"),
+            None => report.as_mut().unwrap().process_row(&row),
+        }
     }
-    report.print_summary(show_skipped);
+
+    if let Some((mut f, out_path)) = ndjson {
+        AsyncWriteExt::flush(&mut f).await.expect("failed to flush");
+        info!("wrote {:?}", out_path);
+    } else {
+        report.unwrap().print_summary(show_skipped);
+    }
 }
 
-async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
+async fn analyze_qmdl(
+    qmdl_path: &str,
+    show_skipped: bool,
+    format_json: bool,
+    output_dir: Option<&Path>,
+) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
-    let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
+    let qmdl_file = &mut File::open(qmdl_path).await.expect("failed to open file");
     let file_size = qmdl_file
         .metadata()
         .await
@@ -124,17 +209,34 @@ async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
             .as_stream()
             .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
     );
-    let mut report = Report::new(qmdl_path);
+
+    let (mut ndjson, mut report) = if format_json {
+        let d = output_dir.expect("--output required for json");
+        (Some(open_ndjson_file(d, qmdl_path, &harness).await), None)
+    } else {
+        (None, Some(Report::new(qmdl_path)))
+    };
+    let mut json_buf = Vec::with_capacity(1024);
+
     while let Some(container) = qmdl_stream
         .try_next()
         .await
         .expect("failed getting QMDL container")
     {
         for row in harness.analyze_qmdl_messages(container) {
-            report.process_row(row);
+            match &mut ndjson {
+                Some((w, _)) => write_ndjson_row(w, &row, &mut json_buf).await.expect("write"),
+                None => report.as_mut().unwrap().process_row(&row),
+            }
         }
     }
-    report.print_summary(show_skipped);
+
+    if let Some((mut f, out_path)) = ndjson {
+        AsyncWriteExt::flush(&mut f).await.expect("failed to flush");
+        info!("wrote {:?}", out_path);
+    } else {
+        report.unwrap().print_summary(show_skipped);
+    }
 }
 
 async fn pcapify(qmdl_path: &PathBuf) {
@@ -179,6 +281,18 @@ async fn main() {
     };
     rayhunter::init_logging(level);
 
+    let needs_output_dir = args.format == "json" || args.pcapify;
+    if needs_output_dir && args.output.is_none() {
+        error!("--output is required for --format json and for --pcapify");
+        std::process::exit(1);
+    }
+
+    let output_dir = args.output.as_deref();
+    if let Some(dir) = output_dir {
+        tokio::fs::create_dir_all(dir)
+            .await
+            .expect("failed to create output directory");
+    }
     let harness = Harness::new_with_config(&AnalyzerConfig::default());
     info!("Analyzers:");
     for analyzer in harness.get_metadata().analyzers {
@@ -197,18 +311,19 @@ async fn main() {
         let name_str = name.to_str().unwrap();
         let path = entry.path();
         let path_str = path.to_str().unwrap();
+        let format_json = args.format == "json";
         // instead of relying on the QMDL extension, can we check if a file is
         // QMDL by inspecting the contents?
         if name_str.ends_with(".qmdl") {
             info!("**** Beginning analysis of {name_str}");
-            analyze_qmdl(path_str, args.show_skipped).await;
+            analyze_qmdl(path_str, args.show_skipped, format_json, output_dir).await;
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
         } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
             info!("**** Beginning analysis of {name_str}");
-            analyze_pcap(path_str, args.show_skipped).await;
+            analyze_pcap(path_str, args.show_skipped, format_json, output_dir).await;
         }
     }
 }
