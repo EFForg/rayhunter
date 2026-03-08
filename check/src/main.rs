@@ -17,7 +17,7 @@ use std::{
     pin::pin,
 };
 use tokio::fs::File;
-use tokio::io::{AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncWrite, AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
 
 #[derive(Parser, Debug)]
@@ -112,34 +112,38 @@ impl Report {
     }
 }
 
-/// Writes one NDJSON line for a row when it is non-empty (has events or a skip reason).
+/// Writes one NDJSON line for a row when it is non-empty. Uses `buf` as scratch to avoid allocating per row.
 async fn write_ndjson_row<W: AsyncWrite + Unpin>(
     writer: &mut W,
     row: &AnalysisRow,
+    buf: &mut Vec<u8>,
 ) -> std::io::Result<()> {
     if !row.is_empty() {
-        let line = serde_json::to_string(row).unwrap() + "\n";
-        AsyncWriteExt::write_all(writer, line.as_bytes()).await?;
+        buf.clear();
+        serde_json::to_writer(&mut *buf, row)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+        buf.push(b'\n');
+        AsyncWriteExt::write_all(writer, buf).await?;
     }
     Ok(())
 }
 
-/// Creates an NDJSON file in output_dir named from input_path, writes metadata line, returns (file, path).
+/// Creates an NDJSON file in output_dir named from input_path, writes metadata line, returns (writer, path).
 async fn open_ndjson_file(
     output_dir: &Path,
     input_path: &str,
     harness: &Harness,
-) -> (File, PathBuf) {
-    tokio::fs::create_dir_all(output_dir).await.expect("failed to create output directory");
+) -> (BufWriter<File>, PathBuf) {
     let out_path = output_dir
         .join(Path::new(input_path).file_stem().unwrap())
         .with_extension("ndjson");
-    let mut f = File::create(&out_path).await.expect("failed to create ndjson file");
+    let f = File::create(&out_path).await.expect("failed to create ndjson file");
+    let mut writer = BufWriter::new(f);
     let line = serde_json::to_string(&harness.get_metadata()).unwrap() + "\n";
-    AsyncWriteExt::write_all(&mut f, line.as_bytes())
+    AsyncWriteExt::write_all(&mut writer, line.as_bytes())
         .await
         .expect("failed to write metadata");
-    (f, out_path)
+    (writer, out_path)
 }
 
 async fn analyze_pcap(
@@ -165,6 +169,7 @@ async fn analyze_pcap(
     } else {
         Some(Report::new(pcap_path))
     };
+    let mut json_buf = Vec::with_capacity(1024);
 
     while let Some(Ok(block)) = pcap_reader.next_block().await {
         let row = match block {
@@ -175,7 +180,7 @@ async fn analyze_pcap(
             }
         };
         if let Some((ref mut w, _)) = ndjson {
-            write_ndjson_row(w, &row).await.expect("write");
+            write_ndjson_row(w, &row, &mut json_buf).await.expect("write");
         } else {
             report.as_mut().unwrap().process_row(&row);
         }
@@ -220,6 +225,7 @@ async fn analyze_qmdl(
     } else {
         Some(Report::new(qmdl_path))
     };
+    let mut json_buf = Vec::with_capacity(1024);
 
     while let Some(container) = qmdl_stream
         .try_next()
@@ -228,7 +234,7 @@ async fn analyze_qmdl(
     {
         for row in harness.analyze_qmdl_messages(container) {
             if let Some((ref mut w, _)) = ndjson {
-                write_ndjson_row(w, &row).await.expect("write");
+                write_ndjson_row(w, &row, &mut json_buf).await.expect("write");
             } else {
                 report.as_mut().unwrap().process_row(&row);
             }
@@ -292,6 +298,9 @@ async fn main() {
     }
 
     let output_dir = args.output.as_deref();
+    if let Some(dir) = output_dir {
+        tokio::fs::create_dir_all(dir).await.expect("failed to create output directory");
+    }
     let harness = Harness::new_with_config(&AnalyzerConfig::default());
     info!("Analyzers:");
     for analyzer in harness.get_metadata().analyzers {
