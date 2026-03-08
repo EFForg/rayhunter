@@ -218,16 +218,11 @@ async fn analyze_qmdl(
             .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
     );
 
-    let mut ndjson = if format_json {
+    let (mut ndjson, mut report) = if format_json {
         let d = output_dir.expect("--output required for json");
-        Some(open_ndjson_file(d, qmdl_path, &harness).await)
+        (Some(open_ndjson_file(d, qmdl_path, &harness).await), None)
     } else {
-        None
-    };
-    let mut report = if format_json {
-        None
-    } else {
-        Some(Report::new(qmdl_path))
+        (None, Some(Report::new(qmdl_path)))
     };
     let mut json_buf = Vec::with_capacity(1024);
 
