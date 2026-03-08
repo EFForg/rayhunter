@@ -30,6 +30,9 @@ Options:
                         recursively scan all pcap, qmdl, and subdirectories 
   -P, --pcapify       Turn QMDL file into PCAP     
       --show-skipped  Show skipped messages
+      --format <FORMAT>  Output format: 'text' or 'json' (default: text).
+                        JSON is NDJSON (one record per line); requires --output.
+  -o, --output <DIR>  Directory for output files (required for --format json and --pcapify)
   -q, --quiet         Print only warnings
   -d, --debug         Print debug info 
   -h, --help          Print help
@@ -43,3 +46,5 @@ Options:
 `rayhunter-check -p ~/Downloads #Check all files in downloads`
 
 `rayhunter-check -d -p ~/Downloads/myfile.qmdl #run in debug mode`
+
+`rayhunter-check -p ~/Downloads/myfile.qmdl --format json -o ./reports #write NDJSON report to ./reports/myfile.ndjson`
