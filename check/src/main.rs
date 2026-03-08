@@ -160,16 +160,11 @@ async fn analyze_pcap(
         .await
         .expect("failed to read PCAP file");
 
-    let mut ndjson = if format_json {
+    let (mut ndjson, mut report) = if format_json {
         let d = output_dir.expect("--output required for json");
-        Some(open_ndjson_file(d, pcap_path, &harness).await)
+        (Some(open_ndjson_file(d, pcap_path, &harness).await), None)
     } else {
-        None
-    };
-    let mut report = if format_json {
-        None
-    } else {
-        Some(Report::new(pcap_path))
+        (None, Some(Report::new(pcap_path)))
     };
     let mut json_buf = Vec::with_capacity(1024);
 
@@ -181,12 +176,9 @@ async fn analyze_pcap(
                 continue;
             }
         };
-        if let Some((ref mut w, _)) = ndjson {
-            write_ndjson_row(w, &row, &mut json_buf)
-                .await
-                .expect("write");
-        } else {
-            report.as_mut().unwrap().process_row(&row);
+        match &mut ndjson {
+            Some((w, _)) => write_ndjson_row(w, &row, &mut json_buf).await.expect("write"),
+            None => report.as_mut().unwrap().process_row(&row),
         }
     }
 
@@ -232,12 +224,9 @@ async fn analyze_qmdl(
         .expect("failed getting QMDL container")
     {
         for row in harness.analyze_qmdl_messages(container) {
-            if let Some((ref mut w, _)) = ndjson {
-                write_ndjson_row(w, &row, &mut json_buf)
-                    .await
-                    .expect("write");
-            } else {
-                report.as_mut().unwrap().process_row(&row);
+            match &mut ndjson {
+                Some((w, _)) => write_ndjson_row(w, &row, &mut json_buf).await.expect("write"),
+                None => report.as_mut().unwrap().process_row(&row),
             }
         }
     }
