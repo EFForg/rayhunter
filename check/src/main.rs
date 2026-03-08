@@ -137,7 +137,9 @@ async fn open_ndjson_file(
     let out_path = output_dir
         .join(Path::new(input_path).file_stem().unwrap())
         .with_extension("ndjson");
-    let f = File::create(&out_path).await.expect("failed to create ndjson file");
+    let f = File::create(&out_path)
+        .await
+        .expect("failed to create ndjson file");
     let mut writer = BufWriter::new(f);
     let line = serde_json::to_string(&harness.get_metadata()).unwrap() + "\n";
     AsyncWriteExt::write_all(&mut writer, line.as_bytes())
@@ -180,7 +182,9 @@ async fn analyze_pcap(
             }
         };
         if let Some((ref mut w, _)) = ndjson {
-            write_ndjson_row(w, &row, &mut json_buf).await.expect("write");
+            write_ndjson_row(w, &row, &mut json_buf)
+                .await
+                .expect("write");
         } else {
             report.as_mut().unwrap().process_row(&row);
         }
@@ -234,7 +238,9 @@ async fn analyze_qmdl(
     {
         for row in harness.analyze_qmdl_messages(container) {
             if let Some((ref mut w, _)) = ndjson {
-                write_ndjson_row(w, &row, &mut json_buf).await.expect("write");
+                write_ndjson_row(w, &row, &mut json_buf)
+                    .await
+                    .expect("write");
             } else {
                 report.as_mut().unwrap().process_row(&row);
             }
@@ -299,7 +305,9 @@ async fn main() {
 
     let output_dir = args.output.as_deref();
     if let Some(dir) = output_dir {
-        tokio::fs::create_dir_all(dir).await.expect("failed to create output directory");
+        tokio::fs::create_dir_all(dir)
+            .await
+            .expect("failed to create output directory");
     }
     let harness = Harness::new_with_config(&AnalyzerConfig::default());
     info!("Analyzers:");
