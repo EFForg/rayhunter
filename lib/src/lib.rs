@@ -29,6 +29,9 @@ pub mod diag_device;
 // re-export telcom_parser, since we use its types in our API
 pub use telcom_parser;
 
+/// Re-export for crates that serialize analysis types (e.g. check).
+pub use serde_json;
+
 /// A list of the internal names of currently implemented devices
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
