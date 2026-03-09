@@ -4,7 +4,6 @@ use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, GsmInformationElement};
 use crate::gsm::layer3::{ProtocolDiscrimiminatedMessage};
 use crate::gsm::radio_resource_management::{RadioResourceManagementMessage};
-use crate::gsm::information_elements::{OptionalSelectionParameters};
 
 pub struct GsmCellReselectionHysteresisAnalyzer {}
 
@@ -16,7 +15,7 @@ impl Analyzer for GsmCellReselectionHysteresisAnalyzer {
 
     fn get_description(&self) -> Cow<'_, str> {
         Cow::from(
-            "GSM Reselection Hysteresis",
+            "The GSM Reselection Hysteresis",
         )
     }
 
@@ -35,9 +34,6 @@ impl Analyzer for GsmCellReselectionHysteresisAnalyzer {
                 RadioResourceManagementMessage::SystemInformationType3(si3),
             ) = &l3_frame.protocol_discriminated_messages
         {
-            if let OptionalSelectionParameters::Present(selection_parameters) = &si3.si3_rest_octets.optional_selection_parameters {
-                println!("offset {}", selection_parameters.cell_reselect_offset);
-            }
             let hysteresis = si3.cell_selection_params.cell_resel_hysteresis * 2;
             let event_type = match hysteresis {
                 0 ..= 6 => EventType::Informational,

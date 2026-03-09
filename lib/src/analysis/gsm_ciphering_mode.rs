@@ -40,9 +40,8 @@ impl Analyzer for GsmCipheringModeAnalyzer {
             debug!("CipherModeSetting");
             let event_type = match ciphering_mode_command.cipher_mode_setting
             {
-                CipherModeSetting::A5_6 | CipherModeSetting::A5_7 => EventType::Informational,
-                CipherModeSetting::A5_4 | CipherModeSetting::A5_5 => EventType::Low,
-                CipherModeSetting::A5_3 => EventType::Medium,
+                CipherModeSetting::A5_5 | CipherModeSetting::A5_6 | CipherModeSetting::A5_7 => EventType::Informational,
+                CipherModeSetting::A5_3 | CipherModeSetting::A5_4 => EventType::Low,
                 CipherModeSetting::NoCiphering| CipherModeSetting::Reserved | CipherModeSetting::A5_1 | CipherModeSetting::A5_2 => EventType::High,
             };
             return Some(Event {
@@ -58,10 +57,10 @@ impl Analyzer for GsmCipheringModeAnalyzer {
         {
             let event_type = match authentication_and_ciphering_request.ciphering_algorithm
             {
-                CipheringAlgorithm::GEA6 | CipheringAlgorithm::GEA7  => EventType::Informational,
-                CipheringAlgorithm::GEA5 => EventType::Low,
-                CipheringAlgorithm::GEA3 | CipheringAlgorithm::GEA4  => EventType::Medium,
-                CipheringAlgorithm::CipheringNotUsed | CipheringAlgorithm::GEA1 | CipheringAlgorithm::GEA2  => EventType::High,
+                CipheringAlgorithm::GEA5 | CipheringAlgorithm::GEA6 | CipheringAlgorithm::GEA7  => EventType::Informational,
+                CipheringAlgorithm::GEA3 | CipheringAlgorithm::GEA4 => EventType::Low,
+                CipheringAlgorithm::GEA2  => EventType::Medium,
+                CipheringAlgorithm::CipheringNotUsed | CipheringAlgorithm::GEA1 => EventType::High,
             };
             return Some(Event {
                 event_type: event_type,

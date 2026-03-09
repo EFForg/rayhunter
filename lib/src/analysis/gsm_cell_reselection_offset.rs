@@ -37,9 +37,10 @@ impl Analyzer for GsmCellReselectionOffsetAnalyzer {
             ) = &l3_frame.protocol_discriminated_messages
         {
             if let OptionalSelectionParameters::Present(selection_parameters) = &si3.si3_rest_octets.optional_selection_parameters {
-                let event_type = match selection_parameters.cell_reselect_offset {
-                    0 => EventType::Informational,
-                    1 .. => EventType::Medium,
+                let event_type = match selection_parameters.cell_reselect_offset * 2 {
+                    0 ..= 6 => EventType::Informational,
+                    7 ..= 9 => EventType::Medium,
+                    10 .. => EventType::High,
                 };
                 return Some(Event {
                     event_type: event_type,
