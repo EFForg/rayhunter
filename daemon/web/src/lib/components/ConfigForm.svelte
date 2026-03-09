@@ -1,5 +1,13 @@
 <script lang="ts">
-    import { get_config, set_config, test_notification, type Config } from '../utils.svelte';
+    import {
+        get_config,
+        get_orbic_severity_indicator_images,
+        reset_orbic_severity_indicator_image,
+        set_config,
+        test_notification,
+        type Config,
+        upload_orbic_severity_indicator_image
+    } from '../utils.svelte';
 
     let config = $state<Config | null>(null);
 
@@ -11,11 +19,25 @@
     let testMessage = $state('');
     let testMessageType = $state<'success' | 'error' | null>(null);
     let showConfig = $state(false);
+    let severityOverrides = $state<string[]>([]);
+    let severityUploadMessage = $state('');
+    let severityOverridesLoaded = $state(false);
+    let severityUploadMessageType = $state<'success' | 'error' | null>(null);
+    let severityUploadInProgress = $state<string | null>(null);
+    let severityResetInProgress = $state<string | null>(null);
+
 
     async function load_config() {
         try {
             loading = true;
             config = await get_config();
+            if (config.ui_level === 5) {
+                await load_severity_overrides();
+                severityOverridesLoaded = true;
+            } else {
+                severityOverrides = [];
+                severityOverridesLoaded = false;
+            }
             message = '';
             messageType = null;
         } catch (error) {
@@ -56,6 +78,66 @@
             testMessageType = 'error';
         } finally {
             testingNotification = false;
+        }
+    }
+
+    async function load_severity_overrides() {
+        try {
+            const status = await get_orbic_severity_indicator_images();
+            severityOverrides = status.slots_with_overrides;
+        } catch (_error) {
+            severityOverrides = [];
+        }
+    }
+
+    $effect(() => {
+        if (showConfig && config?.ui_level === 5 && !severityOverridesLoaded) {
+            load_severity_overrides();
+            severityOverridesLoaded = true;
+        } else if (config?.ui_level !== 5 && severityOverridesLoaded) {
+            severityOverridesLoaded = false;
+            severityOverrides = [];
+        }
+    });
+
+    async function upload_severity_image(slot: string, event: Event) {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+        if (!file) return;
+
+        try {
+            severityUploadInProgress = slot;
+            severityUploadMessage = '';
+            severityUploadMessageType = null;
+            await upload_orbic_severity_indicator_image(slot, file);
+            await load_severity_overrides();
+            severityUploadMessage =
+                'PNG uploaded successfully.';
+            severityUploadMessageType = 'success';
+            input.value = '';
+        } catch (error) {
+            severityUploadMessage = `Failed to upload PNG: ${error}`;
+            severityUploadMessageType = 'error';
+        } finally {
+            severityUploadInProgress = null;
+        }
+    }
+
+
+    async function reset_severity_image(slot: string) {
+        try {
+            severityResetInProgress = slot;
+            severityUploadMessage = '';
+            severityUploadMessageType = null;
+            await reset_orbic_severity_indicator_image(slot);
+            await load_severity_overrides();
+            severityUploadMessage = 'Reverted to bundled default PNG.';
+            severityUploadMessageType = 'success';
+        } catch (error) {
+            severityUploadMessage = `Failed to reset PNG override: ${error}`;
+            severityUploadMessageType = 'error';
+        } finally {
+            severityResetInProgress = null;
         }
     }
 
@@ -108,12 +190,78 @@
                         <option value={2}>2 - Demo mode (orca gif)</option>
                         <option value={3}>3 - EFF logo</option>
                         <option value={4}>4 - High visibility (full screen color)</option>
+                        <option value={5}>5 - Severity indicator images (Orbic only)</option>
                     </select>
                     <p class="text-xs text-gray-500 mt-1">
                         Note: Rayhunter draws over the device's native UI, so some flickering is
                         expected
                     </p>
                 </div>
+
+                {#if config.ui_level === 5}
+                    <div class="border rounded-md p-4 space-y-3 bg-gray-50">
+                        <p class="text-sm text-gray-700">
+                            Upload Orbic severity indicator PNGs. Built-in defaults are bundled from
+                            <code>daemon/images/orbic/severity/</code>, and uploaded overrides are stored in
+                            <code>/data/rayhunter/orbic-display-images/</code>.
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            Upload replacement PNGs for each severity slot, or reset a slot to go back to the bundled default.
+                        </p>
+                        {#if severityUploadMessageType}
+                            <div class="p-3 rounded-md {severityUploadMessageType === 'success'
+                                ? 'bg-green-50 text-green-800 border border-green-200'
+                                : 'bg-red-50 text-red-800 border border-red-200'}">
+                                {severityUploadMessage}
+                            </div>
+                        {/if}
+                        {#each [
+                            {
+                                slot: 'default',
+                                label: 'Default / paused / recording',
+                                filename: 'indicator_default.png'
+                            },
+                            { slot: 'low', label: 'Low severity warning', filename: 'indicator_low.png' },
+                            {
+                                slot: 'medium',
+                                label: 'Medium severity warning',
+                                filename: 'indicator_medium.png'
+                            },
+                            { slot: 'high', label: 'High severity warning', filename: 'indicator_high.png' }
+                        ] as slotInfo}
+                            <div class="border rounded-md p-3 bg-white">
+                                <div class="flex items-center justify-between gap-4 mb-2">
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-800">{slotInfo.label}</div>
+                                        <div class="text-xs text-gray-500">{slotInfo.filename}</div>
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        {severityOverrides.includes(slotInfo.slot)
+                                            ? 'Uploaded override present'
+                                            : 'Using bundled default'}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <input
+                                        type="file"
+                                        accept="image/png"
+                                        disabled={severityUploadInProgress === slotInfo.slot || severityResetInProgress === slotInfo.slot}
+                                        onchange={(event) => upload_severity_image(slotInfo.slot, event)}
+                                        class="block w-full text-sm text-gray-700"
+                                    />
+                                    <button
+                                        type="button"
+                                        onclick={() => reset_severity_image(slotInfo.slot)}
+                                        disabled={!severityOverrides.includes(slotInfo.slot) || severityUploadInProgress === slotInfo.slot || severityResetInProgress === slotInfo.slot}
+                                        class="shrink-0 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-md border border-gray-300"
+                                    >
+                                        Reset
+                                    </button>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                {/if}
 
                 <div>
                     <label

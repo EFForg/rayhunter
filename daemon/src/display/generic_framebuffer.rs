@@ -58,7 +58,7 @@ impl Color {
     }
 }
 
-fn display_style_from_state(state: DisplayState, colorblind_mode: bool) -> (Color, LinePattern) {
+pub(crate) fn display_style_from_state(state: DisplayState, colorblind_mode: bool) -> (Color, LinePattern) {
     match state {
         DisplayState::Paused => (Color::White, LinePattern::Solid),
         DisplayState::Recording => {
@@ -101,7 +101,7 @@ pub trait GenericFramebuffer: Send + 'static {
         } else {
             resized_img = img;
         }
-        let img_rgba8 = resized_img.as_rgba8().unwrap();
+        let img_rgba8 = resized_img.to_rgba8();
         let mut buf = Vec::with_capacity((height * width).try_into().unwrap());
         for y in 0..height {
             for x in 0..width {
