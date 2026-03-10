@@ -58,7 +58,7 @@ Otherwise:
   manually test them. Our test coverage isn't great, but as new features are
   added we are trying to prevent it from becoming worse.
 
-- Please keep your contirbutions to less than approximately 400 lines of code (going slightly over is fine, we aren't dogmatic about it.) This is because we are not able to give quality code review to contributions larger than that and risk introducing bugs into the system. [There was a study showing 400 LOC is the max most humans can handle.](https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/)
+- Please keep your contributions to less than approximately 400 lines of code not counting tests, (going slightly over is fine, we aren't dogmatic about it.) This is because we are not able to give quality code review to contributions larger than that and risk introducing bugs into the system. [There was a study showing 400 LOC is the max most humans can handle.](https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/)
 
 If you have any questions [feel free to open a discussion or chat with us on Mattermost.](https://efforg.github.io/rayhunter/support-feedback-community.html)
 
