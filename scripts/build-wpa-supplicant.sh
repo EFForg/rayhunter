@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Cross-compile wpa_supplicant, wpa_cli, and iw for ARMv7 (musl static).
 # Output: tools/build-wpa-supplicant/out/{wpa_supplicant,wpa_cli,iw}
 #
