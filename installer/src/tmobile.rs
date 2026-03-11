@@ -38,8 +38,15 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
 
     telnet_send_command(addr, "mount -o remount,rw /", "exit code 0", true).await?;
 
-    let config = crate::CONFIG_TOML.replace("#device = \"orbic\"", "device = \"tmobile\"");
-    telnet_send_file(addr, "/data/rayhunter/config.toml", config.as_bytes(), true).await?;
+    telnet_send_file(
+        addr,
+        "/data/rayhunter/config.toml",
+        crate::CONFIG_TOML
+            .replace("#device = \"orbic\"", "device = \"tmobile\"")
+            .as_bytes(),
+        true,
+    )
+    .await?;
 
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
     telnet_send_file(

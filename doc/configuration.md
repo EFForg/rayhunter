@@ -54,6 +54,5 @@ You can also configure WiFi during installation:
 ## Device Security
 
 - **Restrict outbound traffic** limits what the device can send over the network. When enabled, only DNS, DHCP, and HTTPS traffic is allowed; everything else is blocked. This is enabled by default and prevents the device from phoning home to the carrier over cellular. If you need to allow additional ports (for example, port 80 for HTTP or port 22 for SSH), add them to the **Additional allowed ports** list.
-- **Block OTA update daemons** prevents Verizon's `dmclient` and `upgrade` services from running and checking for updates. This is a runtime-only change that reverts on reboot. If you disable this option after it was enabled, a reboot is required for the daemons to start again.
 
 If you prefer editing `config.toml` file, you need to obtain a shell on your [Orbic](./orbic.md#obtaining-a-shell) or [TP-Link](./tplink-m7350.md#obtaining-a-shell) device and edit the file manually. You can view the [default configuration file on GitHub](https://github.com/EFForg/rayhunter/blob/main/dist/config.toml.in).

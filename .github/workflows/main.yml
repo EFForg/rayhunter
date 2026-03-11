@@ -13,6 +13,7 @@ env:
   FILE_RAYHUNTER_DAEMON: ../../rayhunter-daemon/rayhunter-daemon
   FILE_WPA_SUPPLICANT: ../../wpa-supplicant/wpa_supplicant
   FILE_WPA_CLI: ../../wpa-supplicant/wpa_cli
+  FILE_IW: ../../wpa-supplicant/iw
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
@@ -314,14 +315,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Install cross-compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf
       - name: Build wpa_supplicant (armv7)
-        run: docker build --target export --output tools/build-wpa-supplicant/out tools/build-wpa-supplicant
+        run: CC=arm-linux-gnueabihf-gcc STRIP=arm-linux-gnueabihf-strip HOST=arm-linux-gnueabihf scripts/build-wpa-supplicant.sh
       - uses: actions/upload-artifact@v4
         with:
           name: wpa-supplicant
           path: |
             tools/build-wpa-supplicant/out/wpa_supplicant
             tools/build-wpa-supplicant/out/wpa_cli
+            tools/build-wpa-supplicant/out/iw
           if-no-files-found: error
 
   build_rayhunter:

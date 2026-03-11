@@ -1,4 +1,3 @@
-use std::io::ErrorKind;
 use std::path::Path;
 /// Installer for the Uz801 hotspot.
 ///
@@ -17,30 +16,17 @@ use tokio::time::sleep;
 use crate::Uz801Args as Args;
 use crate::output::{print, println};
 
-const QUALCOMM_VENDOR_ID: u16 = 0x05c6;
-const KNOWN_PRODUCT_IDS: &[u16] = &[
-    0x90b6, // UZ801 (default composition)
-];
-
 pub async fn install(Args { admin_ip }: Args) -> Result<()> {
     run_install(admin_ip).await
 }
 
 async fn run_install(admin_ip: String) -> Result<()> {
     print!("Activating USB debugging backdoor... ");
-    let backdoor_ok = match activate_usb_debug(&admin_ip).await {
-        Ok(()) => {
-            println!("ok");
-            true
-        }
-        Err(e) => {
-            println!("failed ({e}), will try ADB anyway");
-            false
-        }
-    };
+    activate_usb_debug(&admin_ip).await?;
+    println!("ok");
 
-    print!("Waiting for ADB connection... ");
-    let mut adb_device = wait_for_adb(backdoor_ok).await?;
+    print!("Waiting for device reboot and ADB connection... ");
+    let mut adb_device = wait_for_adb().await?;
     println!("ok");
 
     print!("Installing rayhunter files... ");
@@ -108,44 +94,29 @@ pub async fn activate_usb_debug(admin_ip: &str) -> Result<()> {
     Ok(())
 }
 
-fn try_connect_adb() -> std::result::Result<ADBUSBDevice, RustADBError> {
-    for &pid in KNOWN_PRODUCT_IDS {
-        match ADBUSBDevice::new(QUALCOMM_VENDOR_ID, pid) {
-            Ok(device) => return Ok(device),
-            Err(RustADBError::DeviceNotFound(_)) => continue,
-            Err(e) => return Err(e),
-        }
-    }
-    ADBUSBDevice::autodetect()
-}
-
-async fn wait_for_adb(backdoor_activated: bool) -> Result<ADBUSBDevice> {
-    const MAX_ATTEMPTS: u32 = 30;
+async fn wait_for_adb() -> Result<ADBUSBDevice> {
+    const MAX_ATTEMPTS: u32 = 30; // 30 seconds
     let mut attempts = 0;
 
-    if backdoor_activated {
-        sleep(Duration::from_secs(10)).await;
-    }
+    // Wait a bit for the reboot to start
+    sleep(Duration::from_secs(10)).await;
 
     loop {
         if attempts >= MAX_ATTEMPTS {
-            anyhow::bail!(
-                "Timeout waiting for ADB connection.\n\
-                 Make sure you don't have an `adb` daemon running (try `adb kill-server`)."
-            );
+            anyhow::bail!("Timeout waiting for ADB connection after USB debug activation");
         }
 
-        match try_connect_adb() {
+        // UZ801 USB vendor and product IDs.
+        // TODO: Research if other variants use different IDs.
+        match ADBUSBDevice::new(0x05c6, 0x90b6) {
             Ok(mut device) => {
+                // Test ADB connection
                 if test_adb_connection(&mut device).await.is_ok() {
                     return Ok(device);
                 }
             }
-            Err(RustADBError::DeviceNotFound(_)) => {}
-            Err(RustADBError::IOError(ref e)) if e.kind() == ErrorKind::ResourceBusy => {
-                anyhow::bail!(
-                    "ADB device found but is busy. If you have adb installed, run `adb kill-server` first."
-                );
+            Err(RustADBError::DeviceNotFound(_)) => {
+                // Device not ready yet, continue waiting
             }
             Err(e) => {
                 anyhow::bail!("ADB connection error: {}", e);
@@ -169,6 +140,7 @@ async fn test_adb_connection(adb_device: &mut ADBUSBDevice) -> Result<()> {
 }
 
 async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
+    // Create rayhunter directory
     let mut buf = Vec::<u8>::new();
     adb_device.shell_command(&["mkdir", "-p", "/data/rayhunter"], &mut buf)?;
 
@@ -183,10 +155,12 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
         rayhunter_daemon_bin,
     )?;
 
+    // Install config file
     let config_content = crate::CONFIG_TOML.replace("#device = \"orbic\"", "device = \"uz801\"");
     let mut config_data = config_content.as_bytes();
     adb_device.push(&mut config_data, &"/data/rayhunter/config.toml")?;
 
+    // Make daemon executable
     let mut buf = Vec::<u8>::new();
     adb_device.shell_command(
         &["chmod", "755", "/data/rayhunter/rayhunter-daemon"],
