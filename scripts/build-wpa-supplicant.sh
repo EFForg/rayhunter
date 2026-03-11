@@ -80,8 +80,8 @@ echo "Building iw ${IW_VERSION}..."
 cd "$BUILD_DIR"
 curl -Lf "$IW_URL" | tar xJ
 cd "iw-${IW_VERSION}"
+PKG_CONFIG_LIBDIR="$SYSROOT/lib/pkgconfig" \
 make CC="$CC" \
-    PKG_CONFIG_PATH="$SYSROOT/lib/pkgconfig" \
     LDFLAGS="-static" \
     -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 $STRIP iw
