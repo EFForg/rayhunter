@@ -484,22 +484,6 @@
 
                     <div class="flex items-center">
                         <input
-                            id="block_ota_daemons"
-                            type="checkbox"
-                            bind:checked={config.block_ota_daemons}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
-                        />
-                        <label for="block_ota_daemons" class="ml-2 block text-sm text-gray-700">
-                            Block OTA update daemons
-                        </label>
-                    </div>
-                    <p class="text-xs text-gray-500">
-                        Prevents Verizon's dmclient and upgrade services from running. They are
-                        replaced with stubs at runtime. Disabling requires a reboot to take effect.
-                    </p>
-
-                    <div class="flex items-center">
-                        <input
                             id="firewall_restrict_outbound"
                             type="checkbox"
                             bind:checked={config.firewall_restrict_outbound}

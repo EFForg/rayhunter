@@ -44,11 +44,6 @@ wifi_enabled = false
 # dns_servers = ["9.9.9.9", "149.112.112.112"]
 
 # Device Security
-# Block OTA update daemons (dmclient, upgrade) from phoning home.
-# Uses mount --bind to replace them with sleep stubs at runtime.
-# Changes are runtime-only and revert on reboot.
-block_ota_daemons = false
-
 # Restrict outbound traffic to essential services only (DHCP, DNS,
 # HTTPS, and replies to inbound connections). Applies to all outbound
 # interfaces (WiFi and cellular). Loopback and hotspot bridge traffic

@@ -18,14 +18,6 @@ pub async fn telnet_send_command_with_output(
     addr: SocketAddr,
     command: &str,
     wait_for_prompt: bool,
-) -> Result<String> {
-    telnet_send_command_with_timeout(addr, command, wait_for_prompt, Duration::from_secs(10)).await
-}
-
-async fn telnet_send_command_with_timeout(
-    addr: SocketAddr,
-    command: &str,
-    wait_for_prompt: bool,
     command_timeout: Duration,
 ) -> Result<String> {
     if command.contains('\n') {
@@ -92,7 +84,9 @@ pub async fn telnet_send_command(
     wait_for_prompt: bool,
 ) -> Result<()> {
     let command = format!("{command}; echo command done, exit code $?");
-    let output = telnet_send_command_with_output(addr, &command, wait_for_prompt).await?;
+    let output =
+        telnet_send_command_with_output(addr, &command, wait_for_prompt, Duration::from_secs(10))
+            .await?;
     if !output.contains(expected_output) {
         bail!("{expected_output:?} not found in: {output}");
     }
@@ -112,7 +106,7 @@ pub async fn telnet_send_file(
     let nc_output = {
         let filename = filename.to_owned();
         let handle = tokio::spawn(async move {
-            telnet_send_command_with_timeout(
+            telnet_send_command_with_output(
                 addr,
                 &format!("nc -l -p 8081 2>&1 >{filename}.tmp"),
                 wait_for_prompt,

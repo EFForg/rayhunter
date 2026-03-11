@@ -201,28 +201,43 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
     Ok(())
 }
 
-async fn check_disk_space(addr: SocketAddr, binary_size: usize) -> Result<()> {
-    // Use /data/rayhunter to resolve through symlink (may point to /cache/rayhunter-data)
-    let df_output = telnet_send_command_with_output(
+async fn device_has_binary(addr: SocketAddr, name: &str) -> bool {
+    telnet_send_command_with_output(
         addr,
-        "df /data/rayhunter | tail -1 | awk '{print $4}'",
+        &format!("which {name} 2>/dev/null && echo FOUND || echo MISSING"),
         false,
+        Duration::from_secs(5),
     )
-    .await?;
-    let available_kb: usize = df_output
-        .lines()
-        .find(|l| l.trim().chars().all(|c| c.is_ascii_digit()) && !l.trim().is_empty())
-        .and_then(|l| l.trim().parse().ok())
-        .unwrap_or(0);
-    let needed_kb = binary_size / 1024 + 1024; // binary + 1 MB headroom for config/logs
-    if available_kb < needed_kb {
-        bail!(
-            "Not enough space on /data: need ~{} KB but only {} KB available.\n\
-             The firmware-devel binary is too large for this device.\n\
-             Build with the firmware profile: cargo build-daemon-firmware",
-            needed_kb,
-            available_kb
-        );
+    .await
+    .map(|out| out.contains("FOUND"))
+    .unwrap_or(false)
+}
+
+async fn install_wifi_tools(addr: SocketAddr) -> Result<()> {
+    let tools: &[(&str, &str, &[u8])] = &[
+        (
+            "wpa_supplicant",
+            "/data/rayhunter/bin/wpa_supplicant",
+            include_bytes!(env!("FILE_WPA_SUPPLICANT")),
+        ),
+        (
+            "wpa_cli",
+            "/data/rayhunter/bin/wpa_cli",
+            include_bytes!(env!("FILE_WPA_CLI")),
+        ),
+        (
+            "iw",
+            "/data/rayhunter/bin/iw",
+            include_bytes!(env!("FILE_IW")),
+        ),
+    ];
+    for &(name, dest, payload) in tools {
+        if device_has_binary(addr, name).await {
+            println!("{name} already on device, skipping");
+        } else {
+            telnet_send_file(addr, dest, payload, false).await?;
+            telnet_send_command(addr, &format!("chmod +x {dest}"), "exit code 0", false).await?;
+        }
     }
     Ok(())
 }
@@ -240,8 +255,6 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
         false,
     )
     .await?;
-
-    check_disk_space(addr, rayhunter_daemon_bin.len()).await?;
 
     let mut conn = TelnetConnection::new(addr, false);
     setup_data_directory(&mut conn, data_dir).await?;
@@ -262,6 +275,8 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
         false,
     )
     .await?;
+
+    install_wifi_tools(addr).await?;
 
     install_config(&mut conn, "orbic", reset_config).await?;
 

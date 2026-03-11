@@ -31,7 +31,6 @@ export interface Config {
     wifi_ssid: string | null;
     wifi_password: string | null;
     wifi_enabled: boolean;
-    block_ota_daemons: boolean;
     dns_servers: string[] | null;
     firewall_restrict_outbound: boolean;
     firewall_allowed_ports: number[] | null;

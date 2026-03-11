@@ -1,7 +1,9 @@
 #!/bin/sh
+CONFIG="/data/rayhunter/config.toml"
+
 case "$1" in
   start)
-    if [ -f /data/rayhunter/firewall-enabled ]; then
+    if grep -q '^firewall_restrict_outbound = true' "$CONFIG" 2>/dev/null; then
         iptables -F OUTPUT
         iptables -A OUTPUT -o lo -j ACCEPT
         for br in bridge0 br0; do
@@ -14,5 +16,9 @@ case "$1" in
         iptables -A OUTPUT -j DROP
         echo 0 > /proc/sys/net/bridge/bridge-nf-call-iptables 2>/dev/null
     fi
+    ;;
+  stop)
+    iptables -F OUTPUT
+    iptables -P OUTPUT ACCEPT
     ;;
 esac

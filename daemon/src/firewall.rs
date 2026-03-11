@@ -6,8 +6,6 @@ use wifi_station::detect_bridge_iface;
 
 use crate::config::Config;
 
-const FIREWALL_FLAG: &str = "/data/rayhunter/firewall-enabled";
-
 async fn run_iptables(args: &[&str]) -> Result<()> {
     let out = Command::new("iptables").args(args).output().await?;
     if !out.status.success() {
@@ -21,10 +19,6 @@ async fn run_iptables(args: &[&str]) -> Result<()> {
 }
 
 pub async fn apply(config: &Config) {
-    if config.block_ota_daemons {
-        crate::ota::block_ota_daemons().await;
-    }
-
     let _ = Command::new("iptables")
         .args(["-F", "OUTPUT"])
         .output()
@@ -32,14 +26,9 @@ pub async fn apply(config: &Config) {
 
     if config.firewall_restrict_outbound {
         match setup_outbound_whitelist(&config.firewall_allowed_ports, &config.ntfy_url).await {
-            Ok(()) => {
-                info!("outbound firewall active: allowing DHCP, DNS, HTTPS only");
-                let _ = tokio::fs::write(FIREWALL_FLAG, "").await;
-            }
+            Ok(()) => info!("outbound firewall active: allowing DHCP, DNS, HTTPS only"),
             Err(e) => warn!("firewall setup failed: {e}"),
         }
-    } else {
-        let _ = tokio::fs::remove_file(FIREWALL_FLAG).await;
     }
 }
 

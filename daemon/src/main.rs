@@ -7,7 +7,6 @@ mod error;
 mod firewall;
 mod key_input;
 mod notifications;
-mod ota;
 mod pcap;
 mod qmdl_store;
 mod server;

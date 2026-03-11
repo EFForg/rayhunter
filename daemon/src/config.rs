@@ -37,7 +37,6 @@ pub struct Config {
     pub wifi_ssid: Option<String>,
     pub wifi_password: Option<String>,
     pub wifi_enabled: bool,
-    pub block_ota_daemons: bool,
     pub dns_servers: Option<Vec<String>>,
     pub firewall_restrict_outbound: bool,
     pub firewall_allowed_ports: Option<Vec<u16>>,
@@ -61,7 +60,6 @@ impl Default for Config {
             wifi_ssid: None,
             wifi_password: None,
             wifi_enabled: false,
-            block_ota_daemons: false,
             dns_servers: None,
             firewall_restrict_outbound: true,
             firewall_allowed_ports: None,
@@ -89,17 +87,25 @@ impl Config {
             dns_servers: self.dns_servers.clone(),
             wifi_ssid: self.wifi_ssid.clone(),
             wifi_password: self.wifi_password.clone(),
-            wpa_supplicant_bin: wpa_bin,
+            wpa_supplicant_bin: wpa_bin.or_else(|| resolve_bin("wpa_supplicant")),
             hostapd_conf,
             ctrl_interface,
             udhcpc_hook_path: Some("/data/rayhunter/udhcpc-hook.sh".into()),
             dhcp_lease_path: Some("/data/rayhunter/dhcp_lease".into()),
             wpa_conf_path: Some("/data/rayhunter/wpa_sta.conf".into()),
-            iw_bin: Some("/data/rayhunter/bin/iw".into()),
+            iw_bin: resolve_bin("iw"),
             crash_log_dir: Some("/data/rayhunter/crash-logs".into()),
             wakelock_name: Some("rayhunter".into()),
         }
     }
+}
+
+fn resolve_bin(name: &str) -> Option<String> {
+    let local = format!("/data/rayhunter/bin/{name}");
+    if std::path::Path::new(&local).exists() {
+        return Some(local);
+    }
+    None
 }
 
 pub async fn parse_config<P>(path: P) -> Result<Config, RayhunterError>
