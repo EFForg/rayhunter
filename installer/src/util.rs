@@ -1,3 +1,4 @@
+use std::io::IsTerminal;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
@@ -206,30 +207,49 @@ pub async fn send_file(admin_ip: &str, local_path: &str, remote_path: &str) -> R
     Ok(())
 }
 
-pub async fn http_ok_every(
-    rayhunter_url: String,
-    interval: Duration,
-    max_failures: u32,
-) -> Result<()> {
-    let client = Client::new();
-    let mut failures = 0;
-    loop {
-        match client.get(&rayhunter_url).send().await {
-            Ok(test) => match test.status().is_success() {
-                true => break,
-                false => bail!(
-                    "request for url ({rayhunter_url}) failed with status code: {:?}",
-                    test.status()
-                ),
-            },
-            Err(e) => match failures > max_failures {
-                true => return Err(e.into()),
-                false => failures += 1,
-            },
+pub async fn reboot_and_verify(addr: SocketAddr, reboot_command: &str, admin_ip: &str) {
+    println!("Installation complete. Rebooting device...");
+    let _ = telnet_send_command(addr, reboot_command, "", true).await;
+
+    if std::io::stdin().is_terminal() {
+        println!(
+            "The device is rebooting. You will need to reconnect to the device's WiFi network."
+        );
+        print!("Once you've reconnected, press Enter to verify the installation: ");
+        let mut input = String::new();
+        let _ = std::io::stdin().read_line(&mut input);
+
+        print!("Verifying rayhunter ... ");
+        sleep(Duration::from_secs(5)).await;
+
+        let client = Client::new();
+        let url = format!("http://{admin_ip}:8080/index.html");
+        let mut success = false;
+        for _ in 0..5 {
+            if let Ok(resp) = client.get(&url).send().await
+                && resp.status().is_success()
+            {
+                success = true;
+                break;
+            }
+            sleep(Duration::from_secs(3)).await;
         }
-        sleep(interval).await;
+
+        if success {
+            println!("ok");
+            println!("rayhunter is running at http://{admin_ip}:8080");
+        } else {
+            println!("could not reach rayhunter.");
+            println!(
+                "The device may still be booting. Check http://{admin_ip}:8080 in a minute or two."
+            );
+        }
+    } else {
+        println!(
+            "Device is rebooting. Check http://{}:8080 after it finishes booting.",
+            admin_ip
+        );
     }
-    Ok(())
 }
 
 /// General function to open a USB device
