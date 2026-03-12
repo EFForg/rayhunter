@@ -34,6 +34,7 @@ pub struct Config {
     pub analyzers: AnalyzerConfig,
     pub min_space_to_start_recording_mb: u64,
     pub min_space_to_continue_recording_mb: u64,
+    pub disable_wifi_auto_shutdown: bool,
 }
 
 impl Default for Config {
@@ -51,6 +52,7 @@ impl Default for Config {
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
             min_space_to_start_recording_mb: 1,
             min_space_to_continue_recording_mb: 1,
+            disable_wifi_auto_shutdown: false,
         }
     }
 }

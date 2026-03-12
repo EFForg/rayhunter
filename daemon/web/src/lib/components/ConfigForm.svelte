@@ -146,6 +146,27 @@
                             Colorblind Mode
                         </label>
                     </div>
+
+                    {#if config.device === 'wingtech' || config.device === 'tmobile'}
+                        <div class="flex items-center">
+                            <input
+                                id="disable_wifi_auto_shutdown"
+                                type="checkbox"
+                                bind:checked={config.disable_wifi_auto_shutdown}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            />
+                            <label
+                                for="disable_wifi_auto_shutdown"
+                                class="ml-2 block text-sm text-gray-700"
+                            >
+                                Keep WiFi Always On
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-500 ml-6">
+                            Prevents WiFi from turning off after 10 minutes with no connected
+                            clients. Uses more battery. Requires device reboot to take effect.
+                        </p>
+                    {/if}
                 </div>
 
                 <div class="border-t pt-4 mt-6 space-y-3">
