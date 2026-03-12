@@ -26,15 +26,22 @@ You can build `rayhunter-check` from source with the following command:
 rayhunter-check [OPTIONS] --path <PATH>
 
 Options:
-  -p, --path <PATH>   Path to the PCAP, or QMDL file. If given a directory will 
-                        recursively scan all pcap, qmdl, and subdirectories 
-  -P, --pcapify       Turn QMDL file into PCAP     
+  -p, --path <PATH>   Path to the PCAP, or QMDL file. If given a directory will
+                        recursively scan all pcap, qmdl, and subdirectories
+  -P, --pcapify       Turn QMDL file into PCAP in --output
       --show-skipped  Show skipped messages
+      --format <FORMAT>  Output format: [possible values: text, json].
+                        JSON is NDJSON (one record per line); requires --output.
+  -o, --output <DIR>  Directory for output files (required for --format json and --pcapify)
   -q, --quiet         Print only warnings
-  -d, --debug         Print debug info 
+  -d, --debug         Print debug info
   -h, --help          Print help
   -V, --version       Print version
 ```
+
+**Note:** All log output goes to stderr. This keeps stdout clean when
+piping or redirecting NDJSON results.
+
 ### Examples 
 `rayhunter-check -p ~/Downloads/myfile.qmdl`
 
@@ -43,3 +50,5 @@ Options:
 `rayhunter-check -p ~/Downloads #Check all files in downloads`
 
 `rayhunter-check -d -p ~/Downloads/myfile.qmdl #run in debug mode`
+
+`rayhunter-check -p ~/Downloads/myfile.qmdl --format json -o ./reports #write NDJSON report to ./reports/myfile.ndjson`
