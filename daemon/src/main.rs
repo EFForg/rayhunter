@@ -22,8 +22,9 @@ use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
 use crate::server::{
-    ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_zip, serve_static,
-    set_config, set_time_offset, test_notification,
+    ServerState, debug_set_display_state, get_config, get_orbic_severity_indicator_images,
+    get_qmdl, get_time, get_zip, reset_orbic_severity_indicator_image, serve_static, set_config,
+    set_time_offset, test_notification, upload_orbic_severity_indicator_image,
 };
 use crate::stats::{get_qmdl_manifest, get_system_stats};
 
@@ -69,6 +70,9 @@ fn get_router() -> AppRouter {
         .route("/api/analysis/{name}", post(start_analysis))
         .route("/api/config", get(get_config))
         .route("/api/config", post(set_config))
+        .route("/api/orbic/severity-indicator-images", get(get_orbic_severity_indicator_images))
+        .route("/api/orbic/severity-indicator-images/{slot}", post(upload_orbic_severity_indicator_image))
+        .route("/api/orbic/severity-indicator-images/{slot}/reset", post(reset_orbic_severity_indicator_image))
         .route("/api/test-notification", post(test_notification))
         .route("/api/time", get(get_time))
         .route("/api/time-offset", post(set_time_offset))

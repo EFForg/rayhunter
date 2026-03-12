@@ -113,3 +113,40 @@ export interface TimeResponse {
 export async function get_daemon_time(): Promise<TimeResponse> {
     return JSON.parse(await req('GET', '/api/time'));
 }
+
+
+export interface OrbicSeverityIndicatorImageStatus {
+    runtime_dir: string;
+    slots_with_overrides: string[];
+}
+
+export async function get_orbic_severity_indicator_images(): Promise<OrbicSeverityIndicatorImageStatus> {
+    return JSON.parse(await req('GET', '/api/orbic/severity-indicator-images'));
+}
+
+export async function upload_orbic_severity_indicator_image(slot: string, file: File): Promise<void> {
+    const response = await fetch(`/api/orbic/severity-indicator-images/${slot}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'image/png',
+        },
+        body: file,
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+    }
+}
+
+
+export async function reset_orbic_severity_indicator_image(slot: string): Promise<void> {
+    const response = await fetch(`/api/orbic/severity-indicator-images/${slot}/reset`, {
+        method: 'POST',
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error);
+    }
+}

@@ -3,7 +3,7 @@ use async_zip::Compression;
 use async_zip::ZipEntryBuilder;
 use async_zip::tokio::write::ZipFileWriter;
 use axum::Json;
-use axum::body::Body;
+use axum::body::{self, Body};
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
@@ -25,6 +25,7 @@ use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::config::Config;
 use crate::diag::DiagDeviceCtrlMessage;
 use crate::display::DisplayState;
+use crate::display::orbic_severity_images::{self, OrbicSeverityImageSlot};
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
 
@@ -37,6 +38,113 @@ pub struct ServerState {
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_token: CancellationToken,
     pub ui_update_sender: Option<Sender<DisplayState>>,
+}
+
+
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    get,
+    path = "/api/orbic/severity-indicator-images",
+    tag = "Configuration",
+    responses(
+        (status = StatusCode::OK, description = "Success", body = orbic_severity_images::OrbicSeverityIndicatorImageStatus)
+    ),
+    summary = "Get the current severity image status.",
+    description = "Show which severity images have custom uploads."
+))]
+pub async fn get_orbic_severity_indicator_images() -> Json<orbic_severity_images::OrbicSeverityIndicatorImageStatus> {
+    Json(orbic_severity_images::get_status().await)
+}
+
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    post,
+    path = "/api/orbic/severity-indicator-images/{slot}",
+    tag = "Configuration",
+    params(
+        ("slot" = String, Path, description = "default, low, medium, or high")
+    ),
+    request_body(content = String, content_type = "image/png"),
+    responses(
+        (status = StatusCode::OK, description = "Success"),
+        (status = StatusCode::BAD_REQUEST, description = "Invalid slot or invalid PNG"),
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Failed to write image file")
+    ),
+    summary = "Upload a custom image for a severity level.",
+    description = "Upload a custom image for one Orbic severity level."
+))]
+pub async fn upload_orbic_severity_indicator_image(
+    Path(slot): Path<String>,
+    body: Body,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let slot = OrbicSeverityImageSlot::from_str(&slot).ok_or((
+        StatusCode::BAD_REQUEST,
+        "slot must be one of: default, low, medium, high".to_string(),
+    ))?;
+
+    let bytes = body::to_bytes(body, 5 * 1024 * 1024).await.map_err(|err| {
+        (
+            StatusCode::BAD_REQUEST,
+            format!("failed to read request body: {err}"),
+        )
+    })?;
+
+    if image::guess_format(&bytes).ok() != Some(image::ImageFormat::Png) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "uploaded file must be a PNG".to_string(),
+        ));
+    }
+
+    orbic_severity_images::store_override(slot, &bytes)
+        .await
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to store PNG override: {err}"),
+            )
+        })?;
+
+    Ok((
+        StatusCode::OK,
+        format!("uploaded {}", slot.filename()),
+    ))
+}
+
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    post,
+    path = "/api/orbic/severity-indicator-images/{slot}/reset",
+    tag = "Configuration",
+    params(
+        ("slot" = String, Path, description = "default, low, medium, or high")
+    ),
+    responses(
+        (status = StatusCode::OK, description = "Success"),
+        (status = StatusCode::BAD_REQUEST, description = "Invalid slot"),
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Failed to remove image file")
+    ),
+    summary = "Restore the default image for a severity level.",
+    description = "Remove the custom image and use the default again."
+))]
+pub async fn reset_orbic_severity_indicator_image(
+    Path(slot): Path<String>,
+) -> Result<(StatusCode, String), (StatusCode, String)> {
+    let slot = OrbicSeverityImageSlot::from_str(&slot).ok_or((
+        StatusCode::BAD_REQUEST,
+        "slot must be one of: default, low, medium, high".to_string(),
+    ))?;
+
+    orbic_severity_images::remove_override(slot)
+        .await
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to remove PNG override: {err}"),
+            )
+        })?;
+
+    Ok((
+        StatusCode::OK,
+        format!("reset {} to bundled default", slot.filename()),
+    ))
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(

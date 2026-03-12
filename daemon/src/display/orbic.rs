@@ -1,6 +1,7 @@
 use crate::config;
 use crate::display::DisplayState;
 use crate::display::generic_framebuffer::{self, Dimensions, GenericFramebuffer};
+use crate::display::orbic_severity_images;
 use async_trait::async_trait;
 
 use tokio::sync::mpsc::Receiver;
@@ -41,11 +42,21 @@ pub fn update_ui(
     shutdown_token: CancellationToken,
     ui_update_rx: Receiver<DisplayState>,
 ) {
-    generic_framebuffer::update_ui(
-        task_tracker,
-        config,
-        Framebuffer,
-        shutdown_token,
-        ui_update_rx,
-    )
+    if config.ui_level == 5 {
+        orbic_severity_images::update_ui(
+            task_tracker,
+            config,
+            Framebuffer,
+            shutdown_token,
+            ui_update_rx,
+        )
+    } else {
+        generic_framebuffer::update_ui(
+            task_tracker,
+            config,
+            Framebuffer,
+            shutdown_token,
+            ui_update_rx,
+        )
+    }
 }
