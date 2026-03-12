@@ -172,7 +172,13 @@ impl TelnetConnection {
 
 impl DeviceConnection for TelnetConnection {
     async fn run_command(&mut self, command: &str) -> Result<String> {
-        crate::util::telnet_send_command_with_output(self.addr, command, self.wait_for_prompt).await
+        crate::util::telnet_send_command_with_output(
+            self.addr,
+            command,
+            self.wait_for_prompt,
+            std::time::Duration::from_secs(10),
+        )
+        .await
     }
 
     async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {

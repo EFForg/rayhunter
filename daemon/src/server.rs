@@ -37,6 +37,8 @@ pub struct ServerState {
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_token: CancellationToken,
     pub ui_update_sender: Option<Sender<DisplayState>>,
+    pub wifi_status: Arc<RwLock<wifi_station::WifiStatus>>,
+    pub wifi_scan_lock: tokio::sync::Mutex<()>,
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -134,7 +136,9 @@ pub async fn serve_static(
 pub async fn get_config(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Config>, (StatusCode, String)> {
-    Ok(Json(state.config.clone()))
+    let mut config = state.config.clone();
+    config.wifi_password = None;
+    Ok(Json(config))
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -157,7 +161,11 @@ pub async fn set_config(
     State(state): State<Arc<ServerState>>,
     Json(config): Json<Config>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    let config_str = toml::to_string_pretty(&config).map_err(|err| {
+    let mut config_to_write = config.clone();
+    config_to_write.wifi_ssid = None;
+    config_to_write.wifi_password = None;
+
+    let config_str = toml::to_string_pretty(&config_to_write).map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("failed to serialize config as TOML: {err}"),
@@ -170,6 +178,8 @@ pub async fn set_config(
             format!("failed to write config file: {err}"),
         )
     })?;
+
+    wifi_station::update_wpa_conf(&config.wifi_config()).await;
 
     // Trigger daemon restart after writing config
     state.daemon_restart_token.cancel();
@@ -394,6 +404,33 @@ pub async fn get_zip(
     Ok((headers, body).into_response())
 }
 
+pub async fn get_wifi_status(
+    State(state): State<Arc<ServerState>>,
+) -> Json<wifi_station::WifiStatus> {
+    let status = state.wifi_status.read().await;
+    Json(status.clone())
+}
+
+pub async fn scan_wifi(
+    State(state): State<Arc<ServerState>>,
+) -> Result<Json<Vec<wifi_station::WifiNetwork>>, (StatusCode, String)> {
+    let _guard = state.wifi_scan_lock.try_lock().map_err(|_| {
+        (
+            StatusCode::TOO_MANY_REQUESTS,
+            "WiFi scan already in progress".to_string(),
+        )
+    })?;
+    let networks = wifi_station::scan_wifi_networks(wifi_station::STA_IFACE)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("WiFi scan failed: {e}"),
+            )
+        })?;
+    Ok(Json(networks))
+}
+
 #[cfg_attr(feature = "apidocs", utoipa::path(
     post,
     path = "/api/debug/display-state",
@@ -498,6 +535,8 @@ mod tests {
             analysis_sender: analysis_tx,
             daemon_restart_token: CancellationToken::new(),
             ui_update_sender: None,
+            wifi_status: Arc::new(RwLock::new(wifi_station::WifiStatus::default())),
+            wifi_scan_lock: tokio::sync::Mutex::new(()),
         })
     }
 
