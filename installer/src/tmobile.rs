@@ -13,7 +13,7 @@ use tokio::time::sleep;
 
 use crate::TmobileArgs as Args;
 use crate::output::{print, println};
-use crate::util::{http_ok_every, telnet_send_command, telnet_send_file};
+use crate::util::{reboot_and_verify, telnet_send_command, telnet_send_file};
 use crate::wingtech::start_telnet;
 
 pub async fn install(
@@ -92,20 +92,7 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
     )
     .await?;
 
-    println!("Rebooting device and waiting 30 seconds for it to start up.");
-    telnet_send_command(addr, "reboot", "exit code 0", true).await?;
-    sleep(Duration::from_secs(30)).await;
-
-    print!("Testing rayhunter ... ");
-    let max_failures = 10;
-    http_ok_every(
-        format!("http://{admin_ip}:8080/index.html"),
-        Duration::from_secs(3),
-        max_failures,
-    )
-    .await?;
-    println!("ok");
-    println!("rayhunter is running at http://{admin_ip}:8080");
+    reboot_and_verify(addr, "reboot", &admin_ip).await;
 
     Ok(())
 }
