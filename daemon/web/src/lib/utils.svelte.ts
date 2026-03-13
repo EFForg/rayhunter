@@ -18,7 +18,10 @@ export enum enabled_notifications {
     LowBattery = 'LowBattery',
 }
 
+export type Device = 'orbic' | 'tplink' | 'tmobile' | 'wingtech' | 'pinephone' | 'uz801';
+
 export interface Config {
+    device: Device;
     ui_level: number;
     colorblind_mode: boolean;
     key_input_mode: number;
@@ -27,6 +30,7 @@ export interface Config {
     analyzers: AnalyzerConfig;
     min_space_to_start_recording_mb: number;
     min_space_to_continue_recording_mb: number;
+    disable_wifi_auto_shutdown: boolean;
 }
 
 export async function req(method: string, url: string, json_body?: unknown): Promise<string> {

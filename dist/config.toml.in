@@ -34,6 +34,13 @@ min_space_to_start_recording_mb = 1
 # Minimum free space (MB) to continue recording (stops if below this)
 min_space_to_continue_recording_mb = 1
 
+# WiFi Management
+# Disable the Qualcomm WLAN auto-shutdown timer that turns off WiFi after
+# 10 minutes with no connected clients. Keeps WiFi always on so you can
+# reach the web UI at any time. Uses more battery. Requires device reboot
+# to take effect.
+disable_wifi_auto_shutdown = false
+
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics
 # See https://github.com/EFForg/rayhunter/blob/main/doc/heuristics.md for details

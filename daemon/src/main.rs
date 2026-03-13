@@ -10,6 +10,7 @@ mod pcap;
 mod qmdl_store;
 mod server;
 mod stats;
+mod wifi;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -215,6 +216,8 @@ async fn run_with_config(
     let notification_service = NotificationService::new(config.ntfy_url.clone());
 
     if !config.debug_mode {
+        wifi::apply_wifi_auto_shutdown_config(config.disable_wifi_auto_shutdown).await;
+
         info!("Using configuration for device: {0:?}", config.device);
         let mut dev = DiagDevice::new(&config.device)
             .await
