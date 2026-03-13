@@ -22,6 +22,7 @@ export interface Config {
     ui_level: number;
     colorblind_mode: boolean;
     key_input_mode: number;
+    keep_screen_on: boolean;
     ntfy_url: string;
     enabled_notifications: enabled_notifications[];
     analyzers: AnalyzerConfig;
