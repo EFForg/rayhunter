@@ -50,6 +50,14 @@ telnet 192.168.1.1
 adb shell
 ```
 
+## WIFI auto-shutdown
+
+The CT2MHS01 ships with a Qualcomm WLAN auto-shutdown timer (`gWlanAutoShutdown=600`) that turns off the wifi access point after 10 minutes with no connected clients. This means if you disconnect from the device's wifi network, you will not be able to reconnect or reach the Rayhunter web UI until you power cycle the device.
+
+If you need persistent remote access to the web UI, enable the **Keep wifi Always On** option in the Rayhunter [configuration](./configuration.md) page. This disables the auto-shutdown timer so the access point stays on indefinitely. A device reboot is required after changing this setting.
+
+Keeping wifi always on will increase battery drain. If you only monitor Rayhunter through the device's screen and do not need remote access, leave this option disabled.
+
 ## Developing
 The device has a framebuffer-driven screen at /dev/fb0 that behaves
 similarly to the Orbic RC400L, although the userspace program

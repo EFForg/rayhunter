@@ -55,6 +55,14 @@ Then run the installer:
 | Paused           | WiFi LED blinks white.         |
 | Warning Detected | Signal LED slowly blinks red.  |
 
+## WIFI auto-shutdown
+
+The TMOHS1 ships with a Qualcomm WLAN auto-shutdown timer (`gWlanAutoShutdown=600`) that turns off the wifi access point after 10 minutes with no connected clients. This means if you disconnect from the device's wifi network, you will not be able to reconnect or reach the Rayhunter web UI until you power cycle the device.
+
+If you need persistent remote access to the web UI, enable the **Keep WiFi Always On** option in the Rayhunter [configuration](./configuration.md) page. This disables the auto-shutdown timer so the access point stays on indefinitely. A device reboot is required after changing this setting.
+
+Keeping wifi always on will increase battery drain. If you only monitor Rayhunter through the device's LEDs and do not need remote access, leave this option disabled.
+
 ## Obtaining a shell
 Even when rayhunter is running, for security reasons the TMOHS1 will not have telnet or adb enabled during normal operation.
 
