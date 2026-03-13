@@ -1,5 +1,12 @@
+use std::sync::LazyLock;
+
 use anyhow::Context;
+use clap::CommandFactory;
 use tauri::Emitter;
+
+mod introspect;
+
+static INSTALLER_COMMAND: LazyLock<clap::Command> = LazyLock::new(installer::Args::command);
 
 async fn run_installer(app_handle: tauri::AppHandle, args: String) -> anyhow::Result<()> {
     let args_vec = shlex::split(&args).context("Failed to parse arguments: unclosed quote")?;
@@ -25,11 +32,17 @@ async fn install_rayhunter(app_handle: tauri::AppHandle, args: String) -> Result
         .map_err(|error| format!("{error:?}"))
 }
 
+#[tauri::command]
+fn rayhunter_options() -> introspect::Command<'static> {
+    introspect::Command::new(&INSTALLER_COMMAND)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![install_rayhunter])
+        .invoke_handler(tauri::generate_handler![rayhunter_options])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
