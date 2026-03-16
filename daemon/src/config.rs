@@ -32,13 +32,21 @@ pub struct Config {
     pub enabled_notifications: Vec<NotificationType>,
     /// Vector containing the list of enabled analyzers
     pub analyzers: AnalyzerConfig,
+    /// Minimum disk space required to start a recording
     pub min_space_to_start_recording_mb: u64,
+    /// Minimum disk space required to continue a recording
     pub min_space_to_continue_recording_mb: u64,
+    /// Wifi client SSID
     pub wifi_ssid: Option<String>,
+    /// Wifi client password
     pub wifi_password: Option<String>,
+    /// Wifi client mode
     pub wifi_enabled: bool,
+    /// Vector containing wifi client DNS servers
     pub dns_servers: Option<Vec<String>>,
+    /// Wifi client firewall mode
     pub firewall_restrict_outbound: bool,
+    /// Vector containing additional wifi client firewall ports to open
     pub firewall_allowed_ports: Option<Vec<u16>>,
 }
 
