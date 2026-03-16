@@ -120,6 +120,7 @@ where
     };
 
     config.wifi_ssid = wifi_station::read_ssid_from_wpa_conf("/data/rayhunter/wpa_sta.conf");
+    // password lives only in wpa_sta.conf; never sent back through the config API
     config.wifi_password = None;
 
     Ok(config)
