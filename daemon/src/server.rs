@@ -404,6 +404,16 @@ pub async fn get_zip(
     Ok((headers, body).into_response())
 }
 
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    get,
+    path = "/api/wifi-status",
+    tag = "Configuration",
+    responses(
+        (status = StatusCode::OK, description = "Success", body = wifi_station::WifiStatus)
+    ),
+    summary = "Get wifi status",
+    description = "Show the status of the wifi client."
+))]
 pub async fn get_wifi_status(
     State(state): State<Arc<ServerState>>,
 ) -> Json<wifi_station::WifiStatus> {
