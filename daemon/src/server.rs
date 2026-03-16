@@ -411,6 +411,18 @@ pub async fn get_wifi_status(
     Json(status.clone())
 }
 
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    post,
+    path = "/api/wifi-scan",
+    tag = "Configuration",
+    responses(
+        (status = StatusCode::OK, description = "Scan success", body = inline(Vec<wifi_station::WifiNetwork>), content_type = "application/json"),
+        (status = StatusCode::TOO_MANY_REQUESTS, description = "Scan already in progress"),
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Scan failed"),
+    ),
+    summary = "Wifi SSID scan",
+    description = "Poll for a list of available wifi networks. Returns an array of WifiNetwork objects."
+))]
 pub async fn scan_wifi(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Vec<wifi_station::WifiNetwork>>, (StatusCode, String)> {
