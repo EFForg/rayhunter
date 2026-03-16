@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # Rust dependencies
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependency-type:
+        patterns:
+          - "*"
+
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependency-type:
+        patterns:
+          - "*"
+
+  # daemon/web Node.js dependencies
+  - package-ecosystem: "npm"
+    directory: "/daemon/web"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependency-type:
+        patterns:
+          - "*"
+
+  # installer-gui Node.js dependencies
+  - package-ecosystem: "npm"
+    directory: "/installer-gui"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependency-type:
+        patterns:
+          - "*"
