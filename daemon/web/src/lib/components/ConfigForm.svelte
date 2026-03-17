@@ -128,8 +128,7 @@
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
                     >
                         <option value={0}>0 - Disable button control</option>
-                        <option value={1}
-                            >1 - Double-tap power button to start/stop recording</option
+                        <option value={1}>1 - Double-tap power button to start new recording</option
                         >
                     </select>
                 </div>

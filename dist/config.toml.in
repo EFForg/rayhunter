@@ -20,7 +20,7 @@ colorblind_mode = false
 ui_level = 1
 
 # 0 = rayhunter does not read button presses
-# 1 = double-tapping the power button starts/stops recordings
+# 1 = double-tapping the power button starts new recording
 key_input_mode = 0
 
 # If set, attempts to send a notification to the url when a new warning is triggered
