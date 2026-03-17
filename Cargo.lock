@@ -6900,6 +6900,7 @@ dependencies = [
  "serde",
  "tokio",
  "tokio-util",
+ "utoipa",
 ]
 
 [[package]]

@@ -17,7 +17,7 @@ required-features = ["apidocs"]
 default = ["rustcrypto-tls"]
 rustcrypto-tls = ["reqwest/rustls-tls-webpki-roots-no-provider", "dep:rustls-rustcrypto"]
 ring-tls = ["reqwest/rustls-tls-webpki-roots"]
-apidocs = ["dep:utoipa"]
+apidocs = ["dep:utoipa", "wifi-station/utoipa"]
 
 [dependencies]
 rayhunter = { path = "../lib" }
