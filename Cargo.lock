@@ -2479,7 +2479,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.61.2",
+ "windows-core 0.57.0",
 ]
 
 [[package]]
@@ -6892,7 +6892,7 @@ checksum = "dd7cf3379ca1aac9eea11fba24fd7e315d621f8dfe35c8d7d2be8b793726e07d"
 [[package]]
 name = "wifi-station"
 version = "0.10.1"
-source = "git+https://github.com/BeigeBox/wifi-station?rev=97c579a#97c579a8944eb126d3f9cfee2ae8e674affc5b69"
+source = "git+https://github.com/BeigeBox/wifi-station?rev=d6de42f#d6de42ff888497f218053bd3ee0cdddd16e14530"
 dependencies = [
  "anyhow",
  "chrono",
