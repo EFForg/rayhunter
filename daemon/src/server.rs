@@ -155,8 +155,11 @@ pub async fn get_config(
 ))]
 pub async fn set_config(
     State(state): State<Arc<ServerState>>,
-    Json(config): Json<Config>,
+    Json(mut config): Json<Config>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
+    // Preserve device type from current config, since the web UI doesn't include it
+    config.device = state.config.device.clone();
+
     let config_str = toml::to_string_pretty(&config).map_err(|err| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
