@@ -279,17 +279,3 @@ pub async fn start_adb(admin_ip: &str, admin_password: &str) -> Result<()> {
     Ok(())
 }
 
-/// Open an interactive ADB shell on the ZTE device.
-pub async fn shell(admin_ip: &str, admin_password: &str) -> Result<()> {
-    login_and_enable_adb(admin_ip, admin_password).await?;
-
-    print!("Waiting for ADB device ... ");
-    let mut adb_device = wait_for_adb().await?;
-    println!("ok");
-
-    #[cfg(unix)]
-    let _raw = crate::util::RawTerminal::new(std::os::fd::AsRawFd::as_raw_fd(&std::io::stdin()))?;
-
-    adb_device.shell(&mut std::io::stdin(), Box::new(std::io::stdout()))?;
-    Ok(())
-}

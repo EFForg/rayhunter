@@ -198,9 +198,6 @@ enum UtilSubCommand {
     OrbicStartTelnet(OrbicNetworkArgs),
     /// Root the Orbic and open an interactive shell.
     OrbicShell(OrbicNetworkArgs),
-    /// Enable ADB on a ZTE MF920V and open an interactive shell.
-    #[cfg(not(target_os = "android"))]
-    ZteShell(ZteArgs),
     /// Enable ADB on a ZTE MF920V.
     #[cfg(not(target_os = "android"))]
     ZteStartAdb(ZteArgs),
@@ -362,8 +359,6 @@ async fn run(args: Args) -> Result<(), Error> {
             UtilSubCommand::PinephoneStopAdb => pinephone::stop_adb().await.context("\nFailed to stop adb on the PinePhone's modem")?,
             UtilSubCommand::OrbicStartTelnet(args) => orbic_network::start_telnet(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\nFailed to start telnet on the Orbic RC400L")?,
             UtilSubCommand::OrbicShell(args) => orbic_network::shell(&args.admin_ip, &args.admin_username, args.admin_password.as_deref()).await.context("\nFailed to open shell on Orbic RC400L")?,
-            #[cfg(not(target_os = "android"))]
-            UtilSubCommand::ZteShell(args) => zte::shell(&args.admin_ip, &args.admin_password).await.context("\nFailed to open ADB shell on ZTE")?,
             #[cfg(not(target_os = "android"))]
             UtilSubCommand::ZteStartAdb(args) => zte::start_adb(&args.admin_ip, &args.admin_password).await.context("\nFailed to enable ADB on ZTE")?,
         }
