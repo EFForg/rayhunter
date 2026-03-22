@@ -21,6 +21,7 @@
     let system_stats: SystemStats | undefined = $state(undefined);
     let update_error: string | undefined = $state(undefined);
     let logview_shown: boolean = $state(false);
+    let config_shown: boolean = $state(false);
     $effect(() => {
         const interval = setInterval(async () => {
             try {
@@ -55,6 +56,7 @@
 </script>
 
 <LogView bind:shown={logview_shown} />
+<ConfigForm bind:shown={config_shown} />
 <div class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center">
     <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
     <img src="/rayhunter_text.png" alt="" class="h-10 xl:h-12" />
@@ -100,6 +102,33 @@
                     stroke="currentColor"
                     stroke-width="1.5"
                     stroke-linecap="round"
+                />
+            </svg>
+        </button>
+        <button onclick={() => (config_shown = true)} class="flex flex-row gap-1 group">
+            <span class="hidden text-white group-hover:text-gray-400 lg:flex">Config</span>
+            <svg
+                class="w-6 h-6 text-white group-hover:text-gray-400"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 13v-2a1 1 0 0 0-1-1h-.757l-.707-1.707.535-.536a1 1 0 0 0 0-1.414l-1.414-1.414a1 1 0 0 0-1.414 0l-.536.535L14 5.757V5a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v.757L8.293 6.464l-.536-.535a1 1 0 0 0-1.414 0L4.929 7.343a1 1 0 0 0 0 1.414l.535.536L4.757 11H4a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h.757l.707 1.707-.535.536a1 1 0 0 0 0 1.414l1.414 1.414a1 1 0 0 0 1.414 0l.536-.535L10 18.243V19a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-.757l1.707-.707.536.535a1 1 0 0 0 1.414 0l1.414-1.414a1 1 0 0 0 0-1.414l-.535-.536.707-1.707H20a1 1 0 0 0 1-1Z"
+                />
+                <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
                 />
             </svg>
         </button>
@@ -273,7 +302,6 @@
             <ManifestTable {entries} server_is_recording={!!current_entry} {manager} />
         </div>
         <DeleteAllButton />
-        <ConfigForm />
     {:else}
         <div class="flex flex-col justify-center items-center">
             <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
