@@ -1,11 +1,9 @@
-use std::io::IsTerminal;
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 use nusb::Device;
-use reqwest::Client;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
@@ -207,49 +205,11 @@ pub async fn send_file(admin_ip: &str, local_path: &str, remote_path: &str) -> R
     Ok(())
 }
 
-pub async fn reboot_and_verify(addr: SocketAddr, reboot_command: &str, admin_ip: &str) {
-    println!("Installation complete. Rebooting device...");
+pub async fn reboot_device(addr: SocketAddr, reboot_command: &str, admin_ip: &str) {
+    println!(
+        "Done. Rebooting device. After it's started up again, check out the web interface at http://{admin_ip}:8080"
+    );
     let _ = telnet_send_command(addr, reboot_command, "", true).await;
-
-    if std::io::stdin().is_terminal() {
-        println!(
-            "The device is rebooting. You will need to reconnect to the device's WiFi network."
-        );
-        print!("Once you've reconnected, press Enter to verify the installation: ");
-        let mut input = String::new();
-        let _ = std::io::stdin().read_line(&mut input);
-
-        print!("Verifying rayhunter ... ");
-        sleep(Duration::from_secs(5)).await;
-
-        let client = Client::new();
-        let url = format!("http://{admin_ip}:8080/index.html");
-        let mut success = false;
-        for _ in 0..5 {
-            if let Ok(resp) = client.get(&url).send().await
-                && resp.status().is_success()
-            {
-                success = true;
-                break;
-            }
-            sleep(Duration::from_secs(3)).await;
-        }
-
-        if success {
-            println!("ok");
-            println!("rayhunter is running at http://{admin_ip}:8080");
-        } else {
-            println!("could not reach rayhunter.");
-            println!(
-                "The device may still be booting. Check http://{admin_ip}:8080 in a minute or two."
-            );
-        }
-    } else {
-        println!(
-            "Device is rebooting. Check http://{}:8080 after it finishes booting.",
-            admin_ip
-        );
-    }
 }
 
 /// General function to open a USB device
