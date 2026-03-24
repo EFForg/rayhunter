@@ -13,7 +13,7 @@ use tokio::time::sleep;
 
 use crate::TmobileArgs as Args;
 use crate::output::{print, println};
-use crate::util::{reboot_and_verify, telnet_send_command, telnet_send_file};
+use crate::util::{reboot_device, telnet_send_command, telnet_send_file};
 use crate::wingtech::start_telnet;
 
 pub async fn install(
@@ -92,7 +92,7 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
     )
     .await?;
 
-    reboot_and_verify(addr, "reboot", &admin_ip).await;
+    reboot_device(addr, "reboot", &admin_ip).await;
 
     Ok(())
 }
