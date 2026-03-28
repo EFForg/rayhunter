@@ -46,6 +46,9 @@ export interface Config {
     firewall_restrict_outbound: boolean;
     firewall_allowed_ports: number[] | null;
     webdav: WebdavConfig;
+    gps_mode: number;
+    gps_fixed_latitude: number | null;
+    gps_fixed_longitude: number | null;
 }
 
 export interface WifiStatus {
@@ -152,4 +155,21 @@ export interface TimeResponse {
 
 export async function get_daemon_time(): Promise<TimeResponse> {
     return JSON.parse(await req('GET', '/api/time'));
+}
+
+export interface GpsData {
+    latitude: number;
+    longitude: number;
+    timestamp: string;
+}
+
+export async function get_gps(): Promise<GpsData | null> {
+    const response = await fetch('/api/gps');
+    if (response.status === 404) {
+        return null;
+    }
+    if (response.status >= 200 && response.status < 300) {
+        return response.json();
+    }
+    throw new Error(await response.text());
 }
