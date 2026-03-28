@@ -5,6 +5,7 @@ pub mod crypto_provider;
 pub mod diag;
 pub mod display;
 pub mod error;
+pub mod gps;
 pub mod key_input;
 pub mod notifications;
 pub mod pcap;

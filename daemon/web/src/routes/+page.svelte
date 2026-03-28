@@ -1,6 +1,6 @@
 <script lang="ts">
     import { ManifestEntry } from '$lib/manifest.svelte';
-    import { get_manifest, get_system_stats } from '$lib/utils.svelte';
+    import { get_manifest, get_system_stats, get_gps, get_config, type GpsData } from '$lib/utils.svelte';
     import ManifestTable from '$lib/components/ManifestTable.svelte';
     import Card from '$lib/components/ManifestCard.svelte';
     import type { SystemStats } from '$lib/systemStats';
@@ -22,7 +22,13 @@
     let update_error: string | undefined = $state(undefined);
     let logview_shown: boolean = $state(false);
     let config_shown: boolean = $state(false);
+    let gps_data: GpsData | null = $state(null);
+    let gps_mode: number = $state(0);
     $effect(() => {
+        get_config().then((c) => {
+            gps_mode = c.gps_mode;
+        });
+
         const interval = setInterval(async () => {
             try {
                 // Don't update UI if browser tab isn't visible
@@ -40,6 +46,7 @@
                 current_entry = new_manifest.current_entry;
 
                 system_stats = await get_system_stats();
+                gps_data = await get_gps();
                 update_error = undefined;
                 loaded = true;
             } catch (error) {
@@ -283,6 +290,48 @@
             {/if}
             <SystemStatsTable stats={system_stats!} />
         </div>
+        {#if gps_mode !== 0}
+        <div class="bg-white border border-gray-200 drop-shadow rounded-md p-4 flex flex-col gap-2">
+            <span class="text-lg font-semibold flex flex-row items-center gap-2">
+                <svg
+                    class="w-5 h-5 text-rayhunter-blue"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M11.906 1.994a8.002 8.002 0 0 1 8.09 8.421 7.996 7.996 0 0 1-1.297 3.957.996.996 0 0 1-.133.204l-.108.129c-.178.243-.37.477-.573.699l-5.112 6.224a1 1 0 0 1-1.545 0L5.982 15.26l-.002-.002a18.146 18.146 0 0 1-.309-.38l-.133-.163a.999.999 0 0 1-.13-.202 7.995 7.995 0 0 1 6.498-12.518ZM15 9.997a3 3 0 1 1-5.999 0 3 3 0 0 1 5.999 0Z"
+                        clip-rule="evenodd"
+                    />
+                </svg>
+                GPS Status
+            </span>
+            {#if gps_data}
+                <table class="w-full text-sm">
+                    <tbody>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-1 pr-4 text-gray-500 font-medium">Latitude</td>
+                            <td class="py-1 font-mono">{gps_data.latitude.toFixed(6)}</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-1 pr-4 text-gray-500 font-medium">Longitude</td>
+                            <td class="py-1 font-mono">{gps_data.longitude.toFixed(6)}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-1 pr-4 text-gray-500 font-medium">GPS Timestamp</td>
+                            <td class="py-1 font-mono">{gps_data.timestamp}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            {:else}
+                <span class="text-gray-400 text-sm">Awaiting GPS data...</span>
+            {/if}
+        </div>
+        {/if}
         <div class="flex flex-col gap-2">
             <div class="flex flex-row gap-2">
                 <div class="text-xl flex-1">History</div>
