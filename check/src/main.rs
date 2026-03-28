@@ -158,7 +158,7 @@ async fn pcapify(qmdl_path: &PathBuf) {
         for msg in container.into_messages().into_iter().flatten() {
             if let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg) {
                 pcap_writer
-                    .write_gsmtap_message(parsed, timestamp)
+                    .write_gsmtap_message(parsed, timestamp, None)
                     .await
                     .expect("failed to write");
             }
