@@ -6,6 +6,7 @@ mod diag;
 mod display;
 mod error;
 mod firewall;
+mod gps;
 mod key_input;
 mod notifications;
 mod pcap;
@@ -24,6 +25,7 @@ use crate::error::RayhunterError;
 use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
+use crate::gps::{get_gps, post_gps};
 use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_wifi_status, get_zip,
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
@@ -79,6 +81,8 @@ fn get_router() -> AppRouter {
         .route("/api/time", get(get_time))
         .route("/api/time-offset", post(set_time_offset))
         .route("/api/debug/display-state", post(debug_set_display_state))
+        .route("/api/gps", get(get_gps))
+        .route("/api/gps", post(post_gps))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/{*path}", get(serve_static))
 }
@@ -298,6 +302,18 @@ async fn run_with_config(
             webdav_config.into(),
         );
     }
+    let initial_gps = if config.gps_mode == 1 {
+        match (config.gps_fixed_latitude, config.gps_fixed_longitude) {
+            (Some(lat), Some(lon)) => Some(gps::GpsData {
+                latitude: lat,
+                longitude: lon,
+                timestamp: "fixed".to_string(),
+            }),
+            _ => None,
+        }
+    } else {
+        None
+    };
 
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),
@@ -310,6 +326,7 @@ async fn run_with_config(
         ui_update_sender: Some(ui_update_tx),
         wifi_status,
         wifi_scan_lock: tokio::sync::Mutex::new(()),
+        gps_state: Arc::new(tokio::sync::RwLock::new(initial_gps)),
     });
     run_server(&task_tracker, state, shutdown_token.clone()).await;
 

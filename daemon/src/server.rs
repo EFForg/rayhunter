@@ -26,6 +26,7 @@ use crate::config::Config;
 use crate::diag::DiagDeviceCtrlMessage;
 use crate::display::DisplayState;
 use crate::notifications::DEFAULT_NOTIFICATION_TIMEOUT;
+use crate::gps::GpsData;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
 
@@ -40,6 +41,7 @@ pub struct ServerState {
     pub ui_update_sender: Option<Sender<DisplayState>>,
     pub wifi_status: Arc<RwLock<wifi_station::WifiStatus>>,
     pub wifi_scan_lock: tokio::sync::Mutex<()>,
+    pub gps_state: Arc<RwLock<Option<GpsData>>>,
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -566,6 +568,7 @@ mod tests {
             ui_update_sender: None,
             wifi_status: Arc::new(RwLock::new(wifi_station::WifiStatus::default())),
             wifi_scan_lock: tokio::sync::Mutex::new(()),
+            gps_state: Arc::new(RwLock::new(None)),
         })
     }
 
