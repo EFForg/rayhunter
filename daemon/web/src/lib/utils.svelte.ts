@@ -153,7 +153,7 @@ export interface GpsData {
 }
 
 export async function get_gps(): Promise<GpsData | null> {
-    const response = await fetch('/api/gps');
+    const response = await fetch('/api/gps', { cache: 'no-store' });
     if (response.status === 404) {
         return null;
     }

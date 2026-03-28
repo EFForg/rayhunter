@@ -3,6 +3,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use crate::server::ServerState;
 
@@ -11,6 +12,28 @@ pub struct GpsData {
     pub latitude: f64,
     pub longitude: f64,
     pub timestamp: String,
+}
+
+/// A single GPS fix recorded in the sidecar file alongside a QMDL recording.
+#[derive(Serialize, Deserialize)]
+pub struct GpsRecord {
+    /// Unix timestamp (seconds) of when this fix was received by the server.
+    pub unix_ts: u32,
+    pub lat: f64,
+    pub lon: f64,
+}
+
+/// Reads all GPS records from a sidecar file, skipping malformed lines.
+pub async fn load_gps_records(file: tokio::fs::File) -> Vec<GpsRecord> {
+    let reader = BufReader::new(file);
+    let mut lines = reader.lines();
+    let mut records = Vec::new();
+    while let Ok(Some(line)) = lines.next_line().await {
+        if let Ok(record) = serde_json::from_str::<GpsRecord>(&line) {
+            records.push(record);
+        }
+    }
+    records
 }
 
 pub async fn post_gps(
@@ -24,7 +47,25 @@ pub async fn post_gps(
         ));
     }
     let mut gps = state.gps_state.write().await;
-    *gps = Some(gps_data);
+    *gps = Some(gps_data.clone());
+    drop(gps);
+
+    // Append the GPS fix to the current recording's sidecar file.
+    let qmdl_store = state.qmdl_store_lock.read().await;
+    if let Some((entry_idx, _)) = qmdl_store.get_current_entry() {
+        if let Ok(mut file) = qmdl_store.open_entry_gps_for_append(entry_idx).await {
+            let unix_ts = chrono::Utc::now().timestamp() as u32;
+            let record = GpsRecord {
+                unix_ts,
+                lat: gps_data.latitude,
+                lon: gps_data.longitude,
+            };
+            if let Ok(json) = serde_json::to_string(&record) {
+                let _ = file.write_all(format!("{json}\n").as_bytes()).await;
+            }
+        }
+    }
+
     Ok(StatusCode::OK)
 }
 

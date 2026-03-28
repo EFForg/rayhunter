@@ -100,6 +100,12 @@ impl ManifestEntry {
         filepath.set_extension("ndjson");
         filepath
     }
+
+    pub fn get_gps_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        let mut filepath = path.as_ref().join(&self.name);
+        filepath.set_extension("gps.ndjson");
+        filepath
+    }
 }
 
 impl RecordingStore {
@@ -263,6 +269,10 @@ impl RecordingStore {
         let analysis_file = File::create(&analysis_filepath)
             .await
             .map_err(RecordingStoreError::CreateFileError)?;
+        let gps_filepath = new_entry.get_gps_filepath(&self.path);
+        File::create(&gps_filepath)
+            .await
+            .map_err(RecordingStoreError::CreateFileError)?;
         self.manifest.entries.push(new_entry);
         self.current_entry = Some(self.manifest.entries.len() - 1);
         self.write_manifest().await?;
@@ -286,6 +296,26 @@ impl RecordingStore {
         File::open(entry.get_analysis_filepath(&self.path))
             .await
             .map_err(RecordingStoreError::ReadFileError)
+    }
+
+    pub async fn open_entry_gps(&self, entry_index: usize) -> Result<File, RecordingStoreError> {
+        let entry = &self.manifest.entries[entry_index];
+        File::open(entry.get_gps_filepath(&self.path))
+            .await
+            .map_err(RecordingStoreError::ReadFileError)
+    }
+
+    pub async fn open_entry_gps_for_append(
+        &self,
+        entry_index: usize,
+    ) -> Result<File, RecordingStoreError> {
+        let entry = &self.manifest.entries[entry_index];
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(entry.get_gps_filepath(&self.path))
+            .await
+            .map_err(RecordingStoreError::CreateFileError)
     }
 
     pub async fn clear_and_open_entry_analysis(
@@ -436,10 +466,14 @@ impl RecordingStore {
         self.write_manifest().await?;
         let qmdl_filepath = entry_to_delete.get_qmdl_filepath(&self.path);
         let analysis_filepath = entry_to_delete.get_analysis_filepath(&self.path);
+        let gps_filepath = entry_to_delete.get_gps_filepath(&self.path);
         remove_file_if_exists(&qmdl_filepath)
             .await
             .map_err(RecordingStoreError::DeleteFileError)?;
         remove_file_if_exists(&analysis_filepath)
+            .await
+            .map_err(RecordingStoreError::DeleteFileError)?;
+        remove_file_if_exists(&gps_filepath)
             .await
             .map_err(RecordingStoreError::DeleteFileError)?;
         Ok(())
@@ -467,6 +501,9 @@ impl RecordingStore {
                 keep.push(true);
                 continue;
             }
+
+            let gps_filepath = entry.get_gps_filepath(&self.path);
+            remove_file_if_exists(&gps_filepath).await.ok();
 
             keep.push(false);
         }
