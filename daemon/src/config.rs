@@ -40,6 +40,8 @@ pub struct Config {
     pub wifi_ssid: Option<String>,
     /// Wifi client password
     pub wifi_password: Option<String>,
+    /// Wifi security type (wpa_psk or sae)
+    pub wifi_security: Option<wifi_station::SecurityType>,
     /// Wifi client mode
     pub wifi_enabled: bool,
     /// Vector containing wifi client DNS servers
@@ -67,6 +69,7 @@ impl Default for Config {
             min_space_to_continue_recording_mb: 1,
             wifi_ssid: None,
             wifi_password: None,
+            wifi_security: None,
             wifi_enabled: false,
             dns_servers: None,
             firewall_restrict_outbound: true,
@@ -95,6 +98,7 @@ impl Config {
             dns_servers: self.dns_servers.clone(),
             wifi_ssid: self.wifi_ssid.clone(),
             wifi_password: self.wifi_password.clone(),
+            security_type: self.wifi_security,
             wpa_supplicant_bin: wpa_bin.or_else(|| resolve_bin("wpa_supplicant")),
             hostapd_conf,
             ctrl_interface,
@@ -127,8 +131,15 @@ where
         Config::default()
     };
 
-    config.wifi_ssid = wifi_station::read_ssid_from_wpa_conf("/data/rayhunter/wpa_sta.conf");
-    // password lives only in wpa_sta.conf; never sent back through the config API
+    if let Some((ssid, security)) =
+        wifi_station::read_network_from_wpa_conf("/data/rayhunter/wpa_sta.conf")
+    {
+        config.wifi_ssid = Some(ssid);
+        config.wifi_security = Some(security);
+    } else {
+        config.wifi_ssid = None;
+        config.wifi_security = None;
+    }
     config.wifi_password = None;
 
     Ok(config)

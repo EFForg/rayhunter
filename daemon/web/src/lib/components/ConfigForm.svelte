@@ -95,10 +95,14 @@
         }
     }
 
-    function select_network(ssid: string) {
+    function select_network(network: WifiNetwork) {
         if (config) {
-            config.wifi_ssid = ssid;
+            config.wifi_ssid = network.ssid;
             config.wifi_password = '';
+            config.wifi_security =
+                network.security === 'WPA3' || network.security === 'WPA3 (transition)'
+                    ? 'sae'
+                    : 'wpa_psk';
             scanResults = [];
         }
     }
@@ -425,7 +429,7 @@
                                     <button
                                         type="button"
                                         class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex justify-between"
-                                        onclick={() => select_network(network.ssid)}
+                                        onclick={() => select_network(network)}
                                     >
                                         <span>{network.ssid}</span>
                                         <span class="text-gray-400"
@@ -433,6 +437,25 @@
                                         >
                                     </button>
                                 {/each}
+                            </div>
+                        {/if}
+
+                        {#if config.wifi_ssid}
+                            <div>
+                                <label
+                                    for="wifi_security"
+                                    class="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Security Type
+                                </label>
+                                <select
+                                    id="wifi_security"
+                                    bind:value={config.wifi_security}
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                >
+                                    <option value="wpa_psk">WPA2 (WPA-PSK)</option>
+                                    <option value="sae">WPA3 (SAE)</option>
+                                </select>
                             </div>
                         {/if}
 

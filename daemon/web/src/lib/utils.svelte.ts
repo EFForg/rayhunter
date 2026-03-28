@@ -30,6 +30,7 @@ export interface Config {
     min_space_to_continue_recording_mb: number;
     wifi_ssid: string | null;
     wifi_password: string | null;
+    wifi_security: 'wpa_psk' | 'sae' | null;
     wifi_enabled: boolean;
     dns_servers: string[] | null;
     firewall_restrict_outbound: boolean;

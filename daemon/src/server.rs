@@ -164,6 +164,7 @@ pub async fn set_config(
     let mut config_to_write = config.clone();
     config_to_write.wifi_ssid = None;
     config_to_write.wifi_password = None;
+    config_to_write.wifi_security = None;
 
     let config_str = toml::to_string_pretty(&config_to_write).map_err(|err| {
         (
