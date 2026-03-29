@@ -149,7 +149,8 @@ export async function get_daemon_time(): Promise<TimeResponse> {
 export interface GpsData {
     latitude: number;
     longitude: number;
-    timestamp: string;
+    /** Unix timestamp in seconds (0 = fixed/no real time). */
+    timestamp: number;
 }
 
 export async function get_gps(): Promise<GpsData | null> {

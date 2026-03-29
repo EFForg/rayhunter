@@ -233,6 +233,7 @@ async fn run_with_config(
             notification_service.new_handler(),
             config.min_space_to_start_recording_mb,
             config.min_space_to_continue_recording_mb,
+            config.gps_mode,
         );
         info!("Starting UI");
 
@@ -307,7 +308,7 @@ async fn run_with_config(
             (Some(lat), Some(lon)) => Some(gps::GpsData {
                 latitude: lat,
                 longitude: lon,
-                timestamp: "fixed".to_string(),
+                timestamp: 0,
             }),
             _ => None,
         }

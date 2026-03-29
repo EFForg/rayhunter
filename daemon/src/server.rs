@@ -523,7 +523,7 @@ mod tests {
     ) -> String {
         let entry_name = {
             let mut store = store_lock.write().await;
-            let (mut qmdl_file, _analysis_file) = store.new_entry().await.unwrap();
+            let (mut qmdl_file, _analysis_file) = store.new_entry(0).await.unwrap();
 
             if !test_data.is_empty() {
                 use tokio::io::AsyncWriteExt;

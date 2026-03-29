@@ -55,6 +55,12 @@
                     <p>Analysis by Rayhunter version {metadata.rayhunter.rayhunter_version}</p>
                     <p><b>Device system OS:</b> {metadata.rayhunter.system_os}</p>
                 </div>
+                {#if entry.gps_mode !== undefined}
+                    <div>
+                        <p class="text-lg underline">GPS Mode</p>
+                        <p>{entry.gps_mode === 0 ? 'Disabled' : entry.gps_mode === 1 ? 'Fixed coordinates' : 'API endpoint'}</p>
+                    </div>
+                {/if}
                 <div>
                     <p class="text-lg underline">Analyzers</p>
                     {#each metadata.analyzers as analyzer}

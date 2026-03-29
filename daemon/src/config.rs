@@ -168,49 +168,6 @@ fn resolve_bin(name: &str) -> Option<String> {
     None
 }
 
-impl Config {
-    pub fn wifi_config(&self) -> wifi_station::WifiConfig {
-        let (wpa_bin, hostapd_conf, ctrl_interface) = match self.device {
-            Device::Tmobile | Device::Wingtech => (
-                Some("/usr/sbin/wpa_supplicant".into()),
-                Some("/data/configs/hostapd.conf".into()),
-                None,
-            ),
-            Device::Uz801 => (
-                Some("/system/bin/wpa_supplicant".into()),
-                Some("/data/misc/wifi/hostapd.conf".into()),
-                Some("/data/misc/wifi/sockets".into()),
-            ),
-            _ => (None, None, None),
-        };
-        wifi_station::WifiConfig {
-            wifi_enabled: self.wifi_enabled,
-            dns_servers: self.dns_servers.clone(),
-            wifi_ssid: self.wifi_ssid.clone(),
-            wifi_password: self.wifi_password.clone(),
-            security_type: self.wifi_security,
-            wpa_supplicant_bin: wpa_bin.or_else(|| resolve_bin("wpa_supplicant")),
-            hostapd_conf,
-            ctrl_interface,
-            udhcpc_hook_path: Some("/data/rayhunter/udhcpc-hook.sh".into()),
-            dhcp_lease_path: Some("/data/rayhunter/dhcp_lease".into()),
-            wpa_conf_path: Some("/data/rayhunter/wpa_sta.conf".into()),
-            iw_bin: resolve_bin("iw"),
-            udhcpc_bin: resolve_bin("udhcpc"),
-            crash_log_dir: Some("/data/rayhunter/crash-logs".into()),
-            wakelock_name: Some("rayhunter".into()),
-        }
-    }
-}
-
-fn resolve_bin(name: &str) -> Option<String> {
-    let local = format!("/data/rayhunter/bin/{name}");
-    if std::path::Path::new(&local).exists() {
-        return Some(local);
-    }
-    None
-}
-
 pub async fn parse_config<P>(path: P) -> Result<Config, RayhunterError>
 where
     P: AsRef<std::path::Path>,
