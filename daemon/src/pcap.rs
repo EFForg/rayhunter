@@ -10,15 +10,12 @@ use axum::response::{IntoResponse, Response};
 use log::error;
 use rayhunter::diag::DataType;
 use rayhunter::gsmtap_parser;
-use rayhunter::pcap::{GsmtapPcapWriter, KismetGpsPoint};
+use rayhunter::pcap::{GpsPoint, GsmtapPcapWriter};
 use rayhunter::qmdl::QmdlReader;
 use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncWrite, duplex};
 use tokio_util::io::ReaderStream;
 
-// Streams a pcap file chunk-by-chunk to the client by reading the QMDL data
-// written so far. This is done by spawning a thread which streams chunks of
-// pcap data to a channel that's piped to the client.
 #[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/pcap/{name}",
@@ -72,42 +69,33 @@ pub async fn get_pcap(
     Ok((headers, body).into_response())
 }
 
-/// Loads GPS records for a recording entry.
-///
-/// - `gps_mode == 0`: returns empty vec (no GPS)
-/// - `gps_mode == 1`: returns a single synthetic record with `unix_ts = 0` (fixed coordinates)
-/// - `gps_mode == 2`: loads per-fix records from the GPS sidecar file
 pub(crate) async fn load_gps_records_for_entry(
     state: &Arc<ServerState>,
     entry_index: usize,
 ) -> Vec<GpsRecord> {
-    if state.config.gps_mode == 0 {
-        return vec![];
+    // Always try the per-session sidecar first — it reflects what was actually
+    // recorded regardless of what the current gps_mode config is.
+    {
+        let qmdl_store = state.qmdl_store_lock.read().await;
+        if let Ok(file) = qmdl_store.open_entry_gps(entry_index).await {
+            let records = load_gps_records(file).await;
+            if !records.is_empty() {
+                return records;
+            }
+        }
     }
+    // Sidecar missing or empty — fall back to current config.
     if state.config.gps_mode == 1 {
         let guard = state.gps_state.read().await;
         return guard
             .as_ref()
-            .map(|g| {
-                vec![GpsRecord {
-                    unix_ts: 0, // 0 signals fixed/synthetic to the Kismet option builder
-                    lat: g.latitude,
-                    lon: g.longitude,
-                }]
-            })
+            .map(|g| vec![GpsRecord { unix_ts: 0, lat: g.latitude, lon: g.longitude }])
             .unwrap_or_default();
     }
-    // gps_mode == 2: load from sidecar
-    let qmdl_store = state.qmdl_store_lock.read().await;
-    match qmdl_store.open_entry_gps(entry_index).await {
-        Ok(file) => load_gps_records(file).await,
-        Err(_) => vec![],
-    }
+    vec![]
 }
 
-/// Returns the GPS fix from `records` whose `unix_ts` is closest to `packet_unix_ts`.
-/// Returns `None` if `records` is empty.
-fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: u32) -> Option<KismetGpsPoint> {
+fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: u32) -> Option<GpsPoint> {
     if records.is_empty() {
         return None;
     }
@@ -117,19 +105,10 @@ fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: u32) -> Option<Kismet
     } else if idx >= records.len() {
         &records[records.len() - 1]
     } else {
-        let before = &records[idx - 1];
-        let after = &records[idx];
-        if packet_unix_ts - before.unix_ts <= after.unix_ts - packet_unix_ts {
-            before
-        } else {
-            after
-        }
+        let (before, after) = (&records[idx - 1], &records[idx]);
+        if packet_unix_ts - before.unix_ts <= after.unix_ts - packet_unix_ts { before } else { after }
     };
-    Some(KismetGpsPoint {
-        latitude: record.lat,
-        longitude: record.lon,
-        timestamp_unix_secs: record.unix_ts,
-    })
+    Some(GpsPoint { latitude: record.lat, longitude: record.lon, unix_ts: record.unix_ts })
 }
 
 pub async fn generate_pcap_data<R, W>(

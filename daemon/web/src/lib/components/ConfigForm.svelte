@@ -670,24 +670,16 @@
 
                 <div class="border-t pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">GPS Settings</h3>
-
                     <div>
-                        <label for="gps_mode" class="block text-sm font-medium text-gray-700 mb-1">
-                            GPS Mode
-                        </label>
-                        <select
-                            id="gps_mode"
-                            bind:value={config.gps_mode}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
-                        >
+                        <label for="gps_mode" class="block text-sm font-medium text-gray-700 mb-1">GPS Mode</label>
+                        <select id="gps_mode" bind:value={config.gps_mode} class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue">
                             <option value={0}>0 - Disabled</option>
                             <option value={1}>1 - Fixed coordinates</option>
                             <option value={2}>2 - API Endpoint</option>
                         </select>
                         <p class="text-xs text-gray-500 mt-1">
                             {#if config.gps_mode === 2}
-                                POST latitude, longitude, and timestamp to <code>/api/gps</code> from
-                                any device on the network.
+                                POST latitude, longitude, and timestamp to <code>/api/gps</code> from any device on the network.
                             {:else if config.gps_mode === 1}
                                 GPS coordinates are fixed to the values below.
                             {:else}
@@ -695,47 +687,19 @@
                             {/if}
                         </p>
                     </div>
-
                     {#if config.gps_mode === 1}
                         <div>
-                            <label
-                                for="gps_fixed_latitude"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Fixed Latitude
-                            </label>
-                            <input
-                                id="gps_fixed_latitude"
-                                type="number"
-                                min="-90"
-                                max="90"
-                                step="any"
-                                required
-                                bind:value={config.gps_fixed_latitude}
-                                placeholder="e.g. 37.7749"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
-                            />
+                            <label for="gps_fixed_latitude" class="block text-sm font-medium text-gray-700 mb-1">Fixed Latitude</label>
+                            <input id="gps_fixed_latitude" type="number" min="-90" max="90" step="any" required
+                                bind:value={config.gps_fixed_latitude} placeholder="e.g. 37.7749"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue" />
                             <p class="text-xs text-gray-500 mt-1">Decimal degrees, -90 to 90</p>
                         </div>
-
                         <div>
-                            <label
-                                for="gps_fixed_longitude"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Fixed Longitude
-                            </label>
-                            <input
-                                id="gps_fixed_longitude"
-                                type="number"
-                                min="-180"
-                                max="180"
-                                step="any"
-                                required
-                                bind:value={config.gps_fixed_longitude}
-                                placeholder="e.g. -122.4194"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
-                            />
+                            <label for="gps_fixed_longitude" class="block text-sm font-medium text-gray-700 mb-1">Fixed Longitude</label>
+                            <input id="gps_fixed_longitude" type="number" min="-180" max="180" step="any" required
+                                bind:value={config.gps_fixed_longitude} placeholder="e.g. -122.4194"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue" />
                             <p class="text-xs text-gray-500 mt-1">Decimal degrees, -180 to 180</p>
                         </div>
                     {/if}
