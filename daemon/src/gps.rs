@@ -14,10 +14,8 @@ pub struct GpsData {
     pub timestamp: String,
 }
 
-/// A single GPS fix recorded in the sidecar file alongside a QMDL recording.
 #[derive(Serialize, Deserialize)]
 pub struct GpsRecord {
-    /// Unix timestamp (seconds) of when this fix was received by the server.
     pub unix_ts: u32,
     pub lat: f64,
     pub lon: f64,
