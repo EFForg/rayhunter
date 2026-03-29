@@ -70,10 +70,12 @@ pub struct ManifestEntry {
     /// When the manifest was uploaded to a WebDAV server
     #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub upload_time: Option<DateTime<Local>>,
+    #[serde(default)]
+    pub gps_mode: Option<u8>,
 }
 
 impl ManifestEntry {
-    fn new() -> Self {
+    fn new(gps_mode: u8) -> Self {
         let now = rayhunter::clock::get_adjusted_now();
         let metadata = RuntimeMetadata::new();
         ManifestEntry {
@@ -86,6 +88,7 @@ impl ManifestEntry {
             arch: Some(metadata.arch),
             stop_reason: None,
             upload_time: None,
+            gps_mode: Some(gps_mode),
         }
     }
 
@@ -223,6 +226,7 @@ impl RecordingStore {
                 arch: None,
                 stop_reason: None,
                 upload_time: None,
+                gps_mode: None,
             });
         }
 
@@ -255,12 +259,12 @@ impl RecordingStore {
     // Closes the current entry (if needed), creates a new entry based on the
     // current time, and updates the manifest. Returns a tuple of the entry's
     // newly created QMDL file and analysis file.
-    pub async fn new_entry(&mut self) -> Result<(File, File), RecordingStoreError> {
+    pub async fn new_entry(&mut self, gps_mode: u8) -> Result<(File, File), RecordingStoreError> {
         // if we've already got an entry open, close it
         if self.current_entry.is_some() {
             self.close_current_entry().await?;
         }
-        let new_entry = ManifestEntry::new();
+        let new_entry = ManifestEntry::new(gps_mode);
         let qmdl_filepath = new_entry.get_qmdl_filepath(&self.path);
         let qmdl_file = File::create(&qmdl_filepath)
             .await
@@ -545,7 +549,7 @@ mod tests {
     async fn test_creating_updating_and_closing_entries() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(0).await.unwrap();
         let entry_index = store.current_entry.unwrap();
         assert_eq!(
             RecordingStore::read_manifest(dir.path()).await.unwrap(),
@@ -582,7 +586,7 @@ mod tests {
     async fn test_create_on_existing_store() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(0).await.unwrap();
         let entry_index = store.current_entry.unwrap();
         store
             .update_entry_qmdl_size(entry_index, 1000)
@@ -596,9 +600,9 @@ mod tests {
     async fn test_repeated_new_entries() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(0).await.unwrap();
         let entry_index = store.current_entry.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(0).await.unwrap();
         let new_entry_index = store.current_entry.unwrap();
         assert_ne!(entry_index, new_entry_index);
         assert_eq!(store.manifest.entries.len(), 2);
@@ -608,7 +612,7 @@ mod tests {
     async fn test_delete_all_entries() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(0).await.unwrap();
         assert!(store.current_entry.is_some());
 
         store.delete_all_entries().await.unwrap();

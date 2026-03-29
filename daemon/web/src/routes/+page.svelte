@@ -299,6 +299,7 @@
                     GPS Status
                 </span>
                 {#if gps_data}
+                    {@const gps_date_formatter = new Intl.DateTimeFormat(undefined, { timeStyle: 'long', dateStyle: 'short' })}
                     <table class="w-full text-sm">
                         <tbody>
                             <tr class="border-b border-gray-100">
@@ -311,7 +312,11 @@
                             </tr>
                             <tr>
                                 <td class="py-1 pr-4 text-gray-500 font-medium">GPS Timestamp</td>
-                                <td class="py-1 font-mono">{gps_data.timestamp}</td>
+                                <td class="py-1 font-mono">
+                                    {gps_data.timestamp > 0
+                                        ? gps_date_formatter.format(new Date(gps_data.timestamp * 1000))
+                                        : 'Fixed'}
+                                </td>
                             </tr>
                         </tbody>
                     </table>
