@@ -7,8 +7,6 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use crate::server::ServerState;
 
-/// Accepts both a JSON number and a numeric string (e.g. `"1234567890"` or `1234567890`).
-/// Truncates floats to seconds. Returns an error for non-numeric values.
 fn deserialize_unix_ts<'de, D>(deserializer: D) -> Result<i64, D::Error>
 where
     D: Deserializer<'de>,
@@ -68,16 +66,10 @@ pub async fn post_gps(
     *gps = Some(gps_data.clone());
     drop(gps);
 
-    // Append the GPS fix to the current recording's sidecar file.
     let qmdl_store = state.qmdl_store_lock.read().await;
     if let Some((entry_idx, _)) = qmdl_store.get_current_entry() {
         if let Ok(mut file) = qmdl_store.open_entry_gps_for_append(entry_idx).await {
-            let unix_ts = chrono::Utc::now().timestamp() as u32;
-            let record = GpsRecord {
-                unix_ts,
-                lat: gps_data.latitude,
-                lon: gps_data.longitude,
-            };
+            let record = GpsRecord { unix_ts: chrono::Utc::now().timestamp() as u32, lat: gps_data.latitude, lon: gps_data.longitude };
             if let Ok(json) = serde_json::to_string(&record) {
                 let _ = file.write_all(format!("{json}\n").as_bytes()).await;
             }
