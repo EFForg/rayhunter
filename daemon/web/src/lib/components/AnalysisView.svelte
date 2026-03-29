@@ -70,6 +70,12 @@
                         >
                     </p>
                 {/if}
+                {#if entry.gps_mode !== undefined}
+                    <p>
+                        <b>GPS Mode:</b>
+                        {entry.gps_mode === 0 ? 'Disabled' : entry.gps_mode === 1 ? 'Fixed coordinates' : 'API endpoint'}
+                    </p>
+                {/if}
             </div>
             {#if metadata && metadata.analyzers}
                 <div>

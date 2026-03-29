@@ -13,6 +13,7 @@ interface JsonManifestEntry {
     qmdl_size_bytes: number;
     stop_reason: string | null;
     upload_time: string | null;
+    gps_mode: number | null;
 }
 
 export class Manifest {
@@ -61,6 +62,7 @@ export class ManifestEntry {
     public analysis_report: AnalysisReport | string | undefined = $state(undefined);
     public stop_reason: string | undefined = $state(undefined);
     public upload_time: Date | undefined = $state(undefined);
+    public gps_mode: number | undefined = $state(undefined);
 
     constructor(json: JsonManifestEntry) {
         this.name = json.name;
@@ -74,6 +76,9 @@ export class ManifestEntry {
         }
         if (json.upload_time) {
             this.upload_time = new Date(json.upload_time);
+        }
+        if (json.gps_mode !== null) {
+            this.gps_mode = json.gps_mode;
         }
     }
 

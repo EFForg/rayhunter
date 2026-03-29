@@ -86,6 +86,11 @@
             {entry.stop_reason}
         </div>
     {/if}
+    {#if entry.gps_mode !== undefined}
+        <div class="text-sm text-gray-500">
+            GPS: {entry.gps_mode === 0 ? 'Disabled' : entry.gps_mode === 1 ? 'Fixed coordinates' : 'API endpoint'}
+        </div>
+    {/if}
     <div class="flex flex-row justify-between lg:justify-end gap-1 mt-2 overflow-x-auto">
         <DownloadLink url={entry.get_pcap_url()} text="pcap" full_button />
         <DownloadLink url={entry.get_qmdl_url()} text="qmdl" full_button />

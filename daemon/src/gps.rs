@@ -1,17 +1,37 @@
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use crate::server::ServerState;
 
+/// Accepts both a JSON number and a numeric string (e.g. `"1234567890"` or `1234567890`).
+/// Truncates floats to seconds. Returns an error for non-numeric values.
+fn deserialize_unix_ts<'de, D>(deserializer: D) -> Result<i64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+    use serde_json::Value;
+    match Value::deserialize(deserializer)? {
+        Value::Number(n) => n.as_i64()
+            .or_else(|| n.as_f64().map(|f| f as i64))
+            .ok_or_else(|| de::Error::custom("timestamp out of range")),
+        Value::String(s) => s.trim().parse::<f64>()
+            .map(|f| f as i64)
+            .map_err(|_| de::Error::custom("timestamp must be a numeric value")),
+        _ => Err(de::Error::custom("timestamp must be a number or numeric string")),
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GpsData {
     pub latitude: f64,
     pub longitude: f64,
-    pub timestamp: String,
+    #[serde(deserialize_with = "deserialize_unix_ts")]
+    pub timestamp: i64,
 }
 
 #[derive(Serialize, Deserialize)]
