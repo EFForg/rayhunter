@@ -1,16 +1,15 @@
 use std::sync::Arc;
-use std::{cmp, future, pin};
+use std::cmp;
 
 use axum::Json;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use futures::TryStreamExt;
 use log::{error, info};
 use rayhunter::analysis::analyzer::{AnalyzerConfig, EventType, Harness};
-use rayhunter::diag::{DataType, MessagesContainer};
-use rayhunter::qmdl::QmdlReader;
+use rayhunter::diag::{DiagParsingError, Message, MessagesContainer};
+use rayhunter::qmdl::QmdlMessageReader;
 use serde::Serialize;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
@@ -47,7 +46,7 @@ impl AnalysisWriter {
 
     // Runs the analysis harness on the given container, serializing the results
     // to the analysis file, returning the whether any warnings were detected
-    pub async fn analyze(
+    pub async fn analyze_container(
         &mut self,
         container: MessagesContainer,
     ) -> Result<EventType, std::io::Error> {
@@ -60,6 +59,17 @@ impl AnalysisWriter {
             max_type = cmp::max(max_type, row.get_max_event_type());
         }
         Ok(max_type)
+    }
+
+    pub async fn analyze_message(
+        &mut self,
+        maybe_qmdl_msg: Result<Message, DiagParsingError>,
+    ) -> Result<EventType, std::io::Error> {
+        let row = self.harness.analyze_qmdl_message(maybe_qmdl_msg);
+        if !row.is_empty() {
+            self.write(&row).await?;
+        }
+        Ok(row.get_max_event_type())
     }
 
     async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
@@ -135,7 +145,7 @@ async fn perform_analysis(
     analyzer_config: &AnalyzerConfig,
 ) -> Result<(), String> {
     info!("Opening QMDL and analysis file for {name}...");
-    let (analysis_file, qmdl_file) = {
+    let (analysis_file, mut qmdl_reader) = {
         let mut qmdl_store = qmdl_store_lock.write().await;
         let (entry_index, _) = qmdl_store
             .entry_for_name(name)
@@ -149,33 +159,25 @@ async fn perform_analysis(
             .await
             .map_err(|e| format!("{e:?}"))?
             .ok_or("QMDL file not found")?;
+        let qmdl_reader = QmdlMessageReader::new(qmdl_file)
+            .await
+            .map_err(|e| format!("{e:?}"))?;
 
-        (analysis_file, qmdl_file)
+        (analysis_file, qmdl_reader)
     };
 
     let mut analysis_writer = AnalysisWriter::new(analysis_file, analyzer_config)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let file_size = qmdl_file
-        .metadata()
-        .await
-        .expect("failed to get QMDL file metadata")
-        .len();
-    let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(file_size as usize));
-    let mut qmdl_stream = pin::pin!(
-        qmdl_reader
-            .as_stream()
-            .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
-    );
 
     info!("Starting analysis for {name}...");
-    while let Some(container) = qmdl_stream
-        .try_next()
+    while let Some(maybe_message) = qmdl_reader
+        .get_next_message()
         .await
-        .expect("failed getting QMDL container")
+        .expect("failed to get message")
     {
         let _ = analysis_writer
-            .analyze(container)
+            .analyze_message(maybe_message)
             .await
             .map_err(|e| format!("{e:?}"))?;
     }

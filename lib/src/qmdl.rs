@@ -3,109 +3,211 @@
 //! QmdlReader and QmdlWriter can read and write MessagesContainers to and from
 //! QMDL files.
 
-use crate::diag::{DataType, HdlcEncapsulatedMessage, MESSAGE_TERMINATOR, MessagesContainer};
+use std::io::ErrorKind;
+use std::pin::Pin;
+use std::task::Poll;
 
+use crate::diag::{DiagParsingError, MESSAGE_TERMINATOR, Message, MessagesContainer};
+
+use async_compression::tokio::bufread::GzipDecoder;
+use async_compression::tokio::write::GzipEncoder;
 use futures::TryStream;
-use log::error;
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncSeek, AsyncSeekExt, AsyncWrite, AsyncWriteExt, BufReader};
+
+const GZIP_MAGIC_NUMBER: u16 = 0x1f8b;
 
 pub struct QmdlWriter<T>
 where
     T: AsyncWrite + Unpin,
 {
-    writer: T,
-    pub total_written: usize,
+    writer: GzipEncoder<T>,
 }
 
 impl<T> QmdlWriter<T>
 where
-    T: AsyncWrite + Unpin,
+    T: AsyncWrite + AsyncSeek + Unpin,
 {
     pub fn new(writer: T) -> Self {
-        QmdlWriter::new_with_existing_size(writer, 0)
+        let gzip_writer = GzipEncoder::new(writer);
+        QmdlWriter {
+            writer: gzip_writer,
+        }
     }
 
-    pub fn new_with_existing_size(writer: T, existing_size: usize) -> Self {
-        QmdlWriter {
-            writer,
-            total_written: existing_size,
-        }
+    pub async fn size(&mut self) -> std::io::Result<usize> {
+        let size = self.writer.get_mut().stream_position().await?;
+        Ok(size as usize)
     }
 
     pub async fn write_container(&mut self, container: &MessagesContainer) -> std::io::Result<()> {
         for msg in &container.messages {
             self.writer.write_all(&msg.data).await?;
-            self.total_written += msg.data.len();
+            self.writer.flush().await?;
         }
+        Ok(())
+    }
+
+    pub async fn close(mut self) -> std::io::Result<()> {
+        self.writer.shutdown().await?;
         Ok(())
     }
 }
 
-pub struct QmdlReader<T>
+#[derive(Debug)]
+enum QmdlReaderSource<T> {
+    Compressed {
+        reader: GzipDecoder<BufReader<T>>,
+        eof: bool,
+    },
+    Uncompressed {
+        reader: T,
+    },
+}
+
+#[derive(Debug)]
+struct QmdlAsyncReader<T> {
+    source: QmdlReaderSource<T>,
+}
+
+impl<T> QmdlAsyncReader<T>
 where
     T: AsyncRead,
 {
-    reader: BufReader<T>,
-    bytes_read: usize,
-    max_bytes: Option<usize>,
+    pub fn new(reader: T, compressed: bool) -> Self {
+        let source = if compressed {
+            QmdlReaderSource::Compressed {
+                reader: GzipDecoder::new(BufReader::new(reader)),
+                eof: false,
+            }
+        } else {
+            QmdlReaderSource::Uncompressed { reader }
+        };
+        Self {
+            source,
+        }
+    }
 }
 
-impl<T> QmdlReader<T>
+impl<T> AsyncRead for QmdlAsyncReader<T>
 where
     T: AsyncRead + Unpin,
 {
-    pub fn new(reader: T, max_bytes: Option<usize>) -> Self {
-        QmdlReader {
-            reader: BufReader::new(reader),
-            bytes_read: 0,
-            max_bytes,
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        match &mut self.get_mut().source {
+            QmdlReaderSource::Compressed { reader, eof } => {
+                // if we already determined we've reached the Gzip EOF, don't read more
+                if *eof {
+                    return Poll::Ready(Ok(()));
+                }
+
+                match Pin::new(reader).poll_read(cx, buf) {
+                    // if we hit an unexpected EOF in a Gzip file, it shouldn't
+                    // be considered fatal, just a truncated file. mark that
+                    // we're done and return the result as usual
+                    Poll::Ready(Err(err)) if err.kind() == ErrorKind::UnexpectedEof => {
+                        *eof = true;
+                        Poll::Ready(Ok(()))
+                    }
+                    res => res,
+                }
+            }
+            QmdlReaderSource::Uncompressed { reader } => Pin::new(reader).poll_read(cx, buf),
         }
     }
+}
 
-    pub fn as_stream(
-        &mut self,
-    ) -> impl TryStream<Ok = MessagesContainer, Error = std::io::Error> + '_ {
-        futures::stream::try_unfold(self, |reader| async {
-            let maybe_container = reader.get_next_messages_container().await?;
-            match maybe_container {
-                Some(container) => Ok(Some((container, reader))),
+#[derive(Debug)]
+pub struct QmdlMessageReader<T>
+where
+    T: AsyncRead,
+{
+    buf_reader: BufReader<QmdlAsyncReader<T>>,
+}
+
+async fn is_gzip_stream<T>(mut reader: T) -> std::io::Result<bool>
+where
+    T: AsyncRead + AsyncSeek + Unpin
+{
+    let magic_number = reader.read_u16().await?;
+    reader.rewind().await?;
+    // this is safe because 0x1f8b.... doesn't overlap with any known
+    // diag::DataType values
+    Ok(magic_number == GZIP_MAGIC_NUMBER)
+}
+
+impl<T> QmdlMessageReader<T>
+where
+    T: AsyncRead + AsyncSeek + Unpin,
+{
+    pub async fn new(mut reader: T) -> std::io::Result<Self> {
+        let compressed = is_gzip_stream(&mut reader)
+            .await
+            .unwrap_or(false);
+        Ok(QmdlMessageReader {
+            buf_reader: BufReader::new(QmdlAsyncReader::new(
+                reader,
+                compressed,
+            )),
+        })
+    }
+
+    pub fn is_compressed(&self) -> bool {
+        matches!(self.buf_reader.get_ref().source, QmdlReaderSource::Compressed { .. })
+    }
+
+    pub fn into_qmdl_stream(self) -> impl TryStream<Ok = Vec<u8>, Error = std::io::Error> {
+        futures::stream::try_unfold(self, |mut reader| async {
+            let mut buf = vec![];
+            match reader                .buf_reader
+                .read_until(MESSAGE_TERMINATOR, &mut buf)
+                .await {
+                    Err(err) => Err(err),
+                    Ok(0) => Ok(None),
+                    Ok(_) => Ok(Some((buf, reader))),
+            }
+        })
+    }
+
+    pub fn into_message_stream(self) -> impl TryStream<Ok = Result<Message, DiagParsingError>, Error = std::io::Error> {
+        futures::stream::try_unfold(self, |mut reader| async {
+            match reader.get_next_message().await? {
+                Some(res) => Ok(Some((res, reader))),
                 None => Ok(None),
             }
         })
     }
 
-    pub async fn get_next_messages_container(
+    pub async fn get_next_message(
         &mut self,
-    ) -> Result<Option<MessagesContainer>, std::io::Error> {
-        if let Some(max_bytes) = self.max_bytes
-            && self.bytes_read >= max_bytes
+    ) -> Result<Option<Result<Message, DiagParsingError>>, std::io::Error> {
+        let mut buf = vec![];
+        if self
+            .buf_reader
+            .read_until(MESSAGE_TERMINATOR, &mut buf)
+            .await?
+            == 0
         {
-            if self.bytes_read > max_bytes {
-                error!(
-                    "warning: {} bytes read, but max_bytes was {}",
-                    self.bytes_read, max_bytes
-                );
-            }
             return Ok(None);
         }
 
-        let mut buf = Vec::new();
-        let bytes_read = self.reader.read_until(MESSAGE_TERMINATOR, &mut buf).await?;
-        self.bytes_read += bytes_read;
+        Ok(Some(Message::from_hdlc(&buf)))
+    }
+}
 
-        // Since QMDL is just a flat list of messages, we can't actually
-        // reproduce the container structure they came from in the original
-        // read. So we'll just pretend that all containers had exactly one
-        // message. As far as I know, the number of messages per container
-        // doesn't actually affect anything, so this should be fine.
-        Ok(Some(MessagesContainer {
-            data_type: DataType::UserSpace,
-            num_messages: 1,
-            messages: vec![HdlcEncapsulatedMessage {
-                len: bytes_read as u32,
-                data: buf,
-            }],
-        }))
+impl<T> AsyncRead for QmdlMessageReader<T>
+where
+    T: AsyncRead + Unpin,
+{
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.get_mut().buf_reader).poll_read(cx, buf)
     }
 }
 
@@ -113,132 +215,185 @@ where
 mod test {
     use std::io::Cursor;
 
-    use crate::diag::CRC_CCITT;
-    use crate::hdlc::hdlc_encapsulate;
+    use crate::diag::{DataType, HdlcEncapsulatedMessage, test::get_test_message};
 
     use super::*;
 
-    fn get_test_messages() -> Vec<HdlcEncapsulatedMessage> {
-        let messages: Vec<HdlcEncapsulatedMessage> = (10..20)
-            .map(|i| {
-                let data = hdlc_encapsulate(&vec![i as u8; i], &CRC_CCITT);
-                HdlcEncapsulatedMessage {
-                    len: data.len() as u32,
-                    data,
-                }
-            })
-            .collect();
-        messages
+    fn get_test_messages() -> (Vec<HdlcEncapsulatedMessage>, Vec<Message>) {
+        let mut hdlcs = Vec::new();
+        let mut messages = Vec::new();
+        for i in 10..20 {
+            let (hdlc, msg) = get_test_message(&[i]);
+            hdlcs.push(hdlc);
+            messages.push(msg);
+        }
+        (hdlcs, messages)
     }
 
     // returns a byte array consisting of concatenated HDLC encapsulated
     // test messages
     fn get_test_message_bytes() -> Vec<u8> {
-        get_test_messages()
+        let (hdlcs, _) = get_test_messages();
+        hdlcs
             .iter()
             .flat_map(|msg| msg.data.clone())
             .collect()
     }
 
     fn get_test_containers() -> Vec<MessagesContainer> {
-        let messages = get_test_messages();
-        let (messages1, messages2) = messages.split_at(5);
+        let (hdlcs, _) = get_test_messages();
+        let (hdlcs1, hdlcs2) = hdlcs.split_at(5);
         vec![
             MessagesContainer {
                 data_type: DataType::UserSpace,
-                num_messages: messages1.len() as u32,
-                messages: messages1.to_vec(),
+                num_messages: hdlcs1.len() as u32,
+                messages: hdlcs1.to_vec(),
             },
             MessagesContainer {
                 data_type: DataType::UserSpace,
-                num_messages: messages2.len() as u32,
-                messages: messages2.to_vec(),
+                num_messages: hdlcs2.len() as u32,
+                messages: hdlcs2.to_vec(),
             },
         ]
     }
 
     #[tokio::test]
-    async fn test_unbounded_qmdl_reader() {
+    async fn test_qmdl_reader() {
         let mut buf = Cursor::new(get_test_message_bytes());
-        let mut reader = QmdlReader::new(&mut buf, None);
-        let expected_messages = get_test_messages();
-        for message in expected_messages {
-            let expected_container = MessagesContainer {
-                data_type: DataType::UserSpace,
-                num_messages: 1,
-                messages: vec![message],
-            };
+        let mut reader = QmdlMessageReader::new(&mut buf).await.unwrap();
+        assert!(!reader.is_compressed());
+        let (_, expected_messages) = get_test_messages();
+        for msg in expected_messages {
             assert_eq!(
-                expected_container,
-                reader.get_next_messages_container().await.unwrap().unwrap()
+                Ok(msg),
+                reader.get_next_message().await.unwrap().unwrap()
             );
         }
     }
 
     #[tokio::test]
-    async fn test_bounded_qmdl_reader() {
-        let mut buf = Cursor::new(get_test_message_bytes());
+    async fn test_truncation() {
+        run_truncation_tests(false).await;
+    }
 
-        // bound the reader to the first two messages
-        let mut expected_messages = get_test_messages();
-        let limit = expected_messages[0].len + expected_messages[1].len;
+    #[tokio::test]
+    async fn test_compressed_truncation() {
+        run_truncation_tests(true).await;
+    }
 
-        let mut reader = QmdlReader::new(&mut buf, Some(limit as usize));
-        for message in expected_messages.drain(0..2) {
-            let expected_container = MessagesContainer {
-                data_type: DataType::UserSpace,
-                num_messages: 1,
-                messages: vec![message],
-            };
+    async fn run_truncation_tests(compressed: bool) {
+        let (hdlcs, expected_messages) = get_test_messages();
+        let (bytes, message_lengths): (Vec<u8>, Vec<usize>) = if compressed {
+            let mut buf = Vec::new();
+            let mut compressed_lengths = Vec::new();
+            let mut writer = GzipEncoder::new(&mut buf);
+            for hdlc in &hdlcs {
+                let before = writer.get_ref().len();
+                writer.write_all(&hdlc.data).await.unwrap();
+                writer.flush().await.unwrap();
+                let after = writer.get_ref().len();
+                compressed_lengths.push(after - before);
+            }
+            (buf, compressed_lengths)
+        } else {
+            (
+                get_test_message_bytes(),
+                hdlcs.iter()
+                    .map(|hdlc| hdlc.data.len())
+                    .collect()
+            )
+        };
+        for truncated_hdlc_i in 1..hdlcs.len() - 1 {
+            let whole_bytes: usize = message_lengths.iter().take(truncated_hdlc_i).sum();
+            for truncated_byte in 1..message_lengths[truncated_hdlc_i] {
+                let mut truncated_bytes = Cursor::new(&bytes[0..whole_bytes + truncated_byte]);
+                let mut reader = QmdlMessageReader::new(&mut truncated_bytes).await.unwrap();
+                for msg in expected_messages.iter().take(truncated_hdlc_i) {
+                    assert_eq!(
+                        Ok(msg),
+                        reader.get_next_message().await.unwrap().unwrap().as_ref()
+                    );
+                }
+                if compressed {
+                    // for a compressed reader, we have a couple possible
+                    // outcomes, depending on how far along the Gzip DEFLATE
+                    // block was before it was truncated:
+                    match reader.get_next_message().await.unwrap() {
+                        // if the block was truncated early enough, the
+                        // GzipDecoder will detect an unexpected EOF, and our
+                        // QmdlReader will indicate the stream of messages is
+                        // done
+                        None => {},
+                        // if it's further along, the expanded result will be an
+                        // invalid HDLC block. if that's the case, make sure the
+                        // QmdlReader indicates the stream of messages is over
+                        // with afterwards
+                        Some(Err(DiagParsingError::HdlcDecapsulationError(_, _))) => {
+                            assert!(matches!(reader.get_next_message().await, Ok(None)));
+                        },
+                        // if it's further along still, we may get a complete
+                        // Message, so make sure it matches the next expected
+                        // one. then, make sure we've hit the end of the message
+                        // stream
+                        Some(Ok(msg)) => {
+                            assert_eq!(&msg, &expected_messages[truncated_hdlc_i]);
+                            assert!(matches!(reader.get_next_message().await, Ok(None)));
+                        },
+                        // we should never be able to decapsulate the HDLC into
+                        // an invalid Diag message
+                        Some(Err(DiagParsingError::MessageParsingError(_, _)))
+                        => {
+                            panic!("unexpected MessageParsingError");
+                        }
+                    }
+                } else {
+                    // a truncated uncompressed reader should always end on an
+                    // HdlcDecapsulationError, and then return Ok(None) to
+                    // indicate the message stream is over
+                    assert!(matches!(
+                        reader.get_next_message().await,
+                        Ok(Some(Err(DiagParsingError::HdlcDecapsulationError(_, _))))
+                    ));
+                    assert!(matches!(reader.get_next_message().await, Ok(None)));
+                }
+            }
+        }
+    }
+
+    /// Writes the test containers to a QmdlWriter, optionally finishing the
+    /// gzip stream with a footer. Then, attempts to decompress the buffer with
+    /// a QmdlWriter, asserting that the containers match what's expected.
+    async fn run_compressed_reading_and_writing_tests(do_close: bool) {
+        let containers = get_test_containers();
+        let mut buf = Cursor::new(Vec::new());
+        {
+            let mut writer = QmdlWriter::new(&mut buf);
+            for container in &containers {
+                writer.write_container(&container).await.unwrap();
+            }
+            if do_close {
+                writer.close().await.unwrap();
+            }
+        }
+        buf.set_position(0);
+        let mut reader = QmdlMessageReader::new(buf).await.unwrap();
+        assert!(reader.is_compressed());
+        let (_, expected_messages) = get_test_messages();
+        for message in expected_messages {
             assert_eq!(
-                expected_container,
-                reader.get_next_messages_container().await.unwrap().unwrap()
+                Ok(message),
+                reader.get_next_message().await.unwrap().unwrap()
             );
         }
         assert!(matches!(
-            reader.get_next_messages_container().await,
+            reader.get_next_message().await,
             Ok(None)
         ));
     }
 
     #[tokio::test]
-    async fn test_qmdl_writer() {
-        let mut buf = Vec::new();
-        let mut writer = QmdlWriter::new(&mut buf);
-        let expected_containers = get_test_containers();
-        for container in &expected_containers {
-            writer.write_container(container).await.unwrap();
-        }
-        assert_eq!(writer.total_written, buf.len());
-        assert_eq!(buf, get_test_message_bytes());
-    }
-
-    #[tokio::test]
-    async fn test_writing_and_reading() {
-        let mut buf = Vec::new();
-        let mut writer = QmdlWriter::new(&mut buf);
-        let expected_containers = get_test_containers();
-        for container in &expected_containers {
-            writer.write_container(container).await.unwrap();
-        }
-
-        let limit = Some(buf.len());
-        let mut reader = QmdlReader::new(Cursor::new(&mut buf), limit);
-        let expected_messages = get_test_messages();
-        for message in expected_messages {
-            let expected_container = MessagesContainer {
-                data_type: DataType::UserSpace,
-                num_messages: 1,
-                messages: vec![message],
-            };
-            assert_eq!(
-                expected_container,
-                reader.get_next_messages_container().await.unwrap().unwrap()
-            );
-        }
-        assert!(matches!(
-            reader.get_next_messages_container().await,
-            Ok(None)
-        ));
+    async fn test_compressed_reading_and_writing() {
+        run_compressed_reading_and_writing_tests(true).await;
+        run_compressed_reading_and_writing_tests(false).await;
     }
 }

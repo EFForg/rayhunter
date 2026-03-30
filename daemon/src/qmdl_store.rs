@@ -55,16 +55,17 @@ impl FileKind {
     // List of all possible physical files on disk.
     pub const ALL: &'static [FileKind] = &[FileKind::Qmdl, FileKind::Analysis, FileKind::Gps];
 
-    pub fn get_filename(&self, entry_name: &str) -> String {
+    pub fn get_filename(&self, entry_name: &str, qmdl_compressed: bool) -> String {
         match self {
+            FileKind::Qmdl if qmdl_compressed => format!("{}.qmdl.gz", entry_name),
             FileKind::Qmdl => format!("{}.qmdl", entry_name),
             FileKind::Analysis => format!("{}.ndjson", entry_name),
             FileKind::Gps => format!("{}-gps.ndjson", entry_name),
         }
     }
 
-    pub fn get_filepath<P: AsRef<Path>>(&self, entry_name: &str, base_path: P) -> PathBuf {
-        base_path.as_ref().join(self.get_filename(entry_name))
+    pub fn get_filepath<P: AsRef<Path>>(&self, entry_name: &str, base_path: P, qmdl_compressed: bool) -> PathBuf {
+        base_path.as_ref().join(self.get_filename(entry_name, qmdl_compressed))
     }
 }
 
@@ -101,7 +102,6 @@ pub struct ManifestEntry {
     /// The system time when the last message was recorded to the file
     #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub last_message_time: Option<DateTime<Local>>,
-    /// The size of the QMDL file in bytes
     pub qmdl_size_bytes: usize,
     /// The rayhunter daemon version which generated the file
     pub rayhunter_version: Option<String>,
@@ -116,6 +116,8 @@ pub struct ManifestEntry {
     pub upload_time: Option<DateTime<Local>>,
     #[serde(default)]
     pub gps_mode: Option<GpsMode>,
+    #[serde(default)]
+    pub compressed: bool,
 }
 
 impl ManifestEntry {
@@ -133,11 +135,12 @@ impl ManifestEntry {
             stop_reason: None,
             upload_time: None,
             gps_mode: Some(gps_mode),
+            compressed: true,
         }
     }
 
     pub fn get_filepath<P: AsRef<Path>>(&self, file_kind: FileKind, path: P) -> PathBuf {
-        file_kind.get_filepath(&self.name, path)
+        file_kind.get_filepath(&self.name, path, self.compressed)
     }
 }
 
@@ -196,8 +199,9 @@ impl RecordingStore {
     }
 
     // Does a best-effort attempt to recover the manifest from a directory of
-    // QMDL files. We expect these files to be named like "<timestamp>.qmdl",
-    // and skip any files which don't match that pattern.
+    // QMDL files. We expect these files to be named like "<timestamp>.qmdl"
+    // or "<timestamp>.qmdl.gz", and skip any files which don't match that
+    // pattern.
     pub async fn recover<P>(path: P) -> Result<Self, RecordingStoreError>
     where
         P: AsRef<Path>,
@@ -217,11 +221,14 @@ impl RecordingStore {
                 continue;
             };
 
-            if !filename.ends_with(".qmdl") {
+            let (stem, compressed) = if filename.ends_with(".qmdl") {
+                (filename.trim_end_matches(".qmdl"), false)
+            } else if filename.ends_with(".qmdl.gz") {
+                (filename.trim_end_matches(".qmdl.gz"), true)
+            } else {
                 continue;
-            }
+            };
 
-            let stem = filename.trim_end_matches(".qmdl");
             let Ok(start_timestamp) = stem.parse::<i64>() else {
                 warn!("QMDL file has invalid name {os_filename:?}, skipping");
                 continue;
@@ -248,6 +255,7 @@ impl RecordingStore {
             info!("successfully recovered QMDL entry {os_filename:?}!");
             manifest_entries.push(ManifestEntry {
                 name: stem.to_string(),
+                compressed,
                 start_time: start_time.into(),
                 last_message_time: Some(last_message_time.into()),
                 qmdl_size_bytes: metadata.size() as usize,
@@ -322,7 +330,7 @@ impl RecordingStore {
         file_kind: FileKind,
     ) -> Result<Option<File>, RecordingStoreError> {
         let entry = &self.manifest.entries[entry_index];
-        let filepath = file_kind.get_filepath(&entry.name, &self.path);
+        let filepath = file_kind.get_filepath(&entry.name, &self.path, entry.compressed);
 
         match File::open(&filepath).await {
             Ok(file) => Ok(Some(file)),
@@ -496,7 +504,7 @@ impl RecordingStore {
         self.write_manifest().await?;
 
         for &file_kind in FileKind::ALL {
-            let filepath = file_kind.get_filepath(&entry_to_delete.name, &self.path);
+            let filepath = file_kind.get_filepath(&entry_to_delete.name, &self.path, entry_to_delete.compressed);
             remove_file_if_exists(&filepath)
                 .await
                 .map_err(RecordingStoreError::DeleteFileError)?;
@@ -513,7 +521,7 @@ impl RecordingStore {
 
         'entries: for entry in &self.manifest.entries {
             for &file_kind in FileKind::ALL {
-                let filepath = file_kind.get_filepath(&entry.name, &self.path);
+                let filepath = file_kind.get_filepath(&entry.name, &self.path, entry.compressed);
                 if let Err(e) = remove_file_if_exists(&filepath).await {
                     log::warn!("failed to remove {filepath:?}: {e:?}");
                     // Some error happened with deleting this entry, abort and go to the next one.
@@ -583,7 +591,10 @@ mod tests {
             .entry_for_name(&store.manifest.entries[entry_index].name)
             .unwrap();
         assert!(entry.last_message_time.is_some());
-        assert_eq!(store.manifest.entries[entry_index].qmdl_size_bytes, 1000);
+        assert_eq!(
+            store.manifest.entries[entry_index].qmdl_size_bytes,
+            1000
+        );
         assert_eq!(
             RecordingStore::read_manifest(dir.path()).await.unwrap(),
             store.manifest

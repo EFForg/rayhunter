@@ -102,7 +102,8 @@ async fn try_upload_entry(
     shutdown_token: CancellationToken,
 ) -> Option<()> {
     let read_lock = store.read().await;
-    let entry_idx = read_lock.entry_for_name(&entry_name)?.0;
+    let (entry_idx, entry) = read_lock.entry_for_name(&entry_name)?;
+    let compressed = entry.compressed;
     let file = read_lock.open_file(entry_idx, file_kind).await;
     drop(read_lock);
 
@@ -118,7 +119,7 @@ async fn try_upload_entry(
         }
     };
 
-    let file_name = file_kind.get_filename(&entry_name);
+    let file_name = file_kind.get_filename(&entry_name, compressed);
 
     let res = select! {
         _ = shutdown_token.cancelled() => {
@@ -331,7 +332,7 @@ mod tests {
         let recorded = captured.lock().await;
         assert_eq!(recorded.len(), 3);
         let paths: Vec<&str> = recorded.iter().map(|r| r.path.as_str()).collect();
-        let qmdl_path = format!("dav/{}.qmdl", entry_name);
+        let qmdl_path = format!("dav/{}.qmdl.gz", entry_name);
         let ndjson_path = format!("dav/{}.ndjson", entry_name);
         let gps_path = format!("dav/{}-gps.ndjson", entry_name);
         assert!(paths.contains(&qmdl_path.as_str()));
