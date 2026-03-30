@@ -113,12 +113,8 @@ async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
 async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
-    let file_size = qmdl_file
-        .metadata()
-        .await
-        .expect("failed to get QMDL file metadata")
-        .len();
-    let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(file_size as usize));
+    let compressed = qmdl_path.ends_with(".gz");
+    let qmdl_reader = QmdlReader::new(qmdl_file, compressed, None);
     let mut qmdl_stream = pin!(
         qmdl_reader
             .as_stream()
@@ -141,8 +137,9 @@ async fn pcapify(qmdl_path: &PathBuf) {
     let qmdl_file = &mut File::open(&qmdl_path)
         .await
         .expect("failed to open qmdl file");
+    let compressed = qmdl_path.ends_with(".gz");
     let qmdl_file_size = qmdl_file.metadata().await.unwrap().len();
-    let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_file_size as usize));
+    let mut qmdl_reader = QmdlReader::new(qmdl_file, compressed, Some(qmdl_file_size as usize));
     let mut pcap_path = qmdl_path.clone();
     pcap_path.set_extension("pcapng");
     let pcap_file = &mut File::create(&pcap_path)
@@ -197,9 +194,7 @@ async fn main() {
         let name_str = name.to_str().unwrap();
         let path = entry.path();
         let path_str = path.to_str().unwrap();
-        // instead of relying on the QMDL extension, can we check if a file is
-        // QMDL by inspecting the contents?
-        if name_str.ends_with(".qmdl") {
+        if name_str.ends_with(".qmdl") || name_str.ends_with(".qmdl.gz") {
             info!("**** Beginning analysis of {name_str}");
             analyze_qmdl(path_str, args.show_skipped).await;
             if args.pcapify {

@@ -12,9 +12,10 @@ use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, Local};
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
+use tokio::io::copy;
 use std::sync::Arc;
 use tokio::fs::write;
-use tokio::io::{AsyncReadExt, copy, duplex};
+use tokio::io::duplex;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::Sender;
 use tokio_util::compat::FuturesAsyncWriteCompatExt;
@@ -64,7 +65,7 @@ pub async fn get_qmdl(
         StatusCode::NOT_FOUND,
         format!("couldn't find qmdl file with name {qmdl_idx}"),
     ))?;
-    let qmdl_file = qmdl_store
+    let qmdl_reader = qmdl_store
         .open_entry_qmdl(entry_index)
         .await
         .map_err(|err| {
@@ -73,14 +74,12 @@ pub async fn get_qmdl(
                 format!("error opening QMDL file: {err}"),
             )
         })?;
-    let limited_qmdl_file = qmdl_file.take(entry.qmdl_size_bytes as u64);
-    let qmdl_stream = ReaderStream::new(limited_qmdl_file);
 
     let headers = [
         (CONTENT_TYPE, "application/octet-stream"),
-        (CONTENT_LENGTH, &entry.qmdl_size_bytes.to_string()),
+        (CONTENT_LENGTH, &entry.uncompressed_qmdl_size_bytes.to_string()),
     ];
-    let body = Body::from_stream(qmdl_stream);
+    let body = Body::from_stream(qmdl_reader.as_stream());
     Ok((headers, body).into_response())
 }
 
@@ -308,21 +307,21 @@ pub async fn get_zip(
     Path(entry_name): Path<String>,
 ) -> Result<Response, (StatusCode, String)> {
     let qmdl_idx = entry_name.trim_end_matches(".zip").to_owned();
-    let (entry_index, qmdl_size_bytes) = {
+    let (entry_index, compressed) = {
         let qmdl_store = state.qmdl_store_lock.read().await;
         let (entry_index, entry) = qmdl_store.entry_for_name(&qmdl_idx).ok_or((
             StatusCode::NOT_FOUND,
             format!("couldn't find entry with name {qmdl_idx}"),
         ))?;
 
-        if entry.qmdl_size_bytes == 0 {
+        if entry.uncompressed_qmdl_size_bytes == 0 {
             return Err((
                 StatusCode::SERVICE_UNAVAILABLE,
                 "QMDL file is empty, try again in a bit!".to_string(),
             ));
         }
 
-        (entry_index, entry.qmdl_size_bytes)
+        (entry_index, entry.compressed)
     };
 
     let qmdl_store_lock = state.qmdl_store_lock.clone();
@@ -335,22 +334,18 @@ pub async fn get_zip(
 
             // Add QMDL file
             {
+                let extension = if compressed { "qmdl.gz" } else { "qmdl" };
                 let entry =
-                    ZipEntryBuilder::new(format!("{qmdl_idx}.qmdl").into(), Compression::Stored);
+                    ZipEntryBuilder::new(format!("{qmdl_idx}.{extension}").into(), Compression::Stored);
                 // FuturesAsyncWriteCompatExt::compat_write because async-zip's entrystream does
                 // not impl tokio's AsyncWrite, but only future's AsyncWrite. This can be removed
                 // once https://github.com/Majored/rs-async-zip/pull/160 is released.
                 let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
-
-                let mut qmdl_file = {
-                    let qmdl_store = qmdl_store_lock.read().await;
-                    qmdl_store
-                        .open_entry_qmdl(entry_index)
-                        .await?
-                        .take(qmdl_size_bytes as u64)
-                };
-
-                copy(&mut qmdl_file, &mut entry_writer).await?;
+                let qmdl_store = qmdl_store_lock.read().await;
+                let mut qmdl_reader = qmdl_store
+                    .open_entry_qmdl(entry_index)
+                    .await?;
+                copy(&mut qmdl_reader, &mut entry_writer).await?;
                 entry_writer.into_inner().close().await?;
             }
 
@@ -360,17 +355,12 @@ pub async fn get_zip(
                     ZipEntryBuilder::new(format!("{qmdl_idx}.pcapng").into(), Compression::Stored);
                 let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
 
-                let qmdl_file_for_pcap = {
-                    let qmdl_store = qmdl_store_lock.read().await;
-                    qmdl_store
-                        .open_entry_qmdl(entry_index)
-                        .await?
-                        .take(qmdl_size_bytes as u64)
-                };
+                let qmdl_store = qmdl_store_lock.read().await;
+                let qmdl_reader = qmdl_store
+                    .open_entry_qmdl(entry_index)
+                    .await?;
 
-                if let Err(e) =
-                    generate_pcap_data(&mut entry_writer, qmdl_file_for_pcap, qmdl_size_bytes).await
-                {
+                if let Err(e) = generate_pcap_data(&mut entry_writer, qmdl_reader).await {
                     // if we fail to generate the PCAP file, we should still continue and give the
                     // user the QMDL.
                     error!("Failed to generate PCAP: {e:?}");
