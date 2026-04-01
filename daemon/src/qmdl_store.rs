@@ -58,7 +58,9 @@ pub struct ManifestEntry {
     /// The system time when the last message was recorded to the file
     #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub last_message_time: Option<DateTime<Local>>,
-    /// The size of the QMDL file in bytes
+    /// The size of the uncompressed QMDL data in bytes. Previously this was
+    /// called `qmdl_size_bytes`, so alias it for backwards compatibility.
+    #[serde(alias = "qmdl_size_bytes")]
     pub uncompressed_qmdl_size_bytes: usize,
     /// The rayhunter daemon version which generated the file
     pub rayhunter_version: Option<String>,
