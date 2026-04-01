@@ -8,4 +8,8 @@ ignore = [
     # user-input. we could get rid of this warning by disabling the image
     # dependency in adb-client.
     "RUSTSEC-2024-0436",
+    # rustls-webpki 0.102.8 CRL Distribution Point flaw (via rustls-rustcrypto).
+    # Only affects dev builds, production firmware uses ring-tls.
+    # TODO: Remove once rustls-rustcrypto releases a version newer than 0.0.2-alpha.
+    "RUSTSEC-2026-0049",
 ]
