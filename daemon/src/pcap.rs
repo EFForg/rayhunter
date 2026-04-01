@@ -68,10 +68,7 @@ pub async fn get_pcap(
     Ok((headers, body).into_response())
 }
 
-pub async fn generate_pcap_data<R, W>(
-    writer: W,
-    mut reader: QmdlReader<R>,
-) -> Result<(), Error>
+pub async fn generate_pcap_data<R, W>(writer: W, mut reader: QmdlReader<R>) -> Result<(), Error>
 where
     W: AsyncWrite + Unpin + Send,
     R: AsyncRead + Unpin,

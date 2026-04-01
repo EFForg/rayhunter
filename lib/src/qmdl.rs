@@ -9,11 +9,11 @@ use std::task::Poll;
 
 use crate::diag::{DataType, HdlcEncapsulatedMessage, MESSAGE_TERMINATOR, MessagesContainer};
 
+use async_compression::tokio::bufread::GzipDecoder;
+use async_compression::tokio::write::GzipEncoder;
 use futures::TryStream;
 use log::error;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
-use async_compression::tokio::bufread::GzipDecoder;
-use async_compression::tokio::write::GzipEncoder;
 
 pub struct QmdlWriter<T>
 where
@@ -79,7 +79,7 @@ struct QmdlAsyncReader<T> {
 
 impl<T> QmdlAsyncReader<T>
 where
-    T: AsyncRead
+    T: AsyncRead,
 {
     pub fn new(reader: T, compressed: bool, max_uncompressed_bytes: Option<usize>) -> Self {
         let source = if compressed {
@@ -137,13 +137,11 @@ where
                     Poll::Ready(Err(err)) if err.kind() == ErrorKind::UnexpectedEof => {
                         *eof = true;
                         Poll::Ready(Ok(()))
-                    },
+                    }
                     res => res,
                 }
-            },
-            QmdlReaderSource::Uncompressed { reader } => {
-                Pin::new(reader).poll_read(cx, buf)
-            },
+            }
+            QmdlReaderSource::Uncompressed { reader } => Pin::new(reader).poll_read(cx, buf),
         };
 
         // if we read more bytes than is allowed, cap the buffer by
@@ -175,14 +173,14 @@ where
     pub fn new(reader: T, compressed: bool, max_uncompressed_bytes: Option<usize>) -> Self {
         QmdlReader {
             buf_reader: BufReader::new(QmdlAsyncReader::new(
-                reader, compressed, max_uncompressed_bytes
+                reader,
+                compressed,
+                max_uncompressed_bytes,
             )),
         }
     }
 
-    pub fn as_stream(
-        self,
-    ) -> impl TryStream<Ok = MessagesContainer, Error = std::io::Error> {
+    pub fn as_stream(self) -> impl TryStream<Ok = MessagesContainer, Error = std::io::Error> {
         futures::stream::try_unfold(self, |mut reader| async {
             let maybe_container = reader.get_next_messages_container().await?;
             match maybe_container {
@@ -196,7 +194,12 @@ where
         &mut self,
     ) -> Result<Option<MessagesContainer>, std::io::Error> {
         let mut buf = Vec::new();
-        if self.buf_reader.read_until(MESSAGE_TERMINATOR, &mut buf).await? == 0 {
+        if self
+            .buf_reader
+            .read_until(MESSAGE_TERMINATOR, &mut buf)
+            .await?
+            == 0
+        {
             return Ok(None);
         }
 
@@ -218,7 +221,7 @@ where
 
 impl<T> AsyncRead for QmdlReader<T>
 where
-    T: AsyncRead + Unpin
+    T: AsyncRead + Unpin,
 {
     fn poll_read(
         self: Pin<&mut Self>,

@@ -280,12 +280,19 @@ impl RecordingStore {
     }
 
     // Returns the corresponding QMDL file for a given entry
-    pub async fn open_entry_qmdl(&self, entry_index: usize) -> Result<QmdlReader<File>, RecordingStoreError> {
+    pub async fn open_entry_qmdl(
+        &self,
+        entry_index: usize,
+    ) -> Result<QmdlReader<File>, RecordingStoreError> {
         let entry = &self.manifest.entries[entry_index];
         let file = File::open(entry.get_qmdl_filepath(&self.path))
             .await
             .map_err(RecordingStoreError::ReadFileError)?;
-        Ok(QmdlReader::new(file, entry.compressed, Some(entry.uncompressed_qmdl_size_bytes)))
+        Ok(QmdlReader::new(
+            file,
+            entry.compressed,
+            Some(entry.uncompressed_qmdl_size_bytes),
+        ))
     }
 
     // Returns the corresponding QMDL file for a given entry
@@ -506,7 +513,10 @@ mod tests {
             .entry_for_name(&store.manifest.entries[entry_index].name)
             .unwrap();
         assert!(entry.last_message_time.is_some());
-        assert_eq!(store.manifest.entries[entry_index].uncompressed_qmdl_size_bytes, 1000);
+        assert_eq!(
+            store.manifest.entries[entry_index].uncompressed_qmdl_size_bytes,
+            1000
+        );
         assert_eq!(
             RecordingStore::read_manifest(dir.path()).await.unwrap(),
             store.manifest

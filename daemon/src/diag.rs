@@ -243,7 +243,7 @@ impl DiagTask {
         } = state
         {
             match (qmdl_writer.close().await, analysis_writer.close().await) {
-                (Ok(()), Ok(())) => {},
+                (Ok(()), Ok(())) => {}
                 (qmdl_result, analysis_result) => {
                     if let Err(err) = qmdl_result {
                         error!("failed to close QmdlWriter: {:?}", err);

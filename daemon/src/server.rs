@@ -12,9 +12,9 @@ use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, Local};
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
-use tokio::io::copy;
 use std::sync::Arc;
 use tokio::fs::write;
+use tokio::io::copy;
 use tokio::io::duplex;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::Sender;
@@ -77,7 +77,10 @@ pub async fn get_qmdl(
 
     let headers = [
         (CONTENT_TYPE, "application/octet-stream"),
-        (CONTENT_LENGTH, &entry.uncompressed_qmdl_size_bytes.to_string()),
+        (
+            CONTENT_LENGTH,
+            &entry.uncompressed_qmdl_size_bytes.to_string(),
+        ),
     ];
     let body = Body::from_stream(qmdl_reader.as_stream());
     Ok((headers, body).into_response())
@@ -335,16 +338,16 @@ pub async fn get_zip(
             // Add QMDL file
             {
                 let extension = if compressed { "qmdl.gz" } else { "qmdl" };
-                let entry =
-                    ZipEntryBuilder::new(format!("{qmdl_idx}.{extension}").into(), Compression::Stored);
+                let entry = ZipEntryBuilder::new(
+                    format!("{qmdl_idx}.{extension}").into(),
+                    Compression::Stored,
+                );
                 // FuturesAsyncWriteCompatExt::compat_write because async-zip's entrystream does
                 // not impl tokio's AsyncWrite, but only future's AsyncWrite. This can be removed
                 // once https://github.com/Majored/rs-async-zip/pull/160 is released.
                 let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
                 let qmdl_store = qmdl_store_lock.read().await;
-                let mut qmdl_reader = qmdl_store
-                    .open_entry_qmdl(entry_index)
-                    .await?;
+                let mut qmdl_reader = qmdl_store.open_entry_qmdl(entry_index).await?;
                 copy(&mut qmdl_reader, &mut entry_writer).await?;
                 entry_writer.into_inner().close().await?;
             }
@@ -356,9 +359,7 @@ pub async fn get_zip(
                 let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
 
                 let qmdl_store = qmdl_store_lock.read().await;
-                let qmdl_reader = qmdl_store
-                    .open_entry_qmdl(entry_index)
-                    .await?;
+                let qmdl_reader = qmdl_store.open_entry_qmdl(entry_index).await?;
 
                 if let Err(e) = generate_pcap_data(&mut entry_writer, qmdl_reader).await {
                     // if we fail to generate the PCAP file, we should still continue and give the
@@ -520,7 +521,10 @@ mod tests {
 
         assert_eq!(
             filenames,
-            vec![format!("{entry_name}.qmdl.gz"), format!("{entry_name}.pcapng"),]
+            vec![
+                format!("{entry_name}.qmdl.gz"),
+                format!("{entry_name}.pcapng"),
+            ]
         );
     }
 }
