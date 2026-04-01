@@ -63,7 +63,7 @@ pub struct DiagTask {
 
 enum DiagState {
     Recording {
-        qmdl_writer: QmdlWriter<File>,
+        qmdl_writer: Box<QmdlWriter<File>>,
         analysis_writer: Box<AnalysisWriter>,
     },
     Stopped,
@@ -152,7 +152,7 @@ impl DiagTask {
             }
         };
         self.stop_current_recording().await;
-        let qmdl_writer = QmdlWriter::new(qmdl_gz_file);
+        let qmdl_writer = Box::new(QmdlWriter::new(qmdl_gz_file));
         let analysis_writer = match AnalysisWriter::new(analysis_file, &self.analyzer_config).await
         {
             Ok(writer) => Box::new(writer),
