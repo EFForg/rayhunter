@@ -520,7 +520,7 @@ mod tests {
 
         assert_eq!(
             filenames,
-            vec![format!("{entry_name}.qmdl"), format!("{entry_name}.pcapng"),]
+            vec![format!("{entry_name}.qmdl.gz"), format!("{entry_name}.pcapng"),]
         );
     }
 }
