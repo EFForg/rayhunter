@@ -388,8 +388,13 @@ pub async fn get_zip(
                         .take(qmdl_size_bytes as u64)
                 };
 
-                if let Err(e) =
-                    generate_pcap_data(&mut entry_writer, qmdl_file_for_pcap, qmdl_size_bytes, gps_records).await
+                if let Err(e) = generate_pcap_data(
+                    &mut entry_writer,
+                    qmdl_file_for_pcap,
+                    qmdl_size_bytes,
+                    gps_records,
+                )
+                .await
                 {
                     // if we fail to generate the PCAP file, we should still continue and give the
                     // user the QMDL.

@@ -75,6 +75,7 @@ pub(crate) async fn load_gps_records_for_entry(
 ) -> Vec<GpsRecord> {
     // Always try the per-session sidecar first — it reflects what was actually
     // recorded regardless of what the current gps_mode config is.
+    let entry_gps_mode;
     {
         let qmdl_store = state.qmdl_store_lock.read().await;
         if let Ok(file) = qmdl_store.open_entry_gps(entry_index).await {
@@ -83,19 +84,33 @@ pub(crate) async fn load_gps_records_for_entry(
                 return records;
             }
         }
+        // Capture the entry's recorded GPS mode before releasing the lock.
+        entry_gps_mode = qmdl_store
+            .manifest
+            .entries
+            .get(entry_index)
+            .and_then(|e| e.gps_mode);
     }
-    // Sidecar missing or empty — fall back to current config.
-    if state.config.gps_mode == 1 {
-        let guard = state.gps_state.read().await;
-        return guard
-            .as_ref()
-            .map(|g| vec![GpsRecord { unix_ts: 0, lat: g.latitude, lon: g.longitude }])
-            .unwrap_or_default();
+    // Sidecar missing or empty — fall back using the entry's own recorded GPS mode,
+    // not the current config, so old fixed-mode sessions still get coordinates even
+    // if the mode has since been changed. Use the configured fixed coords directly
+    // rather than gps_state, which can be overwritten by API calls or be None.
+    if entry_gps_mode == Some(1) {
+        if let (Some(lat), Some(lon)) = (
+            state.config.gps_fixed_latitude,
+            state.config.gps_fixed_longitude,
+        ) {
+            return vec![GpsRecord {
+                unix_ts: 0,
+                lat,
+                lon,
+            }];
+        }
     }
     vec![]
 }
 
-fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: u32) -> Option<GpsPoint> {
+fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: i64) -> Option<GpsPoint> {
     if records.is_empty() {
         return None;
     }
@@ -106,9 +121,79 @@ fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: u32) -> Option<GpsPoi
         &records[records.len() - 1]
     } else {
         let (before, after) = (&records[idx - 1], &records[idx]);
-        if packet_unix_ts - before.unix_ts <= after.unix_ts - packet_unix_ts { before } else { after }
+        let before_delta = packet_unix_ts - before.unix_ts;
+        let after_delta = after.unix_ts - packet_unix_ts;
+        if before_delta <= after_delta {
+            before
+        } else {
+            after
+        }
     };
-    Some(GpsPoint { latitude: record.lat, longitude: record.lon, unix_ts: record.unix_ts })
+    Some(GpsPoint {
+        latitude: record.lat,
+        longitude: record.lon,
+        unix_ts: record.unix_ts,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rec(unix_ts: i64, lat: f64, lon: f64) -> GpsRecord {
+        GpsRecord { unix_ts, lat, lon }
+    }
+
+    #[test]
+    fn test_empty_returns_none() {
+        assert!(find_nearest_gps(&[], 100).is_none());
+    }
+
+    #[test]
+    fn test_single_record_always_returned() {
+        let records = vec![rec(100, 1.0, 2.0)];
+        assert_eq!(find_nearest_gps(&records, 0).unwrap().unix_ts, 100);
+        assert_eq!(find_nearest_gps(&records, 200).unwrap().unix_ts, 100);
+    }
+
+    #[test]
+    fn test_before_all_records_returns_first() {
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 50).unwrap().unix_ts, 100);
+    }
+
+    #[test]
+    fn test_after_all_records_returns_last() {
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 300).unwrap().unix_ts, 200);
+    }
+
+    #[test]
+    fn test_exact_match() {
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0), rec(300, 5.0, 6.0)];
+        assert_eq!(find_nearest_gps(&records, 200).unwrap().unix_ts, 200);
+    }
+
+    #[test]
+    fn test_closer_to_before() {
+        // packet at 130: delta to before(100)=30, delta to after(200)=70 → picks before
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 130).unwrap().unix_ts, 100);
+    }
+
+    #[test]
+    fn test_closer_to_after() {
+        // packet at 170: delta to before(100)=70, delta to after(200)=30 → picks after
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 170).unwrap().unix_ts, 200);
+    }
+
+    #[test]
+    fn test_equidistant_prefers_before() {
+        // packet at 150: delta to before(100)=50, delta to after(200)=50 → tie, picks before
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 150).unwrap().unix_ts, 100);
+    }
 }
 
 pub async fn generate_pcap_data<R, W>(
@@ -135,8 +220,7 @@ where
                 Ok(msg) => {
                     let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
                     if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
-                        let packet_unix_ts =
-                            timestamp.to_datetime().timestamp().max(0) as u32;
+                        let packet_unix_ts = timestamp.to_datetime().timestamp();
                         let gps = find_nearest_gps(&gps_records, packet_unix_ts);
                         pcap_writer
                             .write_gsmtap_message(gsmtap_msg, timestamp, gps.as_ref())

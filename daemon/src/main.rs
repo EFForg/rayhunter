@@ -22,10 +22,10 @@ use crate::battery::run_battery_notification_worker;
 use crate::config::{parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
+use crate::gps::{get_gps, post_gps};
 use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-use crate::gps::{get_gps, post_gps};
 use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_wifi_status, get_zip,
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
@@ -221,6 +221,10 @@ async fn run_with_config(
 
     if !config.debug_mode {
         info!("Starting Diag Thread");
+        let gps_fixed_coords = match (config.gps_fixed_latitude, config.gps_fixed_longitude) {
+            (Some(lat), Some(lon)) => Some((lat, lon)),
+            _ => None,
+        };
         run_diag_read_thread(
             &task_tracker,
             config.device.clone(),
@@ -234,6 +238,7 @@ async fn run_with_config(
             config.min_space_to_start_recording_mb,
             config.min_space_to_continue_recording_mb,
             config.gps_mode,
+            gps_fixed_coords,
         );
         info!("Starting UI");
 
