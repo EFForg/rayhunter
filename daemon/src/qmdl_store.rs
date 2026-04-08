@@ -2,6 +2,7 @@ use std::io::{self, ErrorKind};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
+use crate::config::GpsMode;
 use chrono::{DateTime, Local, TimeDelta};
 use log::{info, warn};
 use rayhunter::util::RuntimeMetadata;
@@ -71,11 +72,11 @@ pub struct ManifestEntry {
     #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub upload_time: Option<DateTime<Local>>,
     #[serde(default)]
-    pub gps_mode: Option<u8>,
+    pub gps_mode: Option<GpsMode>,
 }
 
 impl ManifestEntry {
-    fn new(gps_mode: u8) -> Self {
+    fn new(gps_mode: GpsMode) -> Self {
         let now = rayhunter::clock::get_adjusted_now();
         let metadata = RuntimeMetadata::new();
         ManifestEntry {
@@ -257,7 +258,10 @@ impl RecordingStore {
     // Closes the current entry (if needed), creates a new entry based on the
     // current time, and updates the manifest. Returns a tuple of the entry's
     // newly created QMDL file and analysis file.
-    pub async fn new_entry(&mut self, gps_mode: u8) -> Result<(File, File), RecordingStoreError> {
+    pub async fn new_entry(
+        &mut self,
+        gps_mode: GpsMode,
+    ) -> Result<(File, File), RecordingStoreError> {
         // if we've already got an entry open, close it
         if self.current_entry.is_some() {
             self.close_current_entry().await?;

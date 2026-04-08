@@ -3,7 +3,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::config;
+use crate::config::{self, UiLevel};
 use crate::display::{DisplayState, tplink_framebuffer, tplink_onebit};
 
 use std::fs;
@@ -15,7 +15,7 @@ pub fn update_ui(
     ui_update_rx: Receiver<DisplayState>,
 ) {
     let display_level = config.ui_level;
-    if display_level == 0 {
+    if display_level == UiLevel::Invisible {
         info!("Invisible mode, not spawning UI.");
     }
 

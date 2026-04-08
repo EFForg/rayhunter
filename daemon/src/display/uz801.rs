@@ -9,7 +9,7 @@ use tokio_util::task::TaskTracker;
 
 use std::time::Duration;
 
-use crate::config;
+use crate::config::{self, UiLevel};
 use crate::display::DisplayState;
 
 macro_rules! led {
@@ -31,7 +31,7 @@ pub fn update_ui(
     mut ui_update_rx: mpsc::Receiver<DisplayState>,
 ) {
     let mut invisible: bool = false;
-    if config.ui_level == 0 {
+    if config.ui_level == UiLevel::Invisible {
         info!("Invisible mode, not spawning UI.");
         invisible = true;
     }
