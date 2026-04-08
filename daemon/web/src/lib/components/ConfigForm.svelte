@@ -166,11 +166,11 @@
                         bind:value={config.ui_level}
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                     >
-                        <option value={0}>0 - Invisible mode</option>
-                        <option value={1}>1 - Subtle mode (colored line)</option>
-                        <option value={2}>2 - Demo mode (orca gif)</option>
-                        <option value={3}>3 - EFF logo</option>
-                        <option value={4}>4 - High visibility (full screen color)</option>
+                        <option value={0}>Invisible mode</option>
+                        <option value={1}>Subtle mode (colored line)</option>
+                        <option value={2}>Demo mode (orca gif)</option>
+                        <option value={3}>EFF logo</option>
+                        <option value={4}>High visibility (full screen color)</option>
                     </select>
                     <p class="text-xs text-gray-500 mt-1">
                         Note: Rayhunter draws over the device's native UI, so some flickering is
@@ -190,9 +190,8 @@
                         bind:value={config.key_input_mode}
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                     >
-                        <option value={0}>0 - Disable button control</option>
-                        <option value={1}>1 - Double-tap power button to start new recording</option
-                        >
+                        <option value={0}>Disable button control</option>
+                        <option value={1}>Double-tap power button to start new recording</option>
                     </select>
                 </div>
 
@@ -673,9 +672,9 @@
                     <div>
                         <label for="gps_mode" class="block text-sm font-medium text-gray-700 mb-1">GPS Mode</label>
                         <select id="gps_mode" bind:value={config.gps_mode} class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue">
-                            <option value={0}>0 - Disabled</option>
-                            <option value={1}>1 - Fixed coordinates</option>
-                            <option value={2}>2 - API Endpoint</option>
+                            <option value={0}>Disabled</option>
+                            <option value={1}>Fixed coordinates</option>
+                            <option value={2}>API endpoint</option>
                         </select>
                         <p class="text-xs text-gray-500 mt-1">
                             {#if config.gps_mode === 2}

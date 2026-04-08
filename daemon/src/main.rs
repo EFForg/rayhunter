@@ -19,7 +19,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::battery::run_battery_notification_worker;
-use crate::config::{parse_args, parse_config};
+use crate::config::{GpsMode, parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
 use crate::gps::{get_gps, post_gps};
@@ -308,7 +308,7 @@ async fn run_with_config(
             webdav_config.into(),
         );
     }
-    let initial_gps = if config.gps_mode == 1 {
+    let initial_gps = if config.gps_mode == GpsMode::Fixed {
         match (config.gps_fixed_latitude, config.gps_fixed_longitude) {
             (Some(lat), Some(lon)) => Some(gps::GpsData {
                 latitude: lat,

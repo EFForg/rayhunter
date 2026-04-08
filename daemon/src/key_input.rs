@@ -6,7 +6,7 @@ use tokio::sync::mpsc::Sender;
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::config;
+use crate::config::{self, KeyInputMode};
 use crate::diag::DiagDeviceCtrlMessage;
 
 #[derive(Debug)]
@@ -23,7 +23,7 @@ pub fn run_key_input_thread(
     diag_tx: Sender<DiagDeviceCtrlMessage>,
     cancellation_token: CancellationToken,
 ) {
-    if config.key_input_mode == 0 {
+    if config.key_input_mode == KeyInputMode::Disabled {
         return;
     }
 

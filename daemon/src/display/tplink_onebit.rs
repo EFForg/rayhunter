@@ -1,7 +1,7 @@
 /// Display module for the TP-Link M7350 oled one-bit display.
 ///
 /// https://github.com/m0veax/tplink_m7350/tree/main/oled
-use crate::config;
+use crate::config::{self, UiLevel};
 use crate::display::DisplayState;
 
 use log::{error, info};
@@ -115,7 +115,7 @@ pub fn update_ui(
     mut ui_update_rx: Receiver<DisplayState>,
 ) {
     let display_level = config.ui_level;
-    if display_level == 0 {
+    if display_level == UiLevel::Invisible {
         info!("Invisible mode, not spawning UI.");
     }
 
@@ -140,7 +140,7 @@ pub fn update_ui(
 
             // we write the status every second because it may have been overwritten through menu
             // navigation.
-            if display_level != 0
+            if display_level != UiLevel::Invisible
                 && let Err(e) = tokio::fs::write(OLED_PATH, pixels).await
             {
                 error!("failed to write to display: {e}");

@@ -1,10 +1,40 @@
 use log::warn;
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use rayhunter::Device;
 use rayhunter::analysis::analyzer::AnalyzerConfig;
 
 use crate::error::RayhunterError;
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
+pub enum GpsMode {
+    Disabled = 0,
+    Fixed = 1,
+    Api = 2,
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
+pub enum UiLevel {
+    Invisible = 0,
+    Subtle = 1,
+    Demo = 2,
+    EffLogo = 3,
+    HighVisibility = 4,
+    TransFlag = 128,
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
+pub enum KeyInputMode {
+    Disabled = 0,
+    DoubleTapPower = 1,
+}
 use crate::notifications::NotificationType;
 
 /// The structure of a valid rayhunter configuration
@@ -21,11 +51,11 @@ pub struct Config {
     /// Internal device name
     pub device: Device,
     /// UI level
-    pub ui_level: u8,
+    pub ui_level: UiLevel,
     /// Colorblind mode
     pub colorblind_mode: bool,
     /// Key input mode
-    pub key_input_mode: u8,
+    pub key_input_mode: KeyInputMode,
     /// ntfy.sh URL
     pub ntfy_url: Option<String>,
     /// Vector containing the types of enabled notifications
@@ -36,8 +66,8 @@ pub struct Config {
     pub min_space_to_start_recording_mb: u64,
     /// Minimum disk space required to continue a recording
     pub min_space_to_continue_recording_mb: u64,
-    /// GPS mode: 0=Disabled, 1=Fixed coordinates, 2=API endpoint
-    pub gps_mode: u8,
+    /// GPS mode
+    pub gps_mode: GpsMode,
     /// Fixed latitude used when gps_mode=1
     pub gps_fixed_latitude: Option<f64>,
     /// Fixed longitude used when gps_mode=1
@@ -102,15 +132,15 @@ impl Default for Config {
             port: 8080,
             debug_mode: false,
             device: Device::Orbic,
-            ui_level: 1,
+            ui_level: UiLevel::Subtle,
             colorblind_mode: false,
-            key_input_mode: 0,
+            key_input_mode: KeyInputMode::Disabled,
             analyzers: AnalyzerConfig::default(),
             ntfy_url: None,
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
             min_space_to_start_recording_mb: 1,
             min_space_to_continue_recording_mb: 1,
-            gps_mode: 0,
+            gps_mode: GpsMode::Disabled,
             gps_fixed_latitude: None,
             gps_fixed_longitude: None,
             wifi_ssid: None,
