@@ -105,9 +105,7 @@ impl ManifestEntry {
     }
 
     pub fn get_gps_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        let mut filepath = path.as_ref().join(&self.name);
-        filepath.set_extension("gps.ndjson");
-        filepath
+        path.as_ref().join(format!("{}-gps.ndjson", self.name))
     }
 }
 
