@@ -30,7 +30,7 @@ pub struct GpsPoint {
     pub latitude: f64,
     pub longitude: f64,
     /// Unix timestamp of the GPS fix. 0 means fixed/synthetic (no real GPS time).
-    pub unix_ts: u32,
+    pub unix_ts: i64,
 }
 
 pub struct GsmtapPcapWriter<T>
@@ -149,9 +149,15 @@ where
         let mut options = vec![];
         if let Some(p) = gps {
             let comment = if p.unix_ts == 0 {
-                format!("GPS fixed lat={:.7} lon={:.7}", p.latitude, p.longitude)
+                format!(
+                    r#"{{"latitude":{:.7},"longitude":{:.7}}}"#,
+                    p.latitude, p.longitude
+                )
             } else {
-                format!("GPS lat={:.7} lon={:.7} ts={}", p.latitude, p.longitude, p.unix_ts)
+                format!(
+                    r#"{{"latitude":{:.7},"longitude":{:.7},"timestamp":{}}}"#,
+                    p.latitude, p.longitude, p.unix_ts
+                )
             };
             options.push(EnhancedPacketOption::Comment(Cow::Owned(comment)));
         }

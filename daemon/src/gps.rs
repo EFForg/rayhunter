@@ -1,6 +1,8 @@
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
+use chrono::{DateTime, FixedOffset, Utc};
+use log::error;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -14,13 +16,18 @@ where
     use serde::de;
     use serde_json::Value;
     match Value::deserialize(deserializer)? {
-        Value::Number(n) => n.as_i64()
+        Value::Number(n) => n
+            .as_i64()
             .or_else(|| n.as_f64().map(|f| f as i64))
             .ok_or_else(|| de::Error::custom("timestamp out of range")),
-        Value::String(s) => s.trim().parse::<f64>()
+        Value::String(s) => s
+            .trim()
+            .parse::<f64>()
             .map(|f| f as i64)
             .map_err(|_| de::Error::custom("timestamp must be a numeric value")),
-        _ => Err(de::Error::custom("timestamp must be a number or numeric string")),
+        _ => Err(de::Error::custom(
+            "timestamp must be a number or numeric string",
+        )),
     }
 }
 
@@ -32,14 +39,30 @@ pub struct GpsData {
     pub timestamp: i64,
 }
 
+impl GpsData {
+    pub fn to_datetime(&self) -> DateTime<FixedOffset> {
+        DateTime::from_timestamp(self.timestamp, 0)
+            .unwrap_or_default()
+            .fixed_offset()
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct GpsRecord {
-    pub unix_ts: u32,
+    pub unix_ts: i64,
     pub lat: f64,
     pub lon: f64,
 }
 
-/// Reads all GPS records from a sidecar file, skipping malformed lines.
+impl GpsRecord {
+    pub fn to_datetime(&self) -> DateTime<FixedOffset> {
+        DateTime::from_timestamp(self.unix_ts, 0)
+            .unwrap_or_default()
+            .fixed_offset()
+    }
+}
+
+/// Reads all GPS records from a sidecar NDJSON file, skipping malformed lines.
 pub async fn load_gps_records(file: tokio::fs::File) -> Vec<GpsRecord> {
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
@@ -69,9 +92,18 @@ pub async fn post_gps(
     let qmdl_store = state.qmdl_store_lock.read().await;
     if let Some((entry_idx, _)) = qmdl_store.get_current_entry() {
         if let Ok(mut file) = qmdl_store.open_entry_gps_for_append(entry_idx).await {
-            let record = GpsRecord { unix_ts: chrono::Utc::now().timestamp() as u32, lat: gps_data.latitude, lon: gps_data.longitude };
-            if let Ok(json) = serde_json::to_string(&record) {
-                let _ = file.write_all(format!("{json}\n").as_bytes()).await;
+            let record = GpsRecord {
+                unix_ts: Utc::now().timestamp(),
+                lat: gps_data.latitude,
+                lon: gps_data.longitude,
+            };
+            match serde_json::to_string(&record) {
+                Ok(json) => {
+                    if let Err(e) = file.write_all(format!("{json}\n").as_bytes()).await {
+                        error!("failed to write GPS record to sidecar: {e}");
+                    }
+                }
+                Err(e) => error!("failed to serialize GPS record: {e}"),
             }
         }
     }
@@ -79,9 +111,7 @@ pub async fn post_gps(
     Ok(StatusCode::OK)
 }
 
-pub async fn get_gps(
-    State(state): State<Arc<ServerState>>,
-) -> Result<Json<GpsData>, StatusCode> {
+pub async fn get_gps(State(state): State<Arc<ServerState>>) -> Result<Json<GpsData>, StatusCode> {
     let gps = state.gps_state.read().await;
     match gps.as_ref() {
         Some(data) => Ok(Json(data.clone())),
