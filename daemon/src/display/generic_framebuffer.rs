@@ -3,7 +3,7 @@ use image::{AnimationDecoder, DynamicImage, codecs::gif::GifDecoder, imageops::F
 use std::io::Cursor;
 use std::time::Duration;
 
-use crate::config;
+use crate::config::{self, UiLevel};
 use crate::display::DisplayState;
 use rayhunter::analysis::analyzer::EventType;
 
@@ -176,7 +176,7 @@ pub fn update_ui(
 ) {
     static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/images/");
     let display_level = config.ui_level;
-    if display_level == 0 {
+    if display_level == UiLevel::Invisible {
         info!("Invisible mode, not spawning UI.");
         return;
     }
@@ -187,14 +187,14 @@ pub fn update_ui(
     task_tracker.spawn(async move {
         // this feels wrong, is there a more rusty way to do this?
         let mut img: Option<&[u8]> = None;
-        if display_level == 2 {
+        if display_level == UiLevel::Demo {
             img = Some(
                 IMAGE_DIR
                     .get_file("orca.gif")
                     .expect("failed to read orca.gif")
                     .contents(),
             );
-        } else if display_level == 3 {
+        } else if display_level == UiLevel::EffLogo {
             img = Some(
                 IMAGE_DIR
                     .get_file("eff.png")
@@ -217,20 +217,19 @@ pub fn update_ui(
 
             let mut status_bar_height = 2;
             match display_level {
-                2 => fb.draw_gif(img.unwrap()).await,
-                3 => fb.draw_img(img.unwrap()).await,
-                4 => {
+                UiLevel::Demo => fb.draw_gif(img.unwrap()).await,
+                UiLevel::EffLogo => fb.draw_img(img.unwrap()).await,
+                UiLevel::HighVisibility => {
                     status_bar_height = fb.dimensions().height;
                 }
-                128 => {
+                UiLevel::TransFlag => {
                     fb.draw_line(Color::Cyan, 128).await;
                     fb.draw_line(Color::Pink, 102).await;
                     fb.draw_line(Color::White, 76).await;
                     fb.draw_line(Color::Pink, 50).await;
                     fb.draw_line(Color::Cyan, 25).await;
                 }
-                // this branch is for ui_level 1, which is also the default if an
-                // unknown value is used
+                // UiLevel::Subtle (1) and anything else: just the status bar line
                 _ => {}
             };
             let (color, pattern) = display_style;

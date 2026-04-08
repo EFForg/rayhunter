@@ -7,6 +7,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
+use crate::config::GpsMode;
 use crate::server::ServerState;
 
 fn deserialize_unix_ts<'de, D>(deserializer: D) -> Result<i64, D::Error>
@@ -79,7 +80,7 @@ pub async fn post_gps(
     State(state): State<Arc<ServerState>>,
     Json(gps_data): Json<GpsData>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    if state.config.gps_mode != 2 {
+    if state.config.gps_mode != GpsMode::Api {
         return Err((
             StatusCode::FORBIDDEN,
             "GPS API endpoint is disabled. Set gps_mode to 2 in configuration.".to_string(),
