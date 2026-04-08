@@ -203,10 +203,7 @@ mod tests {
     }
 
     async fn setup_test_server() -> (Arc<Mutex<Vec<String>>>, String) {
-        #[cfg(feature = "rustcrypto-tls")]
-        {
-            let _ = rustls_rustcrypto::provider().install_default();
-        }
+        crate::crypto_provider::install_default();
 
         let received_messages = Arc::new(Mutex::new(Vec::new()));
         let test_state = TestServerState {

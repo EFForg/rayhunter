@@ -1,6 +1,7 @@
 mod analysis;
 mod battery;
 mod config;
+mod crypto_provider;
 mod diag;
 mod display;
 mod error;
@@ -173,12 +174,7 @@ fn run_shutdown_thread(
 async fn main() -> Result<(), RayhunterError> {
     rayhunter::init_logging(log::LevelFilter::Info);
 
-    #[cfg(feature = "rustcrypto-tls")]
-    {
-        rustls_rustcrypto::provider()
-            .install_default()
-            .expect("Couldn't install rustcrypto provider");
-    }
+    crate::crypto_provider::install_default();
 
     let args = parse_args();
 

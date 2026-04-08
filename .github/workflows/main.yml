@@ -314,27 +314,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: armv7-unknown-linux-musleabihf
-      - uses: Swatinem/rust-cache@v2
-      - name: Install ARM cross-compilation toolchain
-        run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf
-      - name: Build rayhunter-daemon (armv7)
+      - name: Build frontend
         run: |
           pushd daemon/web
           npm install
           npm run build
           popd
-          # Run with -p so that cargo will select the minimum feature set for this package.
-          #
-          # Otherwise, it will consider the union of all requested features
-          # from all packages in the workspace. For example, if installer
-          # requires tokio with "full" feature, it will be included no matter
-          # what the feature selection in rayhunter-daemon is.
-          #
-          # https://github.com/rust-lang/cargo/issues/4463
-          CC_armv7_unknown_linux_musleabihf=arm-linux-gnueabihf-gcc cargo build-daemon-firmware
+      - name: Build rayhunter-daemon (armv7)
+        # Cross-compile inside messense/rust-musl-cross, which bundles an
+        # arm-linux-musleabihf cross gcc that aws-lc-sys needs.
+        run: |
+          mkdir -p "$HOME/.cargo-musl-cross"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -v "$PWD":/work \
+            -v "$HOME/.cargo-musl-cross":/cargo-home \
+            -e CARGO_HOME=/cargo-home \
+            -w /work \
+            messense/rust-musl-cross:armv7-musleabihf \
+            cargo build-daemon-firmware
       - uses: actions/upload-artifact@v4
         with:
           name: rayhunter-daemon
