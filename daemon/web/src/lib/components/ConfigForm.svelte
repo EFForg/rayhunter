@@ -20,7 +20,6 @@ import Modal from './Modal.svelte';
     let messageType = $state<'success' | 'error' | null>(null);
     let testMessage = $state('');
     let testMessageType = $state<'success' | 'error' | null>(null);
-    let showConfig = $state(false);
     let severityOverrides = $state<string[]>([]);
     let severityUploadMessage = $state('');
     let severityOverridesLoaded = $state(false);
@@ -92,7 +91,7 @@ import Modal from './Modal.svelte';
     }
 
     $effect(() => {
-        if (showConfig && config?.ui_level === 5 && !severityOverridesLoaded) {
+        if (shown && config?.ui_level === 5 && !severityOverridesLoaded) {
             load_severity_overrides();
             severityOverridesLoaded = true;
         } else if (config?.ui_level !== 5 && severityOverridesLoaded) {
