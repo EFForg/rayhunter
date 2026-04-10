@@ -25,7 +25,9 @@ use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::config::Config;
 use crate::diag::DiagDeviceCtrlMessage;
 use crate::display::DisplayState;
-use crate::display::orbic_severity_images::{self, OrbicSeverityImageSlot};
+use crate::display::generic_framebuffer::{
+    self, SeverityIndicatorImageSlot, SeverityIndicatorImageStatus,
+};
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
 
@@ -43,21 +45,21 @@ pub struct ServerState {
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
     get,
-    path = "/api/orbic/severity-indicator-images",
+    path = "/api/severity-indicator-images",
     tag = "Configuration",
     responses(
-        (status = StatusCode::OK, description = "Success", body = orbic_severity_images::OrbicSeverityIndicatorImageStatus)
+        (status = StatusCode::OK, description = "Success", body = SeverityIndicatorImageStatus)
     ),
     summary = "Get the current severity image status.",
     description = "Show which severity images have custom uploads."
 ))]
-pub async fn get_orbic_severity_indicator_images() -> Json<orbic_severity_images::OrbicSeverityIndicatorImageStatus> {
-    Json(orbic_severity_images::get_status().await)
+pub async fn get_severity_indicator_images() -> Json<SeverityIndicatorImageStatus> {
+    Json(generic_framebuffer::get_severity_indicator_image_status().await)
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
     post,
-    path = "/api/orbic/severity-indicator-images/{slot}",
+    path = "/api/severity-indicator-images/{slot}",
     tag = "Configuration",
     params(
         ("slot" = String, Path, description = "default, low, medium, or high")
@@ -69,13 +71,13 @@ pub async fn get_orbic_severity_indicator_images() -> Json<orbic_severity_images
         (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Failed to write image file")
     ),
     summary = "Upload a custom image for a severity level.",
-    description = "Upload a custom image for one Orbic severity level."
+    description = "Upload a custom image for one severity level."
 ))]
-pub async fn upload_orbic_severity_indicator_image(
+pub async fn upload_severity_indicator_image(
     Path(slot): Path<String>,
     body: Body,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    let slot = OrbicSeverityImageSlot::from_str(&slot).ok_or((
+    let slot = SeverityIndicatorImageSlot::from_str(&slot).ok_or((
         StatusCode::BAD_REQUEST,
         "slot must be one of: default, low, medium, high".to_string(),
     ))?;
@@ -94,12 +96,12 @@ pub async fn upload_orbic_severity_indicator_image(
         ));
     }
 
-    orbic_severity_images::store_override(slot, &bytes)
+    generic_framebuffer::store_severity_indicator_image(slot, bytes.as_ref())
         .await
         .map_err(|err| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to store PNG override: {err}"),
+                format!("failed to store PNG image: {err}"),
             )
         })?;
 
@@ -111,7 +113,7 @@ pub async fn upload_orbic_severity_indicator_image(
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
     post,
-    path = "/api/orbic/severity-indicator-images/{slot}/reset",
+    path = "/api/severity-indicator-images/{slot}/reset",
     tag = "Configuration",
     params(
         ("slot" = String, Path, description = "default, low, medium, or high")
@@ -124,20 +126,20 @@ pub async fn upload_orbic_severity_indicator_image(
     summary = "Restore the default image for a severity level.",
     description = "Remove the custom image and use the default again."
 ))]
-pub async fn reset_orbic_severity_indicator_image(
+pub async fn reset_severity_indicator_image(
     Path(slot): Path<String>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
-    let slot = OrbicSeverityImageSlot::from_str(&slot).ok_or((
+    let slot = SeverityIndicatorImageSlot::from_str(&slot).ok_or((
         StatusCode::BAD_REQUEST,
         "slot must be one of: default, low, medium, high".to_string(),
     ))?;
 
-    orbic_severity_images::remove_override(slot)
+    generic_framebuffer::remove_severity_indicator_image(slot)
         .await
         .map_err(|err| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to remove PNG override: {err}"),
+                format!("failed to remove PNG image: {err}"),
             )
         })?;
 

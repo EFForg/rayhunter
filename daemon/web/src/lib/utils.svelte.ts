@@ -115,17 +115,17 @@ export async function get_daemon_time(): Promise<TimeResponse> {
 }
 
 
-export interface OrbicSeverityIndicatorImageStatus {
+export interface SeverityIndicatorImageStatus {
     runtime_dir: string;
     slots_with_overrides: string[];
 }
 
-export async function get_orbic_severity_indicator_images(): Promise<OrbicSeverityIndicatorImageStatus> {
-    return JSON.parse(await req('GET', '/api/orbic/severity-indicator-images'));
+export async function get_severity_indicator_images(): Promise<SeverityIndicatorImageStatus> {
+    return JSON.parse(await req('GET', '/api/severity-indicator-images'));
 }
 
-export async function upload_orbic_severity_indicator_image(slot: string, file: File): Promise<void> {
-    const response = await fetch(`/api/orbic/severity-indicator-images/${slot}`, {
+export async function upload_severity_indicator_image(slot: string, file: File): Promise<void> {
+    const response = await fetch(`/api/severity-indicator-images/${slot}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'image/png',
@@ -140,8 +140,8 @@ export async function upload_orbic_severity_indicator_image(slot: string, file: 
 }
 
 
-export async function reset_orbic_severity_indicator_image(slot: string): Promise<void> {
-    const response = await fetch(`/api/orbic/severity-indicator-images/${slot}/reset`, {
+export async function reset_severity_indicator_image(slot: string): Promise<void> {
+    const response = await fetch(`/api/severity-indicator-images/${slot}/reset`, {
         method: 'POST',
     });
 

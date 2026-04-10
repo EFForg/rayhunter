@@ -1,12 +1,12 @@
 <script lang="ts">
     import {
         get_config,
-        get_orbic_severity_indicator_images,
-        reset_orbic_severity_indicator_image,
+        get_severity_indicator_images,
+        reset_severity_indicator_image,
         set_config,
         test_notification,
         type Config,
-        upload_orbic_severity_indicator_image
+        upload_severity_indicator_image
     } from '../utils.svelte';
 
     let config = $state<Config | null>(null);
@@ -83,7 +83,7 @@
 
     async function load_severity_overrides() {
         try {
-            const status = await get_orbic_severity_indicator_images();
+            const status = await get_severity_indicator_images();
             severityOverrides = status.slots_with_overrides;
         } catch (_error) {
             severityOverrides = [];
@@ -109,7 +109,7 @@
             severityUploadInProgress = slot;
             severityUploadMessage = '';
             severityUploadMessageType = null;
-            await upload_orbic_severity_indicator_image(slot, file);
+            await upload_severity_indicator_image(slot, file);
             await load_severity_overrides();
             severityUploadMessage =
                 'PNG uploaded successfully.';
@@ -129,12 +129,12 @@
             severityResetInProgress = slot;
             severityUploadMessage = '';
             severityUploadMessageType = null;
-            await reset_orbic_severity_indicator_image(slot);
+            await reset_severity_indicator_image(slot);
             await load_severity_overrides();
-            severityUploadMessage = 'Reverted to bundled default PNG.';
+            severityUploadMessage = 'Reverted to bundled default image.';
             severityUploadMessageType = 'success';
         } catch (error) {
-            severityUploadMessage = `Failed to reset PNG override: ${error}`;
+            severityUploadMessage = `Failed to reset image: ${error}`;
             severityUploadMessageType = 'error';
         } finally {
             severityResetInProgress = null;
@@ -190,7 +190,7 @@
                         <option value={2}>2 - Demo mode (orca gif)</option>
                         <option value={3}>3 - EFF logo</option>
                         <option value={4}>4 - High visibility (full screen color)</option>
-                        <option value={5}>5 - Severity indicator images (Orbic only)</option>
+                        <option value={5}>5 - Severity indicator images</option>
                     </select>
                     <p class="text-xs text-gray-500 mt-1">
                         Note: Rayhunter draws over the device's native UI, so some flickering is
@@ -201,9 +201,9 @@
                 {#if config.ui_level === 5}
                     <div class="border rounded-md p-4 space-y-3 bg-gray-50">
                         <p class="text-sm text-gray-700">
-                            Upload Orbic severity indicator PNGs. Built-in defaults are bundled from
-                            <code>daemon/images/orbic/severity/</code>, and uploaded overrides are stored in
-                            <code>/data/rayhunter/orbic-display-images/</code>.
+                            Upload severity indicator PNGs. Built-in defaults are bundled from
+                            <code>daemon/images/severity/</code>, and uploaded images are stored in
+                            <code>/data/rayhunter/severity-indicator-images/</code>.
                         </p>
                         <p class="text-xs text-gray-500">
                             Upload replacement PNGs for each severity slot, or reset a slot to go back to the bundled default.
@@ -237,7 +237,7 @@
                                     </div>
                                     <div class="text-xs text-gray-500">
                                         {severityOverrides.includes(slotInfo.slot)
-                                            ? 'Uploaded override present'
+                                            ? 'Uploaded custom image present'
                                             : 'Using bundled default'}
                                     </div>
                                 </div>

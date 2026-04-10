@@ -13,7 +13,9 @@ use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 use include_dir::{Dir, include_dir};
 
+static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/images/");
 const REFRESH_RATE: u64 = 1000; //how often in milliseconds to refresh the display
+const SEVERITY_RUNTIME_DIR: &str = "/data/rayhunter/severity-indicator-images";
 
 #[derive(Copy, Clone)]
 pub struct Dimensions {
@@ -80,6 +82,126 @@ pub(crate) fn display_style_from_state(state: DisplayState, colorblind_mode: boo
             EventType::Medium => (Color::Orange, LinePattern::Dashed),
             EventType::High => (Color::Red, LinePattern::Solid),
         },
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum SeverityIndicatorImageSlot {
+    Default,
+    Low,
+    Medium,
+    High,
+}
+
+impl SeverityIndicatorImageSlot {
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "default" => Some(Self::Default),
+            "low" => Some(Self::Low),
+            "medium" => Some(Self::Medium),
+            "high" => Some(Self::High),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+        }
+    }
+
+    pub fn filename(self) -> &'static str {
+        match self {
+            Self::Default => "indicator_default.png",
+            Self::Low => "indicator_low.png",
+            Self::Medium => "indicator_medium.png",
+            Self::High => "indicator_high.png",
+        }
+    }
+
+    fn bundled_path(self) -> &'static str {
+        match self {
+            Self::Default => "severity/indicator_default.png",
+            Self::Low => "severity/indicator_low.png",
+            Self::Medium => "severity/indicator_medium.png",
+            Self::High => "severity/indicator_high.png",
+        }
+    }
+
+    fn bundled_bytes(self) -> &'static [u8] {
+        IMAGE_DIR
+            .get_file(self.bundled_path())
+            .unwrap_or_else(|| panic!("missing bundled severity indicator {}", self.filename()))
+            .contents()
+    }
+
+    fn path(self) -> std::path::PathBuf {
+        std::path::PathBuf::from(SEVERITY_RUNTIME_DIR).join(self.filename())
+    }
+
+    fn from_display_state(state: DisplayState) -> Self {
+        match state {
+            DisplayState::Paused | DisplayState::Recording => Self::Default,
+            DisplayState::WarningDetected { event_type } => match event_type {
+                EventType::Informational => Self::Default,
+                EventType::Low => Self::Low,
+                EventType::Medium => Self::Medium,
+                EventType::High => Self::High,
+            },
+        }
+    }
+
+    fn all() -> [Self; 4] {
+        [Self::Default, Self::Low, Self::Medium, Self::High]
+    }
+}
+
+#[derive(serde::Serialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
+pub struct SeverityIndicatorImageStatus {
+    pub runtime_dir: String,
+    pub slots_with_overrides: Vec<String>,
+}
+
+pub async fn get_severity_indicator_image_status() -> SeverityIndicatorImageStatus {
+    let mut slots_with_overrides = Vec::new();
+    for slot in SeverityIndicatorImageSlot::all() {
+        if tokio::fs::metadata(slot.path()).await.is_ok() {
+            slots_with_overrides.push(slot.as_str().to_string());
+        }
+    }
+
+    SeverityIndicatorImageStatus {
+        runtime_dir: SEVERITY_RUNTIME_DIR.to_string(),
+        slots_with_overrides,
+    }
+}
+
+pub async fn store_severity_indicator_image(
+    slot: SeverityIndicatorImageSlot,
+    bytes: &[u8],
+) -> Result<(), std::io::Error> {
+    tokio::fs::create_dir_all(SEVERITY_RUNTIME_DIR).await?;
+    tokio::fs::write(slot.path(), bytes).await
+}
+
+pub async fn remove_severity_indicator_image(
+    slot: SeverityIndicatorImageSlot,
+) -> Result<(), std::io::Error> {
+    match tokio::fs::remove_file(slot.path()).await {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(err),
+    }
+}
+
+async fn load_severity_indicator_image(slot: SeverityIndicatorImageSlot) -> Vec<u8> {
+    match tokio::fs::read(slot.path()).await {
+        Ok(bytes) => bytes,
+        Err(_) => slot.bundled_bytes().to_vec(),
     }
 }
 
@@ -174,7 +296,6 @@ pub fn update_ui(
     shutdown_token: CancellationToken,
     mut ui_update_rx: Receiver<DisplayState>,
 ) {
-    static IMAGE_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/images/");
     let display_level = config.ui_level;
     if display_level == 0 {
         info!("Invisible mode, not spawning UI.");
@@ -182,11 +303,16 @@ pub fn update_ui(
     }
 
     let colorblind_mode = config.colorblind_mode;
-    let mut display_style = display_style_from_state(DisplayState::Recording, colorblind_mode);
+    let mut current_state = DisplayState::Recording;
+    let mut display_style = display_style_from_state(current_state, colorblind_mode);
 
     task_tracker.spawn(async move {
         // this feels wrong, is there a more rusty way to do this?
         let mut img: Option<&[u8]> = None;
+        let mut severity_default_img: Option<Vec<u8>> = None;
+        let mut severity_low_img: Option<Vec<u8>> = None;
+        let mut severity_medium_img: Option<Vec<u8>> = None;
+        let mut severity_high_img: Option<Vec<u8>> = None;
         if display_level == 2 {
             img = Some(
                 IMAGE_DIR
@@ -201,6 +327,11 @@ pub fn update_ui(
                     .expect("failed to read eff.png")
                     .contents(),
             );
+        } else if display_level == 5 {
+            severity_default_img = Some(load_severity_indicator_image(SeverityIndicatorImageSlot::Default).await);
+            severity_low_img = Some(load_severity_indicator_image(SeverityIndicatorImageSlot::Low).await);
+            severity_medium_img = Some(load_severity_indicator_image(SeverityIndicatorImageSlot::Medium).await);
+            severity_high_img = Some(load_severity_indicator_image(SeverityIndicatorImageSlot::High).await);
         }
         loop {
             if shutdown_token.is_cancelled() {
@@ -209,7 +340,8 @@ pub fn update_ui(
             }
             match ui_update_rx.try_recv() {
                 Ok(state) => {
-                    display_style = display_style_from_state(state, colorblind_mode);
+                    current_state = state;
+                    display_style = display_style_from_state(current_state, colorblind_mode);
                 }
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {}
                 Err(e) => error!("error receiving framebuffer update message: {e}"),
@@ -221,6 +353,15 @@ pub fn update_ui(
                 3 => fb.draw_img(img.unwrap()).await,
                 4 => {
                     status_bar_height = fb.dimensions().height;
+                }
+                5 => {
+                    let severity_img = match SeverityIndicatorImageSlot::from_display_state(current_state) {
+                        SeverityIndicatorImageSlot::Default => severity_default_img.as_ref().unwrap(),
+                        SeverityIndicatorImageSlot::Low => severity_low_img.as_ref().unwrap(),
+                        SeverityIndicatorImageSlot::Medium => severity_medium_img.as_ref().unwrap(),
+                        SeverityIndicatorImageSlot::High => severity_high_img.as_ref().unwrap(),
+                    };
+                    fb.draw_img(severity_img).await;
                 }
                 128 => {
                     fb.draw_line(Color::Cyan, 128).await;
