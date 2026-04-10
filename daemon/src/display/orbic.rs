@@ -15,7 +15,7 @@ const FB_PATH: &str = "/dev/fb0";
 const SYSFS_BASE: &str = "/sys/devices/78b6000.spi/spi_master/spi1/spi1.0";
 const SYSFS_SLEEP_MODE: &str = "/sys/devices/78b6000.spi/spi_master/spi1/spi1.0/sleep_mode";
 const SYSFS_BL_GPIO: &str = "/sys/devices/78b6000.spi/spi_master/spi1/spi1.0/bl_gpio";
-const SYSFS_DISPLAY_ON: &str = "/sys/devices/78b6000.spi/spi_master/spi1/spi1.0/display_on";
+// const SYSFS_DISPLAY_ON: &str = "/sys/devices/78b6000.spi/spi_master/spi1/spi1.0/display_on";
 
 // Global autosleep control:
 //   "mem" => auto-suspend enabled
@@ -107,7 +107,7 @@ fn spawn_keep_screen_on(task_tracker: &TaskTracker, shutdown_token: Cancellation
                     // 1) display_on=1 (this has not been observed to change but we set it anyway)
                     // 2) bl_gpio=1 (backlight)
                     // 3) sleep_mode=1 (resume UI)
-                    write_sysfs_one(SYSFS_DISPLAY_ON).await;
+                    // write_sysfs_one(SYSFS_DISPLAY_ON).await;
                     write_sysfs_one(SYSFS_BL_GPIO).await;
                     write_sysfs_one(SYSFS_SLEEP_MODE).await;
                 }
