@@ -1,14 +1,16 @@
 <script lang="ts">
-    import {
-        get_config,
-        get_severity_indicator_images,
-        reset_severity_indicator_image,
-        set_config,
-        test_notification,
-        type Config,
-        upload_severity_indicator_image
-    } from '../utils.svelte';
+import {
+    get_config,
+    get_severity_indicator_images,
+    reset_severity_indicator_image,
+    set_config,
+    test_notification,
+    type Config,
+    upload_severity_indicator_image
+} from '../utils.svelte';
+import Modal from './Modal.svelte';
 
+    let { shown = $bindable() }: { shown: boolean } = $props();
     let config = $state<Config | null>(null);
 
     let loading = $state(false);
@@ -25,7 +27,6 @@
     let severityUploadMessageType = $state<'success' | 'error' | null>(null);
     let severityUploadInProgress = $state<string | null>(null);
     let severityResetInProgress = $state<string | null>(null);
-
 
     async function load_config() {
         try {
@@ -142,30 +143,14 @@
     }
 
     $effect(() => {
-        if (showConfig && !config) {
+        if (shown && !config) {
             load_config();
         }
     });
 </script>
 
-<div class="bg-white rounded-lg shadow-md p-6 m-4">
-    <button
-        class="w-full flex justify-between items-center text-xl font-bold mb-4 text-rayhunter-dark-blue hover:text-rayhunter-blue"
-        onclick={() => (showConfig = !showConfig)}
-    >
-        <span>Configuration</span>
-        <svg
-            class="w-6 h-6 transition-transform {showConfig ? 'rotate-180' : ''}"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-        >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"
-            ></path>
-        </svg>
-    </button>
-
-    {#if showConfig}
+<Modal bind:shown title="Configuration">
+    <div class="p-2">
         {#if loading}
             <div class="text-center py-4">Loading config...</div>
         {:else if config}
@@ -276,8 +261,7 @@
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
                     >
                         <option value={0}>0 - Disable button control</option>
-                        <option value={1}
-                            >1 - Double-tap power button to start/stop recording</option
+                        <option value={1}>1 - Double-tap power button to start new recording</option
                         >
                     </select>
                 </div>
@@ -586,5 +570,5 @@
                 Failed to load configuration. Please try reloading the page.
             </div>
         {/if}
-    {/if}
-</div>
+    </div>
+</Modal>

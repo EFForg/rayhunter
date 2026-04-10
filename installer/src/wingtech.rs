@@ -1,3 +1,13 @@
+use crate::WingtechArgs as Args;
+use crate::output::{print, println};
+use crate::util::{reboot_device, telnet_send_command, telnet_send_file};
+use aes::Aes128;
+use aes::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
+use anyhow::{Context, Result, bail};
+use base64_light::base64_encode_bytes;
+use block_padding::{Padding, Pkcs7};
+use reqwest::Client;
+use serde::Deserialize;
 /// Installer for the Wingtech CT2MHS01 hotspot.
 ///
 /// Tested on (from `/etc/wt_version`):
@@ -6,20 +16,6 @@
 ///   WT_HARDWARE_VERSION=89323_1_20
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::time::Duration;
-
-use aes::Aes128;
-use aes::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
-use anyhow::{Context, Result, bail};
-use base64_light::base64_encode_bytes;
-use block_padding::{Padding, Pkcs7};
-use reqwest::Client;
-use serde::Deserialize;
-use tokio::time::sleep;
-
-use crate::WingtechArgs as Args;
-use crate::output::{print, println};
-use crate::util::{http_ok_every, telnet_send_command, telnet_send_file};
 
 #[derive(Deserialize)]
 struct LoginResponse {
@@ -145,20 +141,7 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
     )
     .await?;
 
-    println!("Rebooting device and waiting 30 seconds for it to start up.");
-    telnet_send_command(addr, "shutdown -r -t 1 now", "exit code 0", true).await?;
-    sleep(Duration::from_secs(30)).await;
-
-    print!("Testing rayhunter ... ");
-    let max_failures = 10;
-    http_ok_every(
-        format!("http://{admin_ip}:8080/index.html"),
-        Duration::from_secs(3),
-        max_failures,
-    )
-    .await?;
-    println!("ok");
-    println!("rayhunter is running at http://{admin_ip}:8080");
+    reboot_device(addr, "shutdown -r -t 1 now", &admin_ip).await;
 
     Ok(())
 }

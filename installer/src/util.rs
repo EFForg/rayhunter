@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 use nusb::Device;
-use reqwest::Client;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{sleep, timeout};
@@ -206,30 +205,11 @@ pub async fn send_file(admin_ip: &str, local_path: &str, remote_path: &str) -> R
     Ok(())
 }
 
-pub async fn http_ok_every(
-    rayhunter_url: String,
-    interval: Duration,
-    max_failures: u32,
-) -> Result<()> {
-    let client = Client::new();
-    let mut failures = 0;
-    loop {
-        match client.get(&rayhunter_url).send().await {
-            Ok(test) => match test.status().is_success() {
-                true => break,
-                false => bail!(
-                    "request for url ({rayhunter_url}) failed with status code: {:?}",
-                    test.status()
-                ),
-            },
-            Err(e) => match failures > max_failures {
-                true => return Err(e.into()),
-                false => failures += 1,
-            },
-        }
-        sleep(interval).await;
-    }
-    Ok(())
+pub async fn reboot_device(addr: SocketAddr, reboot_command: &str, admin_ip: &str) {
+    println!(
+        "Done. Rebooting device. After it's started up again, check out the web interface at http://{admin_ip}:8080"
+    );
+    let _ = telnet_send_command(addr, reboot_command, "", true).await;
 }
 
 /// General function to open a USB device
