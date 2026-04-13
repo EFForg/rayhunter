@@ -84,12 +84,16 @@
         }, 5000);
     }
 
+    let scanError = $state('');
+
     async function do_scan() {
         scanning = true;
+        scanError = '';
         try {
             scanResults = await scan_wifi_networks();
-        } catch {
+        } catch (error) {
             scanResults = [];
+            scanError = `Scan failed: ${error}`;
         } finally {
             scanning = false;
         }
@@ -131,6 +135,12 @@
             clearInterval(wifiStatusTimer);
             wifiStatusTimer = null;
         }
+        return () => {
+            if (wifiStatusTimer) {
+                clearInterval(wifiStatusTimer);
+                wifiStatusTimer = null;
+            }
+        };
     });
 </script>
 
@@ -351,7 +361,7 @@
                     </div>
                 </div>
 
-                {#if config.device === 'orbic' || config.device === 'moxee'}
+                {#if config.device === 'orbic' || config.device === 'moxee' || config.device === 'tmobile' || config.device === 'wingtech'}
                     <div class="border-t pt-4 mt-6 space-y-3">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4">WiFi Client Mode</h3>
                         <p class="text-xs text-gray-500">
@@ -420,6 +430,10 @@
                                 </button>
                             </div>
                         </div>
+
+                        {#if scanError}
+                            <p class="text-xs text-red-600">{scanError}</p>
+                        {/if}
 
                         {#if scanResults.length > 0}
                             <div
@@ -546,7 +560,7 @@
                                             ? val
                                                   .split(',')
                                                   .map((s) => parseInt(s.trim()))
-                                                  .filter((n) => !isNaN(n))
+                                                  .filter((n) => !isNaN(n) && n >= 1 && n <= 65535)
                                             : null;
                                 }}
                                 placeholder="22, 80"

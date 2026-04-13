@@ -106,6 +106,7 @@ impl Config {
             dhcp_lease_path: Some("/data/rayhunter/dhcp_lease".into()),
             wpa_conf_path: Some("/data/rayhunter/wpa_sta.conf".into()),
             iw_bin: resolve_bin("iw"),
+            udhcpc_bin: resolve_bin("udhcpc"),
             crash_log_dir: Some("/data/rayhunter/crash-logs".into()),
             wakelock_name: Some("rayhunter".into()),
         }
