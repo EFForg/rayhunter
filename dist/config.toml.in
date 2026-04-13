@@ -24,7 +24,7 @@ ui_level = 1
 key_input_mode = 0
 
 # If set, attempts to send a notification to the url when a new warning is triggered
-ntfy_url = ""
+# ntfy_url = "https://ntfy.sh/your-topic"
 # What notification types to enable. Does nothing if the above ntfy_url is not set.
 enabled_notifications = ["Warning", "LowBattery"]
 

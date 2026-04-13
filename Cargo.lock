@@ -6892,7 +6892,7 @@ checksum = "dd7cf3379ca1aac9eea11fba24fd7e315d621f8dfe35c8d7d2be8b793726e07d"
 [[package]]
 name = "wifi-station"
 version = "0.10.1"
-source = "git+https://github.com/BeigeBox/wifi-station?rev=919e9aa#919e9aa064d9bb2513e492decd031dcd33836287"
+source = "git+https://github.com/BeigeBox/wifi-station?rev=c267d37#c267d377a6faf8d2257f85a380ea4a429f268638"
 dependencies = [
  "anyhow",
  "chrono",

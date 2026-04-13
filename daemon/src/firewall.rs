@@ -62,7 +62,7 @@ async fn setup_outbound_whitelist(
 
     if let Some(url) = ntfy_url
         && let Ok(parsed) = url::Url::parse(url)
-        && let Some(port) = parsed.port()
+        && let Some(port) = parsed.port_or_known_default()
         && port != 443
     {
         let port_str = port.to_string();
