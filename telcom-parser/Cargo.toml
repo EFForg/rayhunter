@@ -6,10 +6,10 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-asn1-compiler = "0.7.1"
+asn1-compiler = "0.7.2"
 asn1-codecs = "0.7.1"
 asn1_codecs_derive = "0.7.1"
 bitvec = { version = "1.0", features = ["serde"] }
 log = "0.4"
-thiserror = "1.0.56"
+thiserror = "2.0.12"
 serde = { version = "1.0.196", features = ["derive"] }

@@ -12,25 +12,25 @@ name = "installer"
 path = "src/main.rs"
 
 [dependencies]
-aes = "0.8.4"
-anyhow = "1.0.98"
-axum = { version = "0.8.3", features = ["http1", "tokio"], default-features = false }
-base64_light = "0.1.5"
-block-padding = "0.3.3"
+aes = "0.9.0"
+anyhow = "1.0.102"
+axum = { version = "0.8.9", features = ["http1", "tokio"], default-features = false }
+base64_light = "0.1.6"
+block-padding = "0.4.2"
 bytes = "1.11.1"
-clap = { version = "4.5.37", features = ["derive"] }
-env_logger = "0.11.8"
-hyper = "1.6.0"
-hyper-util = "0.1.11"
-md5 = "0.7.0"
+clap = { version = "4.5.60", features = ["derive"] }
+env_logger = "0.11.10"
+hyper = "1.9.0"
+hyper-util = "0.1.20"
+md5 = "0.8.0"
 md5crypt = "1.0.0"
-nusb = "0.1.13"
+nusb = "0.2.3"
 reqwest = { version = "0.12.15", features = ["json"], default-features = false }
 serde = { version = "1.0.219", features = ["derive"] }
-sha2 = "0.10.8"
-tokio = { version = "1.44.2", features = ["io-util", "io-std", "macros", "rt"], default-features = false }
-tokio-retry2 = "0.5.7"
-tokio-stream = "0.1.17"
+sha2 = "0.11.0"
+tokio = { version = "1.50.0", features = ["io-util", "io-std", "macros", "rt"], default-features = false }
+tokio-retry2 = "0.9.1"
+tokio-stream = "0.1.18"
 futures = "0.3"
 
 [target.'cfg(unix)'.dependencies]
