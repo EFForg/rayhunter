@@ -10,6 +10,8 @@ use thiserror::Error;
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tokio_util::task::TaskTracker;
 
+pub const DEFAULT_NOTIFICATION_TIMEOUT: u64 = 10; //seconds
+
 #[derive(Error, Debug)]
 pub enum NotificationError {
     #[error("HTTP request failed: {0}")]
@@ -56,6 +58,7 @@ struct NotificationStatus {
 
 pub struct NotificationService {
     url: Option<String>,
+    timeout: u64,
     tx: mpsc::Sender<Notification>,
     rx: mpsc::Receiver<Notification>,
 }
@@ -63,7 +66,12 @@ pub struct NotificationService {
 impl NotificationService {
     pub fn new(url: Option<String>) -> Self {
         let (tx, rx) = mpsc::channel(10);
-        Self { url, tx, rx }
+        Self {
+            url,
+            timeout: DEFAULT_NOTIFICATION_TIMEOUT,
+            tx,
+            rx,
+        }
     }
 
     pub fn new_handler(&self) -> mpsc::Sender<Notification> {
@@ -76,8 +84,14 @@ pub async fn send_notification(
     http_client: &reqwest::Client,
     url: &str,
     message: String,
+    timeout: u64,
 ) -> Result<(), NotificationError> {
-    let response = http_client.post(url).body(message).send().await?;
+    let response = http_client
+        .post(url)
+        .body(message)
+        .timeout(Duration::from_secs(timeout))
+        .send()
+        .await?;
 
     if response.status().is_success() {
         Ok(())
@@ -151,7 +165,13 @@ pub fn run_notification_worker(
                         }
                     }
 
-                    match send_notification(&http_client, &url, notification.message.clone()).await
+                    match send_notification(
+                        &http_client,
+                        &url,
+                        notification.message.clone(),
+                        notification_service.timeout,
+                    )
+                    .await
                     {
                         Ok(()) => {
                             notification.last_sent = Some(Instant::now());
@@ -230,10 +250,54 @@ mod tests {
         (received_messages, url)
     }
 
+    async fn setup_timeout_server(timeout: u64) -> String {
+        #[cfg(feature = "rustcrypto-tls")]
+        {
+            let _ = rustls_rustcrypto::provider().install_default();
+        }
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let url = format!("http://{}", addr);
+
+        tokio::spawn(async move {
+            // Accept the connection but don't respond in the timeout
+            let (_socket, _addr) = listener.accept().await.unwrap();
+            tokio::time::sleep(Duration::from_secs(timeout * 2)).await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        url
+    }
+
     async fn cleanup_worker(sender: mpsc::Sender<Notification>, tracker: TaskTracker) {
         drop(sender);
         tracker.close();
         tracker.wait().await;
+    }
+
+    #[tokio::test]
+    async fn test_send_notification_times_out() {
+        let timeout: u64 = 2;
+        let url = setup_timeout_server(timeout).await;
+
+        let http_client = reqwest::Client::new();
+        let result = send_notification(
+            &http_client,
+            &url,
+            "test warning message".to_string(),
+            timeout,
+        )
+        .await;
+
+        match result {
+            Err(NotificationError::RequestFailed(reqwest_error)) => {
+                println!("error = {:?}", reqwest_error);
+                assert!(reqwest_error.is_timeout());
+            }
+            _ => assert!(false),
+        }
     }
 
     #[tokio::test]

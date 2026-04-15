@@ -28,6 +28,7 @@ use crate::display::DisplayState;
 use crate::display::generic_framebuffer::{
     self, SeverityIndicatorImageSlot, SeverityIndicatorImageStatus,
 };
+use crate::notifications::DEFAULT_NOTIFICATION_TIMEOUT;
 use crate::pcap::generate_pcap_data;
 use crate::qmdl_store::RecordingStore;
 
@@ -319,20 +320,25 @@ pub async fn test_notification(
     let http_client = reqwest::Client::new();
     let message = "Test notification from Rayhunter".to_string();
 
-    crate::notifications::send_notification(&http_client, url, message)
-        .await
-        .map(|()| {
-            (
-                StatusCode::OK,
-                "Test notification sent successfully".to_string(),
-            )
-        })
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to send test notification: {e}"),
-            )
-        })
+    crate::notifications::send_notification(
+        &http_client,
+        url,
+        message,
+        DEFAULT_NOTIFICATION_TIMEOUT,
+    )
+    .await
+    .map(|()| {
+        (
+            StatusCode::OK,
+            "Test notification sent successfully".to_string(),
+        )
+    })
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to send test notification: {e}"),
+        )
+    })
 }
 
 /// Response for GET /api/time
