@@ -164,21 +164,18 @@ impl DiagTask {
         // For fixed-mode sessions, write the configured coordinates to the sidecar
         // immediately so the per-session GPS is stored durably and isn't affected
         // by future config changes or GPS API calls.
-        if self.gps_mode == GpsMode::Fixed {
-            if let Some((lat, lon)) = self.gps_fixed_coords {
-                if let Some((entry_idx, _)) = qmdl_store.get_current_entry() {
-                    if let Ok(mut gps_file) = qmdl_store.open_entry_gps_for_append(entry_idx).await
-                    {
-                        let record = GpsRecord {
-                            unix_ts: 0,
-                            lat,
-                            lon,
-                        };
-                        if let Ok(json) = serde_json::to_string(&record) {
-                            let _ = gps_file.write_all(format!("{json}\n").as_bytes()).await;
-                        }
-                    }
-                }
+        if self.gps_mode == GpsMode::Fixed
+            && let Some((lat, lon)) = self.gps_fixed_coords
+            && let Some((entry_idx, _)) = qmdl_store.get_current_entry()
+            && let Ok(mut gps_file) = qmdl_store.open_entry_gps_for_append(entry_idx).await
+        {
+            let record = GpsRecord {
+                unix_ts: 0,
+                lat,
+                lon,
+            };
+            if let Ok(json) = serde_json::to_string(&record) {
+                let _ = gps_file.write_all(format!("{json}\n").as_bytes()).await;
             }
         }
         self.stop_current_recording().await;
