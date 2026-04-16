@@ -216,7 +216,7 @@ impl RecordingStore {
         }
 
         // sort chronologically
-        manifest_entries.sort_by(|a, b| a.start_time.cmp(&b.start_time));
+        manifest_entries.sort_by_key(|a| a.start_time);
 
         let mut store = RecordingStore {
             path: path.as_ref().to_path_buf(),
