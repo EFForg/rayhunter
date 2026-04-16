@@ -1,7 +1,7 @@
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use chrono::{DateTime, FixedOffset, Utc};
+use chrono::Utc;
 use log::error;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
@@ -40,27 +40,11 @@ pub struct GpsData {
     pub timestamp: i64,
 }
 
-impl GpsData {
-    pub fn to_datetime(&self) -> DateTime<FixedOffset> {
-        DateTime::from_timestamp(self.timestamp, 0)
-            .unwrap_or_default()
-            .fixed_offset()
-    }
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct GpsRecord {
     pub unix_ts: i64,
     pub lat: f64,
     pub lon: f64,
-}
-
-impl GpsRecord {
-    pub fn to_datetime(&self) -> DateTime<FixedOffset> {
-        DateTime::from_timestamp(self.unix_ts, 0)
-            .unwrap_or_default()
-            .fixed_offset()
-    }
 }
 
 /// Reads all GPS records from a sidecar NDJSON file, skipping malformed lines.
@@ -91,21 +75,21 @@ pub async fn post_gps(
     drop(gps);
 
     let qmdl_store = state.qmdl_store_lock.read().await;
-    if let Some((entry_idx, _)) = qmdl_store.get_current_entry() {
-        if let Ok(mut file) = qmdl_store.open_entry_gps_for_append(entry_idx).await {
-            let record = GpsRecord {
-                unix_ts: Utc::now().timestamp(),
-                lat: gps_data.latitude,
-                lon: gps_data.longitude,
-            };
-            match serde_json::to_string(&record) {
-                Ok(json) => {
-                    if let Err(e) = file.write_all(format!("{json}\n").as_bytes()).await {
-                        error!("failed to write GPS record to sidecar: {e}");
-                    }
+    if let Some((entry_idx, _)) = qmdl_store.get_current_entry()
+        && let Ok(mut file) = qmdl_store.open_entry_gps_for_append(entry_idx).await
+    {
+        let record = GpsRecord {
+            unix_ts: Utc::now().timestamp(),
+            lat: gps_data.latitude,
+            lon: gps_data.longitude,
+        };
+        match serde_json::to_string(&record) {
+            Ok(json) => {
+                if let Err(e) = file.write_all(format!("{json}\n").as_bytes()).await {
+                    error!("failed to write GPS record to sidecar: {e}");
                 }
-                Err(e) => error!("failed to serialize GPS record: {e}"),
             }
+            Err(e) => error!("failed to serialize GPS record: {e}"),
         }
     }
 
