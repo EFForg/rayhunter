@@ -96,17 +96,17 @@ pub(crate) async fn load_gps_records_for_entry(
     // not the current config, so old fixed-mode sessions still get coordinates even
     // if the mode has since been changed. Use the configured fixed coords directly
     // rather than gps_state, which can be overwritten by API calls or be None.
-    if entry_gps_mode == Some(GpsMode::Fixed) {
-        if let (Some(lat), Some(lon)) = (
+    if entry_gps_mode == Some(GpsMode::Fixed)
+        && let (Some(lat), Some(lon)) = (
             state.config.gps_fixed_latitude,
             state.config.gps_fixed_longitude,
-        ) {
-            return vec![GpsRecord {
-                unix_ts: 0,
-                lat,
-                lon,
-            }];
-        }
+        )
+    {
+        return vec![GpsRecord {
+            unix_ts: 0,
+            lat,
+            lon,
+        }];
     }
     vec![]
 }

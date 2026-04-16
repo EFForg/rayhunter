@@ -25,8 +25,8 @@ use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::config::Config;
 use crate::diag::DiagDeviceCtrlMessage;
 use crate::display::DisplayState;
-use crate::notifications::DEFAULT_NOTIFICATION_TIMEOUT;
 use crate::gps::GpsData;
+use crate::notifications::DEFAULT_NOTIFICATION_TIMEOUT;
 use crate::pcap::{generate_pcap_data, load_gps_records_for_entry};
 use crate::qmdl_store::RecordingStore;
 
@@ -509,6 +509,7 @@ pub async fn debug_set_display_state(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GpsMode;
     use async_zip::base::read::mem::ZipFileReader;
     use axum::extract::{Path, State};
     use tempfile::TempDir;
@@ -528,7 +529,7 @@ mod tests {
     ) -> String {
         let entry_name = {
             let mut store = store_lock.write().await;
-            let (mut qmdl_file, _analysis_file) = store.new_entry(0).await.unwrap();
+            let (mut qmdl_file, _analysis_file) = store.new_entry(GpsMode::Disabled).await.unwrap();
 
             if !test_data.is_empty() {
                 use tokio::io::AsyncWriteExt;
