@@ -81,11 +81,12 @@ impl DiskStats {
         let free_kb = (stat.f_bfree as u64 * block_size / 1024) as usize;
         let available_kb = (stat.f_bavail as u64 * block_size / 1024) as usize;
         let used_kb = total_kb.saturating_sub(free_kb);
-        let used_percent = if stat.f_blocks > 0 {
-            format!("{}%", (stat.f_blocks - stat.f_bfree) * 100 / stat.f_blocks)
-        } else {
-            "0%".to_string()
-        };
+        let used_percent = format!(
+            "{}%",
+            ((stat.f_blocks - stat.f_bfree) * 100)
+                .checked_div(stat.f_blocks)
+                .unwrap_or(0)
+        );
 
         Ok(Self {
             partition: qmdl_path.to_string(),
