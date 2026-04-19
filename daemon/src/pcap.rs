@@ -1,7 +1,7 @@
-use crate::config::GpsMode;
 use crate::gps::{GpsRecord, load_gps_records};
 use crate::server::ServerState;
 
+use crate::config::GpsMode;
 use anyhow::Error;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -74,41 +74,27 @@ pub(crate) async fn load_gps_records_for_entry(
     state: &Arc<ServerState>,
     entry_index: usize,
 ) -> Vec<GpsRecord> {
-    // Always try the per-session sidecar first — it reflects what was actually
-    // recorded regardless of what the current gps_mode config is.
-    let entry_gps_mode;
-    {
-        let qmdl_store = state.qmdl_store_lock.read().await;
-        if let Ok(file) = qmdl_store.open_entry_gps(entry_index).await {
-            let records = load_gps_records(file).await;
-            if !records.is_empty() {
-                return records;
+    let qmdl_store = state.qmdl_store_lock.read().await;
+    match qmdl_store.open_entry_gps(entry_index).await {
+        Ok(Some(file)) => load_gps_records(file).await,
+        Ok(None) => {
+            let gps_mode = qmdl_store
+                .manifest
+                .entries
+                .get(entry_index)
+                .and_then(|e| e.gps_mode);
+            if gps_mode.is_some_and(|m| m != GpsMode::Disabled) {
+                error!(
+                    "GPS sidecar expected for entry {entry_index} (mode: {gps_mode:?}) but not found"
+                );
             }
+            vec![]
         }
-        // Capture the entry's recorded GPS mode before releasing the lock.
-        entry_gps_mode = qmdl_store
-            .manifest
-            .entries
-            .get(entry_index)
-            .and_then(|e| e.gps_mode);
+        Err(e) => {
+            error!("failed to open GPS sidecar: {e}");
+            vec![]
+        }
     }
-    // Sidecar missing or empty — fall back using the entry's own recorded GPS mode,
-    // not the current config, so old fixed-mode sessions still get coordinates even
-    // if the mode has since been changed. Use the configured fixed coords directly
-    // rather than gps_state, which can be overwritten by API calls or be None.
-    if entry_gps_mode == Some(GpsMode::Fixed)
-        && let (Some(lat), Some(lon)) = (
-            state.config.gps_fixed_latitude,
-            state.config.gps_fixed_longitude,
-        )
-    {
-        return vec![GpsRecord {
-            unix_ts: 0,
-            lat,
-            lon,
-        }];
-    }
-    vec![]
 }
 
 fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: i64) -> Option<GpsPoint> {

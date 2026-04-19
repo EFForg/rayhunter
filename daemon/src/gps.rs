@@ -2,7 +2,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use chrono::Utc;
-use log::error;
+use log::{error, warn};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -47,14 +47,22 @@ pub struct GpsRecord {
     pub lon: f64,
 }
 
-/// Reads all GPS records from a sidecar NDJSON file, skipping malformed lines.
+/// Reads all GPS records from a sidecar NDJSON file, logging and skipping malformed lines.
 pub async fn load_gps_records(file: tokio::fs::File) -> Vec<GpsRecord> {
     let reader = BufReader::new(file);
     let mut lines = reader.lines();
     let mut records = Vec::new();
-    while let Ok(Some(line)) = lines.next_line().await {
-        if let Ok(record) = serde_json::from_str::<GpsRecord>(&line) {
-            records.push(record);
+    loop {
+        match lines.next_line().await {
+            Ok(Some(line)) => match serde_json::from_str::<GpsRecord>(&line) {
+                Ok(record) => records.push(record),
+                Err(e) => warn!("skipping malformed GPS sidecar line: {e}"),
+            },
+            Ok(None) => break,
+            Err(e) => {
+                error!("error reading GPS sidecar file: {e}");
+                break;
+            }
         }
     }
     records
@@ -67,7 +75,8 @@ pub async fn post_gps(
     if state.config.gps_mode != GpsMode::Api {
         return Err((
             StatusCode::FORBIDDEN,
-            "GPS API endpoint is disabled. Set gps_mode to 2 in configuration.".to_string(),
+            "GPS API endpoint is disabled. Set gps_mode to API endpoint in configuration."
+                .to_string(),
         ));
     }
     let mut gps = state.gps_state.write().await;
@@ -75,21 +84,38 @@ pub async fn post_gps(
     drop(gps);
 
     let qmdl_store = state.qmdl_store_lock.read().await;
-    if let Some((entry_idx, _)) = qmdl_store.get_current_entry()
-        && let Ok(mut file) = qmdl_store.open_entry_gps_for_append(entry_idx).await
-    {
-        let record = GpsRecord {
-            unix_ts: Utc::now().timestamp(),
-            lat: gps_data.latitude,
-            lon: gps_data.longitude,
-        };
-        match serde_json::to_string(&record) {
-            Ok(json) => {
-                if let Err(e) = file.write_all(format!("{json}\n").as_bytes()).await {
-                    error!("failed to write GPS record to sidecar: {e}");
-                }
+    if let Some((entry_idx, _)) = qmdl_store.get_current_entry() {
+        match qmdl_store.open_entry_gps_for_append(entry_idx).await {
+            Ok(Some(mut file)) => {
+                let record = GpsRecord {
+                    unix_ts: Utc::now().timestamp(),
+                    lat: gps_data.latitude,
+                    lon: gps_data.longitude,
+                };
+                let json = serde_json::to_string(&record).map_err(|e| {
+                    error!("failed to serialize GPS record: {e}");
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("failed to serialize GPS record: {e}"),
+                    )
+                })?;
+                file.write_all(format!("{json}\n").as_bytes())
+                    .await
+                    .map_err(|e| {
+                        error!("failed to write GPS record to sidecar: {e}");
+                        (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("failed to write GPS record to sidecar: {e}"),
+                        )
+                    })?;
             }
-            Err(e) => error!("failed to serialize GPS record: {e}"),
+            Ok(None) => error!("GPS sidecar directory not found, cannot write GPS record"),
+            Err(e) => {
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to open GPS sidecar: {e}"),
+                ));
+            }
         }
     }
 

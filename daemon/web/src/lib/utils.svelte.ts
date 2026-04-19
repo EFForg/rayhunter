@@ -18,6 +18,12 @@ export enum enabled_notifications {
     LowBattery = 'LowBattery',
 }
 
+export enum GpsMode {
+    Disabled = 0,
+    Fixed = 1,
+    Api = 2,
+}
+
 export interface Config {
     device: string;
     ui_level: number;
@@ -35,7 +41,7 @@ export interface Config {
     dns_servers: string[] | null;
     firewall_restrict_outbound: boolean;
     firewall_allowed_ports: number[] | null;
-    gps_mode: number;
+    gps_mode: GpsMode;
     gps_fixed_latitude: number | null;
     gps_fixed_longitude: number | null;
 }

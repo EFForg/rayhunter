@@ -308,6 +308,8 @@ async fn run_with_config(
             webdav_config.into(),
         );
     }
+    // For fixed configuration, we use timestamp 0 to not break other
+    // the GET request for GPS but user won't see the 0 in PCAPs
     let initial_gps = if config.gps_mode == GpsMode::Fixed {
         match (config.gps_fixed_latitude, config.gps_fixed_longitude) {
             (Some(lat), Some(lon)) => Some(gps::GpsData {

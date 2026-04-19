@@ -5,6 +5,7 @@
         test_notification,
         get_wifi_status,
         scan_wifi_networks,
+        GpsMode,
         type Config,
         type WifiStatus,
         type WifiNetwork,
@@ -672,21 +673,21 @@
                     <div>
                         <label for="gps_mode" class="block text-sm font-medium text-gray-700 mb-1">GPS Mode</label>
                         <select id="gps_mode" bind:value={config.gps_mode} class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue">
-                            <option value={0}>Disabled</option>
-                            <option value={1}>Fixed coordinates</option>
-                            <option value={2}>API endpoint</option>
+                            <option value={GpsMode.Disabled}>Disabled</option>
+                            <option value={GpsMode.Fixed}>Fixed coordinates</option>
+                            <option value={GpsMode.Api}>API endpoint</option>
                         </select>
                         <p class="text-xs text-gray-500 mt-1">
-                            {#if config.gps_mode === 2}
+                            {#if config.gps_mode === GpsMode.Api}
                                 POST latitude, longitude, and timestamp to <code>/api/gps</code> from any device on the network.
-                            {:else if config.gps_mode === 1}
+                            {:else if config.gps_mode === GpsMode.Fixed}
                                 GPS coordinates are fixed to the values below.
                             {:else}
                                 GPS is disabled; no coordinates will be tracked.
                             {/if}
                         </p>
                     </div>
-                    {#if config.gps_mode === 1}
+                    {#if config.gps_mode === GpsMode.Fixed}
                         <div>
                             <label for="gps_fixed_latitude" class="block text-sm font-medium text-gray-700 mb-1">Fixed Latitude</label>
                             <input id="gps_fixed_latitude" type="number" min="-90" max="90" step="any" required

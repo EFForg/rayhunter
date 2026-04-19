@@ -167,15 +167,22 @@ impl DiagTask {
         if self.gps_mode == GpsMode::Fixed
             && let Some((lat, lon)) = self.gps_fixed_coords
             && let Some((entry_idx, _)) = qmdl_store.get_current_entry()
-            && let Ok(mut gps_file) = qmdl_store.open_entry_gps_for_append(entry_idx).await
         {
-            let record = GpsRecord {
-                unix_ts: 0,
-                lat,
-                lon,
-            };
-            if let Ok(json) = serde_json::to_string(&record) {
-                let _ = gps_file.write_all(format!("{json}\n").as_bytes()).await;
+            match qmdl_store.open_entry_gps_for_append(entry_idx).await {
+                Ok(Some(mut gps_file)) => {
+                    let record = GpsRecord {
+                        unix_ts: 0,
+                        lat,
+                        lon,
+                    };
+                    if let Ok(json) = serde_json::to_string(&record) {
+                        let _ = gps_file.write_all(format!("{json}\n").as_bytes()).await;
+                    }
+                }
+                Ok(None) => {
+                    error!("GPS sidecar directory not found, cannot write fixed-mode coordinates")
+                }
+                Err(e) => error!("failed to open GPS sidecar for fixed-mode entry: {e}"),
             }
         }
         self.stop_current_recording().await;
