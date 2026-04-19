@@ -1,6 +1,7 @@
 <script lang="ts">
     import { type ReportMetadata } from '$lib/analysis.svelte';
     import type { ManifestEntry } from '$lib/manifest.svelte';
+    import { GpsMode } from '$lib/utils.svelte';
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import AnalysisTable from './AnalysisTable.svelte';
     import ReAnalyzeButton from './ReAnalyzeButton.svelte';
@@ -72,7 +73,7 @@
                 {/if}
                 <p>
                     <b>GPS Mode:</b>
-                    {(entry.gps_mode ?? 0) === 0 ? 'Disabled' : entry.gps_mode === 1 ? 'Fixed coordinates' : 'API endpoint'}
+                    {(entry.gps_mode ?? GpsMode.Disabled) === GpsMode.Disabled ? 'Disabled' : entry.gps_mode === GpsMode.Fixed ? 'Fixed coordinates' : 'API endpoint'}
                 </p>
             </div>
             {#if metadata && metadata.analyzers}

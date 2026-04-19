@@ -1,6 +1,6 @@
 <script lang="ts">
     import { ManifestEntry } from '$lib/manifest.svelte';
-    import { get_manifest, get_system_stats, get_gps, get_config, type GpsData } from '$lib/utils.svelte';
+    import { get_manifest, get_system_stats, get_gps, get_config, GpsMode, type GpsData } from '$lib/utils.svelte';
     import ManifestTable from '$lib/components/ManifestTable.svelte';
     import Card from '$lib/components/ManifestCard.svelte';
     import type { SystemStats } from '$lib/systemStats';
@@ -23,7 +23,7 @@
     let logview_shown: boolean = $state(false);
     let config_shown: boolean = $state(false);
     let gps_data: GpsData | null = $state(null);
-    let gps_mode: number = $state(0);
+    let gps_mode: GpsMode = $state(GpsMode.Disabled);
     $effect(() => {
         get_config().then((c) => {
             gps_mode = c.gps_mode;
@@ -290,7 +290,7 @@
             {/if}
             <SystemStatsTable stats={system_stats!} />
         </div>
-        {#if gps_mode !== 0}
+        {#if gps_mode !== GpsMode.Disabled}
             <div class="bg-white border border-gray-200 drop-shadow rounded-md p-4 flex flex-col gap-2">
                 <span class="text-lg font-semibold flex flex-row items-center gap-2">
                     <svg class="w-5 h-5 text-rayhunter-blue" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { ManifestEntry } from '$lib/manifest.svelte';
+    import { GpsMode } from '$lib/utils.svelte';
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import DownloadLink from '$lib/components/DownloadLink.svelte';
     import DeleteButton from '$lib/components/DeleteButton.svelte';
@@ -88,7 +89,7 @@
     {/if}
     {#if entry.gps_mode !== undefined}
         <div class="text-sm text-gray-500">
-            GPS: {entry.gps_mode === 0 ? 'Disabled' : entry.gps_mode === 1 ? 'Fixed coordinates' : 'API endpoint'}
+            GPS: {entry.gps_mode === GpsMode.Disabled ? 'Disabled' : entry.gps_mode === GpsMode.Fixed ? 'Fixed coordinates' : 'API endpoint'}
         </div>
     {/if}
     <div class="flex flex-row justify-between lg:justify-end gap-1 mt-2 overflow-x-auto">
