@@ -1,5 +1,6 @@
 import { get_report, type AnalysisReport } from './analysis.svelte';
 import { AnalysisStatus, type AnalysisManager } from './analysisManager.svelte';
+import { GpsMode } from './utils.svelte';
 
 interface JsonManifest {
     entries: JsonManifestEntry[];
@@ -13,7 +14,7 @@ interface JsonManifestEntry {
     qmdl_size_bytes: number;
     stop_reason: string | null;
     upload_time: string | null;
-    gps_mode: number | null;
+    gps_mode: GpsMode | null;
 }
 
 export class Manifest {
@@ -62,7 +63,7 @@ export class ManifestEntry {
     public analysis_report: AnalysisReport | string | undefined = $state(undefined);
     public stop_reason: string | undefined = $state(undefined);
     public upload_time: Date | undefined = $state(undefined);
-    public gps_mode: number | undefined = $state(undefined);
+    public gps_mode: GpsMode | undefined = $state(undefined);
 
     constructor(json: JsonManifestEntry) {
         this.name = json.name;

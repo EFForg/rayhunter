@@ -304,24 +304,33 @@ impl RecordingStore {
             .map_err(RecordingStoreError::ReadFileError)
     }
 
-    pub async fn open_entry_gps(&self, entry_index: usize) -> Result<File, RecordingStoreError> {
+    pub async fn open_entry_gps(
+        &self,
+        entry_index: usize,
+    ) -> Result<Option<File>, RecordingStoreError> {
         let entry = &self.manifest.entries[entry_index];
-        File::open(entry.get_gps_filepath(&self.path))
-            .await
-            .map_err(RecordingStoreError::ReadFileError)
+        match File::open(entry.get_gps_filepath(&self.path)).await {
+            Ok(file) => Ok(Some(file)),
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(RecordingStoreError::ReadFileError(e)),
+        }
     }
 
     pub async fn open_entry_gps_for_append(
         &self,
         entry_index: usize,
-    ) -> Result<File, RecordingStoreError> {
+    ) -> Result<Option<File>, RecordingStoreError> {
         let entry = &self.manifest.entries[entry_index];
-        OpenOptions::new()
+        match OpenOptions::new()
             .create(true)
             .append(true)
             .open(entry.get_gps_filepath(&self.path))
             .await
-            .map_err(RecordingStoreError::CreateFileError)
+        {
+            Ok(file) => Ok(Some(file)),
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(RecordingStoreError::CreateFileError(e)),
+        }
     }
 
     pub async fn clear_and_open_entry_analysis(
