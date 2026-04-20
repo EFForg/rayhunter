@@ -43,10 +43,7 @@ pub async fn telnet_send_command_with_output(
 
     let mut read_buf = Vec::new();
     timeout(command_timeout, async {
-        loop {
-            let Ok(byte) = reader.read_u8().await else {
-                break;
-            };
+        while let Ok(byte) = reader.read_u8().await {
             read_buf.push(byte);
 
             // when we see this string we know the command is done and can terminate.

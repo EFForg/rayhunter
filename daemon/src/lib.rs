@@ -1,6 +1,7 @@
 pub mod analysis;
 pub mod battery;
 pub mod config;
+pub mod crypto_provider;
 pub mod diag;
 pub mod display;
 pub mod error;

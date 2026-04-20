@@ -289,19 +289,17 @@ impl DiagTask {
                         self.stop(qmdl_store, Some(reason)).await;
                         return;
                     }
-                    DiskSpaceCheck::Warning(mb) => {
-                        if !self.low_space_warned {
-                            self.low_space_warned = true;
-                            warn!("Disk space low: {}MB remaining", mb);
-                            self.notification_channel
-                                .send(Notification::new(
-                                    NotificationType::Warning,
-                                    format!("Disk space low: {}MB free", mb),
-                                    Some(Duration::from_secs(30)),
-                                ))
-                                .await
-                                .ok();
-                        }
+                    DiskSpaceCheck::Warning(mb) if !self.low_space_warned => {
+                        self.low_space_warned = true;
+                        warn!("Disk space low: {}MB remaining", mb);
+                        self.notification_channel
+                            .send(Notification::new(
+                                NotificationType::Warning,
+                                format!("Disk space low: {}MB free", mb),
+                                Some(Duration::from_secs(30)),
+                            ))
+                            .await
+                            .ok();
                     }
                     _ => {}
                 }
