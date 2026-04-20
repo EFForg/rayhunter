@@ -27,7 +27,7 @@
         "@sveltejs/kit": "^2.57.1",
         "@sveltejs/vite-plugin-svelte": "^7.0.0",
         "@tauri-apps/cli": "^2",
-        "eslint": "^10.2.0",
+        "eslint": "^10.2.1",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-svelte": "^3.17.0",
         "globals": "^17.5.0",
@@ -35,8 +35,8 @@
         "prettier-plugin-svelte": "^3.5.1",
         "svelte": "^5.55.4",
         "svelte-check": "^4.4.6",
-        "typescript": "~6.0.2",
+        "typescript": "~6.0.3",
         "typescript-eslint": "^8.58.2",
-        "vite": "^8.0.8"
+        "vite": "^8.0.9"
     }
 }
