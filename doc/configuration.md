@@ -55,4 +55,39 @@ You can also configure WiFi during installation:
 
 - **Restrict outbound traffic** limits what the device can send over the network. When enabled, only DNS, DHCP, and HTTPS traffic is allowed; everything else is blocked. This is enabled by default and prevents the device from phoning home to the carrier over cellular. If you need to allow additional ports (for example, port 80 for HTTP or port 22 for SSH), add them to the **Additional allowed ports** list.
 
+## WebDAV Upload
+
+Rayhunter can automatically upload finished recordings to a WebDAV server. When a `[webdav]` section is present in `config.toml`, a background worker periodically scans the recording store and uploads any closed entry that is older than `min_age_secs`. Each eligible entry uploads two files: the raw `.qmdl` capture and its `.ndjson` analysis output. After a successful upload the entry is either marked as uploaded in the manifest (and skipped on subsequent polls), or deleted locally if `delete_on_upload = true`. With no `[webdav]` section, no upload worker runs.
+
+WebDAV upload is currently configurable only by editing `config.toml` — there is no web UI control for it yet.
+
+| Key | Required | Default | Description |
+| --- | --- | --- | --- |
+| `host` | yes | — | WebDAV server base URL, e.g. `https://dav.example.com` |
+| `remote_path` | no | `"/"` | Remote directory to upload files into |
+| `username` | no | — | HTTP Basic auth username |
+| `password` | no | — | HTTP Basic auth password |
+| `poll_interval_secs` | no | `3600` | How often (seconds) the worker scans for eligible entries |
+| `min_age_secs` | no | `86400` | Minimum age (seconds) an entry must have before it becomes eligible for upload |
+| `delete_on_upload` | no | `false` | Delete the entry locally after a successful upload |
+
+Example:
+
+```toml
+[webdav]
+host = "https://dav.example.com"
+remote_path = "/rayhunter"
+username = "user"
+password = "pass"
+poll_interval_secs = 3600
+min_age_secs = 86400
+delete_on_upload = false
+```
+
+A few notes on behavior:
+
+- **Auth:** HTTP Basic. Supplying a `password` without a `username` is rejected — the request is sent unauthenticated and a warning is logged.
+- **Retries and overwrites:** each entry's two files (`.qmdl` and `.ndjson`) must both upload successfully before the entry is marked as uploaded in the manifest. If one upload fails, the entry stays unmarked and both files are retried on the next poll — the one that previously succeeded will be overwritten on the server. Once an entry is marked as uploaded, Rayhunter will not upload it again.
+- **Currently-recording entry:** the active recording is never uploaded; only closed entries are eligible.
+
 If you prefer editing `config.toml` file, you need to obtain a shell on your [Orbic](./orbic.md#obtaining-a-shell) or [TP-Link](./tplink-m7350.md#obtaining-a-shell) device and edit the file manually. You can view the [default configuration file on GitHub](https://github.com/EFForg/rayhunter/blob/main/dist/config.toml.in).

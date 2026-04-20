@@ -12,6 +12,8 @@ mod pcap;
 mod qmdl_store;
 mod server;
 mod stats;
+mod webdav;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -27,6 +29,7 @@ use crate::server::{
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
 };
 use crate::stats::{get_qmdl_manifest, get_system_stats};
+use crate::webdav::run_webdav_upload_worker;
 use wifi_station::WifiStatus;
 
 use analysis::{
@@ -295,6 +298,15 @@ async fn run_with_config(
         wifi_status.clone(),
     );
     firewall::apply(&config).await;
+
+    if let Some(webdav_config) = config.webdav.clone() {
+        run_webdav_upload_worker(
+            &task_tracker,
+            shutdown_token.clone(),
+            qmdl_store_lock.clone(),
+            webdav_config.into(),
+        );
+    }
 
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),

@@ -55,6 +55,29 @@ firewall_restrict_outbound = true
 # Example: allow HTTP (80) and SSH (22).
 # firewall_allowed_ports = [80, 22]
 
+# WebDAV Upload
+# If a [webdav] section is present, finished recordings (both the raw .qmdl file
+# and its .ndjson analysis output) are uploaded in the background to a WebDAV
+# server once they've been closed for at least min_age_secs. After a successful
+# upload the entry is either marked as uploaded in the manifest, or deleted
+# locally if delete_on_upload = true. With no [webdav] section, no upload
+# worker runs.
+#
+# [webdav]
+# host = "https://dav.example.com"
+# remote_path = "/rayhunter"
+# # HTTP Basic auth. Both fields are optional; a password without a username is
+# # rejected and the request is sent unauthenticated.
+# username = "user"
+# password = "pass"
+# # How often the worker scans for eligible entries (default 3600).
+# poll_interval_secs = 3600
+# # Minimum age in seconds before an entry becomes eligible for upload
+# # (default 86400 = 1 day).
+# min_age_secs = 86400
+# # Delete the entry locally after a successful upload (default false).
+# delete_on_upload = false
+
 # Analyzer Configuration
 # Enable/disable specific IMSI catcher detection heuristics
 # See https://github.com/EFForg/rayhunter/blob/main/doc/heuristics.md for details

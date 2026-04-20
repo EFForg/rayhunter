@@ -15,8 +15,14 @@ required-features = ["apidocs"]
 
 [features]
 default = ["rustcrypto-tls"]
-rustcrypto-tls = ["reqwest/rustls-tls-webpki-roots-no-provider", "dep:rustls-rustcrypto"]
-pq-tls = ["reqwest/rustls-tls-webpki-roots-no-provider", "dep:rustls-post-quantum"]
+rustcrypto-tls = [
+    "reqwest/rustls-tls-webpki-roots-no-provider",
+    "dep:rustls-rustcrypto",
+]
+pq-tls = [
+    "reqwest/rustls-tls-webpki-roots-no-provider",
+    "dep:rustls-post-quantum",
+]
 apidocs = ["dep:utoipa", "wifi-station/utoipa"]
 
 [dependencies]
@@ -24,8 +30,17 @@ rayhunter = { path = "../lib" }
 wifi-station = { git = "https://github.com/BeigeBox/wifi-station", rev = "e8ec5b4" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
-tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt"] }
-axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json"] }
+tokio = { version = "1.44.2", default-features = false, features = [
+    "fs",
+    "signal",
+    "process",
+    "rt",
+] }
+axum = { version = "0.8", default-features = false, features = [
+    "http1",
+    "tokio",
+    "json",
+] }
 thiserror = "1.0.52"
 libc = "0.2.150"
 log = "0.4.20"
@@ -33,14 +48,21 @@ tokio-util = { version = "0.7.10", features = ["rt", "io", "compat"] }
 futures-macro = "0.3.30"
 include_dir = "0.7.3"
 chrono = { version = "0.4.31", features = ["serde"] }
-tokio-stream = { version = "0.1.14", default-features = false, features = ["io-util"] }
+tokio-stream = { version = "0.1.14", default-features = false, features = [
+    "io-util",
+] }
 futures = { version = "0.3.30", default-features = false }
 serde_json = "1.0.114"
-image = { version =  "0.25.1", default-features = false, features = ["png", "gif"] }
+image = { version = "0.25.1", default-features = false, features = [
+    "png",
+    "gif",
+] }
 tempfile = "3.10.2"
 async_zip = { version = "0.0.17", features = ["tokio"] }
 anyhow = "1.0.98"
-reqwest = { version = "0.12.20", default-features = false }
+reqwest = { version = "0.12.20", default-features = false, features = [
+    "stream",
+] }
 rustls-rustcrypto = { version = "0.0.2-alpha", optional = true }
 rustls-post-quantum = { version = "0.2.4", optional = true }
 async-trait = "0.1.88"
