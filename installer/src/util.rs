@@ -98,7 +98,7 @@ pub async fn telnet_send_file(
     print!("Sending file {filename} ... ");
     // Allow 30s base + 2s per MB for the nc command to complete (covers slow WiFi links)
     let transfer_timeout =
-        Duration::from_secs(30 + (payload.len() as u64 / (512 * 1024)).max(1) * 2);
+        Duration::from_secs(30 + (payload.len() as u64 / (1024 * 1024)).max(1) * 2);
     let nc_output = {
         let filename = filename.to_owned();
         let handle = tokio::spawn(async move {

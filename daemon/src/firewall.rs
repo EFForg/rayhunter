@@ -25,9 +25,10 @@ pub async fn apply(config: &Config) {
         .await;
 
     if config.firewall_restrict_outbound {
+        // Fail open on partial setup error: reachability beats restriction when recovery means physical access.
         match setup_outbound_whitelist(&config.firewall_allowed_ports, &config.ntfy_url).await {
             Ok(()) => info!("outbound firewall active: allowing DHCP, DNS, HTTPS only"),
-            Err(e) => warn!("firewall setup failed: {e}"),
+            Err(e) => warn!("firewall setup failed: {e} (fail-open, outbound unrestricted)"),
         }
     }
 }
