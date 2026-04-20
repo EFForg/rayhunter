@@ -488,12 +488,12 @@
                                     id="dns_servers"
                                     type="text"
                                     bind:value={dnsServersInput}
-                                    placeholder="8.8.8.8, 1.1.1.1"
+                                    placeholder="9.9.9.9, 149.112.112.112"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
                                 />
                                 <p class="text-xs text-gray-500 mt-1">
-                                    Comma-separated. Used when WiFi is active. Defaults to 8.8.8.8,
-                                    1.1.1.1.
+                                    Comma-separated. Used when WiFi is active. Defaults to 9.9.9.9,
+                                    149.112.112.112 (Quad9).
                                 </p>
                             </div>
                         {/if}

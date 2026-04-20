@@ -8,12 +8,10 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{TelnetConnection, install_config, setup_data_directory};
+use crate::connection::{TelnetConnection, install_config, install_wifi_tools, setup_data_directory};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
-use crate::util::{
-    interactive_shell, telnet_send_command, telnet_send_command_with_output, telnet_send_file,
-};
+use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
 
 // Some kajeet devices have password protected telnetd on port 23, so we use port 24 just in case
 const TELNET_PORT: u16 = 24;
@@ -214,47 +212,6 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
     Ok(())
 }
 
-async fn device_has_binary(addr: SocketAddr, name: &str) -> bool {
-    telnet_send_command_with_output(
-        addr,
-        &format!("which {name} 2>/dev/null && echo FOUND || echo MISSING"),
-        false,
-        Duration::from_secs(5),
-    )
-    .await
-    .map(|out| out.contains("FOUND"))
-    .unwrap_or(false)
-}
-
-async fn install_wifi_tools(addr: SocketAddr) -> Result<()> {
-    let tools: &[(&str, &str, &[u8])] = &[
-        (
-            "wpa_supplicant",
-            "/data/rayhunter/bin/wpa_supplicant",
-            include_bytes!(env!("FILE_WPA_SUPPLICANT")),
-        ),
-        (
-            "wpa_cli",
-            "/data/rayhunter/bin/wpa_cli",
-            include_bytes!(env!("FILE_WPA_CLI")),
-        ),
-        (
-            "iw",
-            "/data/rayhunter/bin/iw",
-            include_bytes!(env!("FILE_IW")),
-        ),
-    ];
-    for &(name, dest, payload) in tools {
-        if device_has_binary(addr, name).await {
-            println!("{name} already on device, skipping");
-        } else {
-            telnet_send_file(addr, dest, payload, false).await?;
-            telnet_send_command(addr, &format!("chmod +x {dest}"), "exit code 0", false).await?;
-        }
-    }
-    Ok(())
-}
-
 async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
@@ -289,7 +246,13 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
     )
     .await?;
 
-    install_wifi_tools(addr).await?;
+    install_wifi_tools(
+        &mut conn,
+        include_bytes!(env!("FILE_WPA_SUPPLICANT")),
+        include_bytes!(env!("FILE_WPA_CLI")),
+        include_bytes!(env!("FILE_IW")),
+    )
+    .await?;
 
     install_config(&mut conn, "orbic", reset_config).await?;
 

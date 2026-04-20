@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{DeviceConnection, install_config};
+use crate::connection::{DeviceConnection, install_config, install_wifi_tools};
 use crate::output::{print, println};
 use crate::util::open_usb_device;
 
@@ -53,8 +53,12 @@ pub struct AdbConnection<'a> {
 }
 
 impl DeviceConnection for AdbConnection<'_> {
+    /// Runs through /bin/rootshell so commands execute as root (install_wifi_tools needs
+    /// chmod on root-owned files). setup_rootshell must have succeeded before an
+    /// AdbConnection is created; callers in this module (setup_rayhunter) enforce that
+    /// ordering.
     async fn run_command(&mut self, command: &str) -> Result<String> {
-        adb_command(self.device, &["sh", "-c", command])
+        adb_command(self.device, &["/bin/rootshell", "-c", command])
     }
 
     async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {
@@ -163,6 +167,13 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Re
             device: &mut adb_device,
         };
         install_config(&mut conn, "orbic", reset_config).await?;
+        install_wifi_tools(
+            &mut conn,
+            include_bytes!(env!("FILE_WPA_SUPPLICANT")),
+            include_bytes!(env!("FILE_WPA_CLI")),
+            include_bytes!(env!("FILE_IW")),
+        )
+        .await?;
     }
 
     install_file(
