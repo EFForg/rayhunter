@@ -43,6 +43,25 @@ build_frontend() {
     popd > /dev/null
 }
 
+build_wifi_tools() {
+    if [ -f "tools/build-wpa-supplicant/out/wpa_supplicant" ] \
+        && [ -f "tools/build-wpa-supplicant/out/wpa_cli" ] \
+        && [ -f "tools/build-wpa-supplicant/out/iw" ]; then
+        echo "WiFi tools already built, skipping."
+        return
+    fi
+
+    if ! command -v arm-linux-musleabihf-gcc &> /dev/null; then
+        echo "Error: arm-linux-musleabihf-gcc not found."
+        echo "Install with: brew install FiloSottile/musl-cross/musl-cross"
+        echo "(Required because the installer bundles wpa_supplicant, wpa_cli, and iw for orbic-family devices.)"
+        exit 1
+    fi
+
+    echo "Building WiFi tools..."
+    ./scripts/build-wpa-supplicant.sh
+}
+
 build_daemon() {
     echo "Building daemon..."
     cargo build-daemon-firmware-devel
@@ -57,6 +76,7 @@ case "$COMMAND" in
     build)
         check_dependencies
         build_frontend
+        build_wifi_tools
         build_daemon
         echo ""
         echo "Build complete! To install to a device, run:"
