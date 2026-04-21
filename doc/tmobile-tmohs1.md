@@ -55,6 +55,21 @@ Then run the installer:
 | Paused           | WiFi LED blinks white.         |
 | Warning Detected | Signal LED slowly blinks red.  |
 
+## Wi-Fi auto-shutdown
+
+By default the TMOHS1 turns off its Wi-Fi access point after 10 minutes with no connected clients. Rayhunter keeps recording on the device in the background, but once the access point is down you can't reach the web UI, download captures, or see new warnings until you power cycle the hotspot.
+
+The TMOHS1's native admin UI lets you change this:
+
+1. Connect to the TMOHS1's Wi-Fi (or USB tether).
+2. In a browser open `http://192.168.0.1/` and log in with the admin password.
+3. Go to **Settings** → **Sleep** → **Wi-Fi Standby** and pick **Always on**.
+4. Click **Apply**.
+
+![TMOHS1 Wi-Fi Standby setting](./tmohs1-wifi-standby.png)
+
+Keeping Wi-Fi always on uses more battery. If you only monitor Rayhunter through the device's LEDs and don't need remote access, the default 10-minute timer is fine.
+
 ## Obtaining a shell
 Even when rayhunter is running, for security reasons the TMOHS1 will not have telnet or adb enabled during normal operation.
 

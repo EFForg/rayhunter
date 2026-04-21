@@ -143,6 +143,12 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
 
     reboot_device(addr, "shutdown -r -t 1 now", &admin_ip).await;
 
+    println!();
+    println!("Note: by default the CT2MHS01 shuts off Wi-Fi after ~10 minutes with no clients,");
+    println!("which blocks remote access to Rayhunter until you power cycle. To keep");
+    println!("Wi-Fi always on, open http://{admin_ip}/ -> Settings -> Sleep and set");
+    println!("Wi-Fi Standby to \"Always on\". See doc/wingtech-ct2mhs01.md for steps.");
+
     Ok(())
 }
 

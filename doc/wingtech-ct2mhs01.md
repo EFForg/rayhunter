@@ -50,6 +50,21 @@ telnet 192.168.1.1
 adb shell
 ```
 
+## Wi-Fi auto-shutdown
+
+By default the CT2MHS01 turns off its Wi-Fi access point after the configured sleep timer (default 10 minutes) with no connected clients. Rayhunter keeps recording on the device in the background, but once the access point is down you can't reach the web UI, download captures, or see new warnings until you power cycle the hotspot.
+
+The CT2MHS01's native admin UI lets you change this:
+
+1. Connect to the Wingtech's Wi-Fi (or USB tether).
+2. In a browser open `http://192.168.1.1/` and log in with the admin password.
+3. Go to **Settings** → **Sleep** → **Wi-Fi Standby** and pick **Always on**.
+4. Click **Save**.
+
+![CT2MHS01 Wi-Fi Standby setting](./ct2mhs01-wifi-standby.png)
+
+Keeping Wi-Fi always on uses more battery. If you primarily monitor Rayhunter through the device's screen and don't need remote access, leave the timer at its default.
+
 ## Developing
 The device has a framebuffer-driven screen at /dev/fb0 that behaves
 similarly to the Orbic RC400L, although the userspace program

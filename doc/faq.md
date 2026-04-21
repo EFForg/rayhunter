@@ -22,6 +22,12 @@ Please note that this file may contain sensitive information such as your IMSI a
 
 If you want to use a non-Verizon SIM card you will probably need an unlocked device. But it's not clear which devices are locked nor how to unlock them, we welcome any experimentation and information regarding the use of unlocked devices. So far most verizon branded orbic devices we have encountered are actually unlocked.
 
+### I can't reach my Rayhunter's web UI after leaving it alone for a while
+
+Some hotspots (notably the T-Mobile TMOHS1 and Wingtech CT2MHS01) shut down their Wi-Fi access point after about 10 minutes with no connected clients to save battery. Rayhunter is still recording in the background, but you won't be able to reach the web UI until you power cycle the device or reconnect a client while Wi-Fi is still up.
+
+To avoid this, set Wi-Fi Standby to "Always on" in the hotspot's native admin UI. See [TMOHS1](./tmobile-tmohs1.md#wi-fi-auto-shutdown) or [CT2MHS01](./wingtech-ct2mhs01.md#wi-fi-auto-shutdown) for step-by-step instructions.
+
 ### How do I re-enable USB tethering after installing Rayhunter?
 
 If you have installed with `./installer orbic-usb`, you might find that USB

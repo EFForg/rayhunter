@@ -94,5 +94,11 @@ async fn run_install(admin_ip: String, admin_password: String) -> Result<()> {
 
     reboot_device(addr, "reboot", &admin_ip).await;
 
+    println!();
+    println!("Note: by default the TMOHS1 shuts off Wi-Fi after 10 minutes with no clients,");
+    println!("which blocks remote access to Rayhunter until you power cycle. To keep");
+    println!("Wi-Fi always on, open http://{admin_ip}/ -> Settings -> Sleep and set");
+    println!("Wi-Fi Standby to \"Always on\". See doc/tmobile-tmohs1.md for steps.");
+
     Ok(())
 }
