@@ -43,7 +43,7 @@ use diag::{
     DiagDeviceCtrlMessage, delete_all_recordings, delete_recording, get_analysis_report,
     start_recording, stop_recording,
 };
-use log::{error, info};
+use log::{error, info, warn};
 use qmdl_store::RecordingStoreError;
 use rayhunter::Device;
 use stats::get_log;
@@ -315,7 +315,10 @@ async fn run_with_config(
                 longitude: lon,
                 timestamp: 0,
             }),
-            _ => None,
+            _ => {
+                warn!("gps_mode is Fixed but gps_fixed_latitude or gps_fixed_longitude is missing from config — no GPS coordinates will be recorded");
+                None
+            }
         }
     } else {
         None

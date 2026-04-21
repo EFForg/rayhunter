@@ -1,14 +1,41 @@
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use chrono::Utc;
-use log::{error, warn};
+use log::{error, info, warn};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use crate::config::GpsMode;
 use crate::server::ServerState;
+
+fn deserialize_latitude<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+    let v = f64::deserialize(deserializer)?;
+    if !(-90.0..=90.0).contains(&v) {
+        return Err(de::Error::custom(format!(
+            "latitude {v} out of range [-90, 90]"
+        )));
+    }
+    Ok(v)
+}
+
+fn deserialize_longitude<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+    let v = f64::deserialize(deserializer)?;
+    if !(-180.0..=180.0).contains(&v) {
+        return Err(de::Error::custom(format!(
+            "longitude {v} out of range [-180, 180]"
+        )));
+    }
+    Ok(v)
+}
 
 fn deserialize_unix_ts<'de, D>(deserializer: D) -> Result<i64, D::Error>
 where
@@ -34,7 +61,9 @@ where
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GpsData {
+    #[serde(deserialize_with = "deserialize_latitude")]
     pub latitude: f64,
+    #[serde(deserialize_with = "deserialize_longitude")]
     pub longitude: f64,
     #[serde(deserialize_with = "deserialize_unix_ts")]
     pub timestamp: i64,
@@ -88,7 +117,7 @@ pub async fn post_gps(
         match qmdl_store.open_entry_gps_for_append(entry_idx).await {
             Ok(Some(mut file)) => {
                 let record = GpsRecord {
-                    unix_ts: Utc::now().timestamp(),
+                    unix_ts: gps_data.timestamp,
                     lat: gps_data.latitude,
                     lon: gps_data.longitude,
                 };
@@ -117,6 +146,8 @@ pub async fn post_gps(
                 ));
             }
         }
+    } else {
+        info!("GPS data received but no recording is active — position updated in memory only, not persisted to sidecar");
     }
 
     Ok(StatusCode::OK)
