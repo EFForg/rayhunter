@@ -22,7 +22,7 @@ use tokio_util::io::ReaderStream;
 use tokio_util::sync::CancellationToken;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
-use crate::config::Config;
+use crate::config::{Config, GpsMode};
 use crate::diag::DiagDeviceCtrlMessage;
 use crate::display::DisplayState;
 use crate::gps::GpsData;
@@ -162,8 +162,12 @@ pub async fn get_config(
 ))]
 pub async fn set_config(
     State(state): State<Arc<ServerState>>,
-    Json(config): Json<Config>,
+    Json(mut config): Json<Config>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
+    if config.gps_mode != GpsMode::Fixed {
+        config.gps_fixed_latitude = None;
+        config.gps_fixed_longitude = None;
+    }
     let mut config_to_write = config.clone();
     config_to_write.wifi_ssid = None;
     config_to_write.wifi_password = None;
@@ -509,7 +513,7 @@ pub async fn debug_set_display_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::GpsMode;
+    use crate::config::GpsMode as _;
     use async_zip::base::read::mem::ZipFileReader;
     use axum::extract::{Path, State};
     use tempfile::TempDir;

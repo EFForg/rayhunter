@@ -25,10 +25,6 @@
     let gps_data: GpsData | null = $state(null);
     let gps_mode: GpsMode = $state(GpsMode.Disabled);
     $effect(() => {
-        get_config().then((c) => {
-            gps_mode = c.gps_mode;
-        });
-
         const interval = setInterval(async () => {
             try {
                 // Don't update UI if browser tab isn't visible
@@ -46,6 +42,8 @@
                 current_entry = new_manifest.current_entry;
 
                 system_stats = await get_system_stats();
+                const config = await get_config();
+                gps_mode = config.gps_mode;
                 gps_data = await get_gps();
                 update_error = undefined;
                 loaded = true;
