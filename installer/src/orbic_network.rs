@@ -8,7 +8,9 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{TelnetConnection, install_config, install_wifi_tools, setup_data_directory};
+use crate::connection::{
+    TelnetConnection, install_config, install_wifi_tools, setup_data_directory,
+};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
 use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};

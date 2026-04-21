@@ -54,7 +54,11 @@ pub async fn install_wifi_tools<C: DeviceConnection>(
     iw: &[u8],
 ) -> Result<()> {
     let tools: &[(&str, &str, &[u8])] = &[
-        ("wpa_supplicant", "/data/rayhunter/bin/wpa_supplicant", wpa_supplicant),
+        (
+            "wpa_supplicant",
+            "/data/rayhunter/bin/wpa_supplicant",
+            wpa_supplicant,
+        ),
         ("wpa_cli", "/data/rayhunter/bin/wpa_cli", wpa_cli),
         ("iw", "/data/rayhunter/bin/iw", iw),
     ];
