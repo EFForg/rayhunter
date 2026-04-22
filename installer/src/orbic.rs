@@ -58,7 +58,7 @@ impl DeviceConnection for AdbConnection<'_> {
     /// AdbConnection is created; callers in this module (setup_rayhunter) enforce that
     /// ordering.
     async fn run_command(&mut self, command: &str) -> Result<String> {
-        adb_command(self.device, &["/bin/rootshell", "-c", command])
+        adb_command(self.device, &["/bin/rootshell", "-c", &format!("\"{command}\"")])
     }
 
     async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {
