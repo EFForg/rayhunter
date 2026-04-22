@@ -28,10 +28,6 @@ export default defineConfig({
     },
     plugins: [sveltekit()],
     build: {
-        // Keep the generated bundle compatible with older mobile browsers.
-        // The default Vite target follows a modern baseline that can be too new
-        // for older iOS Safari releases reported in issue #903.
-        target: ['es2018', 'safari12'],
         // Force everything into one HTML file. SvelteKit will still generate
         // a lot of JS files but they are deadweight and will not be included
         // in the rust binary.
