@@ -5,13 +5,13 @@ mod crypto_provider;
 mod diag;
 mod display;
 mod error;
+mod firewall;
 mod key_input;
 mod notifications;
 mod pcap;
 mod qmdl_store;
 mod server;
 mod stats;
-
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -23,10 +23,11 @@ use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
 use crate::server::{
-    ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_zip, serve_static,
-    set_config, set_time_offset, test_notification,
+    ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_wifi_status, get_zip,
+    scan_wifi, serve_static, set_config, set_time_offset, test_notification,
 };
 use crate::stats::{get_qmdl_manifest, get_system_stats};
+use wifi_station::WifiStatus;
 
 use analysis::{
     AnalysisCtrlMessage, AnalysisStatus, get_analysis_status, run_analysis_thread, start_analysis,
@@ -71,6 +72,8 @@ fn get_router() -> AppRouter {
         .route("/api/config", get(get_config))
         .route("/api/config", post(set_config))
         .route("/api/test-notification", post(test_notification))
+        .route("/api/wifi-status", get(get_wifi_status))
+        .route("/api/wifi-scan", post(scan_wifi))
         .route("/api/time", get(get_time))
         .route("/api/time-offset", post(set_time_offset))
         .route("/api/debug/display-state", post(debug_set_display_state))
@@ -236,7 +239,7 @@ async fn run_with_config(
         info!("Starting UI");
 
         let update_ui = match &config.device {
-            Device::Orbic => display::orbic::update_ui,
+            Device::Orbic | Device::Moxee => display::orbic::update_ui,
             Device::Tplink => display::tplink::update_ui,
             Device::Tmobile => display::tmobile::update_ui,
             Device::Wingtech => display::wingtech::update_ui,
@@ -284,6 +287,15 @@ async fn run_with_config(
         config.enabled_notifications.clone(),
     );
 
+    let wifi_status = Arc::new(RwLock::new(WifiStatus::default()));
+    wifi_station::run_wifi_client(
+        &task_tracker,
+        &config.wifi_config(),
+        shutdown_token.clone(),
+        wifi_status.clone(),
+    );
+    firewall::apply(&config).await;
+
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),
         config,
@@ -293,6 +305,8 @@ async fn run_with_config(
         analysis_sender: analysis_tx,
         daemon_restart_token: restart_token.clone(),
         ui_update_sender: Some(ui_update_tx),
+        wifi_status,
+        wifi_scan_lock: tokio::sync::Mutex::new(()),
     });
     run_server(&task_tracker, state, shutdown_token.clone()).await;
 

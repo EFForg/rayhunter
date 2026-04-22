@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{DeviceConnection, install_config};
+use crate::connection::{DeviceConnection, install_config, install_wifi_tools};
 use crate::output::{print, println};
 use crate::util::open_usb_device;
 
@@ -53,8 +53,15 @@ pub struct AdbConnection<'a> {
 }
 
 impl DeviceConnection for AdbConnection<'_> {
+    /// Runs through /bin/rootshell so commands execute as root (install_wifi_tools needs
+    /// chmod on root-owned files). setup_rootshell must have succeeded before an
+    /// AdbConnection is created; callers in this module (setup_rayhunter) enforce that
+    /// ordering.
     async fn run_command(&mut self, command: &str) -> Result<String> {
-        adb_command(self.device, &["sh", "-c", command])
+        adb_command(
+            self.device,
+            &["/bin/rootshell", "-c", &format!("\"{command}\"")],
+        )
     }
 
     async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {
@@ -146,7 +153,11 @@ async fn setup_rootshell(adb_device: &mut ADBUSBDevice) -> Result<()> {
 async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Result<ADBUSBDevice> {
     let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
 
-    adb_at_syscmd(&mut adb_device, "mkdir -p /data/rayhunter").await?;
+    adb_at_syscmd(
+        &mut adb_device,
+        "mkdir -p /data/rayhunter/scripts /data/rayhunter/bin",
+    )
+    .await?;
     install_file(
         &mut adb_device,
         "/data/rayhunter/rayhunter-daemon",
@@ -159,6 +170,13 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Re
             device: &mut adb_device,
         };
         install_config(&mut conn, "orbic", reset_config).await?;
+        install_wifi_tools(
+            &mut conn,
+            include_bytes!(env!("FILE_WPA_SUPPLICANT")),
+            include_bytes!(env!("FILE_WPA_CLI")),
+            include_bytes!(env!("FILE_IW")),
+        )
+        .await?;
     }
 
     install_file(
@@ -173,8 +191,15 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Re
         include_bytes!("../../dist/scripts/misc-daemon"),
     )
     .await?;
+    install_file(
+        &mut adb_device,
+        "/etc/init.d/S01iptables",
+        include_bytes!("../../dist/scripts/S01iptables"),
+    )
+    .await?;
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/rayhunter_daemon").await?;
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/misc-daemon").await?;
+    adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/S01iptables").await?;
     println!("done");
     print!("Waiting for reboot... ");
     adb_at_syscmd(&mut adb_device, "shutdown -r -t 1 now").await?;

@@ -17,6 +17,7 @@ pub async fn telnet_send_command_with_output(
     addr: SocketAddr,
     command: &str,
     wait_for_prompt: bool,
+    command_timeout: Duration,
 ) -> Result<String> {
     if command.contains('\n') {
         bail!("multi-line commands are not allowed");
@@ -41,7 +42,7 @@ pub async fn telnet_send_command_with_output(
     writer.write_all(format!("echo RAYHUNTER_'TELNET'_COMMAND_START; {command}; echo RAYHUNTER_'TELNET'_COMMAND_DONE\r\n").as_bytes()).await?;
 
     let mut read_buf = Vec::new();
-    timeout(Duration::from_secs(10), async {
+    timeout(command_timeout, async {
         while let Ok(byte) = reader.read_u8().await {
             read_buf.push(byte);
 
@@ -57,7 +58,7 @@ pub async fn telnet_send_command_with_output(
         }
     })
     .await
-    .context("command timed out after 10 seconds")?;
+    .with_context(|| format!("command timed out after {}s", command_timeout.as_secs()))?;
     let string = String::from_utf8_lossy(&read_buf);
     let start = string.rfind("RAYHUNTER_TELNET_COMMAND_START");
     let end = string.rfind("RAYHUNTER_TELNET_COMMAND_DONE");
@@ -79,7 +80,9 @@ pub async fn telnet_send_command(
     wait_for_prompt: bool,
 ) -> Result<()> {
     let command = format!("{command}; echo command done, exit code $?");
-    let output = telnet_send_command_with_output(addr, &command, wait_for_prompt).await?;
+    let output =
+        telnet_send_command_with_output(addr, &command, wait_for_prompt, Duration::from_secs(10))
+            .await?;
     if !output.contains(expected_output) {
         bail!("{expected_output:?} not found in: {output}");
     }
@@ -93,6 +96,9 @@ pub async fn telnet_send_file(
     wait_for_prompt: bool,
 ) -> Result<()> {
     print!("Sending file {filename} ... ");
+    // Allow 30s base + 2s per MB for the nc command to complete (covers slow WiFi links)
+    let transfer_timeout =
+        Duration::from_secs(30 + (payload.len() as u64 / (1024 * 1024)).max(1) * 2);
     let nc_output = {
         let filename = filename.to_owned();
         let handle = tokio::spawn(async move {
@@ -100,6 +106,7 @@ pub async fn telnet_send_file(
                 addr,
                 &format!("nc -l -p 8081 2>&1 >{filename}.tmp"),
                 wait_for_prompt,
+                transfer_timeout,
             )
             .await
         });

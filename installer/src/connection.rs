@@ -43,6 +43,47 @@ pub async fn install_config<C: DeviceConnection>(
     Ok(())
 }
 
+/// Install wifi tools (wpa_supplicant, wpa_cli, iw) to /data/rayhunter/bin.
+///
+/// Skips any binary that is already present on the device (e.g. provided by firmware),
+/// since those may be newer or better-integrated than the bundled versions.
+pub async fn install_wifi_tools<C: DeviceConnection>(
+    conn: &mut C,
+    wpa_supplicant: &[u8],
+    wpa_cli: &[u8],
+    iw: &[u8],
+) -> Result<()> {
+    let tools: &[(&str, &str, &[u8])] = &[
+        (
+            "wpa_supplicant",
+            "/data/rayhunter/bin/wpa_supplicant",
+            wpa_supplicant,
+        ),
+        ("wpa_cli", "/data/rayhunter/bin/wpa_cli", wpa_cli),
+        ("iw", "/data/rayhunter/bin/iw", iw),
+    ];
+    for &(name, dest, payload) in tools {
+        if device_has_binary(conn, name).await {
+            println!("{name} already on device, skipping");
+        } else {
+            conn.write_file(dest, payload).await?;
+            conn.run_command(&format!("chmod +x {dest}")).await?;
+        }
+    }
+    Ok(())
+}
+
+async fn device_has_binary<C: DeviceConnection>(conn: &mut C, name: &str) -> bool {
+    // `command -v` is a POSIX shell builtin, so it works on minimal busybox firmware
+    // even when /usr/bin/which is absent.
+    conn.run_command(&format!(
+        "\"command -v {name} >/dev/null 2>&1 && echo FOUND || echo MISSING\""
+    ))
+    .await
+    .map(|out| out.contains("FOUND"))
+    .unwrap_or(false)
+}
+
 /// Check if a directory exists using a DeviceConnection
 pub async fn dir_exists<C: DeviceConnection>(conn: &mut C, path: &str) -> bool {
     conn.run_command(&format!("test -d '{path}' && echo exists || echo missing"))
@@ -172,7 +213,13 @@ impl TelnetConnection {
 
 impl DeviceConnection for TelnetConnection {
     async fn run_command(&mut self, command: &str) -> Result<String> {
-        crate::util::telnet_send_command_with_output(self.addr, command, self.wait_for_prompt).await
+        crate::util::telnet_send_command_with_output(
+            self.addr,
+            command,
+            self.wait_for_prompt,
+            std::time::Duration::from_secs(10),
+        )
+        .await
     }
 
     async fn write_file(&mut self, path: &str, content: &[u8]) -> Result<()> {

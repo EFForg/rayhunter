@@ -9,9 +9,11 @@
     }: { shown: boolean; title: string; children: Snippet } = $props();
 
     onMount(() => {
-        window.addEventListener('scroll', () => {
+        const handler = () => {
             document.documentElement.style.setProperty('--scroll-y', `${window.scrollY}px`);
-        });
+        };
+        window.addEventListener('scroll', handler);
+        return () => window.removeEventListener('scroll', handler);
     });
 
     $effect(() => {

@@ -44,6 +44,9 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
    # Note: the arguments --admin-username 'myusername' and --admin-ip 'mydeviceip'
    #       may be required if different from the default.
 
+   # Optionally configure WiFi client mode during install (Orbic and Moxee only):
+   ./installer orbic --admin-password 'mypassword' --wifi-ssid 'MyNetwork' --wifi-password 'networkpass'
+
    # Or install over USB if you want ADB and a root shell (not recommended for most users)
    ./installer orbic-usb
 

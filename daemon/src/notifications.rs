@@ -248,10 +248,7 @@ mod tests {
     }
 
     async fn setup_timeout_server(timeout: u64) -> String {
-        #[cfg(feature = "rustcrypto-tls")]
-        {
-            let _ = rustls_rustcrypto::provider().install_default();
-        }
+        crate::crypto_provider::install_default();
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();

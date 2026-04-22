@@ -17,10 +17,11 @@ required-features = ["apidocs"]
 default = ["rustcrypto-tls"]
 rustcrypto-tls = ["reqwest/rustls-tls-webpki-roots-no-provider", "dep:rustls-rustcrypto"]
 pq-tls = ["reqwest/rustls-tls-webpki-roots-no-provider", "dep:rustls-post-quantum"]
-apidocs = ["dep:utoipa"]
+apidocs = ["dep:utoipa", "wifi-station/utoipa"]
 
 [dependencies]
 rayhunter = { path = "../lib" }
+wifi-station = { git = "https://github.com/BeigeBox/wifi-station", rev = "e8ec5b4" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
 tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt"] }
@@ -44,3 +45,4 @@ rustls-rustcrypto = { version = "0.0.2-alpha", optional = true }
 rustls-post-quantum = { version = "0.2.4", optional = true }
 async-trait = "0.1.88"
 utoipa = { version = "5.4.0", optional = true }
+url = "2.5.4"

@@ -8,7 +8,9 @@ use serde::Deserialize;
 use tokio::time::sleep;
 
 use crate::RAYHUNTER_DAEMON_INIT;
-use crate::connection::{TelnetConnection, install_config, setup_data_directory};
+use crate::connection::{
+    TelnetConnection, install_config, install_wifi_tools, setup_data_directory,
+};
 use crate::orbic_auth::{LoginInfo, LoginRequest, LoginResponse, encode_password};
 use crate::output::{eprintln, print, println};
 use crate::util::{interactive_shell, telnet_send_command, telnet_send_file};
@@ -229,11 +231,28 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
     let mut conn = TelnetConnection::new(addr, false);
     setup_data_directory(&mut conn, data_dir).await?;
 
+    // Ensure bin and scripts directories exist under the data dir (via symlink)
+    telnet_send_command(
+        addr,
+        "mkdir -p /data/rayhunter/scripts /data/rayhunter/bin",
+        "exit code 0",
+        false,
+    )
+    .await?;
+
     telnet_send_file(
         addr,
         "/data/rayhunter/rayhunter-daemon",
         rayhunter_daemon_bin,
         false,
+    )
+    .await?;
+
+    install_wifi_tools(
+        &mut conn,
+        include_bytes!(env!("FILE_WPA_SUPPLICANT")),
+        include_bytes!(env!("FILE_WPA_CLI")),
+        include_bytes!(env!("FILE_IW")),
     )
     .await?;
 
@@ -251,6 +270,13 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
         addr,
         "/etc/init.d/misc-daemon",
         include_bytes!("../../dist/scripts/misc-daemon"),
+        false,
+    )
+    .await?;
+    telnet_send_file(
+        addr,
+        "/etc/init.d/S01iptables",
+        include_bytes!("../../dist/scripts/S01iptables"),
         false,
     )
     .await?;
@@ -272,6 +298,13 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
     telnet_send_command(
         addr,
         "chmod 755 /etc/init.d/misc-daemon",
+        "exit code 0",
+        false,
+    )
+    .await?;
+    telnet_send_command(
+        addr,
+        "chmod 755 /etc/init.d/S01iptables",
         "exit code 0",
         false,
     )
