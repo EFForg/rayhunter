@@ -77,7 +77,7 @@ async fn device_has_binary<C: DeviceConnection>(conn: &mut C, name: &str) -> boo
     // `command -v` is a POSIX shell builtin, so it works on minimal busybox firmware
     // even when /usr/bin/which is absent.
     conn.run_command(&format!(
-        "command -v {name} >/dev/null 2>&1 && echo FOUND || echo MISSING"
+        "\"command -v {name} >/dev/null 2>&1 && echo FOUND || echo MISSING\""
     ))
     .await
     .map(|out| out.contains("FOUND"))
