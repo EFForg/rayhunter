@@ -39,7 +39,7 @@ use diag::{
     DiagDeviceCtrlMessage, delete_all_recordings, delete_recording, get_analysis_report,
     start_recording, stop_recording,
 };
-use log::{error, info};
+use log::{error, info, warn};
 use qmdl_store::RecordingStoreError;
 use rayhunter::Device;
 use rayhunter::diag_device::DiagDevice;
@@ -215,29 +215,8 @@ async fn run_with_config(
 
     if !config.debug_mode {
         info!("Using configuration for device: {0:?}", config.device);
-        let mut dev = DiagDevice::new(&config.device)
-            .await
-            .map_err(RayhunterError::DiagInitError)?;
-        dev.config_logs()
-            .await
-            .map_err(RayhunterError::DiagInitError)?;
 
-        info!("Starting Diag Thread");
-        run_diag_read_thread(
-            &task_tracker,
-            dev,
-            diag_rx,
-            diag_tx.clone(),
-            ui_update_tx.clone(),
-            qmdl_store_lock.clone(),
-            analysis_tx.clone(),
-            config.analyzers.clone(),
-            notification_service.new_handler(),
-            config.min_space_to_start_recording_mb,
-            config.min_space_to_continue_recording_mb,
-        );
         info!("Starting UI");
-
         let update_ui = match &config.device {
             Device::Orbic | Device::Moxee => display::orbic::update_ui,
             Device::Tplink => display::tplink::update_ui,
@@ -247,6 +226,37 @@ async fn run_with_config(
             Device::Uz801 => display::uz801::update_ui,
         };
         update_ui(&task_tracker, &config, shutdown_token.clone(), ui_update_rx);
+
+        match DiagDevice::new(&config.device).await {
+            Ok(mut dev) => match dev.config_logs().await {
+                Ok(_) => {
+                    info!("Starting Diag Thread");
+                    run_diag_read_thread(
+                        &task_tracker,
+                        dev,
+                        diag_rx,
+                        diag_tx.clone(),
+                        ui_update_tx.clone(),
+                        qmdl_store_lock.clone(),
+                        analysis_tx.clone(),
+                        config.analyzers.clone(),
+                        notification_service.new_handler(),
+                        config.min_space_to_start_recording_mb,
+                        config.min_space_to_continue_recording_mb,
+                    );
+
+                    if let Err(e) = ui_update_tx.send(display::DisplayState::Recording).await {
+                        warn!("couldn't send ui update message: {e}");
+                    }
+                }
+                Err(error) => {
+                    log::error!("Error: {}", RayhunterError::DiagInitError(error));
+                }
+            },
+            Err(error) => {
+                log::error!("Error: {}", RayhunterError::DiagInitError(error));
+            }
+        }
 
         info!("Starting Key Input service");
         key_input::run_key_input_thread(
