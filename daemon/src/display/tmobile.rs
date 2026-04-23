@@ -36,7 +36,7 @@ pub fn update_ui(
         invisible = true;
     }
     task_tracker.spawn(async move {
-        let mut state = DisplayState::Recording;
+        let mut state = DisplayState::Paused;
         let mut last_state = DisplayState::Paused;
 
         loop {

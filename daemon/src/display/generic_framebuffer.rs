@@ -182,7 +182,7 @@ pub fn update_ui(
     }
 
     let colorblind_mode = config.colorblind_mode;
-    let mut display_style = display_style_from_state(DisplayState::Recording, colorblind_mode);
+    let mut display_style = display_style_from_state(DisplayState::Paused, colorblind_mode);
 
     task_tracker.spawn(async move {
         // this feels wrong, is there a more rusty way to do this?

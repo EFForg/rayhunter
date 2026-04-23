@@ -120,7 +120,7 @@ pub fn update_ui(
     }
 
     task_tracker.spawn(async move {
-        let mut pixels = STATUS_SMILING;
+        let mut pixels = STATUS_PAUSED;
 
         loop {
             if shutdown_token.is_cancelled() {
