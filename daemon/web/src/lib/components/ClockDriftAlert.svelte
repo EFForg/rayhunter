@@ -55,7 +55,7 @@
 
 {#if show_alert}
     <div
-        class="bg-yellow-100 border-yellow-400 drop-shadow p-4 flex flex-col gap-2 border rounded-md"
+        class="bg-yellow-100 border-yellow-400 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md"
     >
         <span class="text-xl font-bold flex flex-row items-center gap-2 text-yellow-700">
             <svg

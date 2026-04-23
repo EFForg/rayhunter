@@ -44,7 +44,7 @@
 </script>
 
 <div
-    class="{status_row_color} {status_border_color} drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 overflow-x-auto overflow-y-hidden"
+    class="{status_row_color} {status_border_color} drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md flex-1 overflow-x-auto overflow-y-hidden"
 >
     {#if current}
         <div class="flex flex-row justify-between gap-2">
@@ -82,7 +82,7 @@
         >
     </div>
     {#if entry.stop_reason}
-        <div class="bg-yellow-50 border border-yellow-300 rounded p-2 text-yellow-800 text-sm">
+        <div class="bg-yellow-50 border border-yellow-300 rounded-sm p-2 text-yellow-800 text-sm">
             {entry.stop_reason}
         </div>
     {/if}

@@ -57,7 +57,9 @@
 
 <LogView bind:shown={logview_shown} />
 <ConfigForm bind:shown={config_shown} />
-<div class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center">
+<div
+    class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow-sm flex flex-row justify-between items-center"
+>
     <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
     <img src="/rayhunter_text.png" alt="" class="h-10 xl:h-12" />
     <div class="flex flex-row gap-4">
@@ -204,7 +206,7 @@
 <div class="m-4 xl:mx-8 flex flex-col gap-4">
     {#if update_error !== undefined}
         <div
-            class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
+            class="bg-red-100 border-red-100 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
         >
             <span class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600">
                 <svg
@@ -249,7 +251,7 @@
                 />
             {:else}
                 <div
-                    class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
+                    class="bg-red-100 border-red-100 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
                 >
                     <span
                         class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600"
@@ -295,7 +297,7 @@
                         type="checkbox"
                         id="filter_threshold"
                         bind:checked={filter_threshold}
-                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                     />
                 </div>
             </div>

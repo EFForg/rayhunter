@@ -20,7 +20,7 @@
 
 {#if action_errors.length > 0}
     <div
-        class="bg-red-100 border-red-100 drop-shadow p-4 flex flex-col gap-2
+        class="bg-red-100 border-red-100 drop-shadow-sm p-4 flex flex-col gap-2
         border rounded-md flex-1 justify-between fixed z-10 right-3 bottom-3 ml-3"
     >
         <div class="flex flex-row justify-between">

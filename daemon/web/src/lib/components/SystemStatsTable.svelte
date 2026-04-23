@@ -36,7 +36,7 @@
 </script>
 
 <div
-    class="flex-1 drop-shadow p-4 flex flex-col gap-2 border rounded-md bg-gray-100 border-gray-100"
+    class="flex-1 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md bg-gray-100 border-gray-100"
 >
     <p class="text-xl mb-2">System Information</p>
     <table class="table-auto border">

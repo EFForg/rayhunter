@@ -164,7 +164,7 @@
                     <select
                         id="ui_level"
                         bind:value={config.ui_level}
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                     >
                         <option value={0}>0 - Invisible mode</option>
                         <option value={1}>1 - Subtle mode (colored line)</option>
@@ -188,7 +188,7 @@
                     <select
                         id="key_input_mode"
                         bind:value={config.key_input_mode}
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                     >
                         <option value={0}>0 - Disable button control</option>
                         <option value={1}>1 - Double-tap power button to start new recording</option
@@ -202,7 +202,7 @@
                             id="colorblind_mode"
                             type="checkbox"
                             bind:checked={config.colorblind_mode}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                         />
                         <label for="colorblind_mode" class="ml-2 block text-sm text-gray-700">
                             Colorblind Mode
@@ -221,7 +221,7 @@
                             id="ntfy_url"
                             type="url"
                             bind:value={config.ntfy_url}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                         />
                         <p class="text-xs text-gray-500 mt-1">
                             Test button below uses the saved configuration URL, not the input above
@@ -259,7 +259,7 @@
                         </button>
                         {#if testMessage}
                             <div
-                                class="mt-2 p-2 rounded text-sm {testMessageType === 'error'
+                                class="mt-2 p-2 rounded-sm text-sm {testMessageType === 'error'
                                     ? 'bg-red-100 text-red-700'
                                     : 'bg-green-100 text-green-700'}"
                             >
@@ -318,7 +318,7 @@
                             type="number"
                             min="1"
                             bind:value={config.min_space_to_start_recording_mb}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                         />
                         <p class="text-xs text-gray-500 mt-1">
                             Recording will not start if less than this amount of disk space is free
@@ -337,7 +337,7 @@
                             type="number"
                             min="1"
                             bind:value={config.min_space_to_continue_recording_mb}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                         />
                         <p class="text-xs text-gray-500 mt-1">
                             Recording will stop automatically if disk space drops below this level
@@ -567,7 +567,7 @@
                                 id="imsi_requested"
                                 type="checkbox"
                                 bind:checked={config.analyzers.imsi_requested}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label for="imsi_requested" class="ml-2 block text-sm text-gray-700">
                                 IMSI Requested Heuristic
@@ -579,7 +579,7 @@
                                 id="connection_redirect_2g_downgrade"
                                 type="checkbox"
                                 bind:checked={config.analyzers.connection_redirect_2g_downgrade}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label
                                 for="connection_redirect_2g_downgrade"
@@ -594,7 +594,7 @@
                                 id="lte_sib6_and_7_downgrade"
                                 type="checkbox"
                                 bind:checked={config.analyzers.lte_sib6_and_7_downgrade}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label
                                 for="lte_sib6_and_7_downgrade"
@@ -609,7 +609,7 @@
                                 id="null_cipher"
                                 type="checkbox"
                                 bind:checked={config.analyzers.null_cipher}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label for="null_cipher" class="ml-2 block text-sm text-gray-700">
                                 Null Cipher Heuristic
@@ -621,7 +621,7 @@
                                 id="nas_null_cipher"
                                 type="checkbox"
                                 bind:checked={config.analyzers.nas_null_cipher}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label for="nas_null_cipher" class="ml-2 block text-sm text-gray-700">
                                 NAS Null Cipher Heuristic
@@ -633,7 +633,7 @@
                                 id="incomplete_sib"
                                 type="checkbox"
                                 bind:checked={config.analyzers.incomplete_sib}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label for="incomplete_sib" class="ml-2 block text-sm text-gray-700">
                                 Incomplete SIB Heuristic
@@ -645,7 +645,7 @@
                                 id="test_analyzer"
                                 type="checkbox"
                                 bind:checked={config.analyzers.test_analyzer}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label for="test_analyzer" class="ml-2 block text-sm text-gray-700">
                                 Test Heuristic (noisy!)
@@ -656,7 +656,7 @@
                                 id="diagnostic_analyzer"
                                 type="checkbox"
                                 bind:checked={config.analyzers.diagnostic_analyzer}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label
                                 for="diagnostic_analyzer"
@@ -700,7 +700,7 @@
             </form>
             {#if message}
                 <div
-                    class="mt-4 p-3 rounded {messageType === 'error'
+                    class="mt-4 p-3 rounded-sm {messageType === 'error'
                         ? 'bg-red-100 text-red-700'
                         : 'bg-green-100 text-green-700'}"
                 >
