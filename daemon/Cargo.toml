@@ -34,7 +34,7 @@ futures-macro = "0.3.30"
 include_dir = "0.7.3"
 chrono = { version = "0.4.31", features = ["serde"] }
 tokio-stream = { version = "0.1.14", default-features = false, features = ["io-util"] }
-futures = { version = "0.3.30", default-features = false }
+futures = { version = "0.3.32", default-features = false, features = ["std"] }
 serde_json = "1.0.114"
 image = { version =  "0.25.1", default-features = false, features = ["png", "gif"] }
 tempfile = "3.10.2"

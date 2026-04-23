@@ -45,23 +45,20 @@ pub async fn get_pcap(
         StatusCode::NOT_FOUND,
         format!("couldn't find manifest entry with name {qmdl_name}"),
     ))?;
-    if entry.qmdl_size_bytes == 0 {
+    if entry.uncompressed_qmdl_size_bytes == 0 {
         return Err((
             StatusCode::SERVICE_UNAVAILABLE,
             "QMDL file is empty, try again in a bit!".to_string(),
         ));
     }
-    let qmdl_size_bytes = entry.qmdl_size_bytes;
-    let qmdl_file = qmdl_store
+    let qmdl_reader = qmdl_store
         .open_entry_qmdl(entry_index)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?;
-    // the QMDL reader should stop at the last successfully written data chunk
-    // (entry.size_bytes)
     let (reader, writer) = duplex(1024);
 
     tokio::spawn(async move {
-        if let Err(e) = generate_pcap_data(writer, qmdl_file, qmdl_size_bytes).await {
+        if let Err(e) = generate_pcap_data(writer, qmdl_reader).await {
             error!("failed to generate PCAP: {e:?}");
         }
     });
@@ -71,11 +68,7 @@ pub async fn get_pcap(
     Ok((headers, body).into_response())
 }
 
-pub async fn generate_pcap_data<R, W>(
-    writer: W,
-    qmdl_file: R,
-    qmdl_size_bytes: usize,
-) -> Result<(), Error>
+pub async fn generate_pcap_data<R, W>(writer: W, mut reader: QmdlReader<R>) -> Result<(), Error>
 where
     W: AsyncWrite + Unpin + Send,
     R: AsyncRead + Unpin,
@@ -83,7 +76,6 @@ where
     let mut pcap_writer = GsmtapPcapWriter::new(writer).await?;
     pcap_writer.write_iface_header().await?;
 
-    let mut reader = QmdlReader::new(qmdl_file, Some(qmdl_size_bytes));
     while let Some(container) = reader.get_next_messages_container().await? {
         if container.data_type != DataType::UserSpace {
             continue;

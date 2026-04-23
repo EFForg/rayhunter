@@ -10,7 +10,6 @@ use futures::TryStreamExt;
 use log::{error, info};
 use rayhunter::analysis::analyzer::{AnalyzerConfig, EventType, Harness};
 use rayhunter::diag::{DataType, MessagesContainer};
-use rayhunter::qmdl::QmdlReader;
 use serde::Serialize;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
@@ -135,7 +134,7 @@ async fn perform_analysis(
     analyzer_config: &AnalyzerConfig,
 ) -> Result<(), String> {
     info!("Opening QMDL and analysis file for {name}...");
-    let (analysis_file, qmdl_file) = {
+    let (analysis_file, qmdl_reader) = {
         let mut qmdl_store = qmdl_store_lock.write().await;
         let (entry_index, _) = qmdl_store
             .entry_for_name(name)
@@ -144,23 +143,17 @@ async fn perform_analysis(
             .clear_and_open_entry_analysis(entry_index)
             .await
             .map_err(|e| format!("{e:?}"))?;
-        let qmdl_file = qmdl_store
+        let qmdl_reader = qmdl_store
             .open_entry_qmdl(entry_index)
             .await
             .map_err(|e| format!("{e:?}"))?;
 
-        (analysis_file, qmdl_file)
+        (analysis_file, qmdl_reader)
     };
 
     let mut analysis_writer = AnalysisWriter::new(analysis_file, analyzer_config)
         .await
         .map_err(|e| format!("{e:?}"))?;
-    let file_size = qmdl_file
-        .metadata()
-        .await
-        .expect("failed to get QMDL file metadata")
-        .len();
-    let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(file_size as usize));
     let mut qmdl_stream = pin::pin!(
         qmdl_reader
             .as_stream()

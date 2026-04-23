@@ -63,7 +63,7 @@ pub struct DiagTask {
 
 enum DiagState {
     Recording {
-        qmdl_writer: QmdlWriter<File>,
+        qmdl_writer: Box<QmdlWriter<File>>,
         analysis_writer: Box<AnalysisWriter>,
     },
     Stopped,
@@ -143,7 +143,7 @@ impl DiagTask {
             DiskSpaceCheck::Failed => {}
         }
 
-        let (qmdl_file, analysis_file) = match qmdl_store.new_entry().await {
+        let (qmdl_gz_file, analysis_file) = match qmdl_store.new_entry().await {
             Ok(files) => files,
             Err(e) => {
                 let msg = format!("failed creating QMDL file entry: {e}");
@@ -152,7 +152,7 @@ impl DiagTask {
             }
         };
         self.stop_current_recording().await;
-        let qmdl_writer = QmdlWriter::new(qmdl_file);
+        let qmdl_writer = Box::new(QmdlWriter::new(qmdl_gz_file));
         let analysis_writer = match AnalysisWriter::new(analysis_file, &self.analyzer_config).await
         {
             Ok(writer) => Box::new(writer),
@@ -237,13 +237,23 @@ impl DiagTask {
         let mut state = DiagState::Stopped;
         std::mem::swap(&mut self.state, &mut state);
         if let DiagState::Recording {
-            analysis_writer, ..
+            qmdl_writer,
+            analysis_writer,
+            ..
         } = state
         {
-            analysis_writer
-                .close()
-                .await
-                .expect("failed to close analysis writer");
+            match (qmdl_writer.close().await, analysis_writer.close().await) {
+                (Ok(()), Ok(())) => {}
+                (qmdl_result, analysis_result) => {
+                    if let Err(err) = qmdl_result {
+                        error!("failed to close QmdlWriter: {:?}", err);
+                    }
+                    if let Err(err) = analysis_result {
+                        error!("failed to close AnalysisWriter: {:?}", err);
+                    }
+                    panic!();
+                }
+            }
         }
     }
 
@@ -313,13 +323,13 @@ impl DiagTask {
             }
             debug!(
                 "total QMDL bytes written: {}, updating manifest...",
-                qmdl_writer.total_written
+                qmdl_writer.total_uncompressed_bytes
             );
             let index = qmdl_store
                 .current_entry
                 .expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
             if let Err(e) = qmdl_store
-                .update_entry_qmdl_size(index, qmdl_writer.total_written)
+                .update_entry_qmdl_size(index, qmdl_writer.total_uncompressed_bytes)
                 .await
             {
                 let reason = format!("failed to update manifest (disk full?): {e}");

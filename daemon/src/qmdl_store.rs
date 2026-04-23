@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Local};
 use log::{info, warn};
+use rayhunter::qmdl::QmdlReader;
 use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -57,8 +58,10 @@ pub struct ManifestEntry {
     /// The system time when the last message was recorded to the file
     #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub last_message_time: Option<DateTime<Local>>,
-    /// The size of the QMDL file in bytes
-    pub qmdl_size_bytes: usize,
+    /// The size of the uncompressed QMDL data in bytes. Previously this was
+    /// called `qmdl_size_bytes`, so alias it for backwards compatibility.
+    #[serde(alias = "qmdl_size_bytes")]
+    pub uncompressed_qmdl_size_bytes: usize,
     /// The rayhunter daemon version which generated the file
     pub rayhunter_version: Option<String>,
     /// The OS which created the file
@@ -67,6 +70,8 @@ pub struct ManifestEntry {
     pub arch: Option<String>,
     #[serde(default)]
     pub stop_reason: Option<String>,
+    #[serde(default)]
+    pub compressed: bool,
 }
 
 impl ManifestEntry {
@@ -77,17 +82,22 @@ impl ManifestEntry {
             name: format!("{}", now.timestamp()),
             start_time: now,
             last_message_time: None,
-            qmdl_size_bytes: 0,
+            uncompressed_qmdl_size_bytes: 0,
             rayhunter_version: Some(metadata.rayhunter_version),
             system_os: Some(metadata.system_os),
             arch: Some(metadata.arch),
             stop_reason: None,
+            compressed: true,
         }
     }
 
     pub fn get_qmdl_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         let mut filepath = path.as_ref().join(&self.name);
-        filepath.set_extension("qmdl");
+        if self.compressed {
+            filepath.set_extension("qmdl.gz");
+        } else {
+            filepath.set_extension("qmdl");
+        }
         filepath
     }
 
@@ -153,8 +163,9 @@ impl RecordingStore {
     }
 
     // Does a best-effort attempt to recover the manifest from a directory of
-    // QMDL files. We expect these files to be named like "<timestamp>.qmdl",
-    // and skip any files which don't match that pattern.
+    // QMDL files. We expect these files to be named like "<timestamp>.qmdl"
+    // or "<timestamp>.qmdl.gz", and skip any files which don't match that
+    // pattern.
     pub async fn recover<P>(path: P) -> Result<Self, RecordingStoreError>
     where
         P: AsRef<Path>,
@@ -174,11 +185,14 @@ impl RecordingStore {
                 continue;
             };
 
-            if !filename.ends_with(".qmdl") {
+            let (stem, compressed) = if filename.ends_with(".qmdl") {
+                (filename.trim_end_matches(".qmdl"), false)
+            } else if filename.ends_with(".qmdl.gz") {
+                (filename.trim_end_matches(".qmdl.gz"), true)
+            } else {
                 continue;
-            }
+            };
 
-            let stem = filename.trim_end_matches(".qmdl");
             let Ok(start_timestamp) = stem.parse::<i64>() else {
                 warn!("QMDL file has invalid name {os_filename:?}, skipping");
                 continue;
@@ -205,9 +219,10 @@ impl RecordingStore {
             info!("successfully recovered QMDL entry {os_filename:?}!");
             manifest_entries.push(ManifestEntry {
                 name: stem.to_string(),
+                compressed,
                 start_time: start_time.into(),
                 last_message_time: Some(last_message_time.into()),
-                qmdl_size_bytes: metadata.size() as usize,
+                uncompressed_qmdl_size_bytes: metadata.size() as usize,
                 rayhunter_version: None,
                 system_os: None,
                 arch: None,
@@ -265,11 +280,19 @@ impl RecordingStore {
     }
 
     // Returns the corresponding QMDL file for a given entry
-    pub async fn open_entry_qmdl(&self, entry_index: usize) -> Result<File, RecordingStoreError> {
+    pub async fn open_entry_qmdl(
+        &self,
+        entry_index: usize,
+    ) -> Result<QmdlReader<File>, RecordingStoreError> {
         let entry = &self.manifest.entries[entry_index];
-        File::open(entry.get_qmdl_filepath(&self.path))
+        let file = File::open(entry.get_qmdl_filepath(&self.path))
             .await
-            .map_err(RecordingStoreError::ReadFileError)
+            .map_err(RecordingStoreError::ReadFileError)?;
+        Ok(QmdlReader::new(
+            file,
+            entry.compressed,
+            Some(entry.uncompressed_qmdl_size_bytes),
+        ))
     }
 
     // Returns the corresponding QMDL file for a given entry
@@ -314,7 +337,7 @@ impl RecordingStore {
         entry_index: usize,
         size_bytes: usize,
     ) -> Result<(), RecordingStoreError> {
-        self.manifest.entries[entry_index].qmdl_size_bytes = size_bytes;
+        self.manifest.entries[entry_index].uncompressed_qmdl_size_bytes = size_bytes;
         self.manifest.entries[entry_index].last_message_time =
             Some(rayhunter::clock::get_adjusted_now());
         self.write_manifest().await
@@ -490,7 +513,10 @@ mod tests {
             .entry_for_name(&store.manifest.entries[entry_index].name)
             .unwrap();
         assert!(entry.last_message_time.is_some());
-        assert_eq!(store.manifest.entries[entry_index].qmdl_size_bytes, 1000);
+        assert_eq!(
+            store.manifest.entries[entry_index].uncompressed_qmdl_size_bytes,
+            1000
+        );
         assert_eq!(
             RecordingStore::read_manifest(dir.path()).await.unwrap(),
             store.manifest
