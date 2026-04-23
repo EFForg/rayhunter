@@ -6,6 +6,7 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      applies-to: "security-updates"
       dependency-type:
         patterns:
           - "*"
@@ -16,6 +17,7 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      applies-to: "security-updates"
       dependency-type:
         patterns:
           - "*"
@@ -26,6 +28,7 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      applies-to: "security-updates"
       dependency-type:
         patterns:
           - "*"
@@ -36,6 +39,7 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      applies-to: "security-updates"
       dependency-type:
         patterns:
           - "*"
