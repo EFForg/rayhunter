@@ -210,7 +210,7 @@
                     </div>
                 </div>
 
-                <div class="border-t pt-4 mt-6 space-y-3">
+                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
                     <div>
                         <label for="ntfy_url" class="block text-sm font-medium text-gray-700 mb-1">
@@ -303,7 +303,7 @@
                     </div>
                 </div>
 
-                <div class="border-t pt-4 mt-6 space-y-3">
+                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Storage Management</h3>
 
                     <div>
@@ -346,7 +346,7 @@
                 </div>
 
                 {#if config.device === 'orbic' || config.device === 'moxee' || config.device === 'tmobile' || config.device === 'wingtech'}
-                    <div class="border-t pt-4 mt-6 space-y-3">
+                    <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                         <h3 class="text-lg font-semibold text-gray-800 mb-4">WiFi Client Mode</h3>
                         <p class="text-xs text-gray-500">
                             Connect the device to an existing WiFi network for internet access (e.g.
@@ -359,7 +359,7 @@
                                 id="wifi_enabled"
                                 type="checkbox"
                                 bind:checked={config.wifi_enabled}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
                             <label for="wifi_enabled" class="ml-2 block text-sm text-gray-700">
                                 Enable WiFi
@@ -402,7 +402,7 @@
                                     type="text"
                                     bind:value={config.wifi_ssid}
                                     placeholder="MyWiFiNetwork"
-                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                                 />
                                 <button
                                     type="button"
@@ -421,7 +421,7 @@
 
                         {#if scanResults.length > 0}
                             <div
-                                class="border border-gray-200 rounded-md max-h-40 overflow-y-auto divide-y"
+                                class="border border-gray-200 rounded-md max-h-40 overflow-y-auto divide-y divide-gray-200"
                             >
                                 {#each scanResults as network}
                                     <button
@@ -449,7 +449,7 @@
                                 <select
                                     id="wifi_security"
                                     bind:value={config.wifi_security}
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                                 >
                                     <option value="wpa_psk">WPA2 (WPA-PSK)</option>
                                     <option value="sae">WPA3 (SAE)</option>
@@ -469,7 +469,7 @@
                                 type="password"
                                 bind:value={config.wifi_password}
                                 placeholder="Enter password"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                             />
                             <p class="text-xs text-gray-500 mt-1">
                                 Changing the network requires re-entering the password.
@@ -489,7 +489,7 @@
                                     type="text"
                                     bind:value={dnsServersInput}
                                     placeholder="9.9.9.9, 149.112.112.112"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                                 />
                                 <p class="text-xs text-gray-500 mt-1">
                                     Comma-separated. Used when WiFi is active. Defaults to 9.9.9.9,
@@ -500,7 +500,7 @@
                     </div>
                 {/if}
 
-                <div class="border-t pt-4 mt-6 space-y-3">
+                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Device Security</h3>
 
                     <div class="flex items-center">
@@ -508,7 +508,7 @@
                             id="firewall_restrict_outbound"
                             type="checkbox"
                             bind:checked={config.firewall_restrict_outbound}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded"
+                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                         />
                         <label
                             for="firewall_restrict_outbound"
@@ -548,7 +548,7 @@
                                             : null;
                                 }}
                                 placeholder="22, 80"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                             />
                             <p class="text-xs text-gray-500 mt-1">
                                 Comma-separated TCP ports, e.g. 22, 80
@@ -557,7 +557,7 @@
                     {/if}
                 </div>
 
-                <div class="border-t pt-4 mt-6">
+                <div class="border-t border-gray-200 pt-4 mt-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         Analyzer Heuristic Settings
                     </h3>

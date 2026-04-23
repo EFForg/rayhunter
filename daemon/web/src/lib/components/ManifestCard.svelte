@@ -100,7 +100,7 @@
             />
         {/if}
     </div>
-    <div class="border-b {analysis_visible ? '' : 'hidden'}">
+    <div class="border-b border-gray-200 {analysis_visible ? '' : 'hidden'}">
         <AnalysisView {entry} {manager} {current} />
     </div>
 </div>
