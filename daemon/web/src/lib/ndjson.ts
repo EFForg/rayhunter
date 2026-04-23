@@ -19,7 +19,9 @@ export function parse_ndjson(input: string): NewlineDeliminatedJson {
             // however, if we've reached the end of the input, that means we
             // were given invalid nd-json
             if (lines.length === 0) {
-                throw new Error(`unable to parse invalid nd-json: ${e}, "${current_line}"`);
+                throw new Error(`unable to parse invalid nd-json: ${e}, "${current_line}"`, {
+                    cause: e,
+                });
             }
         }
     }
