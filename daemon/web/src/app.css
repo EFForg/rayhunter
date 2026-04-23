@@ -6,15 +6,11 @@
     --color-rayhunter-green: #94ea18;
 }
 
-/* Preserve Tailwind v3's default border / divide color (gray-200) so the
- * v4 upgrade does not visually change every bare `border` / `divide-x` in
- * the codebase. Without this, those utilities use `currentColor` in v4. */
+/* v4 dropped the v3 preflight rule that set `cursor: pointer` on buttons.
+ * Restore it so enabled buttons get the pointer cursor. */
 @layer base {
-    *,
-    ::after,
-    ::before,
-    ::backdrop,
-    ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+    button:not(:disabled),
+    [role='button']:not(:disabled) {
+        cursor: pointer;
     }
 }
