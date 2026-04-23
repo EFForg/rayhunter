@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
     server: {
@@ -26,7 +27,7 @@ export default defineConfig({
             },
         },
     },
-    plugins: [sveltekit()],
+    plugins: [tailwindcss(), sveltekit()],
     build: {
         // Force everything into one HTML file. SvelteKit will still generate
         // a lot of JS files but they are deadweight and will not be included

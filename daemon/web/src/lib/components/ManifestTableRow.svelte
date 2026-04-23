@@ -36,7 +36,7 @@
     }
 </script>
 
-<tr class="{status_row_color} drop-shadow">
+<tr class="{status_row_color} drop-shadow-sm">
     <td class="p-2">{entry.name}</td>
     <td class="p-2">{date_formatter.format(entry.start_time)}</td>
     <td class="p-2"

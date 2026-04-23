@@ -1,3 +1,20 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import 'tailwindcss';
+
+@theme {
+    --color-rayhunter-blue: #4e4eb1;
+    --color-rayhunter-dark-blue: #3f3da0;
+    --color-rayhunter-green: #94ea18;
+}
+
+/* Preserve Tailwind v3's default border / divide color (gray-200) so the
+ * v4 upgrade does not visually change every bare `border` / `divide-x` in
+ * the codebase. Without this, those utilities use `currentColor` in v4. */
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
