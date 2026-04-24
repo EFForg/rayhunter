@@ -76,7 +76,7 @@ This one is for maintainers of Rayhunter.
 
 1. Make a PR changing the versions in `Cargo.toml` and other files.
    This could be automated better but right now it's manual. You can do this easily with sed:
-   `sed -i "" -E 's/x.x.x/y.y.y/g' */Cargo.toml`
+   `sed -i "" -E 's/x.x.x/y.y.y/g' */Cargo.toml installer-gui/src-tauri/Cargo.toml`
 
 2. Merge PR and make a tag.
 
