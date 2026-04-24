@@ -29,7 +29,7 @@ pub async fn install() -> Result<()> {
     run_command_expect(&mut adb, "mount -o remount,rw /", "exit code 0").await?;
     run_command_expect(&mut adb, "mkdir -p /data/rayhunter", "exit code 0").await?;
 
-    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
+    let rayhunter_daemon_bin = crate::get_file!("FILE_RAYHUNTER_DAEMON");
     adb.write_file("/data/rayhunter/rayhunter-daemon", rayhunter_daemon_bin)
         .await?;
     adb.write_file(

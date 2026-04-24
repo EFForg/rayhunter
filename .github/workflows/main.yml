@@ -141,13 +141,13 @@ jobs:
         npm install
         npm run build
         popd
-        NO_FIRMWARE_BIN=true cargo check --verbose
+        cargo check --verbose
     - name: Run tests
       run: |
-        NO_FIRMWARE_BIN=true cargo test --verbose
+        cargo test --verbose
     - name: Run clippy
       run: |
-        NO_FIRMWARE_BIN=true cargo clippy --verbose
+        cargo clippy --verbose
 
   installer_gui_check:
     # we test the GUI installer separately to:
@@ -173,9 +173,9 @@ jobs:
     # fmt --all runs on all workspace packages so this is handled by
     # check_and_test above
     - name: Check
-      run: NO_FIRMWARE_BIN=true cargo check --package installer-gui --verbose
+      run: cargo check --package installer-gui --verbose
     - name: Run clippy
-      run: NO_FIRMWARE_BIN=true cargo clippy --package installer-gui --verbose
+      run: cargo clippy --package installer-gui --verbose
 
   test_daemon_frontend:
     needs: files_changed
@@ -227,12 +227,12 @@ jobs:
         shell: bash
         run: |
           cd installer
-          NO_FIRMWARE_BIN=true cargo check --verbose
+          cargo check --verbose
       - name: cargo test
         shell: bash
         run: |
           cd installer
-          NO_FIRMWARE_BIN=true cargo test --verbose --no-default-features
+          cargo test --verbose --no-default-features
 
   build_rayhunter_check:
     if: needs.files_changed.outputs.daemon_changed == 'true'

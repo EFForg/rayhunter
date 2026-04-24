@@ -136,7 +136,7 @@ async fn force_debug_mode() -> Result<ADBUSBDevice> {
 }
 
 async fn setup_rootshell(adb_device: &mut ADBUSBDevice) -> Result<()> {
-    let rootshell_bin = include_bytes!(env!("FILE_ROOTSHELL"));
+    let rootshell_bin = crate::get_file!("FILE_ROOTSHELL");
 
     install_file(adb_device, "/bin/rootshell", rootshell_bin).await?;
     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -151,7 +151,7 @@ async fn setup_rootshell(adb_device: &mut ADBUSBDevice) -> Result<()> {
 }
 
 async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Result<ADBUSBDevice> {
-    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
+    let rayhunter_daemon_bin = crate::get_file!("FILE_RAYHUNTER_DAEMON");
 
     adb_at_syscmd(
         &mut adb_device,
@@ -172,9 +172,9 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Re
         install_config(&mut conn, "orbic", reset_config).await?;
         install_wifi_tools(
             &mut conn,
-            include_bytes!(env!("FILE_WPA_SUPPLICANT")),
-            include_bytes!(env!("FILE_WPA_CLI")),
-            include_bytes!(env!("FILE_IW")),
+            crate::get_file!("FILE_WPA_SUPPLICANT"),
+            crate::get_file!("FILE_WPA_CLI"),
+            crate::get_file!("FILE_IW"),
         )
         .await?;
     }

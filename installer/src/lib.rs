@@ -6,6 +6,9 @@ use env_logger::Env;
 use anyhow::bail;
 
 mod connection;
+mod files;
+pub(crate) use files::*;
+
 mod moxee;
 #[cfg(not(target_os = "android"))]
 mod orbic;

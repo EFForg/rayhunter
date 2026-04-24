@@ -26,7 +26,6 @@ pub async fn install(
     Args {
         admin_ip,
         admin_password,
-        ..
     }: Args,
 ) -> Result<()> {
     wingtech_run_install(admin_ip, admin_password).await
@@ -105,7 +104,7 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
     )
     .await?;
 
-    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
+    let rayhunter_daemon_bin = crate::get_file!("FILE_RAYHUNTER_DAEMON");
     telnet_send_file(
         addr,
         "/data/rayhunter/rayhunter-daemon",
