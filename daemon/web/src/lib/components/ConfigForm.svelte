@@ -500,63 +500,6 @@
                     </div>
                 {/if}
 
-                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Device Security</h3>
-
-                    <div class="flex items-center">
-                        <input
-                            id="firewall_restrict_outbound"
-                            type="checkbox"
-                            bind:checked={config.firewall_restrict_outbound}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                        />
-                        <label
-                            for="firewall_restrict_outbound"
-                            class="ml-2 block text-sm text-gray-700"
-                        >
-                            Restrict outbound traffic
-                        </label>
-                    </div>
-                    <p class="text-xs text-gray-500">
-                        Only allows DNS, DHCP, and HTTPS (port 443) outbound. Blocks all other
-                        outbound connections on every interface (WiFi and cellular). Loopback and
-                        hotspot traffic are always allowed. Changes take effect immediately.
-                    </p>
-
-                    {#if config.firewall_restrict_outbound}
-                        <div>
-                            <label
-                                for="firewall_allowed_ports"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Additional Allowed Ports
-                            </label>
-                            <input
-                                id="firewall_allowed_ports"
-                                type="text"
-                                value={config.firewall_allowed_ports
-                                    ? config.firewall_allowed_ports.join(', ')
-                                    : ''}
-                                oninput={(e) => {
-                                    const val = (e.target as HTMLInputElement).value.trim();
-                                    config!.firewall_allowed_ports =
-                                        val.length > 0
-                                            ? val
-                                                  .split(',')
-                                                  .map((s) => parseInt(s.trim()))
-                                                  .filter((n) => !isNaN(n) && n >= 1 && n <= 65535)
-                                            : null;
-                                }}
-                                placeholder="22, 80"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
-                            />
-                            <p class="text-xs text-gray-500 mt-1">
-                                Comma-separated TCP ports, e.g. 22, 80
-                            </p>
-                        </div>
-                    {/if}
-                </div>
-
                 <div class="border-t border-gray-200 pt-4 mt-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         Analyzer Heuristic Settings

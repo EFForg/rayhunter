@@ -267,13 +267,6 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
         false,
     )
     .await?;
-    telnet_send_file(
-        addr,
-        "/etc/init.d/S01iptables",
-        include_bytes!("../../dist/scripts/S01iptables"),
-        false,
-    )
-    .await?;
 
     telnet_send_command(
         addr,
@@ -292,13 +285,6 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
     telnet_send_command(
         addr,
         "chmod 755 /etc/init.d/misc-daemon",
-        "exit code 0",
-        false,
-    )
-    .await?;
-    telnet_send_command(
-        addr,
-        "chmod 755 /etc/init.d/S01iptables",
         "exit code 0",
         false,
     )
