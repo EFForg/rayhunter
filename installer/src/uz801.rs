@@ -148,7 +148,7 @@ async fn install_rayhunter_files(adb_device: &mut ADBUSBDevice) -> Result<()> {
     adb_device.shell_command(&["mount", "-o", "remount,rw", "/system"], &mut buf)?;
 
     // Install rayhunter daemon binary with verification
-    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
+    let rayhunter_daemon_bin = crate::get_file!("FILE_RAYHUNTER_DAEMON");
     install_file(
         adb_device,
         "/data/rayhunter/rayhunter-daemon",

@@ -188,7 +188,7 @@ async fn tplink_run_install(
 
     install_config(&mut conn, "tplink", reset_config).await?;
 
-    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
+    let rayhunter_daemon_bin = crate::get_file!("FILE_RAYHUNTER_DAEMON");
 
     telnet_send_file(
         addr,

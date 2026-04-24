@@ -216,7 +216,7 @@ async fn wait_for_telnet(admin_ip: &str) -> Result<()> {
 
 async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> Result<()> {
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
-    let rayhunter_daemon_bin = include_bytes!(env!("FILE_RAYHUNTER_DAEMON"));
+    let rayhunter_daemon_bin = crate::get_file!("FILE_RAYHUNTER_DAEMON");
 
     // Remount filesystem as read-write to allow modifications
     // This is really only necessary for the Moxee Hotspot
@@ -250,9 +250,9 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
 
     install_wifi_tools(
         &mut conn,
-        include_bytes!(env!("FILE_WPA_SUPPLICANT")),
-        include_bytes!(env!("FILE_WPA_CLI")),
-        include_bytes!(env!("FILE_IW")),
+        crate::get_file!("FILE_WPA_SUPPLICANT"),
+        crate::get_file!("FILE_WPA_CLI"),
+        crate::get_file!("FILE_IW"),
     )
     .await?;
 

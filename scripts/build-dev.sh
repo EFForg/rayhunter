@@ -52,10 +52,10 @@ build_wifi_tools() {
     fi
 
     if ! command -v arm-linux-musleabihf-gcc &> /dev/null; then
-        echo "Error: arm-linux-musleabihf-gcc not found."
+        echo "Warning: Skipping building WiFi tools due to missing C crosscompiler."
+        echo "arm-linux-musleabihf-gcc not found."
         echo "Install with: brew install FiloSottile/musl-cross/musl-cross"
-        echo "(Required because the installer bundles wpa_supplicant, wpa_cli, and iw for orbic-family devices.)"
-        exit 1
+        return
     fi
 
     echo "Building WiFi tools..."
