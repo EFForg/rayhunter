@@ -1,3 +1,7 @@
+# open-pull-requests-limit is used to disable automated version updates
+# security updates are unaffected. see
+# * https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configuring-dependabot-version-updates#disabling-dependabot-version-updates
+# * https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference#open-pull-requests-limit-
 version: 2
 updates:
   # Rust dependencies
@@ -5,6 +9,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
     groups:
       applies-to: "security-updates"
       dependency-type:
@@ -16,6 +21,7 @@ updates:
     directory: "/tools"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
     groups:
       applies-to: "security-updates"
       dependency-type:
@@ -27,6 +33,7 @@ updates:
     directory: "/daemon/web"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
     groups:
       applies-to: "security-updates"
       dependency-type:
@@ -38,6 +45,7 @@ updates:
     directory: "/installer-gui"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 0
     groups:
       applies-to: "security-updates"
       dependency-type:
