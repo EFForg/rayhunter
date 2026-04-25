@@ -21,6 +21,7 @@ pub struct WebdavUploadWorkerConfig {
     host: String,
     username: Option<String>,
     password: Option<String>,
+    timeout: Duration,
     delete_on_upload: bool,
 }
 
@@ -33,6 +34,7 @@ impl From<WebdavConfig> for WebdavUploadWorkerConfig {
             host: value.host,
             username: value.username,
             password: value.password,
+            timeout: Duration::from_secs(value.upload_timeout_secs),
             delete_on_upload: value.delete_on_upload,
         }
     }
@@ -74,8 +76,9 @@ impl WebDavClient {
         host: String,
         username: Option<String>,
         password: Option<String>,
+        timeout: Duration,
         root_dir: String,
-    ) -> Self {
+    ) -> Result<Self, reqwest::Error> {
         let host = host.trim_end_matches('/');
         let root = root_dir.trim_matches('/');
         let base_url = if root.is_empty() {
@@ -84,12 +87,12 @@ impl WebDavClient {
             format!("{}/{}/", host, root)
         };
 
-        Self {
-            client: reqwest::Client::new(),
+        Ok(Self {
+            client: reqwest::Client::builder().timeout(timeout).build()?,
             base_url,
             username,
             password,
-        }
+        })
     }
 
     async fn try_upload_file(&self, file: File, name: &str) -> anyhow::Result<Response> {
@@ -185,12 +188,19 @@ pub fn run_webdav_upload_worker(
         let mut interval = time::interval(config.poll_interval);
         interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
 
-        let webdav_client = WebDavClient::new(
+        let webdav_client = match WebDavClient::new(
             config.host,
             config.username,
             config.password,
+            config.timeout,
             config.remote_path,
-        );
+        ) {
+            Ok(client) => client,
+            Err(err) => {
+                warn!("Unable to create WebDAV client: {:?}", err);
+                return;
+            }
+        };
 
         loop {
             select! {
@@ -346,6 +356,7 @@ mod tests {
             host: url,
             username: Some("user".to_string()),
             password: Some("password".to_string()),
+            timeout: Duration::from_secs(1),
             delete_on_upload: false,
         };
 
@@ -401,6 +412,7 @@ mod tests {
             host: url,
             username: None,
             password: None,
+            timeout: Duration::from_secs(1),
             delete_on_upload: true,
         };
 
@@ -431,6 +443,7 @@ mod tests {
             host: url,
             username: None,
             password: None,
+            timeout: Duration::from_secs(1),
             delete_on_upload: false,
         };
 

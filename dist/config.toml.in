@@ -70,6 +70,8 @@ firewall_restrict_outbound = true
 # # rejected and the request is sent unauthenticated.
 # username = "user"
 # password = "pass"
+# # Timeout in seconds for each upload request (default 300).
+# upload_timeout_secs = 300
 # # How often the worker scans for eligible entries (default 3600).
 # poll_interval_secs = 3600
 # # Minimum age in seconds before an entry becomes eligible for upload

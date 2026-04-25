@@ -67,6 +67,8 @@ pub struct WebdavConfig {
     pub username: Option<String>,
     /// Optional password for HTTP Basic auth
     pub password: Option<String>,
+    /// Timeout (in seconds) for each upload request
+    pub upload_timeout_secs: u64,
     /// How often (in seconds) the worker scans for entries to upload
     pub poll_interval_secs: u64,
     /// Minimum age (in seconds) an entry must have before it becomes eligible for upload
@@ -82,6 +84,7 @@ impl Default for WebdavConfig {
             remote_path: "/".to_string(),
             username: None,
             password: None,
+            upload_timeout_secs: 300,
             poll_interval_secs: 3600,
             min_age_secs: 86400,
             delete_on_upload: false,

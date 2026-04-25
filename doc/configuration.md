@@ -67,6 +67,7 @@ WebDAV upload is currently configurable only by editing `config.toml` — there 
 | `remote_path` | no | `"/"` | Remote directory to upload files into |
 | `username` | no | — | HTTP Basic auth username |
 | `password` | no | — | HTTP Basic auth password |
+| `upload_timeout_secs` | no | `300` | Timeout (seconds) for each upload request |
 | `poll_interval_secs` | no | `3600` | How often (seconds) the worker scans for eligible entries |
 | `min_age_secs` | no | `86400` | Minimum age (seconds) an entry must have before it becomes eligible for upload |
 | `delete_on_upload` | no | `false` | Delete the entry locally after a successful upload |
@@ -79,6 +80,7 @@ host = "https://dav.example.com"
 remote_path = "/rayhunter"
 username = "user"
 password = "pass"
+upload_timeout_secs = 300
 poll_interval_secs = 3600
 min_age_secs = 86400
 delete_on_upload = false
