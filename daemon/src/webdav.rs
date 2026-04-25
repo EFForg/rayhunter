@@ -17,8 +17,7 @@ use crate::qmdl_store::RecordingStore;
 pub struct WebdavUploadWorkerConfig {
     poll_interval: Duration,
     min_age: TimeDelta,
-    remote_path: String,
-    host: String,
+    url: String,
     username: Option<String>,
     password: Option<String>,
     timeout: Duration,
@@ -30,8 +29,7 @@ impl From<WebdavConfig> for WebdavUploadWorkerConfig {
         WebdavUploadWorkerConfig {
             poll_interval: Duration::from_secs(value.poll_interval_secs),
             min_age: TimeDelta::seconds(value.min_age_secs),
-            remote_path: value.remote_path,
-            host: value.host,
+            url: value.url,
             username: value.username,
             password: value.password,
             timeout: Duration::from_secs(value.upload_timeout_secs),
@@ -66,30 +64,24 @@ impl Display for FileKind {
 #[derive(Debug, Clone)]
 struct WebDavClient {
     client: Client,
-    base_url: String,
+    url: String,
     username: Option<String>,
     password: Option<String>,
 }
 
 impl WebDavClient {
     fn new(
-        host: String,
+        mut url: String,
         username: Option<String>,
         password: Option<String>,
         timeout: Duration,
-        root_dir: String,
     ) -> Result<Self, reqwest::Error> {
-        let host = host.trim_end_matches('/');
-        let root = root_dir.trim_matches('/');
-        let base_url = if root.is_empty() {
-            format!("{}/", host)
-        } else {
-            format!("{}/{}/", host, root)
-        };
-
+        if !url.ends_with('/') {
+            url.push('/');
+        }
         Ok(Self {
             client: reqwest::Client::builder().timeout(timeout).build()?,
-            base_url,
+            url,
             username,
             password,
         })
@@ -101,7 +93,7 @@ impl WebDavClient {
         let stream = ReaderStream::new(file);
         let body = Body::wrap_stream(stream);
 
-        let target = format!("{}{}", self.base_url, name);
+        let target = format!("{}{}", self.url, name);
 
         let client = self
             .client
@@ -189,11 +181,10 @@ pub fn run_webdav_upload_worker(
         interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
 
         let webdav_client = match WebDavClient::new(
-            config.host,
+            config.url,
             config.username,
             config.password,
             config.timeout,
-            config.remote_path,
         ) {
             Ok(client) => client,
             Err(err) => {
@@ -304,7 +295,7 @@ mod tests {
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let url = format!("http://{}", addr);
+        let url = format!("http://{}/dav", addr);
 
         tokio::spawn(async move {
             axum::serve(listener, app).await.unwrap();
@@ -352,8 +343,7 @@ mod tests {
         let config = WebdavUploadWorkerConfig {
             poll_interval: Duration::from_millis(50),
             min_age: TimeDelta::seconds(-1),
-            remote_path: "dav".to_string(),
-            host: url,
+            url,
             username: Some("user".to_string()),
             password: Some("password".to_string()),
             timeout: Duration::from_secs(1),
@@ -408,8 +398,7 @@ mod tests {
         let config = WebdavUploadWorkerConfig {
             poll_interval: Duration::from_millis(50),
             min_age: TimeDelta::seconds(-1),
-            remote_path: "dav".to_string(),
-            host: url,
+            url,
             username: None,
             password: None,
             timeout: Duration::from_secs(1),
@@ -439,8 +428,7 @@ mod tests {
         let config = WebdavUploadWorkerConfig {
             poll_interval: Duration::from_millis(50),
             min_age: TimeDelta::seconds(3600),
-            remote_path: "dav".to_string(),
-            host: url,
+            url,
             username: None,
             password: None,
             timeout: Duration::from_secs(1),

@@ -59,10 +59,8 @@ pub struct Config {
 #[serde(default)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct WebdavConfig {
-    /// WebDAV server base URL, e.g. "https://dav.example.com"
-    pub host: String,
-    /// Remote directory to upload files under
-    pub remote_path: String,
+    /// WebDAV server base URL, e.g. "https://example.com/remote.php/files/untitaker/my-subfolder/"
+    pub url: String,
     /// Optional username for HTTP Basic auth
     pub username: Option<String>,
     /// Optional password for HTTP Basic auth
@@ -80,8 +78,7 @@ pub struct WebdavConfig {
 impl Default for WebdavConfig {
     fn default() -> Self {
         WebdavConfig {
-            host: String::new(),
-            remote_path: "/".to_string(),
+            url: String::new(),
             username: None,
             password: None,
             upload_timeout_secs: 300,

@@ -63,8 +63,7 @@ WebDAV upload is currently configurable only by editing `config.toml` — there 
 
 | Key | Required | Default | Description |
 | --- | --- | --- | --- |
-| `host` | yes | — | WebDAV server base URL, e.g. `https://dav.example.com` |
-| `remote_path` | no | `"/"` | Remote directory to upload files into |
+| `url` | yes | — | WebDAV server base URL, e.g. `https://example.com/remote.php/files/user/rayhunter/` |
 | `username` | no | — | HTTP Basic auth username |
 | `password` | no | — | HTTP Basic auth password |
 | `upload_timeout_secs` | no | `300` | Timeout (seconds) for each upload request |
@@ -76,8 +75,7 @@ Example:
 
 ```toml
 [webdav]
-host = "https://dav.example.com"
-remote_path = "/rayhunter"
+url = "https://dav.example.com/rayhunter/"
 username = "user"
 password = "pass"
 upload_timeout_secs = 300
