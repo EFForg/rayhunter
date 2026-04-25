@@ -112,9 +112,9 @@ pub async fn serve_static(
         "index.html" => (
             [
                 (header::CONTENT_TYPE, HeaderValue::from_static("text/html")),
-                (header::CONTENT_ENCODING, HeaderValue::from_static("gzip")),
+                (header::CONTENT_ENCODING, HeaderValue::from_static("br")),
             ],
-            include_bytes!("../web/build/index.html.gz"),
+            include_bytes!("../web/build/index.html.br"),
         )
             .into_response(),
         path => {

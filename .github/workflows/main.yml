@@ -625,7 +625,7 @@ jobs:
       - name: Build rayhunter-daemon openapi docs
         run: |
           mkdir -p daemon/web/build
-          touch daemon/web/build/{favicon.png,index.html.gz,rayhunter_orca_only.png,rayhunter_text.png}
+          touch daemon/web/build/{favicon.png,index.html.br,rayhunter_orca_only.png,rayhunter_text.png}
           cargo run --bin gen_api --features apidocs -- ./rayhunter-openapi.json
       - name: Make swagger folder
         run: |
