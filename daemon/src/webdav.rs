@@ -206,7 +206,7 @@ pub fn run_webdav_upload_worker(
                             break;
                         }
 
-                        let (Some(_), Some(_)) = join!(
+                        let (Some(()), Some(())) = join!(
                             try_upload_entry(
                                 webdav_client.clone(),
                                 qmdl_store_lock.clone(),
