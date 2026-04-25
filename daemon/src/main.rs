@@ -95,7 +95,6 @@ async fn run_server(
     let app = get_router().with_state(state);
 
     task_tracker.spawn(async move {
-        info!("The orca is hunting for stingrays...");
         axum::serve(listener, app)
             .with_graceful_shutdown(shutdown_token.cancelled_owned())
             .await
@@ -213,6 +212,30 @@ async fn run_with_config(
 
     let notification_service = NotificationService::new(config.ntfy_url.clone());
 
+    let analysis_status_lock = Arc::new(RwLock::new(analysis_status));
+    let wifi_status = Arc::new(RwLock::new(WifiStatus::default()));
+    wifi_station::run_wifi_client(
+        &task_tracker,
+        &config.wifi_config(),
+        shutdown_token.clone(),
+        wifi_status.clone(),
+    );
+    firewall::apply(&config).await;
+
+    let state = Arc::new(ServerState {
+        config_path: args.config_path.clone(),
+        config: config.clone(),
+        qmdl_store_lock: qmdl_store_lock.clone(),
+        diag_device_ctrl_sender: diag_tx.clone(),
+        analysis_status_lock: analysis_status_lock.clone(),
+        analysis_sender: analysis_tx.clone(),
+        daemon_restart_token: restart_token.clone(),
+        ui_update_sender: Some(ui_update_tx.clone()),
+        wifi_status,
+        wifi_scan_lock: tokio::sync::Mutex::new(()),
+    });
+    run_server(&task_tracker, state, shutdown_token.clone()).await;
+
     if !config.debug_mode {
         info!("Using configuration for device: {0:?}", config.device);
 
@@ -267,21 +290,20 @@ async fn run_with_config(
         );
     }
 
-    let analysis_status_lock = Arc::new(RwLock::new(analysis_status));
     run_analysis_thread(
         &task_tracker,
         analysis_rx,
         qmdl_store_lock.clone(),
-        analysis_status_lock.clone(),
+        analysis_status_lock,
         config.analyzers.clone(),
     );
 
     run_shutdown_thread(
         &task_tracker,
-        diag_tx.clone(),
+        diag_tx,
         shutdown_token.clone(),
         qmdl_store_lock.clone(),
-        analysis_tx.clone(),
+        analysis_tx,
     );
 
     run_battery_notification_worker(
@@ -297,29 +319,7 @@ async fn run_with_config(
         config.enabled_notifications.clone(),
     );
 
-    let wifi_status = Arc::new(RwLock::new(WifiStatus::default()));
-    wifi_station::run_wifi_client(
-        &task_tracker,
-        &config.wifi_config(),
-        shutdown_token.clone(),
-        wifi_status.clone(),
-    );
-    firewall::apply(&config).await;
-
-    let state = Arc::new(ServerState {
-        config_path: args.config_path.clone(),
-        config,
-        qmdl_store_lock: qmdl_store_lock.clone(),
-        diag_device_ctrl_sender: diag_tx,
-        analysis_status_lock,
-        analysis_sender: analysis_tx,
-        daemon_restart_token: restart_token.clone(),
-        ui_update_sender: Some(ui_update_tx),
-        wifi_status,
-        wifi_scan_lock: tokio::sync::Mutex::new(()),
-    });
-    run_server(&task_tracker, state, shutdown_token.clone()).await;
-
+    info!("The orca is hunting for stingrays...");
     task_tracker.close();
     task_tracker.wait().await;
 
