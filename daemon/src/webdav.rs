@@ -17,10 +17,10 @@ use crate::qmdl_store::RecordingStore;
 pub struct WebdavUploadWorkerConfig {
     poll_interval: Duration,
     min_age: TimeDelta,
-    remote_path: Arc<String>,
-    host: Arc<String>,
-    username: Option<Arc<String>>,
-    password: Option<Arc<String>>,
+    remote_path: String,
+    host: String,
+    username: Option<String>,
+    password: Option<String>,
     delete_on_upload: bool,
 }
 
@@ -29,10 +29,10 @@ impl From<WebdavConfig> for WebdavUploadWorkerConfig {
         WebdavUploadWorkerConfig {
             poll_interval: Duration::from_secs(value.poll_interval_secs),
             min_age: TimeDelta::seconds(value.min_age_secs),
-            remote_path: Arc::new(value.remote_path),
-            host: Arc::new(value.host),
-            username: value.username.map(Arc::new),
-            password: value.password.map(Arc::new),
+            remote_path: value.remote_path,
+            host: value.host,
+            username: value.username,
+            password: value.password,
             delete_on_upload: value.delete_on_upload,
         }
     }
@@ -64,17 +64,17 @@ impl Display for FileKind {
 #[derive(Debug, Clone)]
 struct WebDavClient {
     client: Client,
-    base_url: Arc<String>,
-    username: Option<Arc<String>>,
-    password: Option<Arc<String>>,
+    base_url: String,
+    username: Option<String>,
+    password: Option<String>,
 }
 
 impl WebDavClient {
     fn new(
-        host: Arc<String>,
-        username: Option<Arc<String>>,
-        password: Option<Arc<String>>,
-        root_dir: Arc<String>,
+        host: String,
+        username: Option<String>,
+        password: Option<String>,
+        root_dir: String,
     ) -> Self {
         let host = host.trim_end_matches('/');
         let root = root_dir.trim_matches('/');
@@ -86,13 +86,13 @@ impl WebDavClient {
 
         Self {
             client: reqwest::Client::new(),
-            base_url: Arc::new(base_url),
+            base_url,
             username,
             password,
         }
     }
 
-    async fn try_upload_file(&self, file: File, name: Arc<String>) -> anyhow::Result<Response> {
+    async fn try_upload_file(&self, file: File, name: &str) -> anyhow::Result<Response> {
         let file_size = file.metadata().await?.len();
 
         let stream = ReaderStream::new(file);
@@ -106,7 +106,7 @@ impl WebDavClient {
             .header(CONTENT_TYPE, "application/octet-stream")
             .header(CONTENT_LENGTH, file_size);
 
-        let client = match (self.username.clone(), self.password.clone()) {
+        let client = match (&self.username, &self.password) {
             (Some(username), Some(password)) => client.basic_auth(username, Some(password)),
             (Some(username), None) => client.basic_auth(username, None::<&str>),
             (None, None) => client,
@@ -147,7 +147,7 @@ async fn try_upload_entry(
         return None;
     };
 
-    let file_name = Arc::new(format!("{}{}", entry_name, file_kind.as_extension()));
+    let file_name = format!("{}{}", entry_name, file_kind.as_extension());
 
     let res = select! {
         _ = shutdown_token.cancelled() => {
@@ -157,7 +157,7 @@ async fn try_upload_entry(
             );
             return None;
         },
-        res = client.try_upload_file(file, file_name) => res,
+        res = client.try_upload_file(file, &file_name) => res,
     };
 
     match res {
@@ -342,10 +342,10 @@ mod tests {
         let config = WebdavUploadWorkerConfig {
             poll_interval: Duration::from_millis(50),
             min_age: TimeDelta::seconds(-1),
-            remote_path: Arc::new("dav".to_string()),
-            host: Arc::new(url),
-            username: Some(Arc::new("user".to_string())),
-            password: Some(Arc::new("password".to_string())),
+            remote_path: "dav".to_string(),
+            host: url,
+            username: Some("user".to_string()),
+            password: Some("password".to_string()),
             delete_on_upload: false,
         };
 
@@ -397,8 +397,8 @@ mod tests {
         let config = WebdavUploadWorkerConfig {
             poll_interval: Duration::from_millis(50),
             min_age: TimeDelta::seconds(-1),
-            remote_path: Arc::new("dav".to_string()),
-            host: Arc::new(url),
+            remote_path: "dav".to_string(),
+            host: url,
             username: None,
             password: None,
             delete_on_upload: true,
@@ -427,8 +427,8 @@ mod tests {
         let config = WebdavUploadWorkerConfig {
             poll_interval: Duration::from_millis(50),
             min_age: TimeDelta::seconds(3600),
-            remote_path: Arc::new("dav".to_string()),
-            host: Arc::new(url),
+            remote_path: "dav".to_string(),
+            host: url,
             username: None,
             password: None,
             delete_on_upload: false,
