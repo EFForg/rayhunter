@@ -355,7 +355,9 @@ impl RecordingStore {
                 if self.is_current_entry(&entry.name) || entry.upload_time.is_some() {
                     return None;
                 }
-                (rayhunter::clock::get_adjusted_now() - entry.last_message_time? > min_age)
+                (rayhunter::clock::get_adjusted_now()
+                    - entry.last_message_time.unwrap_or(entry.start_time)
+                    > min_age)
                     .then_some(entry.name.clone())
             })
             .collect()
@@ -614,29 +616,25 @@ mod tests {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
 
-        // Create four entries (the fourth stays current). new_entry names entries by
-        // integer-second timestamp, so rapid consecutive calls collide; rename explicitly
-        // so each entry has a distinct name.
-        for _ in 0..4 {
+        for _ in 0..3 {
             let _ = store.new_entry().await.unwrap();
         }
-        for (i, entry) in store.manifest.entries.iter_mut().enumerate() {
-            entry.name = format!("entry-{}", i);
-        }
 
-        // Entry 0: closed, last_message_time = None → excluded by `?`.
-        // Entry 1: closed, last_message_time = Some(_), upload_time = Some(_) → excluded.
-        store.manifest.entries[1].last_message_time = Some(Local::now());
-        store.manifest.entries[1].upload_time = Some(Local::now());
-        // Entry 2: closed, last_message_time = Some(_), upload_time = None → eligible.
-        store.manifest.entries[2].last_message_time = Some(Local::now());
-        // Entry 3: still the current entry → excluded.
-        store.manifest.entries[3].last_message_time = Some(Local::now());
+        store.manifest.entries[0].name = "entry-0".to_owned();
+        store.manifest.entries[0].start_time = Local::now() - TimeDelta::seconds(10);
+        store.manifest.entries[0].last_message_time = None;
 
-        let eligible = store.get_unuploaded_entries_with_age(TimeDelta::seconds(-1));
-        assert_eq!(eligible, vec!["entry-2".to_string()]);
+        store.manifest.entries[1].name = "entry-1".to_owned();
+        store.manifest.entries[1].start_time = Local::now() - TimeDelta::seconds(10);
+        store.manifest.entries[1].last_message_time = Some(Local::now() - TimeDelta::seconds(5));
 
-        // Entry 2's last_message_time is freshly set, so a 1-hour min_age excludes it.
+        store.manifest.entries[2].name = "entry-2".to_owned();
+        store.manifest.entries[2].start_time = Local::now() - TimeDelta::seconds(10);
+        store.manifest.entries[2].last_message_time = Some(Local::now() - TimeDelta::seconds(1));
+
+        let eligible = store.get_unuploaded_entries_with_age(TimeDelta::seconds(3));
+        assert_eq!(eligible, vec!["entry-0".to_string(), "entry-1".to_string()]);
+
         let none_eligible = store.get_unuploaded_entries_with_age(TimeDelta::seconds(3600));
         assert!(none_eligible.is_empty());
     }
