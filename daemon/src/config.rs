@@ -50,6 +50,43 @@ pub struct Config {
     pub firewall_restrict_outbound: bool,
     /// Vector containing additional wifi client firewall ports to open
     pub firewall_allowed_ports: Option<Vec<u16>>,
+    /// Optional WebDAV upload configuration. When unset, no upload worker runs.
+    pub webdav: Option<WebdavConfig>,
+}
+
+/// Configuration for uploading finished QMDL recordings to a WebDAV server.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
+pub struct WebdavConfig {
+    /// WebDAV server base URL, e.g. "https://example.com/remote.php/files/untitaker/my-subfolder/"
+    pub url: String,
+    /// Optional username for HTTP Basic auth
+    pub username: Option<String>,
+    /// Optional password for HTTP Basic auth
+    pub password: Option<String>,
+    /// Timeout (in seconds) for each upload request
+    pub upload_timeout_secs: u64,
+    /// How often (in seconds) the worker scans for entries to upload
+    pub poll_interval_secs: u64,
+    /// Minimum age (in seconds) an entry must have before it becomes eligible for upload
+    pub min_age_secs: i64,
+    /// Delete the file locally after a successful upload
+    pub delete_on_upload: bool,
+}
+
+impl Default for WebdavConfig {
+    fn default() -> Self {
+        WebdavConfig {
+            url: String::new(),
+            username: None,
+            password: None,
+            upload_timeout_secs: 300,
+            poll_interval_secs: 3600,
+            min_age_secs: 86400,
+            delete_on_upload: false,
+        }
+    }
 }
 
 impl Default for Config {
@@ -74,6 +111,7 @@ impl Default for Config {
             dns_servers: None,
             firewall_restrict_outbound: true,
             firewall_allowed_ports: None,
+            webdav: None,
         }
     }
 }

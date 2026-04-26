@@ -2,7 +2,7 @@ use std::io::{self, ErrorKind};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeDelta};
 use log::{info, warn};
 use rayhunter::util::RuntimeMetadata;
 use serde::{Deserialize, Serialize};
@@ -67,6 +67,9 @@ pub struct ManifestEntry {
     pub arch: Option<String>,
     #[serde(default)]
     pub stop_reason: Option<String>,
+    /// When the manifest was uploaded to a WebDAV server
+    #[cfg_attr(feature = "apidocs", schema(value_type = String))]
+    pub upload_time: Option<DateTime<Local>>,
 }
 
 impl ManifestEntry {
@@ -82,6 +85,7 @@ impl ManifestEntry {
             system_os: Some(metadata.system_os),
             arch: Some(metadata.arch),
             stop_reason: None,
+            upload_time: None,
         }
     }
 
@@ -212,6 +216,7 @@ impl RecordingStore {
                 system_os: None,
                 arch: None,
                 stop_reason: None,
+                upload_time: None,
             });
         }
 
@@ -342,6 +347,23 @@ impl RecordingStore {
         Ok(())
     }
 
+    pub fn get_next_unuploaded_entry(&self, min_age: TimeDelta) -> Option<String> {
+        let now = rayhunter::clock::get_adjusted_now();
+        self.manifest
+            .entries
+            .iter()
+            .filter_map(|entry| {
+                if self.is_current_entry(&entry.name) || entry.upload_time.is_some() {
+                    return None;
+                }
+                let age = now - entry.last_message_time.unwrap_or(entry.start_time);
+
+                (age > min_age).then_some((&entry.name, age))
+            })
+            .max_by_key(|(_, age)| *age)
+            .map(|(name, _)| name.clone())
+    }
+
     // Finds an entry by filename
     pub fn entry_for_name(&self, name: &str) -> Option<(usize, &ManifestEntry)> {
         let entry_index = self
@@ -365,6 +387,22 @@ impl RecordingStore {
             self.manifest.entries[idx].stop_reason = Some(reason);
             self.write_manifest().await?;
         }
+        Ok(())
+    }
+
+    pub async fn mark_entry_as_uploaded(
+        &mut self,
+        name: &str,
+        upload_time: DateTime<Local>,
+    ) -> Result<(), RecordingStoreError> {
+        let entry_index = self
+            .manifest
+            .entries
+            .iter()
+            .position(|entry| entry.name == name)
+            .ok_or(RecordingStoreError::NoSuchEntryError)?;
+        self.manifest.entries[entry_index].upload_time = Some(upload_time);
+        self.write_manifest().await?;
         Ok(())
     }
 
@@ -543,5 +581,79 @@ mod tests {
         // recording.
         store.delete_all_entries().await.unwrap();
         assert!(store.current_entry.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_mark_entry_as_uploaded_sets_time_and_persists() {
+        let dir = make_temp_dir();
+        let mut store = RecordingStore::create(dir.path()).await.unwrap();
+        let _ = store.new_entry().await.unwrap();
+        let name = store.manifest.entries[0].name.clone();
+        store.close_current_entry().await.unwrap();
+
+        let upload_time = Local::now();
+        store
+            .mark_entry_as_uploaded(&name, upload_time)
+            .await
+            .unwrap();
+        assert_eq!(store.manifest.entries[0].upload_time, Some(upload_time));
+
+        let reloaded = RecordingStore::load(dir.path()).await.unwrap();
+        assert_eq!(reloaded.manifest.entries[0].upload_time, Some(upload_time));
+    }
+
+    #[tokio::test]
+    async fn test_mark_entry_as_uploaded_missing_entry() {
+        let dir = make_temp_dir();
+        let mut store = RecordingStore::create(dir.path()).await.unwrap();
+        assert!(matches!(
+            store.mark_entry_as_uploaded("nope", Local::now()).await,
+            Err(RecordingStoreError::NoSuchEntryError)
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_get_next_unuploaded_entry() {
+        let dir = make_temp_dir();
+        let mut store = RecordingStore::create(dir.path()).await.unwrap();
+
+        for _ in 0..3 {
+            let _ = store.new_entry().await.unwrap();
+        }
+
+        store.manifest.entries[0].name = "entry-0".to_owned();
+        store.manifest.entries[0].start_time = Local::now() - TimeDelta::seconds(10);
+        store.manifest.entries[0].last_message_time = None;
+
+        store.manifest.entries[1].name = "entry-1".to_owned();
+        store.manifest.entries[1].start_time = Local::now() - TimeDelta::seconds(10);
+        store.manifest.entries[1].last_message_time = Some(Local::now() - TimeDelta::seconds(5));
+
+        store.manifest.entries[2].name = "entry-2".to_owned();
+        store.manifest.entries[2].start_time = Local::now() - TimeDelta::seconds(10);
+        store.manifest.entries[2].last_message_time = Some(Local::now() - TimeDelta::seconds(1));
+
+        assert_eq!(
+            store.get_next_unuploaded_entry(TimeDelta::seconds(3600)),
+            None,
+        );
+
+        assert_eq!(
+            store.get_next_unuploaded_entry(TimeDelta::seconds(3)),
+            Some("entry-0".to_owned())
+        );
+        store
+            .mark_entry_as_uploaded("entry-0", Local::now())
+            .await
+            .unwrap();
+        assert_eq!(
+            store.get_next_unuploaded_entry(TimeDelta::seconds(3)),
+            Some("entry-1".to_owned())
+        );
+        store
+            .mark_entry_as_uploaded("entry-1", Local::now())
+            .await
+            .unwrap();
+        assert_eq!(store.get_next_unuploaded_entry(TimeDelta::seconds(3)), None);
     }
 }
