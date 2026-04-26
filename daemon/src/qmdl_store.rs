@@ -347,7 +347,8 @@ impl RecordingStore {
         Ok(())
     }
 
-    pub fn get_unuploaded_entries_with_age(&self, min_age: TimeDelta) -> Vec<String> {
+    pub fn get_next_unuploaded_entry(&self, min_age: TimeDelta) -> Option<String> {
+        let now = rayhunter::clock::get_adjusted_now();
         self.manifest
             .entries
             .iter()
@@ -355,12 +356,12 @@ impl RecordingStore {
                 if self.is_current_entry(&entry.name) || entry.upload_time.is_some() {
                     return None;
                 }
-                (rayhunter::clock::get_adjusted_now()
-                    - entry.last_message_time.unwrap_or(entry.start_time)
-                    > min_age)
-                    .then_some(entry.name.clone())
+                let age = now - entry.last_message_time.unwrap_or(entry.start_time);
+
+                (age > min_age).then_some((&entry.name, age))
             })
-            .collect()
+            .max_by_key(|(_, age)| *age)
+            .map(|(name, _)| name.clone())
     }
 
     // Finds an entry by filename
@@ -612,7 +613,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_unuploaded_entries_with_age() {
+    async fn test_get_next_unuploaded_entry() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
 
@@ -632,10 +633,27 @@ mod tests {
         store.manifest.entries[2].start_time = Local::now() - TimeDelta::seconds(10);
         store.manifest.entries[2].last_message_time = Some(Local::now() - TimeDelta::seconds(1));
 
-        let eligible = store.get_unuploaded_entries_with_age(TimeDelta::seconds(3));
-        assert_eq!(eligible, vec!["entry-0".to_string(), "entry-1".to_string()]);
+        assert_eq!(
+            store.get_next_unuploaded_entry(TimeDelta::seconds(3600)),
+            None,
+        );
 
-        let none_eligible = store.get_unuploaded_entries_with_age(TimeDelta::seconds(3600));
-        assert!(none_eligible.is_empty());
+        assert_eq!(
+            store.get_next_unuploaded_entry(TimeDelta::seconds(3)),
+            Some("entry-0".to_owned())
+        );
+        store
+            .mark_entry_as_uploaded("entry-0", Local::now())
+            .await
+            .unwrap();
+        assert_eq!(
+            store.get_next_unuploaded_entry(TimeDelta::seconds(3)),
+            Some("entry-1".to_owned())
+        );
+        store
+            .mark_entry_as_uploaded("entry-1", Local::now())
+            .await
+            .unwrap();
+        assert_eq!(store.get_next_unuploaded_entry(TimeDelta::seconds(3)), None);
     }
 }

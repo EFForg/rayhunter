@@ -197,47 +197,44 @@ pub fn run_webdav_upload_worker(
             select! {
                 _ = shutdown_token.cancelled() => break,
                 _ = interval.tick() => {
-                    let entries = qmdl_store_lock
-                        .read()
-                        .await
-                        .get_unuploaded_entries_with_age(config.min_age);
-
-                    for entry_name in entries {
-                        if shutdown_token.is_cancelled() {
-                            break;
-                        }
+                    loop {
+                        let Some(unuploaded_entry) = qmdl_store_lock
+                            .read()
+                            .await
+                            .get_next_unuploaded_entry(config.min_age) else {
+                                break;
+                            };
 
                         let (Some(()), Some(())) = join!(
                             try_upload_entry(
                                 webdav_client.clone(),
                                 qmdl_store_lock.clone(),
-                                entry_name.clone(),
+                                unuploaded_entry.clone(),
                                 FileKind::Qmdl,
                                 shutdown_token.clone(),
                             ),
                             try_upload_entry(
                                 webdav_client.clone(),
                                 qmdl_store_lock.clone(),
-                                entry_name.clone(),
+                                unuploaded_entry.clone(),
                                 FileKind::Analysis,
                                 shutdown_token.clone()
                             ),
                         ) else {
-                            continue;
+                            break;
                         };
 
                         if config.delete_on_upload {
-                            match qmdl_store_lock.write().await.delete_entry(&entry_name).await {
-                                Ok(_) => info!("Successfully deleted entry: {} after upload to WebDAV", entry_name),
-                                Err(err) => warn!("Unable to delete entry: {} after upload to WebDAV: {}", entry_name, err),
+                            match qmdl_store_lock.write().await.delete_entry(&unuploaded_entry).await {
+                                Ok(_) => info!("Successfully deleted entry: {} after upload to WebDAV", unuploaded_entry),
+                                Err(err) => warn!("Unable to delete entry: {} after upload to WebDAV: {}", unuploaded_entry, err),
                             }
                         } else {
-                            match qmdl_store_lock.write().await.mark_entry_as_uploaded(&entry_name, rayhunter::clock::get_adjusted_now()).await {
-                                Ok(_) => info!("Successfully marked entry: {} as uploaded", entry_name),
-                                Err(err) => warn!("Unable to mark entry: {} as uploaded: {}", entry_name, err),
+                            match qmdl_store_lock.write().await.mark_entry_as_uploaded(&unuploaded_entry, rayhunter::clock::get_adjusted_now()).await {
+                                Ok(_) => info!("Successfully marked entry: {} as uploaded", unuploaded_entry),
+                                Err(err) => warn!("Unable to mark entry: {} as uploaded: {}", unuploaded_entry, err),
                             }
                         }
-
                     }
                 }
             }
