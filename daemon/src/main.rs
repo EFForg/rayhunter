@@ -42,7 +42,6 @@ use diag::{
 use log::{error, info};
 use qmdl_store::RecordingStoreError;
 use rayhunter::Device;
-use rayhunter::diag_device::DiagDevice;
 use stats::get_log;
 use tokio::net::TcpListener;
 use tokio::select;
@@ -214,18 +213,10 @@ async fn run_with_config(
     let notification_service = NotificationService::new(config.ntfy_url.clone());
 
     if !config.debug_mode {
-        info!("Using configuration for device: {0:?}", config.device);
-        let mut dev = DiagDevice::new(&config.device)
-            .await
-            .map_err(RayhunterError::DiagInitError)?;
-        dev.config_logs()
-            .await
-            .map_err(RayhunterError::DiagInitError)?;
-
         info!("Starting Diag Thread");
         run_diag_read_thread(
             &task_tracker,
-            dev,
+            config.device.clone(),
             diag_rx,
             diag_tx.clone(),
             ui_update_tx.clone(),

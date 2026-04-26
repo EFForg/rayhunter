@@ -10,6 +10,7 @@ use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use futures::{StreamExt, TryStreamExt, future};
 use log::{debug, error, info, warn};
+use rayhunter::Device;
 use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -370,7 +371,7 @@ impl DiagTask {
 #[allow(clippy::too_many_arguments)]
 pub fn run_diag_read_thread(
     task_tracker: &TaskTracker,
-    mut dev: DiagDevice,
+    device: Device,
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
     qmdl_file_tx: Sender<DiagDeviceCtrlMessage>,
     ui_update_sender: Sender<display::DisplayState>,
@@ -382,8 +383,21 @@ pub fn run_diag_read_thread(
     min_space_to_continue_mb: u64,
 ) {
     task_tracker.spawn(async move {
+        info!("Using configuration for device: {0:?}", device);
+        let mut dev = DiagDevice::new(&device)
+            .await?;
+        dev.config_logs()
+            .await?;
+
         let mut diag_stream = pin!(dev.as_stream().into_stream());
-        let mut diag_task = DiagTask::new(ui_update_sender, analysis_sender, analyzer_config, notification_channel, min_space_to_start_mb, min_space_to_continue_mb);
+        let mut diag_task = DiagTask::new(
+            ui_update_sender,
+            analysis_sender,
+            analyzer_config,
+            notification_channel,
+            min_space_to_start_mb,
+            min_space_to_continue_mb
+        );
         qmdl_file_tx
             .send(DiagDeviceCtrlMessage::StartRecording { response_tx: None })
             .await
