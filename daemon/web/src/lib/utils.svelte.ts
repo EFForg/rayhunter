@@ -18,6 +18,16 @@ export enum enabled_notifications {
     LowBattery = 'LowBattery',
 }
 
+export interface WebdavConfig {
+    url: string;
+    username: string | null;
+    password: string | null;
+    upload_timeout_secs: number;
+    poll_interval_secs: number;
+    min_age_secs: number;
+    delete_on_upload: boolean;
+}
+
 export interface Config {
     device: string;
     ui_level: number;
@@ -33,6 +43,9 @@ export interface Config {
     wifi_security: 'wpa_psk' | 'sae' | null;
     wifi_enabled: boolean;
     dns_servers: string[] | null;
+    firewall_restrict_outbound: boolean;
+    firewall_allowed_ports: number[] | null;
+    webdav: WebdavConfig;
 }
 
 export interface WifiStatus {

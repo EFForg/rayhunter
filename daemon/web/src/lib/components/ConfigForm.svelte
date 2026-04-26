@@ -26,12 +26,15 @@
     let scanning = $state(false);
     let scanResults = $state<WifiNetwork[]>([]);
     let dnsServersInput = $state('');
+    let webdavExpanded = $state(false);
+    let webdavUrlInput = $state<HTMLInputElement | null>(null);
 
     async function load_config() {
         try {
             loading = true;
             config = await get_config();
             dnsServersInput = config.dns_servers ? config.dns_servers.join(', ') : '';
+            webdavExpanded = config.webdav.url.trim() !== '';
             message = '';
             messageType = null;
             poll_wifi_status();
@@ -343,6 +346,173 @@
                             Recording will stop automatically if disk space drops below this level
                         </p>
                     </div>
+                </div>
+
+                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">WebDAV Upload</h3>
+                    <p class="text-xs text-gray-500">
+                        Once a recording has been closed for at least the configured age, both the
+                        .qmdl and .ndjson files are uploaded in the background to the WebDAV server.
+                    </p>
+
+                    <div class="flex items-center">
+                        <input
+                            id="webdav_enabled"
+                            type="checkbox"
+                            checked={webdavExpanded}
+                            onchange={(e) => {
+                                webdavExpanded = e.currentTarget.checked;
+                                if (webdavExpanded) {
+                                    setTimeout(() => webdavUrlInput?.focus(), 0);
+                                } else {
+                                    if (config) config.webdav.url = '';
+                                }
+                            }}
+                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                        />
+                        <label for="webdav_enabled" class="ml-2 block text-sm text-gray-700">
+                            Enable WebDAV upload
+                        </label>
+                    </div>
+
+                    {#if webdavExpanded}
+                        <div>
+                            <label
+                                for="webdav_url"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Server URL
+                            </label>
+                            <input
+                                id="webdav_url"
+                                type="url"
+                                bind:this={webdavUrlInput}
+                                bind:value={config.webdav.url}
+                                onblur={() => {
+                                    if (config && config.webdav.url.trim() === '') {
+                                        webdavExpanded = false;
+                                    }
+                                }}
+                                placeholder="https://dav.example.com/rayhunter/"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                Files are uploaded via HTTP PUT under this base URL. No folders are
+                                created, and folders in this base URL are assumed to exist already.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="webdav_username"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Username
+                            </label>
+                            <input
+                                id="webdav_username"
+                                type="text"
+                                bind:value={config.webdav.username}
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                Optional. Leave blank for unauthenticated uploads.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="webdav_password"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Password
+                            </label>
+                            <input
+                                id="webdav_password"
+                                type="password"
+                                bind:value={config.webdav.password}
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                A password without a username will be rejected and the request will
+                                be sent unauthenticated.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="webdav_upload_timeout_secs"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Upload Timeout (seconds)
+                            </label>
+                            <input
+                                id="webdav_upload_timeout_secs"
+                                type="number"
+                                min="1"
+                                bind:value={config.webdav.upload_timeout_secs}
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                for="webdav_poll_interval_secs"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Poll Interval (seconds)
+                            </label>
+                            <input
+                                id="webdav_poll_interval_secs"
+                                type="number"
+                                min="1"
+                                bind:value={config.webdav.poll_interval_secs}
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                How often the worker checks for new entries to upload.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="webdav_min_age_secs"
+                                class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Minimum Age Before Upload (seconds)
+                            </label>
+                            <input
+                                id="webdav_min_age_secs"
+                                type="number"
+                                min="0"
+                                bind:value={config.webdav.min_age_secs}
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">
+                                How long a recording must be closed before it becomes eligible for
+                                upload.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input
+                                id="webdav_delete_on_upload"
+                                type="checkbox"
+                                bind:checked={config.webdav.delete_on_upload}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                            />
+                            <label
+                                for="webdav_delete_on_upload"
+                                class="ml-2 block text-sm text-gray-700"
+                            >
+                                Delete on successful upload
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-500">
+                            When enabled, the local files are removed after a successful upload.
+                            Otherwise the manifest is just marked as uploaded.
+                        </p>
+                    {/if}
                 </div>
 
                 {#if config.device === 'orbic' || config.device === 'moxee' || config.device === 'tmobile' || config.device === 'wingtech'}
