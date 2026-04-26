@@ -64,8 +64,7 @@ firewall_restrict_outbound = true
 # worker runs.
 #
 # [webdav]
-# host = "https://dav.example.com"
-# remote_path = "/rayhunter"
+# url = "https://dav.example.com/rayhunter"
 # # HTTP Basic auth. Both fields are optional; a password without a username is
 # # rejected and the request is sent unauthenticated.
 # username = "user"
