@@ -290,12 +290,12 @@ async fn run_with_config(
     );
     firewall::apply(&config).await;
 
-    if let Some(webdav_config) = config.webdav.clone() {
+    if !config.webdav.url.trim().is_empty() {
         run_webdav_upload_worker(
             &task_tracker,
             shutdown_token.clone(),
             qmdl_store_lock.clone(),
-            webdav_config.into(),
+            config.webdav.clone().into(),
         );
     }
 

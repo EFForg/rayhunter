@@ -50,8 +50,8 @@ pub struct Config {
     pub firewall_restrict_outbound: bool,
     /// Vector containing additional wifi client firewall ports to open
     pub firewall_allowed_ports: Option<Vec<u16>>,
-    /// Optional WebDAV upload configuration. When unset, no upload worker runs.
-    pub webdav: Option<WebdavConfig>,
+    /// WebDAV upload configuration. The upload worker runs whenever `webdav.url` is non-empty.
+    pub webdav: WebdavConfig,
 }
 
 /// Configuration for uploading finished QMDL recordings to a WebDAV server.
@@ -111,7 +111,7 @@ impl Default for Config {
             dns_servers: None,
             firewall_restrict_outbound: true,
             firewall_allowed_ports: None,
-            webdav: None,
+            webdav: WebdavConfig::default(),
         }
     }
 }
