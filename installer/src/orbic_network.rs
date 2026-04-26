@@ -248,13 +248,7 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
     )
     .await?;
 
-    install_wifi_tools(
-        &mut conn,
-        crate::get_file!("FILE_WPA_SUPPLICANT"),
-        crate::get_file!("FILE_WPA_CLI"),
-        crate::get_file!("FILE_IW"),
-    )
-    .await?;
+    install_wifi_tools(&mut conn).await?;
 
     install_config(&mut conn, "orbic", reset_config).await?;
 

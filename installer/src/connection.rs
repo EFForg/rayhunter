@@ -47,20 +47,27 @@ pub async fn install_config<C: DeviceConnection>(
 ///
 /// Skips any binary that is already present on the device (e.g. provided by firmware),
 /// since those may be newer or better-integrated than the bundled versions.
-pub async fn install_wifi_tools<C: DeviceConnection>(
-    conn: &mut C,
-    wpa_supplicant: &[u8],
-    wpa_cli: &[u8],
-    iw: &[u8],
-) -> Result<()> {
+///
+/// In debug builds the wpa-supplicant binaries may not be bundled (build.rs sets the
+/// env vars to empty in that case); when so, this is a no-op so devs don't have to
+/// build wpa-supplicant just to install on Orbic.
+pub async fn install_wifi_tools<C: DeviceConnection>(conn: &mut C) -> Result<()> {
+    if env!("FILE_WPA_SUPPLICANT").is_empty() {
+        println!("wifi tools were not built into this installer, skipping");
+        return Ok(());
+    }
     let tools: &[(&str, &str, &[u8])] = &[
         (
             "wpa_supplicant",
             "/data/rayhunter/bin/wpa_supplicant",
-            wpa_supplicant,
+            crate::get_file!("FILE_WPA_SUPPLICANT"),
         ),
-        ("wpa_cli", "/data/rayhunter/bin/wpa_cli", wpa_cli),
-        ("iw", "/data/rayhunter/bin/iw", iw),
+        (
+            "wpa_cli",
+            "/data/rayhunter/bin/wpa_cli",
+            crate::get_file!("FILE_WPA_CLI"),
+        ),
+        ("iw", "/data/rayhunter/bin/iw", crate::get_file!("FILE_IW")),
     ];
     for &(name, dest, payload) in tools {
         if device_has_binary(conn, name).await {
