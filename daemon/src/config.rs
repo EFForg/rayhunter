@@ -46,8 +46,8 @@ pub struct Config {
     pub wifi_enabled: bool,
     /// Vector containing wifi client DNS servers
     pub dns_servers: Option<Vec<String>>,
-    /// Optional WebDAV upload configuration. When unset, no upload worker runs.
-    pub webdav: Option<WebdavConfig>,
+    /// WebDAV upload configuration. The upload worker runs whenever `webdav.url` is non-empty.
+    pub webdav: WebdavConfig,
 }
 
 /// Configuration for uploading finished QMDL recordings to a WebDAV server.
@@ -105,7 +105,7 @@ impl Default for Config {
             wifi_security: None,
             wifi_enabled: false,
             dns_servers: None,
-            webdav: None,
+            webdav: WebdavConfig::default(),
         }
     }
 }
