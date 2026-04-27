@@ -3,13 +3,16 @@
 //! the term to refer to a structured, fully parsed message in any telcom
 //! standard.
 
-use crate::gsmtap::{GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
+use crate::gsmtap::{GsmtapMessage, GsmtapType, UmSubtype, LteNasSubtype, LteRrcSubtype,};
+use crate::gsm::layer3::{L3Frame, parse_l3};
 use pycrate_rs::nas::NASMessage;
 use telcom_parser::{decode, lte_rrc};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum InformationElementError {
+    #[error("Failed decoding RRC message")]
+    GsmDecodingError,
     #[error("Failed decoding RRC message")]
     RRCDecodingError(#[from] telcom_parser::ParsingError),
     #[error("Failed decoding NAS message")]
@@ -20,12 +23,20 @@ pub enum InformationElementError {
 
 #[derive(Debug)]
 pub enum InformationElement {
-    GSM,
+    // This element of the enum is substantially larger than the others,
+    // so we box it to prevent the size of the enum (any variant) from blowing up.
+    GSM(Box<GsmInformationElement>),
     UMTS,
     // This element of the enum is substantially larger than the others,
     // so we box it to prevent the size of the enum (any variant) from blowing up.
     LTE(Box<LteInformationElement>),
     FiveG,
+}
+
+#[derive(Debug)]
+pub enum GsmInformationElement {
+    Ccch(L3Frame),
+    DTAP(L3Frame),
 }
 
 #[derive(Debug)]
@@ -65,6 +76,21 @@ impl TryFrom<&GsmtapMessage> for InformationElement {
 
     fn try_from(gsmtap_msg: &GsmtapMessage) -> Result<Self, Self::Error> {
         match gsmtap_msg.header.gsmtap_type {
+            GsmtapType::Abis => {
+                let gsm = GsmInformationElement::DTAP(parse_l3(&gsmtap_msg.payload, false)?);
+                Ok(InformationElement::GSM(Box::new(gsm)))
+            }
+            GsmtapType::Um(um_subtype) => {
+                let gsm = match um_subtype {
+                    UmSubtype::Ccch => GsmInformationElement::Ccch(parse_l3(&gsmtap_msg.payload, true)?),
+                    _ => {
+                        return Err(InformationElementError::UnsupportedGsmtapType(
+                            gsmtap_msg.header.gsmtap_type,
+                        ));
+                    }
+                };
+                Ok(InformationElement::GSM(Box::new(gsm)))
+            }
             GsmtapType::LteRrc(lte_rrc_subtype) => {
                 use LteInformationElement as R;
                 use LteRrcSubtype as L;
