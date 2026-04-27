@@ -11,8 +11,8 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 0
     groups:
-      applies-to: "security-updates"
-      dependency-type:
+      security:
+        applies-to: "security-updates"
         patterns:
           - "*"
 
@@ -23,8 +23,8 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 0
     groups:
-      applies-to: "security-updates"
-      dependency-type:
+      security:
+        applies-to: "security-updates"
         patterns:
           - "*"
 
@@ -35,8 +35,8 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 0
     groups:
-      applies-to: "security-updates"
-      dependency-type:
+      security:
+        applies-to: "security-updates"
         patterns:
           - "*"
 
@@ -47,7 +47,7 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 0
     groups:
-      applies-to: "security-updates"
-      dependency-type:
+      security:
+        applies-to: "security-updates"
         patterns:
           - "*"
