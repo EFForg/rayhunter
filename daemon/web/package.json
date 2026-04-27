@@ -4,7 +4,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite dev",
-        "build": "vite build && gzip -9 ./build/index.html",
+        "build": "vite build && node ./scripts/compress-index.js",
         "preview": "vite preview",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
