@@ -170,13 +170,7 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Re
             device: &mut adb_device,
         };
         install_config(&mut conn, "orbic", reset_config).await?;
-        install_wifi_tools(
-            &mut conn,
-            crate::get_file!("FILE_WPA_SUPPLICANT"),
-            crate::get_file!("FILE_WPA_CLI"),
-            crate::get_file!("FILE_IW"),
-        )
-        .await?;
+        install_wifi_tools(&mut conn).await?;
     }
 
     install_file(
