@@ -513,7 +513,7 @@ pub async fn debug_set_display_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::GpsMode as _;
+    use crate::config::GpsMode;
     use async_zip::base::read::mem::ZipFileReader;
     use axum::extract::{Path, State};
     use tempfile::TempDir;
