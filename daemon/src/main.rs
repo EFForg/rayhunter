@@ -318,7 +318,9 @@ async fn run_with_config(
                 timestamp: 0,
             }),
             _ => {
-                warn!("gps_mode is Fixed but gps_fixed_latitude or gps_fixed_longitude is missing from config — no GPS coordinates will be recorded");
+                warn!(
+                    "gps_mode is Fixed but gps_fixed_latitude or gps_fixed_longitude is missing from config — no GPS coordinates will be recorded"
+                );
                 None
             }
         }

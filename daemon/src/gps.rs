@@ -148,7 +148,9 @@ pub async fn post_gps(
             }
         }
     } else {
-        info!("GPS data received but no recording is active — position updated in memory only, not persisted to sidecar");
+        info!(
+            "GPS data received but no recording is active — position updated in memory only, not persisted to sidecar"
+        );
     }
 
     Ok(StatusCode::OK)

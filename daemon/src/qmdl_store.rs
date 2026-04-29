@@ -639,7 +639,7 @@ mod tests {
     async fn test_mark_entry_as_uploaded_sets_time_and_persists() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         let name = store.manifest.entries[0].name.clone();
         store.close_current_entry().await.unwrap();
 
@@ -670,7 +670,7 @@ mod tests {
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
 
         for _ in 0..3 {
-            let _ = store.new_entry().await.unwrap();
+            let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         }
 
         store.manifest.entries[0].name = "entry-0".to_owned();
