@@ -6,7 +6,7 @@ use crate::gsmtap::GsmtapMessage;
 use chrono::prelude::*;
 use deku::prelude::*;
 use pcap_file_tokio::pcapng::PcapNgWriter;
-use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
+use pcap_file_tokio::pcapng::blocks::enhanced_packet::{EnhancedPacketBlock, EnhancedPacketOption};
 use pcap_file_tokio::pcapng::blocks::interface_description::InterfaceDescriptionBlock;
 use pcap_file_tokio::pcapng::blocks::section_header::{SectionHeaderBlock, SectionHeaderOption};
 use pcap_file_tokio::{Endianness, PcapError};
@@ -24,6 +24,13 @@ pub enum GsmtapPcapError {
     TimestampOutOfRange(#[from] chrono::OutOfRangeError),
     #[error("Deku error: {0}")]
     Deku(#[from] DekuError),
+}
+
+pub struct GpsPoint {
+    pub latitude: f64,
+    pub longitude: f64,
+    /// Unix timestamp of the GPS fix. 0 means fixed/synthetic (no real GPS time).
+    pub unix_ts: i64,
 }
 
 pub struct GsmtapPcapWriter<T>
@@ -102,6 +109,7 @@ where
         &mut self,
         msg: GsmtapMessage,
         timestamp: Timestamp,
+        gps: Option<&GpsPoint>,
     ) -> Result<(), GsmtapPcapError> {
         let duration = timestamp
             .to_datetime()
@@ -137,14 +145,31 @@ where
         data.extend(&ip_header.to_bytes()?);
         data.extend(&udp_header.to_bytes()?);
         data.extend(&msg_bytes);
+
+        let mut options = vec![];
+        if let Some(p) = gps {
+            let comment = if p.unix_ts == 0 {
+                format!(
+                    r#"{{"latitude":{:.7},"longitude":{:.7}}}"#,
+                    p.latitude, p.longitude
+                )
+            } else {
+                format!(
+                    r#"{{"latitude":{:.7},"longitude":{:.7},"timestamp":{}}}"#,
+                    p.latitude, p.longitude, p.unix_ts
+                )
+            };
+            options.push(EnhancedPacketOption::Comment(Cow::Owned(comment)));
+        }
         let packet = EnhancedPacketBlock {
             interface_id: 0,
             timestamp: duration,
             original_len: data.len() as u32,
             data: Cow::Owned(data),
-            options: vec![],
+            options,
         };
         self.writer.write_pcapng_block(packet).await?;
+
         self.ip_id = self.ip_id.wrapping_add(1);
         Ok(())
     }

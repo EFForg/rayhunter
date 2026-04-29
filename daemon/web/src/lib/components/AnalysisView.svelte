@@ -1,6 +1,7 @@
 <script lang="ts">
     import { type ReportMetadata } from '$lib/analysis.svelte';
     import type { ManifestEntry } from '$lib/manifest.svelte';
+    import { GpsMode } from '$lib/utils.svelte';
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import AnalysisTable from './AnalysisTable.svelte';
     import ReAnalyzeButton from './ReAnalyzeButton.svelte';
@@ -54,6 +55,10 @@
                     <p class="text-lg underline">Metadata</p>
                     <p>Analysis by Rayhunter version {metadata.rayhunter.rayhunter_version}</p>
                     <p><b>Device system OS:</b> {metadata.rayhunter.system_os}</p>
+                </div>
+                <div>
+                    <p class="text-lg underline">GPS Mode</p>
+                    <p>{(entry.gps_mode ?? GpsMode.Disabled) === GpsMode.Disabled ? 'Disabled' : entry.gps_mode === GpsMode.Fixed ? 'Fixed coordinates' : 'API endpoint'}</p>
                 </div>
                 <div>
                     <p class="text-lg underline">Analyzers</p>

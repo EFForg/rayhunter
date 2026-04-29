@@ -2,6 +2,7 @@ use std::io::{self, ErrorKind};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
+use crate::config::GpsMode;
 use chrono::{DateTime, Local, TimeDelta};
 use log::{info, warn};
 use rayhunter::util::RuntimeMetadata;
@@ -70,10 +71,12 @@ pub struct ManifestEntry {
     /// When the manifest was uploaded to a WebDAV server
     #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub upload_time: Option<DateTime<Local>>,
+    #[serde(default)]
+    pub gps_mode: Option<GpsMode>,
 }
 
 impl ManifestEntry {
-    fn new() -> Self {
+    fn new(gps_mode: GpsMode) -> Self {
         let now = rayhunter::clock::get_adjusted_now();
         let metadata = RuntimeMetadata::new();
         ManifestEntry {
@@ -86,6 +89,7 @@ impl ManifestEntry {
             arch: Some(metadata.arch),
             stop_reason: None,
             upload_time: None,
+            gps_mode: Some(gps_mode),
         }
     }
 
@@ -99,6 +103,10 @@ impl ManifestEntry {
         let mut filepath = path.as_ref().join(&self.name);
         filepath.set_extension("ndjson");
         filepath
+    }
+
+    pub fn get_gps_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        path.as_ref().join(format!("{}-gps.ndjson", self.name))
     }
 }
 
@@ -217,6 +225,7 @@ impl RecordingStore {
                 arch: None,
                 stop_reason: None,
                 upload_time: None,
+                gps_mode: None,
             });
         }
 
@@ -249,18 +258,25 @@ impl RecordingStore {
     // Closes the current entry (if needed), creates a new entry based on the
     // current time, and updates the manifest. Returns a tuple of the entry's
     // newly created QMDL file and analysis file.
-    pub async fn new_entry(&mut self) -> Result<(File, File), RecordingStoreError> {
+    pub async fn new_entry(
+        &mut self,
+        gps_mode: GpsMode,
+    ) -> Result<(File, File), RecordingStoreError> {
         // if we've already got an entry open, close it
         if self.current_entry.is_some() {
             self.close_current_entry().await?;
         }
-        let new_entry = ManifestEntry::new();
+        let new_entry = ManifestEntry::new(gps_mode);
         let qmdl_filepath = new_entry.get_qmdl_filepath(&self.path);
         let qmdl_file = File::create(&qmdl_filepath)
             .await
             .map_err(RecordingStoreError::CreateFileError)?;
         let analysis_filepath = new_entry.get_analysis_filepath(&self.path);
         let analysis_file = File::create(&analysis_filepath)
+            .await
+            .map_err(RecordingStoreError::CreateFileError)?;
+        let gps_filepath = new_entry.get_gps_filepath(&self.path);
+        File::create(&gps_filepath)
             .await
             .map_err(RecordingStoreError::CreateFileError)?;
         self.manifest.entries.push(new_entry);
@@ -286,6 +302,35 @@ impl RecordingStore {
         File::open(entry.get_analysis_filepath(&self.path))
             .await
             .map_err(RecordingStoreError::ReadFileError)
+    }
+
+    pub async fn open_entry_gps(
+        &self,
+        entry_index: usize,
+    ) -> Result<Option<File>, RecordingStoreError> {
+        let entry = &self.manifest.entries[entry_index];
+        match File::open(entry.get_gps_filepath(&self.path)).await {
+            Ok(file) => Ok(Some(file)),
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(RecordingStoreError::ReadFileError(e)),
+        }
+    }
+
+    pub async fn open_entry_gps_for_append(
+        &self,
+        entry_index: usize,
+    ) -> Result<Option<File>, RecordingStoreError> {
+        let entry = &self.manifest.entries[entry_index];
+        match OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(entry.get_gps_filepath(&self.path))
+            .await
+        {
+            Ok(file) => Ok(Some(file)),
+            Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(RecordingStoreError::CreateFileError(e)),
+        }
     }
 
     pub async fn clear_and_open_entry_analysis(
@@ -436,10 +481,14 @@ impl RecordingStore {
         self.write_manifest().await?;
         let qmdl_filepath = entry_to_delete.get_qmdl_filepath(&self.path);
         let analysis_filepath = entry_to_delete.get_analysis_filepath(&self.path);
+        let gps_filepath = entry_to_delete.get_gps_filepath(&self.path);
         remove_file_if_exists(&qmdl_filepath)
             .await
             .map_err(RecordingStoreError::DeleteFileError)?;
         remove_file_if_exists(&analysis_filepath)
+            .await
+            .map_err(RecordingStoreError::DeleteFileError)?;
+        remove_file_if_exists(&gps_filepath)
             .await
             .map_err(RecordingStoreError::DeleteFileError)?;
         Ok(())
@@ -467,6 +516,9 @@ impl RecordingStore {
                 keep.push(true);
                 continue;
             }
+
+            let gps_filepath = entry.get_gps_filepath(&self.path);
+            remove_file_if_exists(&gps_filepath).await.ok();
 
             keep.push(false);
         }
@@ -508,7 +560,7 @@ mod tests {
     async fn test_creating_updating_and_closing_entries() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         let entry_index = store.current_entry.unwrap();
         assert_eq!(
             RecordingStore::read_manifest(dir.path()).await.unwrap(),
@@ -545,7 +597,7 @@ mod tests {
     async fn test_create_on_existing_store() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         let entry_index = store.current_entry.unwrap();
         store
             .update_entry_qmdl_size(entry_index, 1000)
@@ -559,9 +611,9 @@ mod tests {
     async fn test_repeated_new_entries() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         let entry_index = store.current_entry.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         let new_entry_index = store.current_entry.unwrap();
         assert_ne!(entry_index, new_entry_index);
         assert_eq!(store.manifest.entries.len(), 2);
@@ -571,7 +623,7 @@ mod tests {
     async fn test_delete_all_entries() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         assert!(store.current_entry.is_some());
 
         store.delete_all_entries().await.unwrap();
@@ -587,7 +639,7 @@ mod tests {
     async fn test_mark_entry_as_uploaded_sets_time_and_persists() {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
-        let _ = store.new_entry().await.unwrap();
+        let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         let name = store.manifest.entries[0].name.clone();
         store.close_current_entry().await.unwrap();
 
@@ -618,7 +670,7 @@ mod tests {
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
 
         for _ in 0..3 {
-            let _ = store.new_entry().await.unwrap();
+            let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
         }
 
         store.manifest.entries[0].name = "entry-0".to_owned();

@@ -24,6 +24,7 @@ rayhunter = { path = "../lib" }
 wifi-station = { git = "https://github.com/BeigeBox/wifi-station", rev = "e8ec5b4" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
+serde_repr = "0.1"
 tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt"] }
 axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json"] }
 thiserror = "1.0.52"

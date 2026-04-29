@@ -18,6 +18,12 @@ export enum enabled_notifications {
     LowBattery = 'LowBattery',
 }
 
+export enum GpsMode {
+    Disabled = 0,
+    Fixed = 1,
+    Api = 2,
+}
+
 export interface Config {
     device: string;
     ui_level: number;
@@ -35,6 +41,9 @@ export interface Config {
     dns_servers: string[] | null;
     firewall_restrict_outbound: boolean;
     firewall_allowed_ports: number[] | null;
+    gps_mode: GpsMode;
+    gps_fixed_latitude: number | null;
+    gps_fixed_longitude: number | null;
 }
 
 export interface WifiStatus {
@@ -141,4 +150,22 @@ export interface TimeResponse {
 
 export async function get_daemon_time(): Promise<TimeResponse> {
     return JSON.parse(await req('GET', '/api/time'));
+}
+
+export interface GpsData {
+    latitude: number;
+    longitude: number;
+    /** Unix timestamp in seconds (0 = fixed/no real time). */
+    timestamp: number;
+}
+
+export async function get_gps(): Promise<GpsData | null> {
+    const response = await fetch('/api/gps', { cache: 'no-store' });
+    if (response.status === 404) {
+        return null;
+    }
+    if (response.status >= 200 && response.status < 300) {
+        return response.json();
+    }
+    throw new Error(await response.text());
 }

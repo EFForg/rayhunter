@@ -22,11 +22,12 @@ use tokio_util::io::ReaderStream;
 use tokio_util::sync::CancellationToken;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
-use crate::config::Config;
+use crate::config::{Config, GpsMode};
 use crate::diag::DiagDeviceCtrlMessage;
 use crate::display::DisplayState;
+use crate::gps::GpsData;
 use crate::notifications::DEFAULT_NOTIFICATION_TIMEOUT;
-use crate::pcap::generate_pcap_data;
+use crate::pcap::{generate_pcap_data, load_gps_records_for_entry};
 use crate::qmdl_store::RecordingStore;
 
 pub struct ServerState {
@@ -40,6 +41,7 @@ pub struct ServerState {
     pub ui_update_sender: Option<Sender<DisplayState>>,
     pub wifi_status: Arc<RwLock<wifi_station::WifiStatus>>,
     pub wifi_scan_lock: tokio::sync::Mutex<()>,
+    pub gps_state: Arc<RwLock<Option<GpsData>>>,
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -160,8 +162,12 @@ pub async fn get_config(
 ))]
 pub async fn set_config(
     State(state): State<Arc<ServerState>>,
-    Json(config): Json<Config>,
+    Json(mut config): Json<Config>,
 ) -> Result<(StatusCode, String), (StatusCode, String)> {
+    if config.gps_mode != GpsMode::Fixed {
+        config.gps_fixed_latitude = None;
+        config.gps_fixed_longitude = None;
+    }
     let mut config_to_write = config.clone();
     config_to_write.wifi_ssid = None;
     config_to_write.wifi_password = None;
@@ -343,6 +349,7 @@ pub async fn get_zip(
     };
 
     let qmdl_store_lock = state.qmdl_store_lock.clone();
+    let gps_records = load_gps_records_for_entry(&state, entry_index).await;
 
     let (reader, writer) = duplex(8192);
 
@@ -385,8 +392,13 @@ pub async fn get_zip(
                         .take(qmdl_size_bytes as u64)
                 };
 
-                if let Err(e) =
-                    generate_pcap_data(&mut entry_writer, qmdl_file_for_pcap, qmdl_size_bytes).await
+                if let Err(e) = generate_pcap_data(
+                    &mut entry_writer,
+                    qmdl_file_for_pcap,
+                    qmdl_size_bytes,
+                    gps_records,
+                )
+                .await
                 {
                     // if we fail to generate the PCAP file, we should still continue and give the
                     // user the QMDL.
@@ -501,6 +513,7 @@ pub async fn debug_set_display_state(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GpsMode;
     use async_zip::base::read::mem::ZipFileReader;
     use axum::extract::{Path, State};
     use tempfile::TempDir;
@@ -520,7 +533,7 @@ mod tests {
     ) -> String {
         let entry_name = {
             let mut store = store_lock.write().await;
-            let (mut qmdl_file, _analysis_file) = store.new_entry().await.unwrap();
+            let (mut qmdl_file, _analysis_file) = store.new_entry(GpsMode::Disabled).await.unwrap();
 
             if !test_data.is_empty() {
                 use tokio::io::AsyncWriteExt;
@@ -566,6 +579,7 @@ mod tests {
             ui_update_sender: None,
             wifi_status: Arc::new(RwLock::new(wifi_station::WifiStatus::default())),
             wifi_scan_lock: tokio::sync::Mutex::new(()),
+            gps_state: Arc::new(RwLock::new(None)),
         })
     }
 

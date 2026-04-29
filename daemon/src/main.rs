@@ -6,6 +6,7 @@ mod diag;
 mod display;
 mod error;
 mod firewall;
+mod gps;
 mod key_input;
 mod notifications;
 mod pcap;
@@ -18,9 +19,10 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::battery::run_battery_notification_worker;
-use crate::config::{parse_args, parse_config};
+use crate::config::{GpsMode, parse_args, parse_config};
 use crate::diag::run_diag_read_thread;
 use crate::error::RayhunterError;
+use crate::gps::{get_gps, post_gps};
 use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
@@ -42,7 +44,7 @@ use diag::{
     DiagDeviceCtrlMessage, delete_all_recordings, delete_recording, get_analysis_report,
     start_recording, stop_recording,
 };
-use log::{error, info};
+use log::{error, info, warn};
 use qmdl_store::RecordingStoreError;
 use rayhunter::Device;
 use stats::get_log;
@@ -79,6 +81,8 @@ fn get_router() -> AppRouter {
         .route("/api/time", get(get_time))
         .route("/api/time-offset", post(set_time_offset))
         .route("/api/debug/display-state", post(debug_set_display_state))
+        .route("/api/gps", get(get_gps))
+        .route("/api/gps", post(post_gps))
         .route("/", get(|| async { Redirect::permanent("/index.html") }))
         .route("/{*path}", get(serve_static))
 }
@@ -217,6 +221,10 @@ async fn run_with_config(
 
     if !config.debug_mode {
         info!("Starting Diag Thread");
+        let gps_fixed_coords = match (config.gps_fixed_latitude, config.gps_fixed_longitude) {
+            (Some(lat), Some(lon)) => Some((lat, lon)),
+            _ => None,
+        };
         run_diag_read_thread(
             &task_tracker,
             config.device.clone(),
@@ -229,6 +237,8 @@ async fn run_with_config(
             notification_service.new_handler(),
             config.min_space_to_start_recording_mb,
             config.min_space_to_continue_recording_mb,
+            config.gps_mode,
+            gps_fixed_coords,
         );
         info!("Starting UI");
 
@@ -298,6 +308,25 @@ async fn run_with_config(
             webdav_config.into(),
         );
     }
+    // For fixed configuration, we use timestamp 0 to not break other
+    // the GET request for GPS but user won't see the 0 in PCAPs
+    let initial_gps = if config.gps_mode == GpsMode::Fixed {
+        match (config.gps_fixed_latitude, config.gps_fixed_longitude) {
+            (Some(lat), Some(lon)) => Some(gps::GpsData {
+                latitude: lat,
+                longitude: lon,
+                timestamp: 0,
+            }),
+            _ => {
+                warn!(
+                    "gps_mode is Fixed but gps_fixed_latitude or gps_fixed_longitude is missing from config — no GPS coordinates will be recorded"
+                );
+                None
+            }
+        }
+    } else {
+        None
+    };
 
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),
@@ -310,6 +339,7 @@ async fn run_with_config(
         ui_update_sender: Some(ui_update_tx),
         wifi_status,
         wifi_scan_lock: tokio::sync::Mutex::new(()),
+        gps_state: Arc::new(tokio::sync::RwLock::new(initial_gps)),
     });
     run_server(&task_tracker, state, shutdown_token.clone()).await;
 

@@ -4596,6 +4596,7 @@ dependencies = [
  "rustls-rustcrypto",
  "serde",
  "serde_json",
+ "serde_repr",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",

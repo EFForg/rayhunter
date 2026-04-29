@@ -5,6 +5,7 @@
         test_notification,
         get_wifi_status,
         scan_wifi_networks,
+        GpsMode,
         type Config,
         type WifiStatus,
         type WifiNetwork,
@@ -166,11 +167,11 @@
                         bind:value={config.ui_level}
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                     >
-                        <option value={0}>0 - Invisible mode</option>
-                        <option value={1}>1 - Subtle mode (colored line)</option>
-                        <option value={2}>2 - Demo mode (orca gif)</option>
-                        <option value={3}>3 - EFF logo</option>
-                        <option value={4}>4 - High visibility (full screen color)</option>
+                        <option value={0}>Invisible mode</option>
+                        <option value={1}>Subtle mode (colored line)</option>
+                        <option value={2}>Demo mode (orca gif)</option>
+                        <option value={3}>EFF logo</option>
+                        <option value={4}>High visibility (full screen color)</option>
                     </select>
                     <p class="text-xs text-gray-500 mt-1">
                         Note: Rayhunter draws over the device's native UI, so some flickering is
@@ -190,9 +191,8 @@
                         bind:value={config.key_input_mode}
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
                     >
-                        <option value={0}>0 - Disable button control</option>
-                        <option value={1}>1 - Double-tap power button to start new recording</option
-                        >
+                        <option value={0}>Disable button control</option>
+                        <option value={1}>Double-tap power button to start new recording</option>
                     </select>
                 </div>
 
@@ -666,6 +666,43 @@
                             </label>
                         </div>
                     </div>
+                </div>
+
+                <div class="border-t pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">GPS Settings</h3>
+                    <div>
+                        <label for="gps_mode" class="block text-sm font-medium text-gray-700 mb-1">GPS Mode</label>
+                        <select id="gps_mode" bind:value={config.gps_mode} class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue">
+                            <option value={GpsMode.Disabled}>Disabled</option>
+                            <option value={GpsMode.Fixed}>Fixed coordinates</option>
+                            <option value={GpsMode.Api}>API endpoint</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            {#if config.gps_mode === GpsMode.Api}
+                                POST latitude, longitude, and timestamp to <code>/api/gps</code> from any device on the network.
+                            {:else if config.gps_mode === GpsMode.Fixed}
+                                GPS coordinates are fixed to the values below.
+                            {:else}
+                                GPS is disabled; no coordinates will be tracked.
+                            {/if}
+                        </p>
+                    </div>
+                    {#if config.gps_mode === GpsMode.Fixed}
+                        <div>
+                            <label for="gps_fixed_latitude" class="block text-sm font-medium text-gray-700 mb-1">Fixed Latitude</label>
+                            <input id="gps_fixed_latitude" type="number" min="-90" max="90" step="any" required
+                                bind:value={config.gps_fixed_latitude} placeholder="e.g. 37.7749"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue" />
+                            <p class="text-xs text-gray-500 mt-1">Decimal degrees, -90 to 90</p>
+                        </div>
+                        <div>
+                            <label for="gps_fixed_longitude" class="block text-sm font-medium text-gray-700 mb-1">Fixed Longitude</label>
+                            <input id="gps_fixed_longitude" type="number" min="-180" max="180" step="any" required
+                                bind:value={config.gps_fixed_longitude} placeholder="e.g. -122.4194"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue" />
+                            <p class="text-xs text-gray-500 mt-1">Decimal degrees, -180 to 180</p>
+                        </div>
+                    {/if}
                 </div>
 
                 <div class="flex gap-2 pt-4">

@@ -1,5 +1,7 @@
+use crate::gps::{GpsRecord, load_gps_records};
 use crate::server::ServerState;
 
+use crate::config::GpsMode;
 use anyhow::Error;
 use axum::body::Body;
 use axum::extract::{Path, State};
@@ -9,15 +11,12 @@ use axum::response::{IntoResponse, Response};
 use log::error;
 use rayhunter::diag::DataType;
 use rayhunter::gsmtap_parser;
-use rayhunter::pcap::GsmtapPcapWriter;
+use rayhunter::pcap::{GpsPoint, GsmtapPcapWriter};
 use rayhunter::qmdl::QmdlReader;
 use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncWrite, duplex};
 use tokio_util::io::ReaderStream;
 
-// Streams a pcap file chunk-by-chunk to the client by reading the QMDL data
-// written so far. This is done by spawning a thread which streams chunks of
-// pcap data to a channel that's piped to the client.
 #[cfg_attr(feature = "apidocs", utoipa::path(
     get,
     path = "/api/pcap/{name}",
@@ -56,12 +55,12 @@ pub async fn get_pcap(
         .open_entry_qmdl(entry_index)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?;
-    // the QMDL reader should stop at the last successfully written data chunk
-    // (entry.size_bytes)
     let (reader, writer) = duplex(1024);
+    let gps_records = load_gps_records_for_entry(&state, entry_index).await;
+    drop(qmdl_store);
 
     tokio::spawn(async move {
-        if let Err(e) = generate_pcap_data(writer, qmdl_file, qmdl_size_bytes).await {
+        if let Err(e) = generate_pcap_data(writer, qmdl_file, qmdl_size_bytes, gps_records).await {
             error!("failed to generate PCAP: {e:?}");
         }
     });
@@ -71,10 +70,124 @@ pub async fn get_pcap(
     Ok((headers, body).into_response())
 }
 
+pub(crate) async fn load_gps_records_for_entry(
+    state: &Arc<ServerState>,
+    entry_index: usize,
+) -> Vec<GpsRecord> {
+    let qmdl_store = state.qmdl_store_lock.read().await;
+    match qmdl_store.open_entry_gps(entry_index).await {
+        Ok(Some(file)) => load_gps_records(file).await,
+        Ok(None) => {
+            let gps_mode = qmdl_store
+                .manifest
+                .entries
+                .get(entry_index)
+                .and_then(|e| e.gps_mode);
+            if gps_mode.is_some_and(|m| m != GpsMode::Disabled) {
+                error!(
+                    "GPS sidecar expected for entry {entry_index} (mode: {gps_mode:?}) but not found"
+                );
+            }
+            vec![]
+        }
+        Err(e) => {
+            error!("failed to open GPS sidecar: {e}");
+            vec![]
+        }
+    }
+}
+
+fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: i64) -> Option<GpsPoint> {
+    if records.is_empty() {
+        return None;
+    }
+    let idx = records.partition_point(|r| r.unix_ts <= packet_unix_ts);
+    let record = if idx == 0 {
+        &records[0]
+    } else if idx >= records.len() {
+        &records[records.len() - 1]
+    } else {
+        let (before, after) = (&records[idx - 1], &records[idx]);
+        let before_delta = packet_unix_ts - before.unix_ts;
+        let after_delta = after.unix_ts - packet_unix_ts;
+        if before_delta <= after_delta {
+            before
+        } else {
+            after
+        }
+    };
+    Some(GpsPoint {
+        latitude: record.lat,
+        longitude: record.lon,
+        unix_ts: record.unix_ts,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rec(unix_ts: i64, lat: f64, lon: f64) -> GpsRecord {
+        GpsRecord { unix_ts, lat, lon }
+    }
+
+    #[test]
+    fn test_empty_returns_none() {
+        assert!(find_nearest_gps(&[], 100).is_none());
+    }
+
+    #[test]
+    fn test_single_record_always_returned() {
+        let records = vec![rec(100, 1.0, 2.0)];
+        assert_eq!(find_nearest_gps(&records, 0).unwrap().unix_ts, 100);
+        assert_eq!(find_nearest_gps(&records, 200).unwrap().unix_ts, 100);
+    }
+
+    #[test]
+    fn test_before_all_records_returns_first() {
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 50).unwrap().unix_ts, 100);
+    }
+
+    #[test]
+    fn test_after_all_records_returns_last() {
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 300).unwrap().unix_ts, 200);
+    }
+
+    #[test]
+    fn test_exact_match() {
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0), rec(300, 5.0, 6.0)];
+        assert_eq!(find_nearest_gps(&records, 200).unwrap().unix_ts, 200);
+    }
+
+    #[test]
+    fn test_closer_to_before() {
+        // packet at 130: delta to before(100)=30, delta to after(200)=70 → picks before
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 130).unwrap().unix_ts, 100);
+    }
+
+    #[test]
+    fn test_closer_to_after() {
+        // packet at 170: delta to before(100)=70, delta to after(200)=30 → picks after
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 170).unwrap().unix_ts, 200);
+    }
+
+    #[test]
+    fn test_equidistant_prefers_before() {
+        // packet at 150: delta to before(100)=50, delta to after(200)=50 → tie, picks before
+        let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
+        assert_eq!(find_nearest_gps(&records, 150).unwrap().unix_ts, 100);
+    }
+}
+
 pub async fn generate_pcap_data<R, W>(
     writer: W,
     qmdl_file: R,
     qmdl_size_bytes: usize,
+    gps_records: Vec<GpsRecord>,
 ) -> Result<(), Error>
 where
     W: AsyncWrite + Unpin + Send,
@@ -94,8 +207,10 @@ where
                 Ok(msg) => {
                     let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
                     if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
+                        let packet_unix_ts = timestamp.to_datetime().timestamp();
+                        let gps = find_nearest_gps(&gps_records, packet_unix_ts);
                         pcap_writer
-                            .write_gsmtap_message(gsmtap_msg, timestamp)
+                            .write_gsmtap_message(gsmtap_msg, timestamp, gps.as_ref())
                             .await?;
                     }
                 }

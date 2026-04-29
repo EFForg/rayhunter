@@ -12,7 +12,9 @@ use futures::{StreamExt, TryStreamExt, future};
 use log::{debug, error, info, warn};
 use rayhunter::Device;
 use tokio::fs::File;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+use crate::gps::GpsRecord;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{RwLock, oneshot};
 use tokio_stream::wrappers::LinesStream;
@@ -26,6 +28,7 @@ use rayhunter::diag_device::DiagDevice;
 use rayhunter::qmdl::QmdlWriter;
 
 use crate::analysis::{AnalysisCtrlMessage, AnalysisWriter};
+use crate::config::GpsMode;
 use crate::display;
 use crate::notifications::{Notification, NotificationType};
 use crate::qmdl_store::{RecordingStore, RecordingStoreError};
@@ -56,6 +59,8 @@ pub struct DiagTask {
     notification_channel: tokio::sync::mpsc::Sender<Notification>,
     min_space_to_start_mb: u64,
     min_space_to_continue_mb: u64,
+    gps_mode: GpsMode,
+    gps_fixed_coords: Option<(f64, f64)>,
     state: DiagState,
     max_type_seen: EventType,
     bytes_since_space_check: usize,
@@ -104,6 +109,8 @@ impl DiagTask {
         notification_channel: tokio::sync::mpsc::Sender<Notification>,
         min_space_to_start_mb: u64,
         min_space_to_continue_mb: u64,
+        gps_mode: GpsMode,
+        gps_fixed_coords: Option<(f64, f64)>,
     ) -> Self {
         Self {
             ui_update_sender,
@@ -112,6 +119,8 @@ impl DiagTask {
             notification_channel,
             min_space_to_start_mb,
             min_space_to_continue_mb,
+            gps_mode,
+            gps_fixed_coords,
             state: DiagState::Stopped,
             max_type_seen: EventType::Informational,
             bytes_since_space_check: 0,
@@ -144,7 +153,7 @@ impl DiagTask {
             DiskSpaceCheck::Failed => {}
         }
 
-        let (qmdl_file, analysis_file) = match qmdl_store.new_entry().await {
+        let (qmdl_file, analysis_file) = match qmdl_store.new_entry(self.gps_mode).await {
             Ok(files) => files,
             Err(e) => {
                 let msg = format!("failed creating QMDL file entry: {e}");
@@ -152,6 +161,30 @@ impl DiagTask {
                 return Err(msg);
             }
         };
+        // For fixed-mode sessions, write the configured coordinates to the sidecar
+        // immediately so the per-session GPS is stored durably and isn't affected
+        // by future config changes or GPS API calls.
+        if self.gps_mode == GpsMode::Fixed
+            && let Some((lat, lon)) = self.gps_fixed_coords
+            && let Some((entry_idx, _)) = qmdl_store.get_current_entry()
+        {
+            match qmdl_store.open_entry_gps_for_append(entry_idx).await {
+                Ok(Some(mut gps_file)) => {
+                    let record = GpsRecord {
+                        unix_ts: 0,
+                        lat,
+                        lon,
+                    };
+                    if let Ok(json) = serde_json::to_string(&record) {
+                        let _ = gps_file.write_all(format!("{json}\n").as_bytes()).await;
+                    }
+                }
+                Ok(None) => {
+                    error!("GPS sidecar directory not found, cannot write fixed-mode coordinates")
+                }
+                Err(e) => error!("failed to open GPS sidecar for fixed-mode entry: {e}"),
+            }
+        }
         self.stop_current_recording().await;
         let qmdl_writer = QmdlWriter::new(qmdl_file);
         let analysis_writer = match AnalysisWriter::new(analysis_file, &self.analyzer_config).await
@@ -381,6 +414,8 @@ pub fn run_diag_read_thread(
     notification_channel: tokio::sync::mpsc::Sender<Notification>,
     min_space_to_start_mb: u64,
     min_space_to_continue_mb: u64,
+    gps_mode: GpsMode,
+    gps_fixed_coords: Option<(f64, f64)>,
 ) {
     task_tracker.spawn(async move {
         info!("Using configuration for device: {0:?}", device);
@@ -396,7 +431,9 @@ pub fn run_diag_read_thread(
             analyzer_config,
             notification_channel,
             min_space_to_start_mb,
-            min_space_to_continue_mb
+            min_space_to_continue_mb,
+            gps_mode,
+            gps_fixed_coords,
         );
         qmdl_file_tx
             .send(DiagDeviceCtrlMessage::StartRecording { response_tx: None })
