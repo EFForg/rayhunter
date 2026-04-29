@@ -94,6 +94,7 @@ pub async fn load_gps_records(file: tokio::fs::File) -> Vec<GpsRecord> {
             }
         }
     }
+    records.sort_by_key(|r| r.unix_ts);
     records
 }
 
