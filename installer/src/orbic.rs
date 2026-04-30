@@ -185,15 +185,8 @@ async fn setup_rayhunter(mut adb_device: ADBUSBDevice, reset_config: bool) -> Re
         include_bytes!("../../dist/scripts/misc-daemon"),
     )
     .await?;
-    install_file(
-        &mut adb_device,
-        "/etc/init.d/S01iptables",
-        include_bytes!("../../dist/scripts/S01iptables"),
-    )
-    .await?;
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/rayhunter_daemon").await?;
     adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/misc-daemon").await?;
-    adb_at_syscmd(&mut adb_device, "chmod 755 /etc/init.d/S01iptables").await?;
     println!("done");
     print!("Waiting for reboot... ");
     adb_at_syscmd(&mut adb_device, "shutdown -r -t 1 now").await?;
