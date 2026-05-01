@@ -10,10 +10,11 @@ use log::debug;
 use pycrate_rs::nas::generated::emm::emm_attach_reject::EMMCauseEMMCause as AttachRejectEMMCause;
 use pycrate_rs::nas::generated::emm::emm_attach_request::TAI;
 use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1};
-use telcom_parser::lte_rrc::{
-    /* DL_DCCH_MessageType, DL_DCCH_MessageType_c1,*/ UL_CCCH_MessageType, UL_CCCH_MessageType_c1,
-};
 use telcom_parser::lte_rrc::{MCC_MNC_Digit, PLMN_Identity, PLMN_IdentityList};
+use telcom_parser::lte_rrc::{
+    /* DL_DCCH_MessageType, DL_DCCH_MessageType_c1,*/ UL_CCCH_MessageType,
+    UL_CCCH_MessageType_c1,
+};
 
 const TIMEOUT_THRESHHOLD: usize = 50;
 
@@ -126,18 +127,24 @@ impl ImsiRequestedAnalyzer {
     // PLMN is represented in two very different ways in the LTE spec so we need
     // two very different functions to decode them. I hate this.
     fn plmn_identity_to_str(&mut self, plmn: &PLMN_Identity) -> String {
-        let mcc_digits: String = plmn.mcc
+        let mcc_digits: String = plmn
+            .mcc
             .as_ref()
-            .map(|mcc| mcc.0.iter()
-                .map(|MCC_MNC_Digit(n)| n.to_string())
-                .collect::<String>())
+            .map(|mcc| {
+                mcc.0
+                    .iter()
+                    .map(|MCC_MNC_Digit(n)| n.to_string())
+                    .collect::<String>()
+            })
             .unwrap_or_default();
-        
-        let mnc_digits: String = plmn.mnc
-            .0.iter()
+
+        let mnc_digits: String = plmn
+            .mnc
+            .0
+            .iter()
             .map(|MCC_MNC_Digit(n)| n.to_string())
             .collect::<String>();
-        
+
         format!("{}-{}", mcc_digits, mnc_digits)
     }
 
