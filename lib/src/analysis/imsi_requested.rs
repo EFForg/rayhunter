@@ -85,9 +85,7 @@ impl ImsiRequestedAnalyzer {
                 if self.likely_enb_plmn == self.likely_ue_plmn {
                     self.flag = Some(Event {
                         event_type: EventType::High,
-                        message: format!(
-                            "Disconnected after Identity Request without Auth Accept on home network!"
-                        ),
+                        message: "Disconnected after Identity Request without Auth Accept on home network!".to_string(),
                     });
                 } else {
                     self.flag = Some(Event {
@@ -128,34 +126,22 @@ impl ImsiRequestedAnalyzer {
     // PLMN is represented in two very different ways in the LTE spec so we need
     // two very different functions to decode them. I hate this.
     fn plmn_identity_to_str(&mut self, plmn: &PLMN_Identity) -> String {
-        let mcc_digits: String = plmn
-            .mcc
+        let mcc_digits: String = plmn.mcc
             .as_ref()
-            .map(|mcc| {
-                mcc.0
-                    .iter()
-                    .filter_map(|d| match d {
-                        MCC_MNC_Digit(n) => Some(n.to_string()),
-                    })
-                    .collect::<Vec<_>>()
-                    .join("")
-            })
+            .map(|mcc| mcc.0.iter()
+                .map(|MCC_MNC_Digit(n)| n.to_string())
+                .collect::<String>())
             .unwrap_or_default();
-
-        let mnc_digits: String = plmn
-            .mnc
-            .0
-            .iter()
-            .filter_map(|d| match d {
-                MCC_MNC_Digit(n) => Some(n.to_string()),
-            })
-            .collect::<Vec<_>>()
-            .join("");
-
+        
+        let mnc_digits: String = plmn.mnc
+            .0.iter()
+            .map(|MCC_MNC_Digit(n)| n.to_string())
+            .collect::<String>();
+        
         format!("{}-{}", mcc_digits, mnc_digits)
     }
 
-    fn plmn_vec_to_str(&mut self, bytes: &Vec<u8>) -> String {
+    fn plmn_vec_to_str(&mut self, bytes: &[u8]) -> String {
         let mcc_digit1 = bytes[0] & 0x0F;
         let mcc_digit2 = (bytes[0] >> 4) & 0x0F;
         let mcc_digit3 = bytes[1] & 0x0F;
