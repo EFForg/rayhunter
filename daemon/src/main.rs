@@ -5,7 +5,6 @@ mod crypto_provider;
 mod diag;
 mod display;
 mod error;
-mod firewall;
 mod key_input;
 mod notifications;
 mod pcap;
@@ -288,7 +287,6 @@ async fn run_with_config(
         shutdown_token.clone(),
         wifi_status.clone(),
     );
-    firewall::apply(&config).await;
 
     if let Some(webdav_config) = config.webdav.clone() {
         run_webdav_upload_worker(

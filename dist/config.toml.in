@@ -43,18 +43,6 @@ wifi_enabled = false
 # Defaults to ["9.9.9.9", "149.112.112.112"] (Quad9) if not specified.
 # dns_servers = ["9.9.9.9", "149.112.112.112"]
 
-# Device Security
-# Restrict outbound traffic to essential services only (DHCP, DNS,
-# HTTPS, and replies to inbound connections). Applies to all outbound
-# interfaces (WiFi and cellular). Loopback and hotspot bridge traffic
-# are always allowed. Defaults to true (recommended).
-firewall_restrict_outbound = true
-
-# Additional TCP ports to allow outbound when the firewall is active.
-# DHCP (67-68), DNS (53), and HTTPS (443) are always allowed.
-# Example: allow HTTP (80) and SSH (22).
-# firewall_allowed_ports = [80, 22]
-
 # WebDAV Upload
 # If a [webdav] section is present, finished recordings (both the raw .qmdl file
 # and its .ndjson analysis output) are uploaded in the background to a WebDAV

@@ -46,10 +46,6 @@ pub struct Config {
     pub wifi_enabled: bool,
     /// Vector containing wifi client DNS servers
     pub dns_servers: Option<Vec<String>>,
-    /// Wifi client firewall mode
-    pub firewall_restrict_outbound: bool,
-    /// Vector containing additional wifi client firewall ports to open
-    pub firewall_allowed_ports: Option<Vec<u16>>,
     /// Optional WebDAV upload configuration. When unset, no upload worker runs.
     pub webdav: Option<WebdavConfig>,
 }
@@ -109,8 +105,6 @@ impl Default for Config {
             wifi_security: None,
             wifi_enabled: false,
             dns_servers: None,
-            firewall_restrict_outbound: true,
-            firewall_allowed_ports: None,
             webdav: None,
         }
     }
