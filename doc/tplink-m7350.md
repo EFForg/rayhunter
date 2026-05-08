@@ -18,7 +18,8 @@ The TP-Link M7350 supports many more frequency bands than Orbic and therefore wo
 
 The TP-Link comes in many different *hardware versions*. Support for installation varies:
 
-* `1.0`, `2.0`: **Not supported**, devs are not able to obtain a device
+* `1.0`, Confirmed working. Successfully tested by a user with the Windows installer (rayhunter-v0.10.2-windows-x86_64). Ensure the SD card is formatted as FAT32 before installation.
+* `2.0`: **Not supported**, devs are not able to obtain a device
 * `3.0`, `3.2`, `5.0`, `5.2`, `7.0`, `8.0`: **Tested, no known issues since 0.3.0.**
 * `6.2`: **One user reported it is working, not tested**
 * `4.0`: **Manual firmware downgrade required** ([issue](https://github.com/EFForg/rayhunter/issues/332))
