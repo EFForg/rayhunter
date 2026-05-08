@@ -2640,7 +2640,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.61.2",
+ "windows-core 0.57.0",
 ]
 
 [[package]]
@@ -7136,7 +7136,8 @@ checksum = "dd7cf3379ca1aac9eea11fba24fd7e315d621f8dfe35c8d7d2be8b793726e07d"
 [[package]]
 name = "wifi-station"
 version = "0.10.1"
-source = "git+https://github.com/BeigeBox/wifi-station?rev=e8ec5b4#e8ec5b491fa125bf5346b6aa84f13ed51de33044"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8eb84ca59dc42c3818d652f7bbd0715abe3bc8f74d160831e865b3946d39fc19"
 dependencies = [
  "anyhow",
  "chrono",
