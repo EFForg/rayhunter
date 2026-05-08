@@ -28,6 +28,7 @@ jobs:
       daemon_needed: ${{ steps.files_changed.outputs.daemon_count != '0' || steps.files_changed.outputs.installer_build != '0' }}
       web_changed: ${{ steps.files_changed.outputs.web_count != '0' }}
       docs_changed: ${{ steps.files_changed.outputs.docs_count != '0' || steps.files_changed.outputs.daemon_count != '0' }}
+      installer_build: ${{ steps.files_changed.outputs.installer_build != '0' }}
       installer_changed: ${{ steps.files_changed.outputs.installer_count != '0' }}
       installer_gui_changed: ${{ steps.files_changed.outputs.installer_gui_count != '0' }}
       rootshell_needed: ${{ steps.files_changed.outputs.rootshell_count != '0' || steps.files_changed.outputs.installer_build != '0' }}
@@ -305,7 +306,7 @@ jobs:
           if-no-files-found: error
 
   build_wpa_supplicant:
-    if: needs.files_changed.outputs.installer_changed == 'true'
+    if: needs.files_changed.outputs.installer_build == 'true'
     needs:
       - files_changed
     runs-on: ubuntu-latest
