@@ -15,11 +15,14 @@ use rayhunter::qmdl::QmdlMessageReader;
 use serde::Serialize;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio_util::task::TaskTracker;
+use wifi_station::WifiNetwork;
 
-use crate::qmdl_store::{FileKind, RecordingStore};
+use crate::display;
+use crate::qmdl_store::FileKind;
+use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
 
 pub struct AnalysisWriter {
@@ -124,6 +127,7 @@ impl AnalysisStatus {
 pub enum AnalysisCtrlMessage {
     NewFilesQueued,
     RecordingFinished(String),
+    WifiNetworksDetected(Vec<WifiNetwork>),
     Exit,
 }
 
@@ -196,6 +200,29 @@ async fn perform_analysis(
     info!("Analysis for {name} complete!");
 
     Ok(())
+}
+
+async fn analyze_wifi_networks(
+    wifi_ouis: &Option<Vec<String>>,
+    networks: Vec<WifiNetwork>,
+    ui_update_sender: &Sender<display::DisplayState>,
+) {
+    if let Some(ouis) = wifi_ouis {
+        for network in networks {
+            if ouis
+                .iter()
+                .find(|oui| network.bssid.starts_with(*oui))
+                .is_some()
+            {
+                ui_update_sender
+                    .send(display::DisplayState::WarningDetected {
+                        event_type: EventType::High,
+                    })
+                    .await
+                    .expect("couldn't send ui update message: {}");
+            }
+        }
+    }
 }
 
 pub fn run_analysis_thread(
