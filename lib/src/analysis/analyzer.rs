@@ -31,6 +31,7 @@ pub struct AnalyzerConfig {
     pub incomplete_sib: bool,
     pub test_analyzer: bool,
     pub imsi_requested: bool,
+    pub wifi_oui_analyzer: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -44,6 +45,7 @@ impl Default for AnalyzerConfig {
             nas_null_cipher: true,
             incomplete_sib: true,
             test_analyzer: false,
+            wifi_oui_analyzer: true,
         }
     }
 }

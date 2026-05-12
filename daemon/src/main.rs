@@ -10,6 +10,7 @@ mod key_input;
 mod notifications;
 mod pcap;
 mod qmdl_store;
+mod scan;
 mod server;
 mod stats;
 mod update;
@@ -26,6 +27,7 @@ use crate::gps::{get_gps, post_gps};
 use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
+use crate::scan::run_wifi_scanner;
 use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_wifi_status, get_zip,
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
@@ -281,6 +283,8 @@ async fn run_with_config(
         qmdl_store_lock.clone(),
         analysis_status_lock.clone(),
         config.analyzers.clone(),
+        ui_update_tx.clone(),
+        config.wifi_ouis.clone(),
     );
 
     run_shutdown_thread(
@@ -343,19 +347,23 @@ async fn run_with_config(
 
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),
-        config,
+        config: config.clone(),
         qmdl_store_lock: qmdl_store_lock.clone(),
         diag_device_ctrl_sender: diag_tx,
         analysis_status_lock,
         analysis_sender: analysis_tx,
         daemon_restart_token: restart_token.clone(),
-        ui_update_sender: Some(ui_update_tx),
+        ui_update_sender: Some(ui_update_tx.clone()),
         wifi_status,
         wifi_scan_lock: tokio::sync::Mutex::new(()),
         gps_state: Arc::new(tokio::sync::RwLock::new(initial_gps)),
         update_status_lock: update_status_lock.clone(),
     });
-    run_server(&task_tracker, state, shutdown_token.clone()).await;
+    run_server(&task_tracker, state.clone(), shutdown_token.clone()).await;
+
+    if config.analyzers.wifi_oui_analyzer {
+        run_wifi_scanner(&task_tracker, state, shutdown_token.clone()).await;
+    }
 
     task_tracker.close();
     task_tracker.wait().await;

@@ -13,11 +13,14 @@ use rayhunter::qmdl::QmdlMessageReader;
 use serde::Serialize;
 use tokio::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio_util::task::TaskTracker;
+use wifi_station::WifiNetwork;
 
-use crate::qmdl_store::{FileKind, RecordingStore};
+use crate::display;
+use crate::qmdl_store::FileKind;
+use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
 
 pub struct AnalysisWriter {
@@ -118,6 +121,7 @@ impl AnalysisStatus {
 pub enum AnalysisCtrlMessage {
     NewFilesQueued,
     RecordingFinished(String),
+    WifiNetworksDetected(Vec<WifiNetwork>),
     Exit,
 }
 
@@ -191,12 +195,37 @@ async fn perform_analysis(
     Ok(())
 }
 
+async fn analyze_wifi_networks(
+    wifi_ouis: &Option<Vec<String>>,
+    networks: Vec<WifiNetwork>,
+    ui_update_sender: &Sender<display::DisplayState>,
+) {
+    if let Some(ouis) = wifi_ouis {
+        for network in networks {
+            if ouis
+                .iter()
+                .find(|oui| network.bssid.starts_with(*oui))
+                .is_some()
+            {
+                ui_update_sender
+                    .send(display::DisplayState::WarningDetected {
+                        event_type: EventType::High,
+                    })
+                    .await
+                    .expect("couldn't send ui update message: {}");
+            }
+        }
+    }
+}
+
 pub fn run_analysis_thread(
     task_tracker: &TaskTracker,
     mut analysis_rx: Receiver<AnalysisCtrlMessage>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     analyzer_config: AnalyzerConfig,
+    ui_update_sender: Sender<display::DisplayState>,
+    wifi_ouis: Option<Vec<String>>,
 ) {
     task_tracker.spawn(async move {
         loop {
@@ -216,6 +245,9 @@ pub fn run_analysis_thread(
                 Some(AnalysisCtrlMessage::RecordingFinished(name)) => {
                     let mut status = analysis_status_lock.write().await;
                     status.finished.push(name);
+                }
+                Some(AnalysisCtrlMessage::WifiNetworksDetected(networks)) => {
+                    analyze_wifi_networks(&wifi_ouis, networks, &ui_update_sender).await;
                 }
                 Some(AnalysisCtrlMessage::Exit) | None => return,
             }
