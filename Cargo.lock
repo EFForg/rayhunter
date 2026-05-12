@@ -7168,8 +7168,7 @@ checksum = "dd7cf3379ca1aac9eea11fba24fd7e315d621f8dfe35c8d7d2be8b793726e07d"
 [[package]]
 name = "wifi-station"
 version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8eb84ca59dc42c3818d652f7bbd0715abe3bc8f74d160831e865b3946d39fc19"
+source = "git+https://github.com/jacklund/wifi-station?branch=add-bssid#26045857d891208b3c04836a91f6082b569bb5bb"
 dependencies = [
  "anyhow",
  "chrono",
