@@ -426,6 +426,7 @@ jobs:
     needs:
       - build_rayhunter
       - build_rootshell
+      - build_wpa_supplicant
       - files_changed
       - installer_gui_check
       - test_installer_frontend
@@ -482,6 +483,7 @@ jobs:
     needs:
       - build_rayhunter
       - build_rootshell
+      - build_wpa_supplicant
       - files_changed
       - installer_gui_check
       - test_installer_frontend
@@ -525,6 +527,7 @@ jobs:
     needs:
       - build_rayhunter
       - build_rootshell
+      - build_wpa_supplicant
       - files_changed
       - installer_gui_check
       - test_installer_frontend
