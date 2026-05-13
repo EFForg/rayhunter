@@ -14,7 +14,7 @@ use super::{
     imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
     information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
     null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
-    test_analyzer::TestAnalyzer,
+    test_analyzer::TestAnalyzer, wifi_oui_analyzer::WifiOUIAnalyzer,
 };
 
 /// A list of booleans which stores information about which analyzers are enabled
@@ -31,6 +31,7 @@ pub struct AnalyzerConfig {
     pub test_analyzer: bool,
     pub imsi_requested: bool,
     pub wifi_oui_analyzer: bool,
+    pub wifi_ouis: Vec<String>,
 }
 
 impl Default for AnalyzerConfig {
@@ -45,6 +46,7 @@ impl Default for AnalyzerConfig {
             incomplete_sib: true,
             test_analyzer: false,
             wifi_oui_analyzer: true,
+            wifi_ouis: Vec::new(),
         }
     }
 }
@@ -367,11 +369,23 @@ impl Harness {
             harness.add_analyzer(Box::new(DiagnosticAnalyzer {}));
         }
 
+        if analyzer_config.wifi_oui_analyzer {
+            harness.add_analyzer(Box::new(WifiOUIAnalyzer::new(&analyzer_config.wifi_ouis)));
+        }
+
         harness
     }
 
     pub fn add_analyzer(&mut self, analyzer: Box<dyn Analyzer + Send>) {
         self.analyzers.push(analyzer);
+    }
+
+    pub fn analyze_wifi_ouis(&mut self, bssids: Vec<String>) -> Vec<Event> {
+        self
+            .analyze_information_element(&InformationElement::WifiBSSIDList(bssids))
+            .iter()
+            .flat_map(|e| e.clone())
+            .collect::<Vec<Event>>()
     }
 
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {
