@@ -55,7 +55,7 @@ You can copy the daemon and config files to the device using `netcat` or `adb pu
 
 The `device` setting in `config.toml` must match one of the lowercase variant names from the `Device` enum (e.g. `"orbic"`, `"tplink"`). This controls which display driver is used.
 
-Setting `debug_mode = true` in `config.toml` runs the daemon without `/dev/diag`, so you can test the display and web UI without the hardware.
+To bring the daemon up without `/dev/diag` (for instance, to test the display and web UI before the hardware path works), see [Running the daemon on your PC](./installing-from-source.md#running-the-daemon-on-your-pc).
 
 ### Autostart
 

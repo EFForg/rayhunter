@@ -267,12 +267,14 @@ async fn run_with_config(
         analysis_tx.clone(),
     );
 
-    run_battery_notification_worker(
-        &task_tracker,
-        config.device.clone(),
-        notification_service.new_handler(),
-        shutdown_token.clone(),
-    );
+    if !config.debug_mode {
+        run_battery_notification_worker(
+            &task_tracker,
+            config.device.clone(),
+            notification_service.new_handler(),
+            shutdown_token.clone(),
+        );
+    }
 
     run_notification_worker(
         &task_tracker,
@@ -281,12 +283,14 @@ async fn run_with_config(
     );
 
     let wifi_status = Arc::new(RwLock::new(WifiStatus::default()));
-    wifi_station::run_wifi_client(
-        &task_tracker,
-        &config.wifi_config(),
-        shutdown_token.clone(),
-        wifi_status.clone(),
-    );
+    if !config.debug_mode {
+        wifi_station::run_wifi_client(
+            &task_tracker,
+            &config.wifi_config(),
+            shutdown_token.clone(),
+            wifi_status.clone(),
+        );
+    }
 
     if !config.webdav.url.trim().is_empty() {
         run_webdav_upload_worker(
