@@ -11,6 +11,7 @@ export interface AnalyzerConfig {
     incomplete_sib: boolean;
     test_analyzer: boolean;
     diagnostic_analyzer: boolean;
+    wifi_oui_analyzer: boolean;
 }
 
 export enum enabled_notifications {

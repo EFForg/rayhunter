@@ -285,7 +285,7 @@ async fn run_with_config(
         analysis_status_lock.clone(),
         config.analyzers.clone(),
         ui_update_tx.clone(),
-        config.wifi_ouis.clone(),
+        notification_service.new_handler(),
     );
 
     run_shutdown_thread(
