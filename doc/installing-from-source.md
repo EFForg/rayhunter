@@ -27,6 +27,25 @@ Then you can build everything with:
 ./scripts/install-dev.sh orbic  # replace 'orbic' with your device type
 ```
 
+## Running the daemon on your PC
+
+If you don't have a target device handy, you can run `rayhunter-daemon` on your
+PC with `debug_mode = true`. This skips DIAG, the device display, key input,
+the battery worker, and the WiFi client, so recording-related endpoints will
+not work, but the frontend and read-only APIs do.
+
+```sh
+mkdir -p ./qmdl && printf 'entries = []\n' > ./qmdl/manifest.toml
+cat > config.toml <<'EOF'
+qmdl_store_path = "./qmdl"
+port = 8080
+debug_mode = true
+EOF
+cargo run -p rayhunter-daemon -- ./config.toml
+```
+
+Open `http://127.0.0.1:8080`.
+
 ## Hot-reloading the frontend
 
 If you are working on the frontend, you normally have to repeat all of the above steps everytime to see a change.
