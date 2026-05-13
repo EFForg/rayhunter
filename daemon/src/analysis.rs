@@ -1,5 +1,6 @@
 use std::cmp;
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::Json;
 use axum::{
@@ -20,6 +21,7 @@ use wifi_station::WifiNetwork;
 
 use crate::display;
 use crate::qmdl_store::FileKind;
+use crate::notifications::{Notification, NotificationType};
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
 
@@ -195,29 +197,6 @@ async fn perform_analysis(
     Ok(())
 }
 
-async fn analyze_wifi_networks(
-    wifi_ouis: &Option<Vec<String>>,
-    networks: Vec<WifiNetwork>,
-    ui_update_sender: &Sender<display::DisplayState>,
-) {
-    if let Some(ouis) = wifi_ouis {
-        for network in networks {
-            if ouis
-                .iter()
-                .find(|oui| network.bssid.starts_with(*oui))
-                .is_some()
-            {
-                ui_update_sender
-                    .send(display::DisplayState::WarningDetected {
-                        event_type: EventType::High,
-                    })
-                    .await
-                    .expect("couldn't send ui update message: {}");
-            }
-        }
-    }
-}
-
 pub fn run_analysis_thread(
     task_tracker: &TaskTracker,
     mut analysis_rx: Receiver<AnalysisCtrlMessage>,
@@ -225,7 +204,7 @@ pub fn run_analysis_thread(
     analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     analyzer_config: AnalyzerConfig,
     ui_update_sender: Sender<display::DisplayState>,
-    wifi_ouis: Option<Vec<String>>,
+    notification_channel: Sender<Notification>,
 ) {
     task_tracker.spawn(async move {
         loop {
@@ -247,9 +226,39 @@ pub fn run_analysis_thread(
                     status.finished.push(name);
                 }
                 Some(AnalysisCtrlMessage::WifiNetworksDetected(networks)) => {
-                    analyze_wifi_networks(&wifi_ouis, networks, &ui_update_sender).await;
+                    if !analyzer_config.wifi_ouis.is_empty() {
+                        let mut harness = Harness::new_with_config(&analyzer_config);
+                        let mut events = harness
+                            .analyze_wifi_ouis(networks.iter().map(|n| n.bssid.clone()).collect());
+                        if !events.is_empty() {
+                            events.sort_by(|a, b| a.event_type.cmp(&b.event_type));
+                            if let Some(max_event) = events.pop() {
+                                if max_event.event_type > EventType::Informational {
+                                    info!("a heuristic triggered on this run!");
+                                    notification_channel
+                                        .send(Notification::new(
+                                            NotificationType::Warning,
+                                            format!(
+                                                "Rayhunter has detected a {:?} severity event",
+                                                max_event.event_type,
+                                            ),
+                                            Some(Duration::from_secs(60 * 5)),
+                                        ))
+                                        .await
+                                        .expect("Failed to send to notification channel");
+                                    ui_update_sender
+                                        .send(display::DisplayState::WarningDetected {
+                                            event_type: max_event.event_type,
+                                        })
+                                        .await
+                                        .expect("couldn't send ui update message: {}");
+                                }
+                            }
+                        }
+                    }
                 }
                 Some(AnalysisCtrlMessage::Exit) | None => return,
+
             }
         }
     });

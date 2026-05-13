@@ -83,3 +83,4 @@ nas_null_cipher = true
 incomplete_sib = true
 test_analyzer = false
 diagnostic_analyzer = true
+wifi_oui_analyzer = true
