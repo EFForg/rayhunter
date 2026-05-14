@@ -1,4 +1,4 @@
-use log::{info, warn};
+use log::{debug, info, warn};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::{select, task::JoinHandle, time};
@@ -23,8 +23,10 @@ pub async fn run_wifi_scanner(
                         warn!("WiFi scan already in progress");
                         continue;
                     }
+                    debug!("Calling scan_wifi_networks()");
                     match scan_wifi_networks(STA_IFACE).await {
                         Ok(networks) => {
+                            debug!("Found {} networks", networks.len());
                             if let Err(e) = state.analysis_sender.send(
                                 AnalysisCtrlMessage::WifiNetworksDetected(networks)
                             ).await {
