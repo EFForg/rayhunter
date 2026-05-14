@@ -1,3 +1,5 @@
+use log::{debug, info};
+
 use crate::analysis::{
     analyzer::{Analyzer, Event, EventType},
     information_element::InformationElement,
@@ -34,14 +36,16 @@ impl Analyzer for WifiOUIAnalyzer {
         _packet_num: usize,
     ) -> Option<Event> {
         if let InformationElement::WifiBSSIDList(bssids) = ie {
+            debug!("WifiOUIAnalyzer got BSSIDs {:?}", bssids);
             if !self.wifi_ouis.is_empty() {
                 for bssid in bssids {
                     if self
                         .wifi_ouis
                         .iter()
-                        .find(|oui| bssid.starts_with(*oui))
+                        .find(|oui| bssid.to_uppercase().starts_with(&oui.to_uppercase()))
                         .is_some()
                     {
+                        debug!("Found match for bssid {bssid}");
                         return Some(Event {
                             event_type: EventType::High,
                             message: "Detected possible IMSI catcher wifi endpoint".to_string(),

@@ -8,7 +8,7 @@ use axum::{
     http::StatusCode,
 };
 use futures::TryStreamExt;
-use log::{error, info};
+use log::{debug, error, info};
 use rayhunter::analysis::analyzer::{AnalyzerConfig, EventType, Harness};
 use rayhunter::diag::{DataType, MessagesContainer};
 use rayhunter::qmdl::QmdlReader;
@@ -222,10 +222,12 @@ pub fn run_analysis_thread(
                     status.finished.push(name);
                 }
                 Some(AnalysisCtrlMessage::WifiNetworksDetected(networks)) => {
+                    debug!("Networks detected, configured OUIs: {:?}", analyzer_config.wifi_ouis.join(","));
                     if !analyzer_config.wifi_ouis.is_empty() {
                         let mut harness = Harness::new_with_config(&analyzer_config);
                         let mut events = harness
                             .analyze_wifi_ouis(networks.iter().map(|n| n.bssid.clone()).collect());
+                        debug!("Called analyze_wifi_ouis, got events: {:?}", events);
                         if !events.is_empty() {
                             events.sort_by(|a, b| a.event_type.cmp(&b.event_type));
                             if let Some(max_event) = events.pop() {
