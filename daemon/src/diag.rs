@@ -170,9 +170,10 @@ impl DiagTask {
                 lat,
                 lon,
             };
-            let json = serde_json::to_string(&record)?;
+            let mut json = serde_json::to_vec(&record)?;
+            json.push(b'\n');
             gps_file
-                .write_all(format!("{json}\n").as_bytes())
+                .write_all(&json)
                 .await
                 .map_err(RecordingStoreError::WriteFileError)?;
         }
