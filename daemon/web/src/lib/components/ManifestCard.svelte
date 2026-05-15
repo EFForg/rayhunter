@@ -1,6 +1,5 @@
 <script lang="ts">
     import { ManifestEntry } from '$lib/manifest.svelte';
-    import { gpsModeLabel } from '$lib/utils.svelte';
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import DownloadLink from '$lib/components/DownloadLink.svelte';
     import DeleteButton from '$lib/components/DeleteButton.svelte';
@@ -85,11 +84,6 @@
     {#if entry.stop_reason}
         <div class="bg-yellow-50 border border-yellow-300 rounded-sm p-2 text-yellow-800 text-sm">
             {entry.stop_reason}
-        </div>
-    {/if}
-    {#if entry.gps_mode !== undefined}
-        <div class="text-sm text-gray-500">
-            GPS: {gpsModeLabel(entry.gps_mode)}
         </div>
     {/if}
     <div class="flex flex-row justify-between lg:justify-end gap-1 mt-2 overflow-x-auto">
