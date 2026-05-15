@@ -1,7 +1,7 @@
 <script lang="ts">
     import { type ReportMetadata } from '$lib/analysis.svelte';
     import type { ManifestEntry } from '$lib/manifest.svelte';
-    import { gpsModeLabel } from '$lib/utils.svelte';
+    import { gps_mode_label } from '$lib/utils.svelte';
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import AnalysisTable from './AnalysisTable.svelte';
     import ReAnalyzeButton from './ReAnalyzeButton.svelte';
@@ -73,7 +73,7 @@
                 {/if}
                 <p>
                     <b>GPS Mode:</b>
-                    {gpsModeLabel(entry.gps_mode)}
+                    {gps_mode_label(entry.gps_mode)}
                 </p>
             </div>
             {#if metadata && metadata.analyzers}
