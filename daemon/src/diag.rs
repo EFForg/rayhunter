@@ -40,7 +40,7 @@ const DISK_CHECK_BYTES_INTERVAL: usize = 256 * 1024;
 pub enum DiagDeviceCtrlMessage {
     StopRecording,
     StartRecording {
-        response_tx: Option<oneshot::Sender<Result<(), String>>>,
+        response_tx: Option<oneshot::Sender<Result<(), RecordingStoreError>>>,
     },
     DeleteEntry {
         name: String,
@@ -129,7 +129,7 @@ impl DiagTask {
     }
 
     /// Start recording, returning an error if disk space is too low.
-    async fn start(&mut self, qmdl_store: &mut RecordingStore) -> Result<(), String> {
+    async fn start(&mut self, qmdl_store: &mut RecordingStore) -> Result<(), RecordingStoreError> {
         self.max_type_seen = EventType::Informational;
         self.bytes_since_space_check = 0;
         self.low_space_warned = false;
@@ -140,12 +140,10 @@ impl DiagTask {
             self.min_space_to_continue_mb,
         ) {
             DiskSpaceCheck::Critical(mb) | DiskSpaceCheck::Warning(mb) => {
-                let msg = format!(
-                    "Insufficient disk space: {}MB available, {}MB required",
-                    mb, self.min_space_to_start_mb
-                );
-                error!("{msg}");
-                return Err(msg);
+                return Err(RecordingStoreError::InsufficientDiskSpace(
+                    mb,
+                    self.min_space_to_start_mb,
+                ));
             }
             DiskSpaceCheck::Ok(mb) => {
                 info!("Starting recording with {}MB disk space available", mb);
@@ -153,14 +151,8 @@ impl DiagTask {
             DiskSpaceCheck::Failed => {}
         }
 
-        let (qmdl_file, analysis_file) = match qmdl_store.new_entry(self.gps_mode).await {
-            Ok(files) => files,
-            Err(e) => {
-                let msg = format!("failed creating QMDL file entry: {e}");
-                error!("{msg}");
-                return Err(msg);
-            }
-        };
+        let (qmdl_file, analysis_file) = qmdl_store.new_entry(self.gps_mode).await?;
+
         // For fixed-mode sessions, write the configured coordinates to the sidecar
         // immediately so the per-session GPS is stored durably and isn't affected
         // by future config changes or GPS API calls.
@@ -168,38 +160,34 @@ impl DiagTask {
             && let Some((lat, lon)) = self.gps_fixed_coords
             && let Some((entry_idx, _)) = qmdl_store.get_current_entry()
         {
-            match qmdl_store.open_entry_gps_for_append(entry_idx).await {
-                Ok(Some(mut gps_file)) => {
-                    let record = GpsRecord {
-                        unix_ts: 0,
-                        lat,
-                        lon,
-                    };
-                    if let Ok(json) = serde_json::to_string(&record) {
-                        let _ = gps_file.write_all(format!("{json}\n").as_bytes()).await;
-                    }
-                }
-                Ok(None) => {
-                    error!("GPS sidecar directory not found, cannot write fixed-mode coordinates")
-                }
-                Err(e) => error!("failed to open GPS sidecar for fixed-mode entry: {e}"),
-            }
+            let mut gps_file = qmdl_store
+                .open_entry_gps_for_append(entry_idx)
+                .await?
+                .ok_or(RecordingStoreError::GpsSidecarNotFound)?;
+
+            let record = GpsRecord {
+                unix_ts: chrono::Utc::now().timestamp(),
+                lat,
+                lon,
+            };
+            let json = serde_json::to_string(&record)?;
+            gps_file
+                .write_all(format!("{json}\n").as_bytes())
+                .await
+                .map_err(RecordingStoreError::WriteFileError)?;
         }
+
         self.stop_current_recording().await;
         let qmdl_writer = QmdlWriter::new(qmdl_file);
-        let analysis_writer = match AnalysisWriter::new(analysis_file, &self.analyzer_config).await
-        {
-            Ok(writer) => Box::new(writer),
-            Err(e) => {
-                let msg = format!("failed to create analysis writer: {e}");
-                error!("{msg}");
-                return Err(msg);
-            }
-        };
+        let analysis_writer = AnalysisWriter::new(analysis_file, &self.analyzer_config)
+            .await
+            .map_err(RecordingStoreError::WriteFileError)?;
+
         self.state = DiagState::Recording {
             qmdl_writer,
-            analysis_writer,
+            analysis_writer: Box::new(analysis_writer),
         };
+
         if let Err(e) = self
             .ui_update_sender
             .send(display::DisplayState::Recording)
@@ -530,7 +518,7 @@ pub async fn start_recording(
 
     match response_rx.await {
         Ok(Ok(())) => Ok((StatusCode::ACCEPTED, "ok".to_string())),
-        Ok(Err(reason)) => Err((StatusCode::INSUFFICIENT_STORAGE, reason)),
+        Ok(Err(reason)) => Err((StatusCode::INSUFFICIENT_STORAGE, reason.to_string())),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("failed to receive start recording response: {e}"),
