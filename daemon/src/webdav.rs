@@ -245,6 +245,7 @@ pub fn run_webdav_upload_worker(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GpsMode;
     use axum::{
         Router,
         body::Bytes,

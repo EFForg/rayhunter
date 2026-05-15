@@ -10,6 +10,7 @@ use pcap_file_tokio::pcapng::blocks::enhanced_packet::{EnhancedPacketBlock, Enha
 use pcap_file_tokio::pcapng::blocks::interface_description::InterfaceDescriptionBlock;
 use pcap_file_tokio::pcapng::blocks::section_header::{SectionHeaderBlock, SectionHeaderOption};
 use pcap_file_tokio::{Endianness, PcapError};
+use serde::Serialize;
 use std::borrow::Cow;
 use thiserror::Error;
 use tokio::io::AsyncWrite;
@@ -26,11 +27,13 @@ pub enum GsmtapPcapError {
     Deku(#[from] DekuError),
 }
 
+#[derive(Serialize)]
 pub struct GpsPoint {
-    pub latitude: f64,
-    pub longitude: f64,
-    /// Unix timestamp of the GPS fix. 0 means fixed/synthetic (no real GPS time).
     pub unix_ts: i64,
+    #[serde(rename = "lat")]
+    pub latitude: f64,
+    #[serde(rename = "lon")]
+    pub longitude: f64,
 }
 
 pub struct GsmtapPcapWriter<T>
@@ -148,17 +151,7 @@ where
 
         let mut options = vec![];
         if let Some(p) = gps {
-            let comment = if p.unix_ts == 0 {
-                format!(
-                    r#"{{"latitude":{:.7},"longitude":{:.7}}}"#,
-                    p.latitude, p.longitude
-                )
-            } else {
-                format!(
-                    r#"{{"latitude":{:.7},"longitude":{:.7},"timestamp":{}}}"#,
-                    p.latitude, p.longitude, p.unix_ts
-                )
-            };
+            let comment = serde_json::to_string(p).expect("GpsPoint serialization cannot fail");
             options.push(EnhancedPacketOption::Comment(Cow::Owned(comment)));
         }
         let packet = EnhancedPacketBlock {

@@ -23,6 +23,8 @@ pub enum RecordingStoreError {
     CreateFileError(tokio::io::Error),
     #[error("Couldn't read file: {0}")]
     ReadFileError(tokio::io::Error),
+    #[error("Couldn't write file: {0}")]
+    WriteFileError(tokio::io::Error),
     #[error("Couldn't delete file: {0}")]
     DeleteFileError(tokio::io::Error),
     #[error("Couldn't open directory at path: {0}")]
@@ -33,6 +35,12 @@ pub enum RecordingStoreError {
     WriteManifestError(tokio::io::Error),
     #[error("Couldn't parse QMDL store manifest file: {0}")]
     ParseManifestError(toml::de::Error),
+    #[error("Insufficient disk space: {0}MB available, {1}MB required")]
+    InsufficientDiskSpace(u64, u64),
+    #[error("GPS sidecar directory not found")]
+    GpsSidecarNotFound,
+    #[error("Serialization error: {0}")]
+    SerializationError(#[from] serde_json::Error),
 }
 
 pub struct RecordingStore {
