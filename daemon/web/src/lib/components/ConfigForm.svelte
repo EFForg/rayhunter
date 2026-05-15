@@ -10,6 +10,7 @@
         type WifiNetwork,
     } from '../utils.svelte';
     import Modal from './Modal.svelte';
+    import ExpandableInput from './ExpandableInput.svelte';
 
     let { shown = $bindable() }: { shown: boolean } = $props();
     let config = $state<Config | null>(null);
@@ -26,15 +27,12 @@
     let scanning = $state(false);
     let scanResults = $state<WifiNetwork[]>([]);
     let dnsServersInput = $state('');
-    let webdavExpanded = $state(false);
-    let webdavUrlInput = $state<HTMLInputElement | null>(null);
 
     async function load_config() {
         try {
             loading = true;
             config = await get_config();
             dnsServersInput = config.dns_servers ? config.dns_servers.join(', ') : '';
-            webdavExpanded = config.webdav.url.trim() !== '';
             message = '';
             messageType = null;
             poll_wifi_status();
@@ -215,95 +213,90 @@
 
                 <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
-                    <div>
-                        <label for="ntfy_url" class="block text-sm font-medium text-gray-700 mb-1">
-                            ntfy URL for Sending Notifications (if unset you will not receive
-                            notifications)
-                        </label>
-                        <input
-                            id="ntfy_url"
-                            type="url"
-                            bind:value={config.ntfy_url}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
-                        />
-                        <p class="text-xs text-gray-500 mt-1">
-                            Test button below uses the saved configuration URL, not the input above
-                        </p>
-                    </div>
 
-                    <div>
-                        <button
-                            type="button"
-                            onclick={send_test_notification}
-                            disabled={testingNotification}
-                            class="bg-rayhunter-blue hover:bg-rayhunter-dark-blue disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
-                        >
-                            {#if testingNotification}
+                    <ExpandableInput
+                        bind:value={config.ntfy_url}
+                        checkboxId="ntfy_enabled"
+                        inputId="ntfy_url"
+                        label="Enable ntfy notifications"
+                        inputLabel="ntfy URL"
+                        inputPlaceholder="https://ntfy.sh/my-rayhunter"
+                        inputHelp="Test button below uses the saved configuration URL, not the input above"
+                    >
+                        <div>
+                            <button
+                                type="button"
+                                onclick={send_test_notification}
+                                disabled={testingNotification}
+                                class="bg-rayhunter-blue hover:bg-rayhunter-dark-blue disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-md flex flex-row gap-1 items-center"
+                            >
+                                {#if testingNotification}
+                                    <div
+                                        class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+                                    ></div>
+                                    Sending...
+                                {:else}
+                                    <svg
+                                        class="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                                        ></path>
+                                    </svg>
+                                    Send Test Notification
+                                {/if}
+                            </button>
+                            {#if testMessage}
                                 <div
-                                    class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-                                ></div>
-                                Sending...
-                            {:else}
-                                <svg
-                                    class="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
+                                    class="mt-2 p-2 rounded-sm text-sm {testMessageType === 'error'
+                                        ? 'bg-red-100 text-red-700'
+                                        : 'bg-green-100 text-green-700'}"
                                 >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                                    ></path>
-                                </svg>
-                                Send Test Notification
+                                    {testMessage}
+                                </div>
                             {/if}
-                        </button>
-                        {#if testMessage}
-                            <div
-                                class="mt-2 p-2 rounded-sm text-sm {testMessageType === 'error'
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-green-100 text-green-700'}"
-                            >
-                                {testMessage}
-                            </div>
-                        {/if}
-                    </div>
+                        </div>
 
-                    <div class="space-y-2">
-                        <div class="block text-sm font-medium text-gray-700 mb-1">
-                            Enabled Notification Types
+                        <div class="space-y-2">
+                            <div class="block text-sm font-medium text-gray-700 mb-1">
+                                Enabled Notification Types
+                            </div>
+                            <div class="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="enable_warning_notifications"
+                                    value="Warning"
+                                    bind:group={config.enabled_notifications}
+                                />
+                                <label
+                                    for="enable_warning_notifications"
+                                    class="ml-2 block text-sm text-gray-700"
+                                >
+                                    Warnings
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="enable_lowbattery_notifications"
+                                    value="LowBattery"
+                                    bind:group={config.enabled_notifications}
+                                />
+                                <label
+                                    for="enable_lowbattery_notifications"
+                                    class="ml-2 block text-sm text-gray-700"
+                                >
+                                    Low Battery
+                                </label>
+                            </div>
                         </div>
-                        <div class="flex items-center">
-                            <input
-                                type="checkbox"
-                                id="enable_warning_notifications"
-                                value="Warning"
-                                bind:group={config.enabled_notifications}
-                            />
-                            <label
-                                for="enable_warning_notifications"
-                                class="ml-2 block text-sm text-gray-700"
-                            >
-                                Warnings
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input
-                                type="checkbox"
-                                id="enable_lowbattery_notifications"
-                                value="LowBattery"
-                                bind:group={config.enabled_notifications}
-                            />
-                            <label
-                                for="enable_lowbattery_notifications"
-                                class="ml-2 block text-sm text-gray-700"
-                            >
-                                Low Battery
-                            </label>
-                        </div>
-                    </div>
+                    </ExpandableInput>
                 </div>
 
                 <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
@@ -355,53 +348,15 @@
                         .qmdl and .ndjson files are uploaded in the background to the WebDAV server.
                     </p>
 
-                    <div class="flex items-center">
-                        <input
-                            id="webdav_enabled"
-                            type="checkbox"
-                            checked={webdavExpanded}
-                            onchange={(e) => {
-                                webdavExpanded = e.currentTarget.checked;
-                                if (webdavExpanded) {
-                                    setTimeout(() => webdavUrlInput?.focus(), 0);
-                                } else {
-                                    if (config) config.webdav.url = '';
-                                }
-                            }}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                        />
-                        <label for="webdav_enabled" class="ml-2 block text-sm text-gray-700">
-                            Enable WebDAV upload
-                        </label>
-                    </div>
-
-                    {#if webdavExpanded}
-                        <div>
-                            <label
-                                for="webdav_url"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Server URL
-                            </label>
-                            <input
-                                id="webdav_url"
-                                type="url"
-                                bind:this={webdavUrlInput}
-                                bind:value={config.webdav.url}
-                                onblur={() => {
-                                    if (config && config.webdav.url.trim() === '') {
-                                        webdavExpanded = false;
-                                    }
-                                }}
-                                placeholder="https://dav.example.com/rayhunter/"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
-                            />
-                            <p class="text-xs text-gray-500 mt-1">
-                                Files are uploaded via HTTP PUT under this base URL. No folders are
-                                created, and folders in this base URL are assumed to exist already.
-                            </p>
-                        </div>
-
+                    <ExpandableInput
+                        bind:value={config.webdav.url}
+                        checkboxId="webdav_enabled"
+                        inputId="webdav_url"
+                        label="Enable WebDAV upload"
+                        inputLabel="Server URL"
+                        inputPlaceholder="https://dav.example.com/rayhunter/"
+                        inputHelp="Files are uploaded via HTTP PUT under this base URL. No folders are created, and folders in this base URL are assumed to exist already."
+                    >
                         <div>
                             <label
                                 for="webdav_username"
@@ -512,7 +467,7 @@
                             When enabled, the local files are removed after a successful upload.
                             Otherwise the manifest is just marked as uploaded.
                         </p>
-                    {/if}
+                    </ExpandableInput>
                 </div>
 
                 {#if config.device === 'orbic' || config.device === 'moxee' || config.device === 'tmobile' || config.device === 'wingtech'}
