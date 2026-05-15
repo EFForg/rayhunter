@@ -11,7 +11,7 @@ use tokio::{select, sync::RwLock, time};
 use tokio_util::io::ReaderStream;
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
-use crate::config::{GpsMode, WebdavConfig};
+use crate::config::WebdavConfig;
 use crate::qmdl_store::RecordingStore;
 
 pub struct WebdavUploadWorkerConfig {
