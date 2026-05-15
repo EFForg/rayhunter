@@ -1,6 +1,6 @@
 <script lang="ts">
     import { type SystemStats } from '$lib/systemStats';
-    import { gpsModeLabel, GpsMode, type GpsData } from '$lib/utils.svelte';
+    import { gps_mode_label, GpsMode, type GpsData } from '$lib/utils.svelte';
     let {
         stats,
         gps_data = null,
@@ -122,7 +122,7 @@
             {#if gps_mode !== GpsMode.Disabled}
                 <tr class="border-b border-gray-200">
                     <td class="py-1 pr-4 text-gray-500 font-medium">GPS Mode</td>
-                    <td class="py-1">{gpsModeLabel(gps_mode)}</td>
+                    <td class="py-1">{gps_mode_label(gps_mode)}</td>
                 </tr>
                 {#if gps_data}
                     <tr class="border-b border-gray-200">
