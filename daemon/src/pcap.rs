@@ -123,6 +123,45 @@ fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: i64) -> Option<GpsPoi
     })
 }
 
+pub async fn generate_pcap_data<R, W>(
+    writer: W,
+    qmdl_file: R,
+    qmdl_size_bytes: usize,
+    gps_records: Vec<GpsRecord>,
+) -> Result<(), Error>
+where
+    W: AsyncWrite + Unpin + Send,
+    R: AsyncRead + Unpin,
+{
+    let mut pcap_writer = GsmtapPcapWriter::new(writer).await?;
+    pcap_writer.write_iface_header().await?;
+
+    let mut reader = QmdlReader::new(qmdl_file, Some(qmdl_size_bytes));
+    while let Some(container) = reader.get_next_messages_container().await? {
+        if container.data_type != DataType::UserSpace {
+            continue;
+        }
+
+        for maybe_msg in container.into_messages() {
+            match maybe_msg {
+                Ok(msg) => {
+                    let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
+                    if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
+                        let packet_unix_ts = timestamp.to_datetime().timestamp();
+                        let gps = find_nearest_gps(&gps_records, packet_unix_ts);
+                        pcap_writer
+                            .write_gsmtap_message(gsmtap_msg, timestamp, gps.as_ref())
+                            .await?;
+                    }
+                }
+                Err(e) => error!("error parsing message: {e:?}"),
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,43 +220,4 @@ mod tests {
         let records = vec![rec(100, 1.0, 2.0), rec(200, 3.0, 4.0)];
         assert_eq!(find_nearest_gps(&records, 150).unwrap().unix_ts, 100);
     }
-}
-
-pub async fn generate_pcap_data<R, W>(
-    writer: W,
-    qmdl_file: R,
-    qmdl_size_bytes: usize,
-    gps_records: Vec<GpsRecord>,
-) -> Result<(), Error>
-where
-    W: AsyncWrite + Unpin + Send,
-    R: AsyncRead + Unpin,
-{
-    let mut pcap_writer = GsmtapPcapWriter::new(writer).await?;
-    pcap_writer.write_iface_header().await?;
-
-    let mut reader = QmdlReader::new(qmdl_file, Some(qmdl_size_bytes));
-    while let Some(container) = reader.get_next_messages_container().await? {
-        if container.data_type != DataType::UserSpace {
-            continue;
-        }
-
-        for maybe_msg in container.into_messages() {
-            match maybe_msg {
-                Ok(msg) => {
-                    let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
-                    if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
-                        let packet_unix_ts = timestamp.to_datetime().timestamp();
-                        let gps = find_nearest_gps(&gps_records, packet_unix_ts);
-                        pcap_writer
-                            .write_gsmtap_message(gsmtap_msg, timestamp, gps.as_ref())
-                            .await?;
-                    }
-                }
-                Err(e) => error!("error parsing message: {e:?}"),
-            }
-        }
-    }
-
-    Ok(())
 }

@@ -290,7 +290,7 @@ mod tests {
                 println!("error = {:?}", reqwest_error);
                 assert!(reqwest_error.is_timeout());
             }
-            _ => assert!(false),
+            _ => unreachable!(),
         }
     }
 
