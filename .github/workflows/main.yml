@@ -172,6 +172,9 @@ jobs:
       with:
         components: clippy
     - uses: Swatinem/rust-cache@v2
+      with:
+        # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+        cache-bin: 'false'
     # we don't need to run cargo fmt here because both cargo fmt and cargo
     # fmt --all runs on all workspace packages so this is handled by
     # check_and_test above
@@ -275,6 +278,9 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+          cache-bin: 'false'
       - name: Build rayhunter-check
         run: cargo build --bin rayhunter-check --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
@@ -411,6 +417,9 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+          cache-bin: 'false'
       - run: cargo build --package installer --bin installer --release --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
@@ -504,6 +513,10 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Workaround for https://github.com/Swatinem/rust-cache/issues/341
+          # bin caching breaks cargo resolution on macOS 15 runner images
+          cache-bin: 'false'
       - name: Build GUI installer
         shell: bash
         run: |
