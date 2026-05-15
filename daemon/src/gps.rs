@@ -122,22 +122,21 @@ pub async fn post_gps(
                     lat: gps_data.latitude,
                     lon: gps_data.longitude,
                 };
-                let json = serde_json::to_string(&record).map_err(|e| {
+                let mut json = serde_json::to_vec(&record).map_err(|e| {
                     error!("failed to serialize GPS record: {e}");
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         format!("failed to serialize GPS record: {e}"),
                     )
                 })?;
-                file.write_all(format!("{json}\n").as_bytes())
-                    .await
-                    .map_err(|e| {
-                        error!("failed to write GPS record to sidecar: {e}");
-                        (
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            format!("failed to write GPS record to sidecar: {e}"),
-                        )
-                    })?;
+                json.push(b'\n');
+                file.write_all(&json).await.map_err(|e| {
+                    error!("failed to write GPS record to sidecar: {e}");
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        format!("failed to write GPS record to sidecar: {e}"),
+                    )
+                })?;
             }
             Ok(None) => error!("GPS sidecar directory not found, cannot write GPS record"),
             Err(e) => {
