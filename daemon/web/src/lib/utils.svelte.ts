@@ -34,6 +34,16 @@ export enum GpsMode {
     Api = 2,
 }
 
+export function gpsModeLabel(mode: GpsMode | undefined | null): string {
+    switch (mode) {
+        case GpsMode.Fixed:
+            return 'Fixed coordinates';
+        case GpsMode.Api:
+            return 'API endpoint';
+        default:
+            return 'Disabled';
+    }
+}
 
 export interface Config {
     device: string;
