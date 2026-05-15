@@ -102,6 +102,7 @@ fn check_disk_space(path: &std::path::Path, warning_mb: u64, critical_mb: u64) -
 }
 
 impl DiagTask {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         ui_update_sender: Sender<display::DisplayState>,
         analysis_sender: Sender<AnalysisCtrlMessage>,
