@@ -27,12 +27,13 @@ The **GPS Settings** allows you to attach GPS-based location history to every re
 
 The modes are:
 
-- *Disabled*, the default option, won't attach any comment to the packets or enable any program logic for the management of coordinates.
+- *Disabled*, the default option, disables this feature entirely.
 
-- *Fixed*, this is more suitable for measurements taken in the same geographic position for that session, it enables two input fields for latitude and longitude. They accept decimal degrees format (from -90 to 90 for latitude, and -180 to 180 for latitude). This mode adds a "fixed" value to the GPS timestamp in the PCAP packets to help during analysis to know the coordinates were set up manually.
-- *API Endpoint*, enables the /api/gps endpoint to send POST requests in json format with the values for latitude, longitude, and timestamp. The GPS timestamp should be provided as Unix timestamp, and can be passed as number or string without errors, but any other format won't pass the validation process.
+- *Fixed*, for hardcoding latitude (-90 to 90) and longitude (-180 to 180) for devices that don't move very often or at all. Every packet in the recording will have that location.
 
-The GPS data is stored as a separate JSON file next to QMDL captures, and contains its own timestamp for each packet. This timestamp is meant to be compared during analysis with the packet timestamp so we know the time difference between the packet capture from the GPS capture, if there is any, since GPS data and packet data may come from two entirely separate devices.
+- *API Endpoint*, enables the `POST /api/gps` endpoint so that third-party tools (i.e. your own scripts) can update location info continuously. Please refer to the [API documentation](api-docs.md) for more info.
+
+The GPS data is stored as a separate JSON file next to QMDL captures, and contains its own timestamps. These timestamps are meant to be compared during analysis with the packet timestamp so we know the time difference between the packet capture from the GPS capture, if there is any, since GPS data and packet data may come from two entirely separate devices.
 
 ## WiFi Client Mode
 

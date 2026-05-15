@@ -47,7 +47,9 @@ use utoipa::OpenApi;
         server::test_notification,
         server::get_time,
         server::set_time_offset,
-        server::debug_set_display_state
+        server::debug_set_display_state,
+        gps::post_gps,
+        gps::get_gps
     ),
     servers(
         (
