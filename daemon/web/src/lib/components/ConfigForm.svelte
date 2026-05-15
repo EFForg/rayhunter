@@ -781,7 +781,7 @@
                     </div>
                 </div>
 
-                <div class="border-t pt-4 mt-6 space-y-3">
+                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">GPS Settings</h3>
                     <div>
                         <label for="gps_mode" class="block text-sm font-medium text-gray-700 mb-1"

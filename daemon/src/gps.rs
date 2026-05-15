@@ -60,6 +60,7 @@ where
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct GpsData {
     #[serde(deserialize_with = "deserialize_latitude")]
     pub latitude: f64,
@@ -98,6 +99,20 @@ pub async fn load_gps_records(file: tokio::fs::File) -> Vec<GpsRecord> {
     records
 }
 
+/// Submit GPS coordinates
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    post,
+    path = "/api/gps",
+    tag = "Configuration",
+    request_body = GpsData,
+    responses(
+        (status = StatusCode::OK, description = "GPS data accepted"),
+        (status = StatusCode::FORBIDDEN, description = "GPS API endpoint is disabled"),
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Failed to write GPS record")
+    ),
+    summary = "Submit GPS coordinates",
+    description = "Submit GPS coordinates from an external source (e.g. a phone app). Requires gps_mode to be set to 'Api' in configuration. latitude is in decimal degrees from -90 to 90, longitude is in decimal degrees from -180 to 180, timestamp is a Unix timestamp in seconds."
+))]
 pub async fn post_gps(
     State(state): State<Arc<ServerState>>,
     Json(gps_data): Json<GpsData>,
@@ -155,6 +170,18 @@ pub async fn post_gps(
     Ok(StatusCode::OK)
 }
 
+/// Get the current GPS coordinates
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    get,
+    path = "/api/gps",
+    tag = "Configuration",
+    responses(
+        (status = StatusCode::OK, description = "Current GPS data", body = GpsData),
+        (status = StatusCode::NOT_FOUND, description = "No GPS data available")
+    ),
+    summary = "Get current GPS coordinates",
+    description = "Returns the most recently submitted GPS coordinates. Returns 404 if no coordinates have been submitted yet this session."
+))]
 pub async fn get_gps(State(state): State<Arc<ServerState>>) -> Result<Json<GpsData>, StatusCode> {
     let gps = state.gps_state.read().await;
     match gps.as_ref() {
