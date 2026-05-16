@@ -28,7 +28,10 @@ fn set_binary_var(include_dir: &Path, var: &str, file: &str) {
         return;
     }
     let binary = include_dir.join(file);
-    println!("cargo::rerun-if-changed={}", binary.display());
+    // We need to rerun the build script if the file starts appearing or disappearing, to emit the
+    // right warnings and change the envvar's value. We don't really need to rerun the build script
+    // if the file changes contents.
+    watch_file(&binary);
     if binary.exists() {
         println!("cargo::rustc-env={var}={}", binary.display());
     } else {
@@ -39,4 +42,19 @@ fn set_binary_var(include_dir: &Path, var: &str, file: &str) {
         );
         println!("cargo::rustc-env={var}=");
     }
+}
+
+/// Rerun the build script if the file changes or it appears, or disappears.
+///
+/// Simply emitting rerun-if-changed for a nonexistent filepath (such as wpa_supplicant) will make
+/// cargo recompile everything all the time. Therefore, if the file does not exist we need to watch
+/// the first parent directory that does.
+fn watch_file(mut file: &Path) {
+    while !file.exists()
+        && let Some(parent) = file.parent()
+    {
+        file = parent;
+    }
+
+    println!("cargo::rerun-if-changed={}", file.display());
 }
