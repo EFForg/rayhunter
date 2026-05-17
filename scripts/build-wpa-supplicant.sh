@@ -39,10 +39,9 @@ cd "$BUILD_DIR/libnl-${LIBNL_VERSION}"
     --enable-static \
     --disable-shared \
     --disable-cli \
-    --disable-debug \
-    > /dev/null 2>&1
-make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)" > /dev/null 2>&1
-make install > /dev/null 2>&1
+    --disable-debug
+make -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+make install
 
 echo "Building wpa_supplicant ${WPA_VERSION}..."
 cd "$BUILD_DIR"
