@@ -569,4 +569,17 @@ mod tests {
         );
         assert!(row.events[2].is_none());
     }
+
+    #[test]
+    fn test_analyze_wifi_ouis() {
+        let mut analyzer_config = AnalyzerConfig::default();
+        analyzer_config.wifi_oui_analyzer = true;
+        analyzer_config.wifi_ouis = vec!["AA:BB:CC".to_string()];
+        let mut harness = Harness::new_with_config(&analyzer_config);
+        let events = harness.analyze_wifi_ouis(vec!["00:11:22:33:44:55".to_string()]);
+        assert!(events.is_empty());
+        let events = harness.analyze_wifi_ouis(vec!["AA:BB:CC:33:44:55".to_string()]);
+        assert_eq!(1, events.len());
+        assert_eq!(EventType::High, events[0].event_type);
+    }
 }
