@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::{select, task::JoinHandle, time};
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
-use wifi_station::{scan_wifi_networks, STA_IFACE};
+use wifi_station::{STA_IFACE, scan_wifi_networks};
 
 use crate::{analysis::AnalysisCtrlMessage, server::ServerState};
 
