@@ -241,7 +241,6 @@ pub fn run_analysis_thread(
                     status.finished.push(name);
                 }
                 Some(AnalysisCtrlMessage::Exit) | None => return,
-
             }
         }
     });
