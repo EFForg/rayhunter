@@ -85,9 +85,9 @@ pub struct MessagesContainer {
 }
 
 impl MessagesContainer {
-    pub fn into_messages(self) -> Vec<Result<Message, DiagParsingError>> {
+    pub fn messages(&self) -> Vec<Result<Message, DiagParsingError>> {
         let mut result = Vec::new();
-        for msg in self.messages {
+        for msg in &self.messages {
             for sub_msg in msg.data.split_inclusive(|&b| b == MESSAGE_TERMINATOR) {
                 match hdlc_decapsulate(sub_msg, &CRC_CCITT) {
                     Ok(data) => match Message::from_bytes((&data, 0)) {
@@ -569,7 +569,7 @@ mod test {
         let mut container = make_container(DataType::UserSpace, encapsulated1);
         container.messages.push(encapsulated2);
         container.num_messages += 1;
-        assert_eq!(container.into_messages(), vec![Ok(message1), Ok(message2)]);
+        assert_eq!(container.messages(), vec![Ok(message1), Ok(message2)]);
     }
 
     #[test]
@@ -579,7 +579,7 @@ mod test {
         encapsulated1.data.extend(encapsulated2.data);
         encapsulated1.len += encapsulated2.len;
         let container = make_container(DataType::UserSpace, encapsulated1);
-        assert_eq!(container.into_messages(), vec![Ok(message1), Ok(message2)]);
+        assert_eq!(container.messages(), vec![Ok(message1), Ok(message2)]);
     }
 
     #[test]
@@ -593,7 +593,7 @@ mod test {
         let mut container = make_container(DataType::UserSpace, encapsulated1);
         container.messages.push(encapsulated2);
         container.num_messages += 1;
-        let result = container.into_messages();
+        let result = container.messages();
         assert_eq!(result[0], Ok(message1));
         assert!(matches!(
             result[1],
@@ -611,7 +611,7 @@ mod test {
         let mut container = make_container(DataType::UserSpace, encapsulated1);
         container.messages.push(bad_encapsulation);
         container.num_messages += 1;
-        let result = container.into_messages();
+        let result = container.messages();
         assert_eq!(result[0], Ok(message1));
         assert!(matches!(
             result[1],

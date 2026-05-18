@@ -85,31 +85,35 @@ pub(crate) async fn load_gps_records_for_entry(
                 .and_then(|e| e.gps_mode);
             if gps_mode.is_some_and(|m| m != GpsMode::Disabled) {
                 error!(
-                    "GPS sidecar expected for entry {entry_index} (mode: {gps_mode:?}) but not found"
+                    "GPS storage expected for entry {entry_index} (mode: {gps_mode:?}) but not found"
                 );
             }
             vec![]
         }
         Err(e) => {
-            error!("failed to open GPS sidecar: {e}");
+            error!("failed to open GPS storage: {e}");
             vec![]
         }
     }
 }
 
-fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: i64) -> Option<GpsPoint> {
+fn record_timestamp(r: &GpsRecord) -> i64 {
+    r.latest_packet_timestamp.unwrap_or(i64::MIN)
+}
+
+fn find_nearest_gps(records: &[GpsRecord], packet_timestamp: i64) -> Option<GpsPoint> {
     if records.is_empty() {
         return None;
     }
-    let idx = records.partition_point(|r| r.unix_ts <= packet_unix_ts);
+    let idx = records.partition_point(|r| record_timestamp(r) <= packet_timestamp);
     let record = if idx == 0 {
         &records[0]
     } else if idx >= records.len() {
         &records[records.len() - 1]
     } else {
         let (before, after) = (&records[idx - 1], &records[idx]);
-        let before_delta = packet_unix_ts - before.unix_ts;
-        let after_delta = after.unix_ts - packet_unix_ts;
+        let before_delta = packet_timestamp - record_timestamp(before);
+        let after_delta = record_timestamp(after) - packet_timestamp;
         if before_delta <= after_delta {
             before
         } else {
@@ -119,7 +123,7 @@ fn find_nearest_gps(records: &[GpsRecord], packet_unix_ts: i64) -> Option<GpsPoi
     Some(GpsPoint {
         latitude: record.lat,
         longitude: record.lon,
-        unix_ts: record.unix_ts,
+        unix_ts: record_timestamp(record),
     })
 }
 
@@ -142,7 +146,7 @@ where
             continue;
         }
 
-        for maybe_msg in container.into_messages() {
+        for maybe_msg in container.messages() {
             match maybe_msg {
                 Ok(msg) => {
                     let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
@@ -166,8 +170,13 @@ where
 mod tests {
     use super::*;
 
-    fn rec(unix_ts: i64, lat: f64, lon: f64) -> GpsRecord {
-        GpsRecord { unix_ts, lat, lon }
+    fn rec(latest_packet_timestamp: i64, lat: f64, lon: f64) -> GpsRecord {
+        GpsRecord {
+            latest_packet_timestamp: Some(latest_packet_timestamp),
+            system_time: 0,
+            lat,
+            lon,
+        }
     }
 
     #[test]

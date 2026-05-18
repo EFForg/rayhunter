@@ -212,7 +212,7 @@ impl DiagDevice {
             if container.data_type != DataType::UserSpace {
                 continue;
             }
-            return Ok(container.into_messages());
+            return Ok(container.messages());
         }
     }
 

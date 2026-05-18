@@ -414,7 +414,7 @@ impl Harness {
 
     pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> Vec<AnalysisRow> {
         let mut rows = Vec::new();
-        for maybe_qmdl_message in container.into_messages() {
+        for maybe_qmdl_message in container.messages() {
             self.packet_num += 1;
 
             rows.push(AnalysisRow {
