@@ -226,41 +226,43 @@ pub fn run_analysis_thread(
                     status.finished.push(name);
                 }
                 Some(AnalysisCtrlMessage::WifiNetworksDetected(networks)) => {
-                    debug!("Networks detected, configured OUIs: {:?}", analyzer_config.wifi_ouis.join(","));
+                    debug!(
+                        "Networks detected, configured OUIs: {:?}",
+                        analyzer_config.wifi_ouis.join(",")
+                    );
                     if !analyzer_config.wifi_ouis.is_empty() {
                         let mut harness = Harness::new_with_config(&analyzer_config);
                         let mut events = harness
                             .analyze_wifi_ouis(networks.iter().map(|n| n.bssid.clone()).collect());
                         debug!("Called analyze_wifi_ouis, got events: {:?}", events);
                         if !events.is_empty() {
-                            events.sort_by(|a, b| a.event_type.cmp(&b.event_type));
-                            if let Some(max_event) = events.pop() {
-                                if max_event.event_type > EventType::Informational {
-                                    info!("a heuristic triggered on this run!");
-                                    notification_channel
-                                        .send(Notification::new(
-                                            NotificationType::Warning,
-                                            format!(
-                                                "Rayhunter has detected a {:?} severity event",
-                                                max_event.event_type,
-                                            ),
-                                            Some(Duration::from_secs(60 * 5)),
-                                        ))
-                                        .await
-                                        .expect("Failed to send to notification channel");
-                                    ui_update_sender
-                                        .send(display::DisplayState::WarningDetected {
-                                            event_type: max_event.event_type,
-                                        })
-                                        .await
-                                        .expect("couldn't send ui update message: {}");
-                                }
+                            events.sort_by_key(|a| a.event_type);
+                            if let Some(max_event) = events.pop()
+                                && max_event.event_type > EventType::Informational
+                            {
+                                info!("a heuristic triggered on this run!");
+                                notification_channel
+                                    .send(Notification::new(
+                                        NotificationType::Warning,
+                                        format!(
+                                            "Rayhunter has detected a {:?} severity event",
+                                            max_event.event_type,
+                                        ),
+                                        Some(Duration::from_secs(60 * 5)),
+                                    ))
+                                    .await
+                                    .expect("Failed to send to notification channel");
+                                ui_update_sender
+                                    .send(display::DisplayState::WarningDetected {
+                                        event_type: max_event.event_type,
+                                    })
+                                    .await
+                                    .expect("couldn't send ui update message: {}");
                             }
                         }
                     }
                 }
                 Some(AnalysisCtrlMessage::Exit) | None => return,
-
             }
         }
     });

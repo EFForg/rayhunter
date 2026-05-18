@@ -386,8 +386,7 @@ impl Harness {
     }
 
     pub fn analyze_wifi_ouis(&mut self, bssids: Vec<String>) -> Vec<Event> {
-        self
-            .analyze_information_element(&InformationElement::WifiBSSIDList(bssids))
+        self.analyze_information_element(&InformationElement::WifiBSSIDList(bssids))
             .iter()
             .flat_map(|e| e.clone())
             .collect::<Vec<Event>>()

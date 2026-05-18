@@ -1,4 +1,4 @@
-use log::{debug, info};
+use log::debug;
 
 use crate::analysis::{
     analyzer::{Analyzer, Event, EventType},
