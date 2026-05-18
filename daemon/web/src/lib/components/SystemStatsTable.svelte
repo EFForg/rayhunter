@@ -36,11 +36,6 @@
         }
         return text;
     });
-
-    const gps_date_formatter = new Intl.DateTimeFormat(undefined, {
-        timeStyle: 'long',
-        dateStyle: 'short',
-    });
 </script>
 
 <div
@@ -129,17 +124,9 @@
                         <td class="py-1 pr-4 text-gray-500 font-medium">Latitude</td>
                         <td class="py-1 font-mono">{gps_data.latitude.toFixed(6)}</td>
                     </tr>
-                    <tr class="border-b border-gray-200">
+                    <tr>
                         <td class="py-1 pr-4 text-gray-500 font-medium">Longitude</td>
                         <td class="py-1 font-mono">{gps_data.longitude.toFixed(6)}</td>
-                    </tr>
-                    <tr>
-                        <td class="py-1 pr-4 text-gray-500 font-medium">GPS Timestamp</td>
-                        <td class="py-1 font-mono">
-                            {gps_data.timestamp > 0
-                                ? gps_date_formatter.format(new Date(gps_data.timestamp * 1000))
-                                : 'Fixed'}
-                        </td>
                     </tr>
                 {:else}
                     <tr>

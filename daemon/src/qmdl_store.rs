@@ -37,8 +37,8 @@ pub enum RecordingStoreError {
     ParseManifestError(toml::de::Error),
     #[error("Insufficient disk space: {0}MB available, {1}MB required")]
     InsufficientDiskSpace(u64, u64),
-    #[error("GPS sidecar directory not found")]
-    GpsSidecarNotFound,
+    #[error("GPS storage directory not found")]
+    GpsStorageNotFound,
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
 }

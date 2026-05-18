@@ -798,8 +798,8 @@
                         </select>
                         <p class="text-xs text-gray-500 mt-1">
                             {#if config.gps_mode === GpsMode.Api}
-                                POST latitude, longitude, and timestamp to <code>/api/gps</code> from
-                                any device on the network.
+                                POST latitude and longitude to <code>/api/gps</code> from any device
+                                on the network. Timestamp is derived from packet capture timing.
                             {:else if config.gps_mode === GpsMode.Fixed}
                                 GPS coordinates are fixed to the values below.
                             {:else}

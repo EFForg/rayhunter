@@ -311,7 +311,6 @@ async fn run_with_config(
             (Some(lat), Some(lon)) => Some(gps::GpsData {
                 latitude: lat,
                 longitude: lon,
-                timestamp: chrono::Utc::now().timestamp(),
             }),
             _ => {
                 warn!(

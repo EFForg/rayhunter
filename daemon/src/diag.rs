@@ -23,7 +23,7 @@ use tokio_util::task::TaskTracker;
 #[cfg(feature = "apidocs")]
 use rayhunter::analysis::analyzer::ReportMetadata;
 use rayhunter::analysis::analyzer::{AnalysisLineNormalizer, AnalyzerConfig, EventType};
-use rayhunter::diag::{DataType, MessagesContainer};
+use rayhunter::diag::{DataType, Message, MessagesContainer};
 use rayhunter::diag_device::DiagDevice;
 use rayhunter::qmdl::QmdlWriter;
 
@@ -49,6 +49,10 @@ pub enum DiagDeviceCtrlMessage {
     DeleteAllEntries {
         response_tx: oneshot::Sender<Result<(), RecordingStoreError>>,
     },
+    GpsUpdate {
+        lat: f64,
+        lon: f64,
+    },
     Exit,
 }
 
@@ -65,6 +69,7 @@ pub struct DiagTask {
     max_type_seen: EventType,
     bytes_since_space_check: usize,
     low_space_warned: bool,
+    latest_packet_timestamp: Option<i64>,
 }
 
 enum DiagState {
@@ -126,6 +131,7 @@ impl DiagTask {
             max_type_seen: EventType::Informational,
             bytes_since_space_check: 0,
             low_space_warned: false,
+            latest_packet_timestamp: None,
         }
     }
 
@@ -154,7 +160,7 @@ impl DiagTask {
 
         let (qmdl_file, analysis_file) = qmdl_store.new_entry(self.gps_mode).await?;
 
-        // For fixed-mode sessions, write the configured coordinates to the sidecar
+        // For fixed-mode sessions, write the configured coordinates to the storage
         // immediately so the per-session GPS is stored durably and isn't affected
         // by future config changes or GPS API calls.
         if self.gps_mode == GpsMode::Fixed
@@ -164,10 +170,11 @@ impl DiagTask {
             let mut gps_file = qmdl_store
                 .open_entry_gps_for_append(entry_idx)
                 .await?
-                .ok_or(RecordingStoreError::GpsSidecarNotFound)?;
+                .ok_or(RecordingStoreError::GpsStorageNotFound)?;
 
             let record = GpsRecord {
-                unix_ts: chrono::Utc::now().timestamp(),
+                latest_packet_timestamp: None,
+                system_time: rayhunter::clock::get_adjusted_now().timestamp(),
                 lat,
                 lon,
             };
@@ -255,6 +262,38 @@ impl DiagTask {
             error!("Error deleting QMDL entries {e}");
         }
         res
+    }
+
+    async fn handle_gps_update(&mut self, qmdl_store: &RecordingStore, lat: f64, lon: f64) {
+        let Some((entry_idx, _)) = qmdl_store.get_current_entry() else {
+            info!("GPS update received but no recording active, not writing to storage");
+            return;
+        };
+        let mut file = match qmdl_store.open_entry_gps_for_append(entry_idx).await {
+            Ok(Some(f)) => f,
+            Ok(None) => {
+                error!("GPS storage not found, cannot write GPS record");
+                return;
+            }
+            Err(e) => {
+                error!("failed to open GPS storage: {e}");
+                return;
+            }
+        };
+        let record = GpsRecord {
+            latest_packet_timestamp: self.latest_packet_timestamp,
+            system_time: rayhunter::clock::get_adjusted_now().timestamp(),
+            lat,
+            lon,
+        };
+        let Ok(mut json) = serde_json::to_vec(&record) else {
+            error!("failed to serialize GPS record");
+            return;
+        };
+        json.push(b'\n');
+        if let Err(e) = file.write_all(&json).await {
+            error!("failed to write GPS record to storage: {e}");
+        }
     }
 
     async fn stop_current_recording(&mut self) {
@@ -352,6 +391,20 @@ impl DiagTask {
                 return;
             }
             debug!("done!");
+
+            // Extract the latest packet timestamp from this container
+            if let Some(ts) = container
+                .messages()
+                .into_iter()
+                .filter_map(|r| match r {
+                    Ok(Message::Log { timestamp, .. }) => Some(timestamp.to_datetime().timestamp()),
+                    _ => None,
+                })
+                .max()
+            {
+                self.latest_packet_timestamp = Some(ts);
+            }
+
             let container_bytes: usize = container.messages.iter().map(|m| m.data.len()).sum();
             self.bytes_since_space_check += container_bytes;
             let max_type = match analysis_writer.analyze(container).await {
@@ -464,6 +517,10 @@ pub fn run_diag_read_thread(
                             if response_tx.send(resp).is_err() {
                                 error!("Failed to send delete all entries respons, receiver dropped");
                             }
+                        },
+                        Some(DiagDeviceCtrlMessage::GpsUpdate { lat, lon }) => {
+                            let qmdl_store = qmdl_store_lock.read().await;
+                            diag_task.handle_gps_update(&qmdl_store, lat, lon).await;
                         },
                     }
                 }
