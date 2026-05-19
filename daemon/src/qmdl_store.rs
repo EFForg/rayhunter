@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::io::{self, ErrorKind};
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
@@ -41,6 +42,40 @@ pub enum RecordingStoreError {
     GpsStorageNotFound,
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileKind {
+    Qmdl,
+    Analysis,
+    Gps,
+}
+
+impl FileKind {
+    // List of all possible physical files on disk.
+    pub const ALL: &'static [FileKind] = &[FileKind::Qmdl, FileKind::Analysis, FileKind::Gps];
+
+    pub fn get_filename(&self, entry_name: &str) -> String {
+        match self {
+            FileKind::Qmdl => format!("{}.qmdl", entry_name),
+            FileKind::Analysis => format!("{}.ndjson", entry_name),
+            FileKind::Gps => format!("{}-gps.ndjson", entry_name),
+        }
+    }
+
+    pub fn get_filepath<P: AsRef<Path>>(&self, entry_name: &str, base_path: P) -> PathBuf {
+        base_path.as_ref().join(self.get_filename(entry_name))
+    }
+}
+
+impl Display for FileKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FileKind::Qmdl => write!(f, "QMDL"),
+            FileKind::Analysis => write!(f, "analysis"),
+            FileKind::Gps => write!(f, "GPS"),
+        }
+    }
 }
 
 pub struct RecordingStore {
@@ -102,19 +137,15 @@ impl ManifestEntry {
     }
 
     pub fn get_qmdl_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        let mut filepath = path.as_ref().join(&self.name);
-        filepath.set_extension("qmdl");
-        filepath
+        FileKind::Qmdl.get_filepath(&self.name, path)
     }
 
     pub fn get_analysis_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        let mut filepath = path.as_ref().join(&self.name);
-        filepath.set_extension("ndjson");
-        filepath
+        FileKind::Analysis.get_filepath(&self.name, path)
     }
 
     pub fn get_gps_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        path.as_ref().join(format!("{}-gps.ndjson", self.name))
+        FileKind::Gps.get_filepath(&self.name, path)
     }
 }
 
@@ -316,8 +347,18 @@ impl RecordingStore {
         &self,
         entry_index: usize,
     ) -> Result<Option<File>, RecordingStoreError> {
+        self.open_file(entry_index, FileKind::Gps).await
+    }
+
+    pub async fn open_file(
+        &self,
+        entry_index: usize,
+        file_kind: FileKind,
+    ) -> Result<Option<File>, RecordingStoreError> {
         let entry = &self.manifest.entries[entry_index];
-        match File::open(entry.get_gps_filepath(&self.path)).await {
+        let filepath = file_kind.get_filepath(&entry.name, &self.path);
+
+        match File::open(&filepath).await {
             Ok(file) => Ok(Some(file)),
             Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
             Err(e) => Err(RecordingStoreError::ReadFileError(e)),
