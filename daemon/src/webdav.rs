@@ -1,18 +1,17 @@
-use std::fmt::Display;
 use std::{sync::Arc, time::Duration};
 
 use chrono::TimeDelta;
+use futures::future::join_all;
 use log::{info, warn};
 use reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE};
 use reqwest::{Body, Client, Response};
 use tokio::fs::File;
-use tokio::join;
 use tokio::{select, sync::RwLock, time};
 use tokio_util::io::ReaderStream;
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 
 use crate::config::WebdavConfig;
-use crate::qmdl_store::RecordingStore;
+use crate::qmdl_store::{FileKind, RecordingStore};
 
 pub struct WebdavUploadWorkerConfig {
     poll_interval: Duration,
@@ -34,29 +33,6 @@ impl From<WebdavConfig> for WebdavUploadWorkerConfig {
             password: value.password,
             timeout: Duration::from_secs(value.upload_timeout_secs),
             delete_on_upload: value.delete_on_upload,
-        }
-    }
-}
-
-enum FileKind {
-    Analysis,
-    Qmdl,
-}
-
-impl FileKind {
-    fn as_extension(&self) -> &'static str {
-        match self {
-            FileKind::Analysis => ".ndjson",
-            FileKind::Qmdl => ".qmdl",
-        }
-    }
-}
-
-impl Display for FileKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            FileKind::Analysis => write!(f, "analysis"),
-            FileKind::Qmdl => write!(f, "QMDL"),
         }
     }
 }
@@ -127,22 +103,22 @@ async fn try_upload_entry(
 ) -> Option<()> {
     let read_lock = store.read().await;
     let entry_idx = read_lock.entry_for_name(&entry_name)?.0;
-    let file = match file_kind {
-        FileKind::Analysis => read_lock.open_entry_analysis(entry_idx).await,
-        FileKind::Qmdl => read_lock.open_entry_qmdl(entry_idx).await,
-    };
+    let file = read_lock.open_file(entry_idx, file_kind).await;
     drop(read_lock);
 
-    let Ok(file) = file.map_err(|err| {
-        warn!(
-            "Unable to open entry: {} {} file: {:?}",
-            entry_name, file_kind, err
-        )
-    }) else {
-        return None;
+    let file = match file {
+        Ok(Some(f)) => f,
+        Ok(None) => return Some(()), // File doesn't exist (e.g., GPS for old recordings)
+        Err(err) => {
+            warn!(
+                "Unable to open entry: {} {} file: {:?}",
+                entry_name, file_kind, err
+            );
+            return None;
+        }
     };
 
-    let file_name = format!("{}{}", entry_name, file_kind.as_extension());
+    let file_name = file_kind.get_filename(&entry_name);
 
     let res = select! {
         _ = shutdown_token.cancelled() => {
@@ -205,24 +181,23 @@ pub fn run_webdav_upload_worker(
                                 break;
                             };
 
-                        let (Some(()), Some(())) = join!(
-                            try_upload_entry(
-                                webdav_client.clone(),
-                                qmdl_store_lock.clone(),
-                                unuploaded_entry.clone(),
-                                FileKind::Qmdl,
-                                shutdown_token.clone(),
-                            ),
-                            try_upload_entry(
-                                webdav_client.clone(),
-                                qmdl_store_lock.clone(),
-                                unuploaded_entry.clone(),
-                                FileKind::Analysis,
-                                shutdown_token.clone()
-                            ),
-                        ) else {
+                        let upload_futures: Vec<_> = FileKind::ALL
+                            .iter()
+                            .map(|&file_kind| {
+                                try_upload_entry(
+                                    webdav_client.clone(),
+                                    qmdl_store_lock.clone(),
+                                    unuploaded_entry.clone(),
+                                    file_kind,
+                                    shutdown_token.clone(),
+                                )
+                            })
+                            .collect();
+
+                        let results = join_all(upload_futures).await;
+                        if !results.iter().all(|r| r.is_some()) {
                             break;
-                        };
+                        }
 
                         if config.delete_on_upload {
                             match qmdl_store_lock.write().await.delete_entry(&unuploaded_entry).await {
@@ -354,12 +329,14 @@ mod tests {
         cleanup_worker(shutdown, tracker).await;
 
         let recorded = captured.lock().await;
-        assert_eq!(recorded.len(), 2);
+        assert_eq!(recorded.len(), 3);
         let paths: Vec<&str> = recorded.iter().map(|r| r.path.as_str()).collect();
         let qmdl_path = format!("dav/{}.qmdl", entry_name);
         let ndjson_path = format!("dav/{}.ndjson", entry_name);
+        let gps_path = format!("dav/{}-gps.ndjson", entry_name);
         assert!(paths.contains(&qmdl_path.as_str()));
         assert!(paths.contains(&ndjson_path.as_str()));
+        assert!(paths.contains(&gps_path.as_str()));
         for put in recorded.iter() {
             assert_eq!(put.auth.as_deref(), Some("Basic dXNlcjpwYXNzd29yZA=="));
         }
@@ -408,7 +385,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(500)).await;
         cleanup_worker(shutdown, tracker).await;
 
-        assert_eq!(captured.lock().await.len(), 2);
+        assert_eq!(captured.lock().await.len(), 3);
 
         let store_read = store.read().await;
         assert!(store_read.entry_for_name(&entry_name).is_none());
