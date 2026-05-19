@@ -783,10 +783,7 @@
                                 bind:checked={config.analyzers.wifi_oui_analyzer}
                                 class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                             />
-                            <label
-                                for="wifi_oui_analyzer"
-                                class="ml-2 block text-sm text-gray-700"
-                            >
+                            <label for="wifi_oui_analyzer" class="ml-2 block text-sm text-gray-700">
                                 WiFi OUI Analyzer
                             </label>
                         </div>
