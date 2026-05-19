@@ -31,7 +31,7 @@ use crate::analysis::{AnalysisCtrlMessage, AnalysisWriter};
 use crate::config::GpsMode;
 use crate::display;
 use crate::notifications::{Notification, NotificationType};
-use crate::qmdl_store::{RecordingStore, RecordingStoreError};
+use crate::qmdl_store::{FileKind, RecordingStore, RecordingStoreError};
 use crate::server::ServerState;
 use crate::stats::DiskStats;
 
@@ -747,9 +747,10 @@ pub async fn get_analysis_report(
         ))?
     };
     let analysis_file = qmdl_store
-        .open_entry_analysis(entry_index)
+        .open_file(entry_index, FileKind::Analysis)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?
+        .ok_or((StatusCode::NOT_FOUND, "Analysis file not found".to_string()))?;
 
     // Read and normalize the NDJSON file
     let reader = BufReader::new(analysis_file);

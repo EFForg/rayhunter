@@ -136,16 +136,8 @@ impl ManifestEntry {
         }
     }
 
-    pub fn get_qmdl_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        FileKind::Qmdl.get_filepath(&self.name, path)
-    }
-
-    pub fn get_analysis_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        FileKind::Analysis.get_filepath(&self.name, path)
-    }
-
-    pub fn get_gps_filepath<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        FileKind::Gps.get_filepath(&self.name, path)
+    pub fn get_filepath<P: AsRef<Path>>(&self, file_kind: FileKind, path: P) -> PathBuf {
+        file_kind.get_filepath(&self.name, path)
     }
 }
 
@@ -306,15 +298,15 @@ impl RecordingStore {
             self.close_current_entry().await?;
         }
         let new_entry = ManifestEntry::new(gps_mode);
-        let qmdl_filepath = new_entry.get_qmdl_filepath(&self.path);
+        let qmdl_filepath = new_entry.get_filepath(FileKind::Qmdl, &self.path);
         let qmdl_file = File::create(&qmdl_filepath)
             .await
             .map_err(RecordingStoreError::CreateFileError)?;
-        let analysis_filepath = new_entry.get_analysis_filepath(&self.path);
+        let analysis_filepath = new_entry.get_filepath(FileKind::Analysis, &self.path);
         let analysis_file = File::create(&analysis_filepath)
             .await
             .map_err(RecordingStoreError::CreateFileError)?;
-        let gps_filepath = new_entry.get_gps_filepath(&self.path);
+        let gps_filepath = new_entry.get_filepath(FileKind::Gps, &self.path);
         File::create(&gps_filepath)
             .await
             .map_err(RecordingStoreError::CreateFileError)?;
@@ -322,32 +314,6 @@ impl RecordingStore {
         self.current_entry = Some(self.manifest.entries.len() - 1);
         self.write_manifest().await?;
         Ok((qmdl_file, analysis_file))
-    }
-
-    // Returns the corresponding QMDL file for a given entry
-    pub async fn open_entry_qmdl(&self, entry_index: usize) -> Result<File, RecordingStoreError> {
-        let entry = &self.manifest.entries[entry_index];
-        File::open(entry.get_qmdl_filepath(&self.path))
-            .await
-            .map_err(RecordingStoreError::ReadFileError)
-    }
-
-    // Returns the corresponding QMDL file for a given entry
-    pub async fn open_entry_analysis(
-        &self,
-        entry_index: usize,
-    ) -> Result<File, RecordingStoreError> {
-        let entry = &self.manifest.entries[entry_index];
-        File::open(entry.get_analysis_filepath(&self.path))
-            .await
-            .map_err(RecordingStoreError::ReadFileError)
-    }
-
-    pub async fn open_entry_gps(
-        &self,
-        entry_index: usize,
-    ) -> Result<Option<File>, RecordingStoreError> {
-        self.open_file(entry_index, FileKind::Gps).await
     }
 
     pub async fn open_file(
@@ -373,7 +339,7 @@ impl RecordingStore {
         match OpenOptions::new()
             .create(true)
             .append(true)
-            .open(entry.get_gps_filepath(&self.path))
+            .open(entry.get_filepath(FileKind::Gps, &self.path))
             .await
         {
             Ok(file) => Ok(Some(file)),
@@ -390,7 +356,7 @@ impl RecordingStore {
         let file = OpenOptions::new()
             .write(true)
             .truncate(true)
-            .open(entry.get_analysis_filepath(&self.path))
+            .open(entry.get_filepath(FileKind::Analysis, &self.path))
             .await
             .map_err(RecordingStoreError::ReadFileError)?;
         Ok(file)

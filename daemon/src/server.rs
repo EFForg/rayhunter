@@ -72,14 +72,15 @@ pub async fn get_qmdl(
         format!("couldn't find qmdl file with name {qmdl_idx}"),
     ))?;
     let qmdl_file = qmdl_store
-        .open_entry_qmdl(entry_index)
+        .open_file(entry_index, FileKind::Qmdl)
         .await
         .map_err(|err| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("error opening QMDL file: {err}"),
             )
-        })?;
+        })?
+        .ok_or((StatusCode::NOT_FOUND, "QMDL file not found".to_string()))?;
     let limited_qmdl_file = qmdl_file.take(entry.qmdl_size_bytes as u64);
     let qmdl_stream = ReaderStream::new(limited_qmdl_file);
 
@@ -405,8 +406,9 @@ pub async fn get_zip(
                 let qmdl_file_for_pcap = {
                     let qmdl_store = qmdl_store_lock.read().await;
                     qmdl_store
-                        .open_entry_qmdl(entry_index)
+                        .open_file(entry_index, FileKind::Qmdl)
                         .await?
+                        .ok_or_else(|| anyhow::anyhow!("QMDL file not found"))?
                         .take(qmdl_size_bytes as u64)
                 };
 
