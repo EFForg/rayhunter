@@ -12,6 +12,7 @@ export interface AnalyzerConfig {
     test_analyzer: boolean;
     diagnostic_analyzer: boolean;
     wifi_oui_analyzer: boolean;
+    wifi_ouis: string[] | null;
 }
 
 export enum enabled_notifications {
