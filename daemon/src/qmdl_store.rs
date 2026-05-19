@@ -528,18 +528,13 @@ impl RecordingStore {
         };
         let entry_to_delete = self.manifest.entries.remove(entry_to_delete_idx);
         self.write_manifest().await?;
-        let qmdl_filepath = entry_to_delete.get_qmdl_filepath(&self.path);
-        let analysis_filepath = entry_to_delete.get_analysis_filepath(&self.path);
-        let gps_filepath = entry_to_delete.get_gps_filepath(&self.path);
-        remove_file_if_exists(&qmdl_filepath)
-            .await
-            .map_err(RecordingStoreError::DeleteFileError)?;
-        remove_file_if_exists(&analysis_filepath)
-            .await
-            .map_err(RecordingStoreError::DeleteFileError)?;
-        remove_file_if_exists(&gps_filepath)
-            .await
-            .map_err(RecordingStoreError::DeleteFileError)?;
+
+        for &file_kind in FileKind::ALL {
+            let filepath = file_kind.get_filepath(&entry_to_delete.name, &self.path);
+            remove_file_if_exists(&filepath)
+                .await
+                .map_err(RecordingStoreError::DeleteFileError)?;
+        }
         Ok(())
     }
 
@@ -550,24 +545,17 @@ impl RecordingStore {
 
         let mut keep = Vec::new();
 
-        for entry in &self.manifest.entries {
-            let qmdl_filepath = entry.get_qmdl_filepath(&self.path);
-            let analysis_filepath = entry.get_analysis_filepath(&self.path);
-
-            if let Err(e) = remove_file_if_exists(&qmdl_filepath).await {
-                log::warn!("failed to remove {qmdl_filepath:?}: {e:?}");
-                keep.push(true);
-                continue;
+        'entries: for entry in &self.manifest.entries {
+            for &file_kind in FileKind::ALL {
+                let filepath = file_kind.get_filepath(&entry.name, &self.path);
+                if let Err(e) = remove_file_if_exists(&filepath).await {
+                    log::warn!("failed to remove {filepath:?}: {e:?}");
+                    // Some error happened with deleting this entry, abort and go to the next one.
+                    // Also *keep* the manifest entry.
+                    keep.push(true);
+                    continue 'entries;
+                }
             }
-
-            if let Err(e) = remove_file_if_exists(&analysis_filepath).await {
-                log::warn!("failed to remove {analysis_filepath:?}: {e:?}");
-                keep.push(true);
-                continue;
-            }
-
-            let gps_filepath = entry.get_gps_filepath(&self.path);
-            remove_file_if_exists(&gps_filepath).await.ok();
 
             keep.push(false);
         }

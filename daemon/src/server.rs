@@ -359,8 +359,14 @@ pub async fn get_zip(
         let result: Result<(), Error> = async {
             let mut zip = ZipFileWriter::with_tokio(writer);
 
+            const EXCLUDED_FROM_ZIP: &[FileKind] = &[FileKind::Analysis];
+
             // Add stored files
             for &file_kind in FileKind::ALL {
+                if EXCLUDED_FROM_ZIP.contains(&file_kind) {
+                    continue;
+                }
+
                 let file_opt = {
                     let qmdl_store = qmdl_store_lock.read().await;
                     qmdl_store.open_file(entry_index, file_kind).await?
