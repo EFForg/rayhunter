@@ -28,7 +28,7 @@ use crate::display::DisplayState;
 use crate::gps::GpsData;
 use crate::notifications::DEFAULT_NOTIFICATION_TIMEOUT;
 use crate::pcap::{generate_pcap_data, load_gps_records_for_entry};
-use crate::qmdl_store::RecordingStore;
+use crate::qmdl_store::{FileKind, RecordingStore};
 use crate::update::UpdateStatus;
 
 pub struct ServerState {
@@ -359,24 +359,34 @@ pub async fn get_zip(
         let result: Result<(), Error> = async {
             let mut zip = ZipFileWriter::with_tokio(writer);
 
-            // Add QMDL file
-            {
-                let entry =
-                    ZipEntryBuilder::new(format!("{qmdl_idx}.qmdl").into(), Compression::Stored);
+            // Add stored files
+            for &file_kind in FileKind::ALL {
+                let file_opt = {
+                    let qmdl_store = qmdl_store_lock.read().await;
+                    qmdl_store.open_file(entry_index, file_kind).await?
+                };
+
+                let Some(mut file) = file_opt else {
+                    continue;
+                };
+
+                let entry = ZipEntryBuilder::new(
+                    file_kind.get_filename(&qmdl_idx).into(),
+                    Compression::Stored,
+                );
                 // FuturesAsyncWriteCompatExt::compat_write because async-zip's entrystream does
                 // not impl tokio's AsyncWrite, but only future's AsyncWrite. This can be removed
                 // once https://github.com/Majored/rs-async-zip/pull/160 is released.
                 let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
 
-                let mut qmdl_file = {
-                    let qmdl_store = qmdl_store_lock.read().await;
-                    qmdl_store
-                        .open_entry_qmdl(entry_index)
-                        .await?
-                        .take(qmdl_size_bytes as u64)
-                };
+                // Truncating to qmdl_size_bytes is an attempt to ignore partial writes by the diag
+                // thread.
+                if file_kind == FileKind::Qmdl {
+                    copy(&mut file.take(qmdl_size_bytes as u64), &mut entry_writer).await?;
+                } else {
+                    copy(&mut file, &mut entry_writer).await?;
+                }
 
-                copy(&mut qmdl_file, &mut entry_writer).await?;
                 entry_writer.into_inner().close().await?;
             }
 
@@ -615,7 +625,11 @@ mod tests {
 
         assert_eq!(
             filenames,
-            vec![format!("{entry_name}.qmdl"), format!("{entry_name}.pcapng"),]
+            vec![
+                format!("{entry_name}.qmdl"),
+                format!("{entry_name}-gps.ndjson"),
+                format!("{entry_name}.pcapng"),
+            ]
         );
     }
 }
