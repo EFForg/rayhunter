@@ -1,4 +1,5 @@
 use crate::gps::{GpsRecord, load_gps_records};
+use crate::qmdl_store::FileKind;
 use crate::server::ServerState;
 
 use crate::config::GpsMode;
@@ -52,9 +53,10 @@ pub async fn get_pcap(
     }
     let qmdl_size_bytes = entry.qmdl_size_bytes;
     let qmdl_file = qmdl_store
-        .open_entry_qmdl(entry_index)
+        .open_file(entry_index, FileKind::Qmdl)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?
+        .ok_or((StatusCode::NOT_FOUND, "QMDL file not found".to_string()))?;
     let (reader, writer) = duplex(1024);
     let gps_records = load_gps_records_for_entry(&state, entry_index).await;
     drop(qmdl_store);
@@ -75,7 +77,7 @@ pub(crate) async fn load_gps_records_for_entry(
     entry_index: usize,
 ) -> Vec<GpsRecord> {
     let qmdl_store = state.qmdl_store_lock.read().await;
-    match qmdl_store.open_entry_gps(entry_index).await {
+    match qmdl_store.open_file(entry_index, FileKind::Gps).await {
         Ok(Some(file)) => load_gps_records(file).await,
         Ok(None) => {
             let gps_mode = qmdl_store

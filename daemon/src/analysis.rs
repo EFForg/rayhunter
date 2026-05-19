@@ -18,7 +18,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio_util::task::TaskTracker;
 
-use crate::qmdl_store::RecordingStore;
+use crate::qmdl_store::{FileKind, RecordingStore};
 use crate::server::ServerState;
 
 pub struct AnalysisWriter {
@@ -145,9 +145,10 @@ async fn perform_analysis(
             .await
             .map_err(|e| format!("{e:?}"))?;
         let qmdl_file = qmdl_store
-            .open_entry_qmdl(entry_index)
+            .open_file(entry_index, FileKind::Qmdl)
             .await
-            .map_err(|e| format!("{e:?}"))?;
+            .map_err(|e| format!("{e:?}"))?
+            .ok_or("QMDL file not found")?;
 
         (analysis_file, qmdl_file)
     };
