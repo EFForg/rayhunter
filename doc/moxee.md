@@ -29,7 +29,7 @@ According to [FCC ID 2APQU-K779HSDL](https://fcc.report/FCC-ID/2APQU-K779HSDL), 
 
 ## Installing
 
-Follow the [release installation guide](./installing-from-release.md). The Rayhunter UI will be available at <http://192.168.0.1:8080>.
+Follow the [release installation guide](./installing-from-release.md). The Rayhunter UI will be available at <http://192.168.1.1:8080>.
 
 ## Obtaining a shell
 

@@ -44,7 +44,7 @@ installation routines.
 
 ## Installing
 
-Follow the [release installation guide](./installing-from-release.md). The Rayhunter UI will be available at <http://192.168.0.1:8080>.
+Follow the [release installation guide](./installing-from-release.md). The Rayhunter UI will be available at <http://192.168.1.1:8080>.
 
 <a name=shell></a>
 ## Obtaining a shell
