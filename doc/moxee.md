@@ -27,21 +27,30 @@ According to [FCC ID 2APQU-K779HSDL](https://fcc.report/FCC-ID/2APQU-K779HSDL), 
 | 66   | 1700/2100 MHz (E-AWS)   |
 | 71   | 600 MHz                 |
 
-## Installation
+## Installing
 
-Connect to the hotspot's network using WiFi or USB tethering and run:
+To get started, follow the [release installation guide](./installing-from-release.md). Then run the installer with the following command:
 
-```sh
+```bash
 ./installer moxee --admin-password 'mypassword'
+
+# Note: the arguments --admin-username 'myusername' and --admin-ip 'mydeviceip'
+#       may be required if different from the default.
 ```
 
-The password (in place of `mypassword`) is under the battery.
+* The password is the one used to log in to the device's admin menu. You can reset the password by pressing the button under the back case until the unit restarts.
+   * ***Note:*** If you have changed the device username, password, or IP address from their default values, these must be provided as arguments to the installer command above.
+* On Moxee-brand devices, check under the battery for the password.
+* `./installer moxee` is almost the same as `./installer orbic`, it just comes with slightly better defaults that will give you more space for recordings. 
 
-`./installer moxee` is almost the same as `./installer orbic`, it just comes
-with slightly better defaults that will give you more space for recordings.
+The Rayhunter UI will be available at <http://192.168.1.1:8080>.
 
+<a name=shell></a>
 ## Obtaining a shell
 
-```sh
+After running the installer, there will not be a root shell and ADB will not be
+enabled. Instead, you can use:
+
+```bash
 ./installer util orbic-shell
 ```
