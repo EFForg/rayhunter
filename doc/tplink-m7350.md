@@ -43,7 +43,6 @@ You can get your TP-Link M7350 from:
 To get started, follow the [release installation guide](./installing-from-release.md). Then run the installer with the following command:
 
 ```bash
-# For TP-Link:
 ./installer tplink
 ```
 
