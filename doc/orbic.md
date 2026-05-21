@@ -71,8 +71,12 @@ The Rayhunter UI will be available at <http://192.168.1.1:8080>.
 <a name=shell></a>
 ## Obtaining a shell
 
-After running the installer, there will not be a rootshell and ADB will not be
-enabled. Instead you can use `./installer util orbic-shell`.
+After running the installer, there will not be a root shell and ADB will not be
+enabled. Instead, you can use:
+
+```bash
+./installer util orbic-shell
+```
 
 If you are using an installer prior to 0.7.0 or `orbic-usb` explicitly, you can
 obtain a root shell by running `adb shell` or `./installer util shell`. Then,

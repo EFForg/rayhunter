@@ -31,7 +31,6 @@ According to [FCC ID 2APQU-K779HSDL](https://fcc.report/FCC-ID/2APQU-K779HSDL), 
 
 To get started, follow the [release installation guide](./installing-from-release.md). Then run the installer with the following command:
 
-
 ```bash
 ./installer moxee --admin-password 'mypassword'
 
@@ -49,5 +48,9 @@ The Rayhunter UI will be available at <http://192.168.1.1:8080>.
 <a name=shell></a>
 ## Obtaining a shell
 
-After running the installer, there will not be a rootshell and ADB will not be
-enabled. Instead you can use `./installer util orbic-shell`.
+After running the installer, there will not be a root shell and ADB will not be
+enabled. Instead, you can use:
+
+```bash
+./installer util orbic-shell
+```
