@@ -44,7 +44,29 @@ installation routines.
 
 ## Installing
 
-Follow the [release installation guide](./installing-from-release.md). The Rayhunter UI will be available at <http://192.168.1.1:8080>.
+To get started, follow the [installation release guide](./installing-from-release.md). Then run the installer with the following command:
+
+
+```bash
+# For Orbic:
+./installer orbic --admin-password 'mypassword'
+
+# For Kajeet/Smartspot:
+./installer orbic --admin-password '$m@rt$p0tc0nf!g'
+
+# Note: the arguments --admin-username 'myusername' and --admin-ip 'mydeviceip'
+#       may be required if different from the default.
+
+# Or install over USB if you want ADB and a root shell (not recommended for most users)
+./installer orbic-usb
+```
+
+* The password is the one used to login to the device's admin menu. You can reset the password by pressing the button under the back case until the unit restarts.
+   * ***Note:*** If you have changed the device username, password, or IP address from their default values, these must be provided as arguments to the installer command above.
+* On Verizon Orbic, the default password is the WiFi password.
+* On Kajeet/Smartspot devices, the default password is `$m@rt$p0tc0nf!g`
+
+The Rayhunter UI will be available at <http://192.168.1.1:8080>.
 
 <a name=shell></a>
 ## Obtaining a shell

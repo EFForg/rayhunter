@@ -29,10 +29,25 @@ According to [FCC ID 2APQU-K779HSDL](https://fcc.report/FCC-ID/2APQU-K779HSDL), 
 
 ## Installing
 
-Follow the [release installation guide](./installing-from-release.md). The Rayhunter UI will be available at <http://192.168.1.1:8080>.
+To get started, follow the [installation release guide](./installing-from-release.md). Then run the installer with the following command:
 
+
+```bash
+./installer moxee --admin-password 'mypassword'
+
+# Note: the arguments --admin-username 'myusername' and --admin-ip 'mydeviceip'
+#       may be required if different from the default.
+```
+
+* The password is the one used to login to the device's admin menu. You can reset the password by pressing the button under the back case until the unit restarts.
+   * ***Note:*** If you have changed the device username, password, or IP address from their default values, these must be provided as arguments to the installer command above.
+* On Moxee-brand devices, check under the battery for the password.
+* `./installer moxee` is almost the same as `./installer orbic`, it just comes with slightly better defaults that will give you more space for recordings. 
+
+The Rayhunter UI will be available at <http://192.168.1.1:8080>.
+
+<a name=shell></a>
 ## Obtaining a shell
 
-```sh
-./installer util orbic-shell
-```
+After running the installer, there will not be a rootshell and ADB will not be
+enabled. Instead you can use `./installer util orbic-shell`.

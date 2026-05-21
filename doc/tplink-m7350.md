@@ -38,10 +38,18 @@ You can get your TP-Link M7350 from:
 * [Ebay](https://www.ebay.com/sch/i.html?_nkw=tp-link+m7350&_sacat=0&_from=R40&_trksid=p4432023.m570.l1313).
 * Can also be found sold as the 'Vodafone Pocket Wifi 5' in Australia 
 
-## Installation & Usage
+## Installing
 
-Follow the [release installation guide](./installing-from-release.md). Substitute `./installer orbic` for `./installer tplink` in other documentation. The Rayhunter UI will be available at <http://192.168.0.1:8080>.
+To get started, follow the [installation release guide](./installing-from-release.md). Then run the installer with the following command:
 
+```bash
+# For TP-Link:
+./installer tplink
+```
+
+The Rayhunter UI will be available at <http://192.168.0.1:8080>.
+
+<a name=shell></a>
 ## Obtaining a shell
 
 You can obtain a root shell with the following command:
