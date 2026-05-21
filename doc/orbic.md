@@ -44,7 +44,7 @@ installation routines.
 
 ## Installing
 
-To get started, follow the [installation release guide](./installing-from-release.md). Then run the installer with the following command:
+To get started, follow the [release installation guide](./installing-from-release.md). Then run the installer with the following command:
 
 
 ```bash
