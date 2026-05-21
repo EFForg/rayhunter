@@ -61,7 +61,7 @@ To get started, follow the [release installation guide](./installing-from-releas
 ./installer orbic-usb
 ```
 
-* The password is the one used to login to the device's admin menu. You can reset the password by pressing the button under the back case until the unit restarts.
+* The password is the one used to log in to the device's admin menu. You can reset the password by pressing the button under the back case until the unit restarts.
    * ***Note:*** If you have changed the device username, password, or IP address from their default values, these must be provided as arguments to the installer command above.
 * On Verizon Orbic, the default password is the WiFi password.
 * On Kajeet/Smartspot devices, the default password is `$m@rt$p0tc0nf!g`
