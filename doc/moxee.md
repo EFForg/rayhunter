@@ -27,18 +27,9 @@ According to [FCC ID 2APQU-K779HSDL](https://fcc.report/FCC-ID/2APQU-K779HSDL), 
 | 66   | 1700/2100 MHz (E-AWS)   |
 | 71   | 600 MHz                 |
 
-## Installation
+## Installing
 
-Connect to the hotspot's network using WiFi or USB tethering and run:
-
-```sh
-./installer moxee --admin-password 'mypassword'
-```
-
-The password (in place of `mypassword`) is under the battery.
-
-`./installer moxee` is almost the same as `./installer orbic`, it just comes
-with slightly better defaults that will give you more space for recordings.
+Follow the [release installation guide](./installing-from-release.md). The Rayhunter UI will be available at <http://192.168.0.1:8080>.
 
 ## Obtaining a shell
 

@@ -42,6 +42,10 @@ The orbic's installation routine underwent many different changes:
 It's possible that many tutorials out there still refer to some of the old
 installation routines.
 
+## Installing
+
+Follow the [release installation guide](./installing-from-release.md). The Rayhunter UI will be available at <http://192.168.0.1:8080>.
+
 <a name=shell></a>
 ## Obtaining a shell
 
