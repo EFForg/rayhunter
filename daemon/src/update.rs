@@ -247,4 +247,21 @@ mod tests {
         assert_eq!(newer_version, "0.11.2");
         assert_eq!(older_version, "0.11.1");
     }
+
+    #[test]
+    fn compares_major_minor_patch_correctly() {
+        let (v1_parts, v1) = parse_release_tagname("v1.0.0").unwrap();
+        let (v2_parts, v2) = parse_release_tagname("v1.0.1").unwrap();
+        let (v3_parts, v3) = parse_release_tagname("v1.1.0").unwrap();
+        let (v4_parts, v4) = parse_release_tagname("v2.0.0").unwrap();
+
+        assert!(v2_parts > v1_parts);
+        assert!(v3_parts > v2_parts);
+        assert!(v4_parts > v3_parts);
+
+        assert_eq!(v1, "1.0.0");
+        assert_eq!(v2, "1.0.1");
+        assert_eq!(v3, "1.1.0");
+        assert_eq!(v4, "2.0.0");
+    }
 }
