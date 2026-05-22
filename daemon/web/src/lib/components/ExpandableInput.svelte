@@ -11,7 +11,7 @@
         inputHelp = '',
         children,
     }: {
-        value: string;
+        value: string | null;
         checkboxId: string;
         inputId: string;
         label: string;
@@ -21,7 +21,11 @@
         children?: Snippet;
     } = $props();
 
-    let expanded = $state(value.trim() !== '');
+    function has_value(text: string | null) {
+        return text !== null && text.trim() !== '';
+    }
+
+    let expanded = $state(has_value (value));
     let inputElement = $state<HTMLInputElement | null>(null);
 
     function handle_checkbox_change(e: Event) {
@@ -34,7 +38,7 @@
     }
 
     function handle_input_blur() {
-        if (value.trim() === '') {
+        if (!has_value(value)) {
             expanded = false;
         }
     }
