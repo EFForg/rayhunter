@@ -50,7 +50,7 @@ export interface Config {
     ui_level: number;
     colorblind_mode: boolean;
     key_input_mode: number;
-    ntfy_url: string;
+    ntfy_url: string | null;
     enabled_notifications: enabled_notifications[];
     analyzers: AnalyzerConfig;
     min_space_to_start_recording_mb: number;
