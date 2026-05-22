@@ -94,6 +94,7 @@ async fn refresh_update_status(
 ) -> Result<Option<(String, String)>, String> {
     let response = http_client
         .get(GITHUB_LATEST_RELEASE_URL)
+        .header(reqwest::header::USER_AGENT, "rayhunter-update-checker")
         .send()
         .await
         .map_err(|err| format!("failed to query GitHub releases: {err}"))?;
