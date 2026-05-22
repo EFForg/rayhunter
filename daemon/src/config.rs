@@ -60,6 +60,8 @@ pub struct Config {
     pub ntfy_url: Option<String>,
     /// Vector containing the types of enabled notifications
     pub enabled_notifications: Vec<NotificationType>,
+    /// Whether Rayhunter should periodically check GitHub for new releases
+    pub auto_check_updates: bool,
     /// Vector containing the list of enabled analyzers
     pub analyzers: AnalyzerConfig,
     /// Minimum disk space required to start a recording
@@ -134,6 +136,7 @@ impl Default for Config {
             analyzers: AnalyzerConfig::default(),
             ntfy_url: None,
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
+            auto_check_updates: true,
             min_space_to_start_recording_mb: 1,
             min_space_to_continue_recording_mb: 1,
             gps_mode: GpsMode::Disabled,
