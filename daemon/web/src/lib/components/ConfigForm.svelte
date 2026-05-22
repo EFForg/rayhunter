@@ -6,6 +6,7 @@
         get_wifi_status,
         scan_wifi_networks,
         GpsMode,
+        enabled_notifications,
         type Config,
         type WifiStatus,
         type WifiNetwork,
@@ -214,6 +215,22 @@
                 <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
 
+                    <div class="flex items-center">
+                        <input
+                            id="auto_check_updates"
+                            type="checkbox"
+                            bind:checked={config.auto_check_updates}
+                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                        />
+                        <label for="auto_check_updates" class="ml-2 block text-sm text-gray-700">
+                            Automatically check for software updates
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        When enabled, Rayhunter periodically checks GitHub for new releases and
+                        shows an update notice in the web UI.
+                    </p>
+
                     <ExpandableInput
                         bind:value={config.ntfy_url}
                         checkboxId="ntfy_enabled"
@@ -293,6 +310,20 @@
                                     class="ml-2 block text-sm text-gray-700"
                                 >
                                     Low Battery
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="enable_update_notifications"
+                                    value={enabled_notifications.Update}
+                                    bind:group={config.enabled_notifications}
+                                />
+                                <label
+                                    for="enable_update_notifications"
+                                    class="ml-2 block text-sm text-gray-700"
+                                >
+                                    Software Updates
                                 </label>
                             </div>
                         </div>
