@@ -20,7 +20,7 @@ Through web UI you can set:
 - **Enabled Notification Types** allows enabling or disabling the following types of notifications:
   - *Warnings*, which will alert when a heuristic is triggered. Alerts will be sent at most once every five minutes.
   - *Low Battery*, which will alert when the device's battery is low. Notifications may not be supported for all devices—you can check if your device is supported by looking at whether the battery level indicator is functioning on the System Information section of the Rayhunter UI.
-  - *Updates*, which will alert when a new Rayhunter release is available.
+  - *Software Updates*, which will alert when a new Rayhunter release is available.
 - With **Analyzer Heuristic Settings** you can switch on or off built-in [Rayhunter heuristics](heuristics.md). Some heuristics are experimental or can trigger a lot of false positive warnings in some networks (our tests have shown that some heuristics have different behavior in US or European networks). In that case you can decide whether you would like to have the heuristics that trigger a lot of false positives on or off. Please note that we are constantly improving and adding new heuristics, so a new release may reduce false positives in existing heuristics as well.
 
 ## GPS
@@ -41,7 +41,7 @@ The GPS data is stored as a separate JSON file next to QMDL captures, and contai
 
 On the **Orbic**, **Moxee**, **UZ801**, **TMOHS1**, and **Wingtech**, Rayhunter can connect the device to an existing WiFi network while keeping the hotspot running. This gives the device internet access for [notifications](https://docs.ntfy.sh/) and lets you reach the web UI from any device on that network.
 
-When the device is online, Rayhunter also checks GitHub for new releases and shows an update notice in the web UI. If you enable the *Updates* notification type, it can send the same notice through ntfy as well. You can disable this feature by turning off the *Automatically check for software updates* setting in the web UI.
+When the device is online, Rayhunter also checks GitHub for new releases and shows an update notice in the web UI. If you enable the *Software Updates* notification type, it can send the same notice through ntfy as well. You can disable this feature by turning off the *Automatically check for software updates* setting in the web UI.
 
 - **Enable WiFi** turns WiFi client mode on or off. Disabling it does not erase saved credentials.
 - **Scan** searches for nearby networks. Select one from the dropdown, or type an SSID manually.
