@@ -28,6 +28,10 @@ key_input_mode = 0
 # What notification types to enable. Does nothing if the above ntfy_url is not set.
 enabled_notifications = ["Warning", "LowBattery"]
 
+# If true, Rayhunter will periodically check GitHub for new releases and show
+# an update notice in the web UI.
+auto_check_updates = true
+
 # Disk Space Management
 # Minimum free space (MB) required to start recording
 min_space_to_start_recording_mb = 1
