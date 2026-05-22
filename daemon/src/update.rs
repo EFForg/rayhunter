@@ -24,6 +24,7 @@ pub struct UpdateStatus {
     pub latest_release_url: Option<String>,
     pub update_available: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "apidocs", schema(value_type = Option<String>, format = "date-time"))]
     pub last_checked: Option<DateTime<Local>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_error: Option<String>,
