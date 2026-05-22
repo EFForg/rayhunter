@@ -94,7 +94,6 @@ async fn refresh_update_status(
 ) -> Result<Option<(String, String)>, String> {
     let response = http_client
         .get(GITHUB_LATEST_RELEASE_URL)
-        // TODO: do we set a user agent here?
         .send()
         .await
         .map_err(|err| format!("failed to query GitHub releases: {err}"))?;
