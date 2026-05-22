@@ -353,7 +353,7 @@ async fn run_with_config(
         wifi_status,
         wifi_scan_lock: tokio::sync::Mutex::new(()),
         gps_state: Arc::new(tokio::sync::RwLock::new(initial_gps)),
-        update_status_lock,
+        update_status_lock: update_status_lock.clone(),
     });
     run_server(&task_tracker, state, shutdown_token.clone()).await;
 
