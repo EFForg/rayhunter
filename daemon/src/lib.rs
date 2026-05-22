@@ -9,6 +9,7 @@ pub mod gps;
 pub mod key_input;
 pub mod notifications;
 pub mod pcap;
+pub mod update;
 pub mod qmdl_store;
 pub mod server;
 pub mod stats;
@@ -34,6 +35,7 @@ use utoipa::OpenApi;
         server::get_zip,
         stats::get_system_stats,
         stats::get_qmdl_manifest,
+        stats::get_update_status,
         stats::get_log,
         diag::start_recording,
         diag::stop_recording,
