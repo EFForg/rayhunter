@@ -4,8 +4,8 @@ use std::sync::Arc;
 use crate::battery::get_battery_status;
 use crate::error::RayhunterError;
 use crate::server::ServerState;
-use crate::{battery::BatteryState, qmdl_store::ManifestEntry};
 use crate::update::UpdateStatus;
+use crate::{battery::BatteryState, qmdl_store::ManifestEntry};
 
 use axum::Json;
 use axum::extract::State;
@@ -231,9 +231,7 @@ pub async fn get_qmdl_manifest(
     summary = "Rayhunter update status",
     description = "Check for available updates for Rayhunter."
 ))]
-pub async fn get_update_status(
-    State(state): State<Arc<ServerState>>,
-) -> Json<UpdateStatus> {
+pub async fn get_update_status(State(state): State<Arc<ServerState>>) -> Json<UpdateStatus> {
     Json(state.update_status_lock.read().await.clone())
 }
 

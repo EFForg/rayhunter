@@ -9,10 +9,10 @@ pub mod gps;
 pub mod key_input;
 pub mod notifications;
 pub mod pcap;
-pub mod update;
 pub mod qmdl_store;
 pub mod server;
 pub mod stats;
+pub mod update;
 pub mod webdav;
 
 #[cfg(feature = "apidocs")]
