@@ -25,7 +25,7 @@
         return text !== null && text.trim() !== '';
     }
 
-    let expanded = $state(has_value (value));
+    let expanded = $state(has_value(value));
     let inputElement = $state<HTMLInputElement | null>(null);
 
     function handle_checkbox_change(e: Event) {
