@@ -30,7 +30,7 @@ enabled_notifications = ["Warning", "LowBattery"]
 
 # If true, Rayhunter will periodically check GitHub for new releases and show
 # an update notice in the web UI.
-auto_check_updates = true
+auto_check_updates = false
 
 # Disk Space Management
 # Minimum free space (MB) required to start recording
