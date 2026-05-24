@@ -56,7 +56,8 @@
                 // Allow update status to fail
                 try {
                     update_status = await get_update_status();
-                } catch {
+                } catch (error) {
+                    console.error('Error fetching update status:', error);
                     update_status = null;
                 }
                 const config = await get_config();
