@@ -67,11 +67,15 @@ fn parse_release_tagname(version: &str) -> Option<(VersionParts, String)> {
     let trimmed_version = version.trim().trim_start_matches('v');
     let mut parts = trimmed_version.split('.');
 
-    // Ignore any pre-release/build metadata by splitting on '-'
-    // TODO: is this okay?
-    let major = parts.next()?.split('-').next()?.parse().ok()?;
-    let minor = parts.next()?.split('-').next()?.parse().ok()?;
-    let patch = parts.next()?.split('-').next()?.parse().ok()?;
+    // Fail on versions with pre-release metadata: https://github.com/EFForg/rayhunter/pull/1054#issuecomment-4528407281
+    let major = parts.next()?.parse::<u64>().ok()?;
+    let minor = parts.next()?.parse::<u64>().ok()?;
+    let patch = parts.next()?.parse::<u64>().ok()?;
+    // Expect only major.minor.patch format
+    if parts.next().is_some() {
+        return None;
+    }
+
     let version = format!("{}.{}.{}", major, minor, patch);
     Some((
         VersionParts {
@@ -226,19 +230,20 @@ mod tests {
     }
 
     #[test]
-    fn parses_versions_with_v_prefix_and_prerelease() {
-        let (parts, version) = parse_release_tagname("v0.11.1-beta.1").unwrap();
-        assert_eq!(parts.major, 0);
-        assert_eq!(parts.minor, 11);
-        assert_eq!(parts.patch, 1);
-        assert_eq!(version, "0.11.1");
-    }
-
-    #[test]
     fn returns_none_for_invalid_versions() {
         assert!(parse_release_tagname("invalid").is_none());
         assert!(parse_release_tagname("v1.2").is_none());
         assert!(parse_release_tagname("v1.2.x").is_none());
+        assert!(parse_release_tagname("v1.2.3.4").is_none());
+        assert!(parse_release_tagname("v1.2.-3").is_none());
+        assert!(parse_release_tagname("v1.2.3-beta").is_none());
+        assert!(parse_release_tagname("v1.2.3-beta.1").is_none());
+        assert!(parse_release_tagname("1.2").is_none());
+        assert!(parse_release_tagname("1.2.x").is_none());
+        assert!(parse_release_tagname("1.2.3.4").is_none());
+        assert!(parse_release_tagname("1.2.-3").is_none());
+        assert!(parse_release_tagname("1.2.3-beta").is_none());
+        assert!(parse_release_tagname("1.2.3-beta.1").is_none());
     }
 
     #[test]
