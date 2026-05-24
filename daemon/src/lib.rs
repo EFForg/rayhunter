@@ -12,6 +12,7 @@ pub mod pcap;
 pub mod qmdl_store;
 pub mod server;
 pub mod stats;
+pub mod update;
 pub mod webdav;
 
 #[cfg(feature = "apidocs")]
@@ -34,6 +35,7 @@ use utoipa::OpenApi;
         server::get_zip,
         stats::get_system_stats,
         stats::get_qmdl_manifest,
+        stats::get_update_status,
         stats::get_log,
         diag::start_recording,
         diag::stop_recording,

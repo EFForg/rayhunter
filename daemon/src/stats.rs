@@ -4,6 +4,7 @@ use std::sync::Arc;
 use crate::battery::get_battery_status;
 use crate::error::RayhunterError;
 use crate::server::ServerState;
+use crate::update::UpdateStatus;
 use crate::{battery::BatteryState, qmdl_store::ManifestEntry};
 
 use axum::Json;
@@ -218,6 +219,20 @@ pub async fn get_qmdl_manifest(
         entries,
         current_entry,
     }))
+}
+
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    get,
+    path = "/api/update-status",
+    tag = "Statistics",
+    responses(
+        (status = StatusCode::OK, description = "Success", body = UpdateStatus)
+    ),
+    summary = "Rayhunter update status",
+    description = "Check for available updates for Rayhunter."
+))]
+pub async fn get_update_status(State(state): State<Arc<ServerState>>) -> Json<UpdateStatus> {
+    Json(state.update_status_lock.read().await.clone())
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(

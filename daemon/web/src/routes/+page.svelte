@@ -3,9 +3,11 @@
     import {
         get_manifest,
         get_system_stats,
+        get_update_status,
         get_gps,
         get_config,
         GpsMode,
+        type UpdateStatus,
         type GpsData,
     } from '$lib/utils.svelte';
     import ManifestTable from '$lib/components/ManifestTable.svelte';
@@ -19,6 +21,7 @@
     import ActionErrors from '$lib/components/ActionErrors.svelte';
     import ClockDriftAlert from '$lib/components/ClockDriftAlert.svelte';
     import LogView from '$lib/components/LogView.svelte';
+    import UpdateNotice from '$lib/components/UpdateNotice.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -31,6 +34,7 @@
     let config_shown: boolean = $state(false);
     let gps_data: GpsData | null = $state(null);
     let gps_mode: GpsMode = $state(GpsMode.Disabled);
+    let update_status: UpdateStatus | null = $state(null);
     $effect(() => {
         const interval = setInterval(async () => {
             try {
@@ -49,6 +53,13 @@
                 current_entry = new_manifest.current_entry;
 
                 system_stats = await get_system_stats();
+                // Allow update status to fail
+                try {
+                    update_status = await get_update_status();
+                } catch (error) {
+                    console.error('Error fetching update status:', error);
+                    update_status = null;
+                }
                 const config = await get_config();
                 gps_mode = config.gps_mode;
                 gps_data = await get_gps();
@@ -252,6 +263,7 @@
     {/if}
     <ActionErrors />
     <ClockDriftAlert />
+    <UpdateNotice status={update_status} />
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">
             {#if current_entry}

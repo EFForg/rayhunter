@@ -16,6 +16,7 @@ export interface AnalyzerConfig {
 export enum enabled_notifications {
     Warning = 'Warning',
     LowBattery = 'LowBattery',
+    Update = 'Update',
 }
 
 export interface WebdavConfig {
@@ -52,6 +53,7 @@ export interface Config {
     key_input_mode: number;
     ntfy_url: string | null;
     enabled_notifications: enabled_notifications[];
+    auto_check_updates: boolean;
     analyzers: AnalyzerConfig;
     min_space_to_start_recording_mb: number;
     min_space_to_continue_recording_mb: number;
@@ -170,8 +172,21 @@ export interface TimeResponse {
     offset_seconds: number;
 }
 
+export interface UpdateStatus {
+    current_version: string;
+    latest_version?: string | null;
+    latest_release_url?: string | null;
+    update_available: boolean;
+    last_checked?: string | null;
+    last_error?: string | null;
+}
+
 export async function get_daemon_time(): Promise<TimeResponse> {
     return JSON.parse(await req('GET', '/api/time'));
+}
+
+export async function get_update_status(): Promise<UpdateStatus> {
+    return JSON.parse(await req('GET', '/api/update-status'));
 }
 
 export interface GpsData {

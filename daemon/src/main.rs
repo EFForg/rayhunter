@@ -12,6 +12,7 @@ mod pcap;
 mod qmdl_store;
 mod server;
 mod stats;
+mod update;
 mod webdav;
 
 use std::net::SocketAddr;
@@ -29,7 +30,8 @@ use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_wifi_status, get_zip,
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
 };
-use crate::stats::{get_qmdl_manifest, get_system_stats};
+use crate::stats::{get_qmdl_manifest, get_system_stats, get_update_status};
+use crate::update::{UpdateStatus, run_update_check_worker};
 use crate::webdav::run_webdav_upload_worker;
 use wifi_station::WifiStatus;
 
@@ -63,6 +65,7 @@ fn get_router() -> AppRouter {
         .route("/api/qmdl/{name}", get(get_qmdl))
         .route("/api/zip/{name}", get(get_zip))
         .route("/api/system-stats", get(get_system_stats))
+        .route("/api/update-status", get(get_update_status))
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
         .route("/api/log", get(get_log))
         .route("/api/start-recording", post(start_recording))
@@ -217,6 +220,7 @@ async fn run_with_config(
     let _shutdown_guard = shutdown_token.clone().drop_guard();
 
     let notification_service = NotificationService::new(config.ntfy_url.clone());
+    let update_status_lock = Arc::new(RwLock::new(UpdateStatus::default()));
 
     if !config.debug_mode {
         info!("Starting Diag Thread");
@@ -258,6 +262,16 @@ async fn run_with_config(
             diag_tx.clone(),
             shutdown_token.clone(),
         );
+
+        if config.auto_check_updates {
+            run_update_check_worker(
+                &task_tracker,
+                shutdown_token.clone(),
+                update_status_lock.clone(),
+                notification_service.new_handler(),
+                config.enabled_notifications.clone(),
+            );
+        }
     }
 
     let analysis_status_lock = Arc::new(RwLock::new(analysis_status));
@@ -339,6 +353,7 @@ async fn run_with_config(
         wifi_status,
         wifi_scan_lock: tokio::sync::Mutex::new(()),
         gps_state: Arc::new(tokio::sync::RwLock::new(initial_gps)),
+        update_status_lock: update_status_lock.clone(),
     });
     run_server(&task_tracker, state, shutdown_token.clone()).await;
 

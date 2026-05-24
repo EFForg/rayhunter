@@ -26,6 +26,7 @@ pub enum NotificationError {
 pub enum NotificationType {
     Warning,
     LowBattery,
+    Update,
 }
 
 pub struct Notification {
