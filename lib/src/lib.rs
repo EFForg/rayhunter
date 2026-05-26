@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+// this is a test change
+
 /// Initialize logging with the given default level, suppressing noisy warnings
 /// from hampi about undecoded ASN1 extensions. Respects `RUST_LOG` overrides.
 pub fn init_logging(default_level: log::LevelFilter) {
