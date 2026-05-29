@@ -20,8 +20,8 @@ use tokio_util::task::TaskTracker;
 use wifi_station::WifiNetwork;
 
 use crate::display;
-use crate::qmdl_store::FileKind;
 use crate::notifications::{Notification, NotificationType};
+use crate::qmdl_store::FileKind;
 use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
 
