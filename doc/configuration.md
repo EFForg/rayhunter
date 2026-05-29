@@ -61,12 +61,6 @@ On the first detection of a crash, a diagnostic snapshot is saved to `/data/rayh
 
 If recovery fails after 5 attempts, the status will change to **failed**. A reboot of the device will reset WiFi.
 
-You can also configure WiFi during installation:
-
-```sh
-./installer orbic --admin-password 'mypassword' --wifi-ssid 'MyNetwork' --wifi-password 'networkpass'
-```
-
 ## WebDAV Upload
 
 Rayhunter can automatically upload finished recordings to a WebDAV server. When a `[webdav]` section is present in `config.toml`, a background worker periodically scans the recording store and uploads any closed entry that is older than `min_age_secs`. Each eligible entry uploads two files: the raw `.qmdl` capture and its `.ndjson` analysis output. After a successful upload the entry is either marked as uploaded in the manifest (and skipped on subsequent polls), or deleted locally if `delete_on_upload = true`. With no `[webdav]` section, no upload worker runs.
