@@ -77,23 +77,31 @@ mod test {
         // Constructed as: opcode(1) + pending(1) + outer_len(2) + inner_len(2) +
         //                 log_type(2=0xb17f LE) + timestamp(8) + body(40) = 56 bytes total
         let mut msg_bytes: Vec<u8> = vec![
-            0x10, 0x00,             // opcode=Log, pending=0
-            56, 0, 56, 0,           // outer_length=56, inner_length=56
-            0x7f, 0xb1,             // log_type = 0xb17f (LE)
+            0x10, 0x00, // opcode=Log, pending=0
+            56, 0, 56, 0, // outer_length=56, inner_length=56
+            0x7f, 0xb1, // log_type = 0xb17f (LE)
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // timestamp
         ];
         msg_bytes.extend_from_slice(&[
             0x05, // version=5
-            0x01, 0x00, 0x00, 0x39, 0x07, 0x00, 0x00, 0x89, 0x00, 0x00, 0x00,
-            0xab, 0xb5, 0x5a, 0x00, 0xab, 0xb5, 0x5a, 0x00,
-            0x1a, 0x69, 0xa4, 0x11, 0x1a, 0x45, 0x0d, 0x00, 0x86, 0xa7, 0xae, 0x02,
-            0x00, 0x00, 0x00, 0x00, 0x80, 0x1c, 0x00, 0x00,
+            0x01, 0x00, 0x00, 0x39, 0x07, 0x00, 0x00, 0x89, 0x00, 0x00, 0x00, 0xab, 0xb5, 0x5a,
+            0x00, 0xab, 0xb5, 0x5a, 0x00, 0x1a, 0x69, 0xa4, 0x11, 0x1a, 0x45, 0x0d, 0x00, 0x86,
+            0xa7, 0xae, 0x02, 0x00, 0x00, 0x00, 0x00, 0x80, 0x1c, 0x00, 0x00,
         ]);
-        let msg = Message::from_bytes((&msg_bytes, 0)).expect("Message parse failed").1;
-        if let Message::Log { body: LogBody::LteMl1ServingCellMeas { packet, .. }, .. } = msg {
+        let msg = Message::from_bytes((&msg_bytes, 0))
+            .expect("Message parse failed")
+            .1;
+        if let Message::Log {
+            body: LogBody::LteMl1ServingCellMeas { packet, .. },
+            ..
+        } = msg
+        {
             assert_eq!(packet.get_earfcn(), 1849);
             let rsrp = packet.get_rsrp_dbm();
-            assert!(rsrp <= -44 && rsrp >= -120, "RSRP {rsrp} dBm outside valid LTE range");
+            assert!(
+                rsrp <= -44 && rsrp >= -120,
+                "RSRP {rsrp} dBm outside valid LTE range"
+            );
         } else {
             panic!("unexpected message variant");
         }
