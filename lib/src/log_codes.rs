@@ -31,6 +31,10 @@ pub const LOG_NR_RRC_OTA_MSG_LOG_C: u32 = 0xb821;
 // These are 4G-related log types.
 
 pub const LOG_LTE_RRC_OTA_MSG_LOG_C: u32 = 0xb0c0;
+// Qualcomm ML1 (physical layer) serving cell measurement report: RSRP, RSRQ, RSSI
+pub const LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C: u32 = 0xb17f;
+// Qualcomm MAC layer RACH response log: contains Timing Advance from Random Access Response
+pub const LOG_LTE_MAC_RACH_RESPONSE_C: u32 = 0xb062;
 pub const LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C: u32 = 0xb0e2;
 pub const LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C: u32 = 0xb0e3;
 pub const LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C: u32 = 0xb0ec;
