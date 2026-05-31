@@ -201,7 +201,8 @@ fn parse_rach_response(payload: &[u8]) -> Option<GsmtapMessage> {
 
         if sp_id == 0x06 {
             // RACH Attempt subpacket
-            if let Some(msg) = extract_rach_attempt_gsmtap(&payload[offset + 4..sp_end], sp_version) {
+            if let Some(msg) = extract_rach_attempt_gsmtap(&payload[offset + 4..sp_end], sp_version)
+            {
                 return Some(msg);
             }
         }
@@ -258,7 +259,10 @@ fn extract_rach_attempt_gsmtap(body: &[u8], version: u8) -> Option<GsmtapMessage
     // RA-RNTI (type=2) and applies the RAR PDU format. The 4-byte framing prefix is:
     //   [RadioType=1(FDD)][Direction=1(DL)][RNTIType=2(RA-RNTI)][0x01=payload-marker]
     let payload = vec![
-        0x01u8, 0x01, 0x02, 0x01, // framing: FDD, DL, RA-RNTI, payload-marker
+        0x01u8,
+        0x01,
+        0x02,
+        0x01, // framing: FDD, DL, RA-RNTI, payload-marker
         rapid & 0x3F,
         ((ta >> 3) & 0xFF) as u8,
         ((ta & 0x07) as u8) << 5,
@@ -278,6 +282,7 @@ fn extract_rach_attempt_gsmtap(body: &[u8], version: u8) -> Option<GsmtapMessage
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gsmtap::GsmtapType;
     use deku::DekuContainerWrite;
 
     #[test]
@@ -292,5 +297,50 @@ mod tests {
         };
         // This would panic before the fix with "bit size of input is larger than bit requested size"
         assert!(msg.to_bytes().is_ok());
+    }
+
+    // Builds a minimal 0xb062 payload: outer header + one RACH Attempt subpacket (version 0x03).
+    // v0x03 body layout: hdr=6B [_, _, rapid, _, _, bitmask], then MSG2=7B [backoff(2), result(1), tc_rnti(2), ta(2)]
+    fn make_rach_v03_payload(ta_raw: u16, bitmask: u8) -> Vec<u8> {
+        let rapid: u8 = 43;
+        let tc_rnti: u16 = 0x1234;
+        let [ta_lo, ta_hi] = ta_raw.to_le_bytes();
+        let [rnti_lo, rnti_hi] = tc_rnti.to_le_bytes();
+        // sp_size covers the 4-byte subpacket header + 6-byte body header + 7-byte MSG2 = 17
+        vec![
+            0x01, 0x01, 0x00, 0x00, // outer: version=1, num_subpackets=1, reserved
+            0x06, 0x03, 17, 0x00, // subpacket: id=0x06, version=0x03, size=17 LE
+            0x00, 0x00, rapid, 0x00, 0x00, bitmask, // body header (6 bytes)
+            0x00, 0x00, 0x01, rnti_lo, rnti_hi, ta_lo, ta_hi, // MSG2 (7 bytes)
+        ]
+    }
+
+    #[test]
+    fn test_rach_response_valid_ta() {
+        let payload = make_rach_v03_payload(42, 0x02); // 0x02 = msg2 present, msg1 absent
+        let msg = parse_rach_response(&payload).expect("expected a GsmtapMessage for valid TA");
+        assert_eq!(msg.header.gsmtap_type, GsmtapType::LteMacFramed);
+        // TA stored in frame_number for Wireshark compatibility (gsmtap.frame_nr)
+        assert_eq!(msg.header.frame_number, 42);
+        // MAC RAR PDU: 4-byte framing prefix + 7-byte RAR PDU = 11 bytes
+        assert_eq!(msg.payload.len(), 11);
+        // Verify TA encoding in RAR PDU bytes 5–6 (TA[10:3] and TA[2:0])
+        // ta=42: ta>>3=5 in byte[5], (ta&7)<<5 = 2<<5 = 0x40 in byte[6]
+        assert_eq!(msg.payload[5], 5);
+        assert_eq!(msg.payload[6], 0x40);
+    }
+
+    #[test]
+    fn test_rach_response_ffff_sentinel_returns_none() {
+        // 0xFFFF means RAR was received but TA was not valid; must be dropped
+        let payload = make_rach_v03_payload(0xFFFF, 0x02);
+        assert!(parse_rach_response(&payload).is_none());
+    }
+
+    #[test]
+    fn test_rach_response_no_msg2_returns_none() {
+        // bitmask=0x01 means only MSG1 present; no TA available
+        let payload = make_rach_v03_payload(42, 0x01);
+        assert!(parse_rach_response(&payload).is_none());
     }
 }
