@@ -358,13 +358,14 @@ impl LteRrcOtaPacket {
 
 // Qualcomm ML1 (physical layer) serving cell measurement log (0xb17f).
 // Format from SCAT: https://github.com/fgsect/scat/blob/master/src/scat/parsers/qualcomm/diagltelogparser.py
+// V4 format string (after version byte): '<BHHHLLLLLL'
 // V5 format string (after version byte): '<BHLH2xLLLLLL'
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(ctx = "version: u8", id = "version")]
 pub enum LteMl1ServingCellMeasPacket {
     #[deku(id = "4")]
     V4 {
-        rrc_release: u16,
+        rrc_release: u8,
         reserved: u16,
         earfcn: u16,
         pci_serv_layer: u16,
