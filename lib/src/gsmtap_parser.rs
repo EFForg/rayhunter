@@ -176,37 +176,30 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
 // Returns None if the log contains no MSG2 (no Timing Advance was received).
 fn parse_rach_response(payload: &[u8]) -> Option<GsmtapMessage> {
     // Outer header: version(u8) + num_subpackets(u8) + reserved(u16)
-    if payload.len() < 4 || payload[0] != 0x01 {
+    if *payload.get(0)? != 0x01 {
         return None;
     }
-    let num_subpackets = payload[1] as usize;
+    let num_subpackets = *payload.get(1)? as usize;
     let mut offset = 4;
 
     for _ in 0..num_subpackets {
         // Subpacket header: id(u8) + version(u8) + size(u16 LE)
-        if offset + 4 > payload.len() {
-            break;
-        }
-        let sp_id = payload[offset];
-        let sp_version = payload[offset + 1];
-        let sp_size = u16::from_le_bytes([payload[offset + 2], payload[offset + 3]]) as usize;
+        let sp_hdr = payload.get(offset..offset + 4)?;
+        let sp_id = sp_hdr[0];
+        let sp_version = sp_hdr[1];
+        let sp_size = u16::from_le_bytes([sp_hdr[2], sp_hdr[3]]) as usize;
         if sp_size < 4 {
-            break;
+            return None;
         }
-        let sp_end = offset + sp_size;
-        if sp_end > payload.len() {
-            break;
-        }
+        let sp_body = payload.get(offset + 4..offset + sp_size)?;
 
         if sp_id == 0x06 {
-            // RACH Attempt subpacket
-            if let Some(msg) = extract_rach_attempt_gsmtap(&payload[offset + 4..sp_end], sp_version)
-            {
+            if let Some(msg) = extract_rach_attempt_gsmtap(sp_body, sp_version) {
                 return Some(msg);
             }
         }
 
-        offset = sp_end;
+        offset += sp_size;
     }
     None
 }
@@ -224,11 +217,9 @@ fn extract_rach_attempt_gsmtap(body: &[u8], version: u8) -> Option<GsmtapMessage
         _ => return None,
     };
 
-    if body.len() < hdr_size {
-        return None;
-    }
-    let msg_bitmask = body[bitmask_offset];
-    let rapid = body[rapid_offset] & 0x3F;
+    let hdr = body.get(..hdr_size)?;
+    let msg_bitmask = hdr[bitmask_offset];
+    let rapid = hdr[rapid_offset] & 0x3F;
     let msg1_present = msg_bitmask & 0x01 != 0;
     let msg2_present = msg_bitmask & 0x02 != 0;
 
@@ -237,12 +228,10 @@ fn extract_rach_attempt_gsmtap(body: &[u8], version: u8) -> Option<GsmtapMessage
     }
 
     // MSG2: backoff(u16) + result(u8) + tc_rnti(u16) + ta(u16) = 7 bytes
-    let msg2_offset = hdr_size + if msg1_present { msg1_size } else { 0 };
-    if body.len() < msg2_offset + 7 {
-        return None;
-    }
-    let tc_rnti = u16::from_le_bytes([body[msg2_offset + 3], body[msg2_offset + 4]]);
-    let ta_raw = u16::from_le_bytes([body[msg2_offset + 5], body[msg2_offset + 6]]);
+    let msg2_start = hdr_size + if msg1_present { msg1_size } else { 0 };
+    let msg2 = body.get(msg2_start..msg2_start + 7)?;
+    let tc_rnti = u16::from_le_bytes([msg2[3], msg2[4]]);
+    let ta_raw = u16::from_le_bytes([msg2[5], msg2[6]]);
     // 0xFFFF is a Qualcomm sentinel meaning the RAR was received but TA was not valid
     if ta_raw == 0xFFFF {
         return None;
