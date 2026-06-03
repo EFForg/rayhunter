@@ -176,7 +176,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
 // Returns None if the log contains no MSG2 (no Timing Advance was received).
 fn parse_rach_response(payload: &[u8]) -> Option<GsmtapMessage> {
     // Outer header: version(u8) + num_subpackets(u8) + reserved(u16)
-    if *payload.get(0)? != 0x01 {
+    if *payload.first()? != 0x01 {
         return None;
     }
     let num_subpackets = *payload.get(1)? as usize;
@@ -193,10 +193,10 @@ fn parse_rach_response(payload: &[u8]) -> Option<GsmtapMessage> {
         }
         let sp_body = payload.get(offset + 4..offset + sp_size)?;
 
-        if sp_id == 0x06 {
-            if let Some(msg) = extract_rach_attempt_gsmtap(sp_body, sp_version) {
-                return Some(msg);
-            }
+        if sp_id == 0x06
+            && let Some(msg) = extract_rach_attempt_gsmtap(sp_body, sp_version)
+        {
+            return Some(msg);
         }
 
         offset += sp_size;
