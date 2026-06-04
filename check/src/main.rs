@@ -111,7 +111,9 @@ async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
 async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
-    let mut qmdl_reader = QmdlMessageReader::new(qmdl_file).await.expect("failed to open QmdlReader");
+    let mut qmdl_reader = QmdlMessageReader::new(qmdl_file)
+        .await
+        .expect("failed to open QmdlReader");
     let mut report = Report::new(qmdl_path);
     while let Some(maybe_message) = qmdl_reader
         .get_next_message()
@@ -127,7 +129,9 @@ async fn pcapify(qmdl_path: &PathBuf) {
     let qmdl_file = &mut File::open(&qmdl_path)
         .await
         .expect("failed to open qmdl file");
-    let mut qmdl_reader = QmdlMessageReader::new(qmdl_file).await.expect("failed to open QmdlReader");
+    let mut qmdl_reader = QmdlMessageReader::new(qmdl_file)
+        .await
+        .expect("failed to open QmdlReader");
     let mut pcap_path = qmdl_path.clone();
     pcap_path.set_extension("pcapng");
     let pcap_file = &mut File::create(&pcap_path)

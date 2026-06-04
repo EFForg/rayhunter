@@ -387,13 +387,10 @@ impl DiagTask {
                     "total QMDL bytes written: {}, updating manifest...",
                     file_size
                 );
-                let index = qmdl_store
-                    .current_entry
-                    .expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
-                if let Err(e) = qmdl_store
-                    .update_entry_qmdl_size(index, file_size)
-                    .await
-                {
+                let index = qmdl_store.current_entry.expect(
+                    "DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???",
+                );
+                if let Err(e) = qmdl_store.update_entry_qmdl_size(index, file_size).await {
                     let reason = format!("failed to update manifest (disk full?): {e}");
                     error!("{reason}");
                     self.stop(qmdl_store, Some(reason)).await;

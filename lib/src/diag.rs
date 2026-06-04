@@ -157,10 +157,7 @@ impl Message {
                 }
                 Err(e) => Err(DiagParsingError::MessageParsingError(e, data)),
             },
-            Err(err) => Err(DiagParsingError::HdlcDecapsulationError(
-                err,
-                data.to_vec(),
-            )),
+            Err(err) => Err(DiagParsingError::HdlcDecapsulationError(err, data.to_vec())),
         }
     }
 }

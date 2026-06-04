@@ -64,8 +64,15 @@ impl FileKind {
         }
     }
 
-    pub fn get_filepath<P: AsRef<Path>>(&self, entry_name: &str, base_path: P, qmdl_compressed: bool) -> PathBuf {
-        base_path.as_ref().join(self.get_filename(entry_name, qmdl_compressed))
+    pub fn get_filepath<P: AsRef<Path>>(
+        &self,
+        entry_name: &str,
+        base_path: P,
+        qmdl_compressed: bool,
+    ) -> PathBuf {
+        base_path
+            .as_ref()
+            .join(self.get_filename(entry_name, qmdl_compressed))
     }
 }
 
@@ -504,7 +511,11 @@ impl RecordingStore {
         self.write_manifest().await?;
 
         for &file_kind in FileKind::ALL {
-            let filepath = file_kind.get_filepath(&entry_to_delete.name, &self.path, entry_to_delete.compressed);
+            let filepath = file_kind.get_filepath(
+                &entry_to_delete.name,
+                &self.path,
+                entry_to_delete.compressed,
+            );
             remove_file_if_exists(&filepath)
                 .await
                 .map_err(RecordingStoreError::DeleteFileError)?;
@@ -591,10 +602,7 @@ mod tests {
             .entry_for_name(&store.manifest.entries[entry_index].name)
             .unwrap();
         assert!(entry.last_message_time.is_some());
-        assert_eq!(
-            store.manifest.entries[entry_index].qmdl_size_bytes,
-            1000
-        );
+        assert_eq!(store.manifest.entries[entry_index].qmdl_size_bytes, 1000);
         assert_eq!(
             RecordingStore::read_manifest(dir.path()).await.unwrap(),
             store.manifest

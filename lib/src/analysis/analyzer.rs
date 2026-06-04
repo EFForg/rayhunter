@@ -421,7 +421,10 @@ impl Harness {
         row
     }
 
-    pub fn analyze_qmdl_message(&mut self, maybe_qmdl_message: Result<Message, DiagParsingError>) -> AnalysisRow {
+    pub fn analyze_qmdl_message(
+        &mut self,
+        maybe_qmdl_message: Result<Message, DiagParsingError>,
+    ) -> AnalysisRow {
         let mut row = AnalysisRow::new();
         self.packet_num += 1;
 
@@ -458,7 +461,8 @@ impl Harness {
     }
 
     pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> Vec<AnalysisRow> {
-        container.messages()
+        container
+            .messages()
             .drain(..)
             .map(|maybe_message| self.analyze_qmdl_message(maybe_message))
             .collect()
