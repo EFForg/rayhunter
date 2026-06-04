@@ -144,13 +144,13 @@ async fn pcapify(qmdl_path: &PathBuf) {
         .await
         .expect("failed to get message")
     {
-        if let Ok(msg) = maybe_message {
-            if let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg) {
-                pcap_writer
-                    .write_gsmtap_message(parsed, timestamp, None)
-                    .await
-                    .expect("failed to write");
-            }
+        if let Ok(msg) = maybe_message
+            && let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg)
+        {
+            pcap_writer
+                .write_gsmtap_message(parsed, timestamp, None)
+                .await
+                .expect("failed to write");
         }
     }
     info!("wrote pcap to {:?}", &pcap_path);
