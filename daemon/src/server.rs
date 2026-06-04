@@ -13,9 +13,9 @@ use chrono::{DateTime, Local};
 use log::{error, warn};
 use rayhunter::qmdl::QmdlMessageReader;
 use serde::{Deserialize, Serialize};
-use tokio::io::AsyncReadExt;
 use std::sync::Arc;
 use tokio::fs::write;
+use tokio::io::AsyncReadExt;
 use tokio::io::copy;
 use tokio::io::duplex;
 use tokio::sync::RwLock;
@@ -84,21 +84,16 @@ pub async fn get_qmdl(
             )
         })?
         .ok_or((StatusCode::NOT_FOUND, "QMDL file not found".to_string()))?;
-    let qmdl_reader = QmdlMessageReader::new(qmdl_file)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("error reading QMDL file: {err}"),
-            )
-        })?;
+    let qmdl_reader = QmdlMessageReader::new(qmdl_file).await.map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("error reading QMDL file: {err}"),
+        )
+    })?;
 
     let headers = [
         (CONTENT_TYPE, "application/octet-stream"),
-        (
-            CONTENT_LENGTH,
-            &entry.qmdl_size_bytes.to_string(),
-        ),
+        (CONTENT_LENGTH, &entry.qmdl_size_bytes.to_string()),
     ];
     let body = Body::from_stream(qmdl_reader.into_qmdl_stream());
     Ok((headers, body).into_response())
@@ -423,12 +418,8 @@ pub async fn get_zip(
                 };
                 let qmdl_reader = QmdlMessageReader::new(qmdl_file_for_pcap).await?;
 
-                if let Err(e) = generate_pcap_data(
-                    &mut entry_writer,
-                    qmdl_reader,
-                    gps_records,
-                )
-                .await
+                if let Err(e) =
+                    generate_pcap_data(&mut entry_writer, qmdl_reader, gps_records).await
                 {
                     // if we fail to generate the PCAP file, we should still continue and give the
                     // user the QMDL.
@@ -549,7 +540,10 @@ mod tests {
     use async_zip::base::read::mem::ZipFileReader;
     use axum::extract::{Path, State};
     use futures::AsyncReadExt;
-    use rayhunter::{diag::{DataType, HdlcEncapsulatedMessage, Message, MessagesContainer}, qmdl::{QmdlMessageReader, QmdlWriter}};
+    use rayhunter::{
+        diag::{DataType, HdlcEncapsulatedMessage, Message, MessagesContainer},
+        qmdl::{QmdlMessageReader, QmdlWriter},
+    };
     use tempfile::TempDir;
 
     async fn create_test_qmdl_store() -> (TempDir, Arc<RwLock<crate::qmdl_store::RecordingStore>>) {
@@ -567,7 +561,8 @@ mod tests {
     ) -> String {
         let entry_name = {
             let mut store = store_lock.write().await;
-        let (mut qmdl_gz_file, _analysis_file) = store.new_entry(GpsMode::Disabled).await.unwrap();
+            let (mut qmdl_gz_file, _analysis_file) =
+                store.new_entry(GpsMode::Disabled).await.unwrap();
 
             let mut writer = QmdlWriter::new(&mut qmdl_gz_file);
             writer.write_container(test_data).await.unwrap();
@@ -624,52 +619,13 @@ mod tests {
         MessagesContainer {
             data_type: DataType::UserSpace,
             num_messages: 1,
-            messages: vec![
-                HdlcEncapsulatedMessage {
-                    len: 39,
-                    data: vec![
-                        16,
-                        0,
-                        32,
-                        0,
-                        32,
-                        0,
-                        192,
-                        176,
-                        26,
-                        165,
-                        245,
-                        135,
-                        118,
-                        35,
-                        2,
-                        1,
-                        20,
-                        14,
-                        48,
-                        0,
-                        160,
-                        0,
-                        2,
-                        8,
-                        0,
-                        0,
-                        217,
-                        15,
-                        5,
-                        0,
-                        0,
-                        0,
-                        0,
-                        1,
-                        0,
-                        10,
-                        13,
-                        196,
-                        126,
-                    ],
-                },
-            ],
+            messages: vec![HdlcEncapsulatedMessage {
+                len: 39,
+                data: vec![
+                    16, 0, 32, 0, 32, 0, 192, 176, 26, 165, 245, 135, 118, 35, 2, 1, 20, 14, 48, 0,
+                    160, 0, 2, 8, 0, 0, 217, 15, 5, 0, 0, 0, 0, 1, 0, 10, 13, 196, 126,
+                ],
+            }],
         }
     }
 
@@ -680,7 +636,9 @@ mod tests {
         let entry_name = create_test_entry_with_data(&store_lock, &test_qmdl_data).await;
         let state = create_test_server_state(store_lock);
 
-        let response = get_zip(State(state), Path(entry_name.clone())).await.unwrap();
+        let response = get_zip(State(state), Path(entry_name.clone()))
+            .await
+            .unwrap();
 
         let headers = response.headers();
         assert_eq!(headers.get("content-type").unwrap(), "application/zip");
@@ -690,7 +648,8 @@ mod tests {
 
         let zip_reader = ZipFileReader::new(body_bytes.to_vec()).await.unwrap();
         let zip_reader_file = zip_reader.file();
-        let filenames: Vec<String> = zip_reader_file.entries()
+        let filenames: Vec<String> = zip_reader_file
+            .entries()
             .iter()
             .map(|entry| entry.filename().as_str().unwrap().to_string())
             .collect();
@@ -704,13 +663,16 @@ mod tests {
         );
 
         let mut qmdl_body = Vec::with_capacity(128);
-        zip_reader.reader_without_entry(0)
+        zip_reader
+            .reader_without_entry(0)
             .await
             .unwrap()
             .read_to_end(&mut qmdl_body)
             .await
             .unwrap();
-        let mut qmdl_reader = QmdlMessageReader::new(Cursor::new(qmdl_body)).await.unwrap();
+        let mut qmdl_reader = QmdlMessageReader::new(Cursor::new(qmdl_body))
+            .await
+            .unwrap();
         let expected_message = Message::from_hdlc(&test_qmdl_data.messages[0].data).unwrap();
         assert_eq!(
             qmdl_reader.get_next_message().await.unwrap(),
