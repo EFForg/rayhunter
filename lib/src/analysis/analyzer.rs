@@ -224,7 +224,7 @@ impl AnalysisLineNormalizer {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Default)]
 pub struct AnalysisRow {
     pub packet_timestamp: Option<DateTime<FixedOffset>>,
     pub skipped_message_reason: Option<String>,
@@ -233,11 +233,7 @@ pub struct AnalysisRow {
 
 impl AnalysisRow {
     pub fn new() -> Self {
-        Self {
-            packet_timestamp: None,
-            skipped_message_reason: None,
-            events: vec![],
-        }
+        Self::default()
     }
 
     pub fn is_empty(&self) -> bool {
