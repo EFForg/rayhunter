@@ -7,10 +7,18 @@ use crate::config;
 use crate::display::DisplayState;
 
 pub fn update_ui(
-    _task_tracker: &TaskTracker,
+    task_tracker: &TaskTracker,
     _config: &config::Config,
-    _shutdown_token: CancellationToken,
-    _ui_update_rx: Receiver<DisplayState>,
+    shutdown_token: CancellationToken,
+    mut ui_update_rx: Receiver<DisplayState>,
 ) {
     info!("Headless mode, not spawning UI.");
+    task_tracker.spawn(async move {
+        loop {
+            tokio::select! {
+                _ = shutdown_token.cancelled() => break,
+                _ = ui_update_rx.recv() => {}
+            }
+        }
+    });
 }
