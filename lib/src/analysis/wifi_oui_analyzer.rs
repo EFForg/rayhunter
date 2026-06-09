@@ -1,4 +1,6 @@
-use log::{LevelFilter, Log, debug, info};
+use std::borrow::Cow;
+
+use log::{debug, info, LevelFilter, Log};
 use log4rs::{
     append::file::FileAppender,
     config::{Appender, Root},
@@ -40,12 +42,12 @@ impl WifiOUIAnalyzer {
 }
 
 impl Analyzer for WifiOUIAnalyzer {
-    fn get_name(&self) -> std::borrow::Cow<'_, str> {
+    fn get_name(&self) -> Cow<'_, str> {
         "WifiOUIAnalyzer".into()
     }
 
-    fn get_description(&self) -> std::borrow::Cow<'_, str> {
-        "blah blah blah".into()
+    fn get_description(&self) -> Cow<'_, str> {
+        Cow::from("Scans wifi channels looking for OUIs of known IMSI catchers")
     }
 
     fn get_version(&self) -> u32 {
@@ -67,7 +69,6 @@ impl Analyzer for WifiOUIAnalyzer {
                         .find(|oui| bssid.to_uppercase().starts_with(&oui.to_uppercase()))
                         .is_some()
                     {
-                        info!("Logging match to wifi.log");
                         info!(logger: self.logger, "Found match for bssid {bssid}");
                         return Some(Event {
                             event_type: EventType::Informational,
