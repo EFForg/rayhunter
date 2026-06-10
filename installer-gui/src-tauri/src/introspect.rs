@@ -1,54 +1,96 @@
+//! Combines the values we care about from the clap CLI and the modifiers module into something
+//! serializable by serde.
+use std::collections::HashMap;
+
 use serde::Serialize;
 
-#[derive(Serialize, Debug)]
+use crate::modifiers;
+
+#[derive(Debug, Serialize)]
 pub struct Command<'a> {
     subcommands: Vec<Subcommand<'a>>,
 }
 
 impl Command<'_> {
-    pub fn new(clap_command: &clap::Command) -> Command<'_> {
+    pub fn new(command: &clap::Command) -> Command<'_> {
+        let subcommand_map: HashMap<&str, &clap::Command> = command
+            .get_subcommands()
+            .map(|s| (s.get_name(), s))
+            .collect();
+
         Command {
-            subcommands: clap_command
-                .get_subcommands()
-                // at least for now, we filter out subcommands that themselves have subcommands like
-                // "util" as supporting these would require additional changes to both the frontend
-                // and this module
-                .filter(|c| !c.has_subcommands())
-                .map(|c| Subcommand::new(c))
+            // this resulting vector contains the subcommands that are found in both
+            // command.get_subcommands() and modifiers::subcommand_modifiers() in the order defined
+            // by subcommand_modifiers()
+            subcommands: modifiers::subcommand_modifiers()
+                .iter()
+                .filter_map(|modifier| {
+                    subcommand_map
+                        .get(modifier.command)
+                        .map(|subcommand| Subcommand::new(subcommand, modifier))
+                })
                 .collect(),
         }
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Serialize)]
 struct Argument<'a> {
-    name: &'a str,
+    advanced: bool,
+    flag: String,
+    label: &'a str,
     takes_values: bool,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Serialize)]
 struct Subcommand<'a> {
     arguments: Vec<Argument<'a>>,
-    name: &'a str,
+    command: &'a str,
+    label: &'a str,
 }
 
 impl Argument<'_> {
-    fn new(clap_argument: &clap::Arg) -> Argument<'_> {
-        Argument {
-            name: clap_argument.get_id().as_str(),
-            takes_values: clap_argument.get_action().takes_values(),
-        }
+    fn new<'a>(
+        argument: &'a clap::Arg,
+        modifier: &modifiers::ArgumentModifier<'static>,
+    ) -> Option<Argument<'a>> {
+        // if an argument doesn't have the data we need, it's silently dropped from the GUI, however,
+        // tests should prevent this from happening and we could add logging messages about this in
+        // the future if desired
+        Some(Argument {
+            advanced: modifier.advanced,
+            flag: format!("--{}", argument.get_long()?),
+            label: modifier.gui_label,
+            takes_values: argument.get_action().takes_values(),
+        })
     }
 }
 
 impl Subcommand<'_> {
-    fn new(clap_command: &clap::Command) -> Subcommand<'_> {
+    fn new<'a>(
+        command: &'a clap::Command,
+        modifier: &modifiers::SubcommandModifier<'static>,
+    ) -> Subcommand<'a> {
+        let argument_map: HashMap<&str, &clap::Arg> = command
+            .get_arguments()
+            .map(|a| (a.get_id().as_str(), a))
+            .collect();
+
         Subcommand {
-            arguments: clap_command
-                .get_arguments()
-                .map(|a| Argument::new(a))
+            // this resulting vector contains the arguments that are found in both
+            // command.get_arguments() and modifier.arg_modifiers in the order defined by by
+            // arg_modifiers
+            arguments: modifier
+                .arg_modifiers
+                .iter()
+                .filter_map(|arg_modifier| {
+                    argument_map
+                        .get(arg_modifier.clap_id)
+                        .and_then(|arg| Argument::new(arg, arg_modifier))
+                })
                 .collect(),
-            name: clap_command.get_name(),
+            command: modifier.command,
+            label: modifier.gui_label,
         }
     }
 }

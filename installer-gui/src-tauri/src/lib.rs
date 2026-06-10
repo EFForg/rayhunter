@@ -5,6 +5,7 @@ use clap::CommandFactory;
 use tauri::Emitter;
 
 mod introspect;
+mod modifiers;
 
 static INSTALLER_COMMAND: LazyLock<clap::Command> = LazyLock::new(installer::Args::command);
 
