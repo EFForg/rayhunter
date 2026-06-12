@@ -1,15 +1,13 @@
 use clap::Parser;
-use futures::TryStreamExt;
 use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
     analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness},
-    diag::DataType,
     gsmtap_parser,
     pcap::GsmtapPcapWriter,
-    qmdl::QmdlReader,
+    qmdl::QmdlMessageReader,
 };
-use std::{collections::HashMap, future, path::PathBuf, pin::pin};
+use std::{collections::HashMap, path::PathBuf};
 use tokio::fs::File;
 use walkdir::WalkDir;
 
@@ -113,26 +111,16 @@ async fn analyze_pcap(pcap_path: &str, show_skipped: bool) {
 async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
-    let file_size = qmdl_file
-        .metadata()
+    let mut qmdl_reader = QmdlMessageReader::new(qmdl_file)
         .await
-        .expect("failed to get QMDL file metadata")
-        .len();
-    let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(file_size as usize));
-    let mut qmdl_stream = pin!(
-        qmdl_reader
-            .as_stream()
-            .try_filter(|container| future::ready(container.data_type == DataType::UserSpace))
-    );
+        .expect("failed to open QmdlReader");
     let mut report = Report::new(qmdl_path);
-    while let Some(container) = qmdl_stream
-        .try_next()
+    while let Some(maybe_message) = qmdl_reader
+        .get_next_message()
         .await
-        .expect("failed getting QMDL container")
+        .expect("failed to get message")
     {
-        for row in harness.analyze_qmdl_messages(container) {
-            report.process_row(row);
-        }
+        report.process_row(harness.analyze_qmdl_message(maybe_message));
     }
     report.print_summary(show_skipped);
 }
@@ -141,8 +129,9 @@ async fn pcapify(qmdl_path: &PathBuf) {
     let qmdl_file = &mut File::open(&qmdl_path)
         .await
         .expect("failed to open qmdl file");
-    let qmdl_file_size = qmdl_file.metadata().await.unwrap().len();
-    let mut qmdl_reader = QmdlReader::new(qmdl_file, Some(qmdl_file_size as usize));
+    let mut qmdl_reader = QmdlMessageReader::new(qmdl_file)
+        .await
+        .expect("failed to open QmdlReader");
     let mut pcap_path = qmdl_path.clone();
     pcap_path.set_extension("pcapng");
     let pcap_file = &mut File::create(&pcap_path)
@@ -150,18 +139,18 @@ async fn pcapify(qmdl_path: &PathBuf) {
         .expect("failed to open pcap file");
     let mut pcap_writer = GsmtapPcapWriter::new(pcap_file).await.unwrap();
     pcap_writer.write_iface_header().await.unwrap();
-    while let Some(container) = qmdl_reader
-        .get_next_messages_container()
+    while let Some(maybe_message) = qmdl_reader
+        .get_next_message()
         .await
-        .expect("failed to get container")
+        .expect("failed to get message")
     {
-        for msg in container.messages().into_iter().flatten() {
-            if let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg) {
-                pcap_writer
-                    .write_gsmtap_message(parsed, timestamp, None)
-                    .await
-                    .expect("failed to write");
-            }
+        if let Ok(msg) = maybe_message
+            && let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg)
+        {
+            pcap_writer
+                .write_gsmtap_message(parsed, timestamp, None)
+                .await
+                .expect("failed to write");
         }
     }
     info!("wrote pcap to {:?}", &pcap_path);
@@ -197,9 +186,7 @@ async fn main() {
         let name_str = name.to_str().unwrap();
         let path = entry.path();
         let path_str = path.to_str().unwrap();
-        // instead of relying on the QMDL extension, can we check if a file is
-        // QMDL by inspecting the contents?
-        if name_str.ends_with(".qmdl") {
+        if name_str.ends_with(".qmdl") || name_str.ends_with(".qmdl.gz") {
             info!("**** Beginning analysis of {name_str}");
             analyze_qmdl(path_str, args.show_skipped).await;
             if args.pcapify {

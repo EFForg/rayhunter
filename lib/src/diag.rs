@@ -1,5 +1,6 @@
 //! Diag protocol serialization/deserialization
 
+use bytes::Bytes;
 use chrono::{DateTime, FixedOffset};
 use crc::{Algorithm, Crc};
 use deku::prelude::*;
@@ -89,27 +90,16 @@ impl MessagesContainer {
         let mut result = Vec::new();
         for msg in &self.messages {
             for sub_msg in msg.data.split_inclusive(|&b| b == MESSAGE_TERMINATOR) {
-                match hdlc_decapsulate(sub_msg, &CRC_CCITT) {
-                    Ok(data) => match Message::from_bytes((&data, 0)) {
-                        Ok(((leftover_bytes, _), res)) => {
-                            if !leftover_bytes.is_empty() {
-                                warn!(
-                                    "warning: {} leftover bytes when parsing Message",
-                                    leftover_bytes.len()
-                                );
-                            }
-                            result.push(Ok(res));
-                        }
-                        Err(e) => result.push(Err(DiagParsingError::MessageParsingError(e, data))),
-                    },
-                    Err(err) => result.push(Err(DiagParsingError::HdlcDecapsulationError(
-                        err,
-                        sub_msg.to_vec(),
-                    ))),
-                }
+                result.push(Message::from_hdlc(sub_msg));
             }
         }
         result
+    }
+}
+
+impl From<MessagesContainer> for Bytes {
+    fn from(value: MessagesContainer) -> Self {
+        value.to_bytes().unwrap().into()
     }
 }
 
@@ -150,6 +140,26 @@ pub enum Message {
         #[deku(ctx = "u32::from_le_bytes([*opcode1, *opcode2, *opcode3, *opcode4]), *subopcode")]
         payload: ResponsePayload,
     },
+}
+
+impl Message {
+    pub fn from_hdlc(data: &[u8]) -> Result<Message, DiagParsingError> {
+        match hdlc_decapsulate(data, &CRC_CCITT) {
+            Ok(data) => match Message::from_bytes((&data, 0)) {
+                Ok(((leftover_bytes, _), res)) => {
+                    if !leftover_bytes.is_empty() {
+                        warn!(
+                            "warning: {} leftover bytes when parsing Message",
+                            leftover_bytes.len()
+                        );
+                    }
+                    Ok(res)
+                }
+                Err(e) => Err(DiagParsingError::MessageParsingError(e, data)),
+            },
+            Err(err) => Err(DiagParsingError::HdlcDecapsulationError(err, data.to_vec())),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -411,7 +421,7 @@ pub fn build_log_mask_request(
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use super::*;
 
     // Just about all of these test cases from manually parsing diag packets w/ QCSuper
@@ -525,7 +535,7 @@ mod test {
     // this log is based on one captured on a real device -- if it fails to
     // serialize or deserialize, that's probably a problem with this mock, not
     // the DiagReader implementation
-    fn get_test_message(payload: &[u8]) -> (HdlcEncapsulatedMessage, Message) {
+    pub fn get_test_message(payload: &[u8]) -> (HdlcEncapsulatedMessage, Message) {
         let length_with_payload = 31 + payload.len() as u16;
         let message = Message::Log {
             pending_msgs: 0,
@@ -559,6 +569,8 @@ mod test {
             len: encapsulated_data.len() as u32,
             data: encapsulated_data,
         };
+        // sanity check
+        assert_eq!(&Message::from_hdlc(&encapsulated.data).unwrap(), &message);
         (encapsulated, message)
     }
 

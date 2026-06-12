@@ -10,12 +10,11 @@ use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use log::error;
-use rayhunter::diag::DataType;
 use rayhunter::gsmtap_parser;
 use rayhunter::pcap::{GpsPoint, GsmtapPcapWriter};
-use rayhunter::qmdl::QmdlReader;
+use rayhunter::qmdl::QmdlMessageReader;
 use std::sync::Arc;
-use tokio::io::{AsyncRead, AsyncWrite, duplex};
+use tokio::io::{AsyncRead, AsyncSeek, AsyncWrite, duplex};
 use tokio_util::io::ReaderStream;
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
@@ -51,18 +50,20 @@ pub async fn get_pcap(
             "QMDL file is empty, try again in a bit!".to_string(),
         ));
     }
-    let qmdl_size_bytes = entry.qmdl_size_bytes;
     let qmdl_file = qmdl_store
         .open_file(entry_index, FileKind::Qmdl)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?
         .ok_or((StatusCode::NOT_FOUND, "QMDL file not found".to_string()))?;
+    let qmdl_reader = QmdlMessageReader::new(qmdl_file)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:?}")))?;
     let (reader, writer) = duplex(1024);
     let gps_records = load_gps_records_for_entry(&state, entry_index).await;
     drop(qmdl_store);
 
     tokio::spawn(async move {
-        if let Err(e) = generate_pcap_data(writer, qmdl_file, qmdl_size_bytes, gps_records).await {
+        if let Err(e) = generate_pcap_data(writer, qmdl_reader, gps_records).await {
             error!("failed to generate PCAP: {e:?}");
         }
     });
@@ -131,37 +132,29 @@ fn find_nearest_gps(records: &[GpsRecord], packet_timestamp: i64) -> Option<GpsP
 
 pub async fn generate_pcap_data<R, W>(
     writer: W,
-    qmdl_file: R,
-    qmdl_size_bytes: usize,
+    mut reader: QmdlMessageReader<R>,
     gps_records: Vec<GpsRecord>,
 ) -> Result<(), Error>
 where
     W: AsyncWrite + Unpin + Send,
-    R: AsyncRead + Unpin,
+    R: AsyncRead + AsyncSeek + Unpin,
 {
     let mut pcap_writer = GsmtapPcapWriter::new(writer).await?;
     pcap_writer.write_iface_header().await?;
 
-    let mut reader = QmdlReader::new(qmdl_file, Some(qmdl_size_bytes));
-    while let Some(container) = reader.get_next_messages_container().await? {
-        if container.data_type != DataType::UserSpace {
-            continue;
-        }
-
-        for maybe_msg in container.messages() {
-            match maybe_msg {
-                Ok(msg) => {
-                    let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
-                    if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
-                        let packet_unix_ts = timestamp.to_datetime().timestamp();
-                        let gps = find_nearest_gps(&gps_records, packet_unix_ts);
-                        pcap_writer
-                            .write_gsmtap_message(gsmtap_msg, timestamp, gps.as_ref())
-                            .await?;
-                    }
+    while let Some(maybe_msg) = reader.get_next_message().await? {
+        match maybe_msg {
+            Ok(msg) => {
+                let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
+                if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
+                    let packet_unix_ts = timestamp.to_datetime().timestamp();
+                    let gps = find_nearest_gps(&gps_records, packet_unix_ts);
+                    pcap_writer
+                        .write_gsmtap_message(gsmtap_msg, timestamp, gps.as_ref())
+                        .await?;
                 }
-                Err(e) => error!("error parsing message: {e:?}"),
             }
+            Err(e) => error!("error parsing message: {e:?}"),
         }
     }
 

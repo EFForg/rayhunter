@@ -74,7 +74,7 @@ pub struct DiagTask {
 
 enum DiagState {
     Recording {
-        qmdl_writer: QmdlWriter<File>,
+        qmdl_writer: Box<QmdlWriter<File>>,
         analysis_writer: Box<AnalysisWriter>,
     },
     Stopped,
@@ -158,7 +158,7 @@ impl DiagTask {
             DiskSpaceCheck::Failed => {}
         }
 
-        let (qmdl_file, analysis_file) = qmdl_store.new_entry(self.gps_mode).await?;
+        let (qmdl_gz_file, analysis_file) = qmdl_store.new_entry(self.gps_mode).await?;
 
         // For fixed-mode sessions, write the configured coordinates to the storage
         // immediately so the per-session GPS is stored durably and isn't affected
@@ -185,13 +185,11 @@ impl DiagTask {
                 .await
                 .map_err(RecordingStoreError::WriteFileError)?;
         }
-
         self.stop_current_recording().await;
-        let qmdl_writer = QmdlWriter::new(qmdl_file);
+        let qmdl_writer = Box::new(QmdlWriter::new(qmdl_gz_file));
         let analysis_writer = AnalysisWriter::new(analysis_file, &self.analyzer_config)
             .await
             .map_err(RecordingStoreError::WriteFileError)?;
-
         self.state = DiagState::Recording {
             qmdl_writer,
             analysis_writer: Box::new(analysis_writer),
@@ -300,13 +298,23 @@ impl DiagTask {
         let mut state = DiagState::Stopped;
         std::mem::swap(&mut self.state, &mut state);
         if let DiagState::Recording {
-            analysis_writer, ..
+            qmdl_writer,
+            analysis_writer,
+            ..
         } = state
         {
-            analysis_writer
-                .close()
-                .await
-                .expect("failed to close analysis writer");
+            match (qmdl_writer.close().await, analysis_writer.close().await) {
+                (Ok(()), Ok(())) => {}
+                (qmdl_result, analysis_result) => {
+                    if let Err(err) = qmdl_result {
+                        error!("failed to close QmdlWriter: {:?}", err);
+                    }
+                    if let Err(err) = analysis_result {
+                        error!("failed to close AnalysisWriter: {:?}", err);
+                    }
+                    panic!();
+                }
+            }
         }
     }
 
@@ -374,23 +382,22 @@ impl DiagTask {
                 self.stop(qmdl_store, Some(reason)).await;
                 return;
             }
-            debug!(
-                "total QMDL bytes written: {}, updating manifest...",
-                qmdl_writer.total_written
-            );
-            let index = qmdl_store
-                .current_entry
-                .expect("DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???");
-            if let Err(e) = qmdl_store
-                .update_entry_qmdl_size(index, qmdl_writer.total_written)
-                .await
-            {
-                let reason = format!("failed to update manifest (disk full?): {e}");
-                error!("{reason}");
-                self.stop(qmdl_store, Some(reason)).await;
-                return;
+            if let Ok(file_size) = qmdl_writer.size().await {
+                debug!(
+                    "total QMDL bytes written: {}, updating manifest...",
+                    file_size
+                );
+                let index = qmdl_store.current_entry.expect(
+                    "DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???",
+                );
+                if let Err(e) = qmdl_store.update_entry_qmdl_size(index, file_size).await {
+                    let reason = format!("failed to update manifest (disk full?): {e}");
+                    error!("{reason}");
+                    self.stop(qmdl_store, Some(reason)).await;
+                    return;
+                }
+                debug!("done!");
             }
-            debug!("done!");
 
             // Extract the latest packet timestamp from this container
             if let Some(ts) = container
@@ -407,7 +414,7 @@ impl DiagTask {
 
             let container_bytes: usize = container.messages.iter().map(|m| m.data.len()).sum();
             self.bytes_since_space_check += container_bytes;
-            let max_type = match analysis_writer.analyze(container).await {
+            let max_type = match analysis_writer.analyze_container(container).await {
                 Ok(t) => t,
                 Err(e) => {
                     warn!("failed to analyze container: {e}");

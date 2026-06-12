@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 use crate::analysis::diagnostic::DiagnosticAnalyzer;
+use crate::diag::{DiagParsingError, Message};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType};
 use crate::util::RuntimeMetadata;
 use crate::{diag::MessagesContainer, gsmtap_parser};
@@ -223,7 +224,7 @@ impl AnalysisLineNormalizer {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Default)]
 pub struct AnalysisRow {
     pub packet_timestamp: Option<DateTime<FixedOffset>>,
     pub skipped_message_reason: Option<String>,
@@ -231,6 +232,10 @@ pub struct AnalysisRow {
 }
 
 impl AnalysisRow {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.skipped_message_reason.is_none() && !self.contains_warnings()
     }
@@ -412,50 +417,51 @@ impl Harness {
         row
     }
 
+    pub fn analyze_qmdl_message(
+        &mut self,
+        maybe_qmdl_message: Result<Message, DiagParsingError>,
+    ) -> AnalysisRow {
+        let mut row = AnalysisRow::new();
+        self.packet_num += 1;
+
+        let qmdl_message = match maybe_qmdl_message {
+            Ok(msg) => msg,
+            Err(err) => {
+                row.skipped_message_reason = Some(format!("{err:?}"));
+                return row;
+            }
+        };
+        let gsmtap_message = match gsmtap_parser::parse(qmdl_message) {
+            Ok(msg) => msg,
+            Err(err) => {
+                row.skipped_message_reason = Some(format!("{err:?}"));
+                return row;
+            }
+        };
+
+        let Some((timestamp, gsmtap_msg)) = gsmtap_message else {
+            return row;
+        };
+        row.packet_timestamp = Some(timestamp.to_datetime());
+
+        let element = match InformationElement::try_from(&gsmtap_msg) {
+            Ok(element) => element,
+            Err(err) => {
+                row.skipped_message_reason = Some(format!("{err:?}"));
+                return row;
+            }
+        };
+
+        row.events = self.analyze_information_element(&element);
+        row
+    }
+
     pub fn analyze_qmdl_messages(&mut self, container: MessagesContainer) -> Vec<AnalysisRow> {
-        let mut rows = Vec::new();
-        for maybe_qmdl_message in container.messages() {
-            self.packet_num += 1;
-
-            rows.push(AnalysisRow {
-                packet_timestamp: None,
-                skipped_message_reason: None,
-                events: Vec::new(),
-            });
-            // unwrap is safe here since we just pushed a value
-            let row = rows.last_mut().unwrap();
-            let qmdl_message = match maybe_qmdl_message {
-                Ok(msg) => msg,
-                Err(err) => {
-                    row.skipped_message_reason = Some(format!("{err:?}"));
-                    continue;
-                }
-            };
-
-            let gsmtap_message = match gsmtap_parser::parse(qmdl_message) {
-                Ok(msg) => msg,
-                Err(err) => {
-                    row.skipped_message_reason = Some(format!("{err:?}"));
-                    continue;
-                }
-            };
-
-            let Some((timestamp, gsmtap_msg)) = gsmtap_message else {
-                continue;
-            };
-            row.packet_timestamp = Some(timestamp.to_datetime());
-
-            let element = match InformationElement::try_from(&gsmtap_msg) {
-                Ok(element) => element,
-                Err(err) => {
-                    row.skipped_message_reason = Some(format!("{err:?}"));
-                    continue;
-                }
-            };
-
-            row.events = self.analyze_information_element(&element);
-        }
-        rows
+        container
+            .messages()
+            .drain(..)
+            .map(|maybe_message| self.analyze_qmdl_message(maybe_message))
+            .collect()
     }
 
     fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
