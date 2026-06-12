@@ -30,7 +30,8 @@
     let current_entry: ManifestEntry | undefined = $state(undefined);
     let system_stats: SystemStats | undefined = $state(undefined);
     let update_error: string | undefined = $state(undefined);
-    let logview_shown: boolean = $state(false);
+    let rayhunter_logview_shown: boolean = $state(false);
+    let wifi_logview_shown: boolean = $state(false);
     let config_shown: boolean = $state(false);
     let gps_data: GpsData | null = $state(null);
     let gps_mode: GpsMode = $state(GpsMode.Disabled);
@@ -78,7 +79,8 @@
     });
 </script>
 
-<LogView bind:shown={logview_shown} />
+<LogView bind:shown={rayhunter_logview_shown} log={'rayhunter.log'} title={'Rayhunter Logs'} />
+<LogView bind:shown={wifi_logview_shown} log={'wifi.log'} title={'WiFi Logs'} />
 <ConfigForm bind:shown={config_shown} />
 <div
     class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow-sm flex flex-row justify-between items-center"
@@ -86,8 +88,52 @@
     <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
     <img src="/rayhunter_text.png" alt="" class="h-10 xl:h-12" />
     <div class="flex flex-row gap-4">
-        <button onclick={() => (logview_shown = true)} class="flex flex-row gap-1 group">
-            <span class="hidden text-white group-hover:text-gray-400 lg:flex">Logs</span>
+        <button onclick={() => (rayhunter_logview_shown = true)} class="flex flex-row gap-1 group">
+            <span class="hidden text-white group-hover:text-gray-400 lg:flex">Rayhunter Logs</span>
+            <svg
+                class="w-6 h-6 text-white group-hover:text-gray-400"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    d="M10 14H3"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                />
+                <path
+                    d="M10 18H3"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                />
+                <path
+                    d="M14 15L17.5 18L21 15"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+                <path
+                    d="M3 6L13.5 6M20 6L17.75 6"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                />
+                <path
+                    d="M20 10L9.5 10M3 10H5.25"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                />
+            </svg>
+        </button>
+        <button onclick={() => (wifi_logview_shown = true)} class="flex flex-row gap-1 group">
+            <span class="hidden text-white group-hover:text-gray-400 lg:flex">WiFi Logs</span>
             <svg
                 class="w-6 h-6 text-white group-hover:text-gray-400"
                 aria-hidden="true"

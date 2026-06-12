@@ -226,10 +226,6 @@ pub fn run_analysis_thread(
                     status.finished.push(name);
                 }
                 Some(AnalysisCtrlMessage::WifiNetworksDetected(networks)) => {
-                    debug!(
-                        "Networks detected, configured OUIs: {:?}",
-                        analyzer_config.wifi_ouis.join(",")
-                    );
                     if !analyzer_config.wifi_ouis.is_empty() {
                         let mut harness = Harness::new_with_config(&analyzer_config);
                         let mut events = harness
