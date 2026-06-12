@@ -75,8 +75,7 @@ You can read our [full policy](https://www.eff.org/about/opportunities/volunteer
 This one is for maintainers of Rayhunter.
 
 1. Make a PR changing the versions in `Cargo.toml` and other files.
-   This could be automated better but right now it's manual. You can do this easily with sed:
-   `sed -i "" -E 's/x.x.x/y.y.y/g' */Cargo.toml installer-gui/src-tauri/Cargo.toml`
+   This can be done by running `scripts/set-versions.sh VERSION_NUM`.
 
 2. Merge the PR, make a tag, and push the tag to GitHub. Pushing the tag should
    trigger the [release workflow](https://github.com/EFForg/rayhunter/actions/workflows/release.yml).
