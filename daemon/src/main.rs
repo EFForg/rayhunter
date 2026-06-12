@@ -69,7 +69,7 @@ fn get_router() -> AppRouter {
         .route("/api/system-stats", get(get_system_stats))
         .route("/api/update-status", get(get_update_status))
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
-        .route("/api/log", get(get_log))
+        .route("/api/log/{name}", get(get_log))
         .route("/api/start-recording", post(start_recording))
         .route("/api/stop-recording", post(stop_recording))
         .route("/api/delete-recording/{name}", post(delete_recording))
