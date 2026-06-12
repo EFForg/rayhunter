@@ -1,8 +1,9 @@
-# To use: navigate on Github to Actions, select "Release rayhunter" on the left, click "Run workflow" > "Run workflow" on the right.
-# https://github.com/EFForg/rayhunter/actions/workflows/release.yml
+# To learn how to use this workflow, please read CONTRIBUTING.md.
 name: Release rayhunter
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
   GH_TOKEN: ${{ github.token }}
