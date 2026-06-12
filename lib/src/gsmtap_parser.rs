@@ -1,5 +1,5 @@
 use crate::diag::Message;
-use crate::diag::diaglog::{Timestamp, LogBody, Nas4GMessageDirection};
+use crate::diag::diaglog::{LogBody, Nas4GMessageDirection, Timestamp};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
 
 use log::debug;
