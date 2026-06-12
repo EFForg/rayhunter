@@ -30,9 +30,11 @@ use crate::output::eprintln;
 static CONFIG_TOML: &str = include_str!("../../dist/config.toml.in");
 static RAYHUNTER_DAEMON_INIT: &str = include_str!("../../dist/scripts/rayhunter_daemon");
 
+// We mark this as public so it can be used by installer-gui to programmatically introspect the
+// installer's options.
 #[derive(Parser, Debug)]
 #[command(version, about)]
-struct Args {
+pub struct Args {
     #[command(subcommand)]
     command: Command,
 }
