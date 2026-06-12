@@ -78,8 +78,7 @@ This one is for maintainers of Rayhunter.
    This could be automated better but right now it's manual. You can do this easily with sed:
    `sed -i "" -E 's/x.x.x/y.y.y/g' */Cargo.toml installer-gui/src-tauri/Cargo.toml`
 
-2. Merge PR and make a tag.
+2. Merge the PR, make a tag, and push the tag to GitHub. Pushing the tag should
+   trigger the [release workflow](https://github.com/EFForg/rayhunter/actions/workflows/release.yml).
 
-3. [Run release workflow.](https://github.com/EFForg/rayhunter/actions/workflows/release.yml)
-
-4. Write changelog, edit it into the release, announce on mattermost.
+3. Write changelog, edit it into the release, announce on mattermost.
