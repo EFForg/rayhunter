@@ -44,11 +44,12 @@ jobs:
 
           # We rebuild everything if any of these conditions hold:
           # * We are on main
+          # * The run was triggered by a tag
           # * Changes are made to github workflows
           # * A cargo-workspace file changed (lockfile or .cargo), as that could affect any crate anywhere
           # * Something from the script or dist folder changed (could be gated to installer, but some scripts like build_wpa_supplicant are part of the build process)
           # * #build-all was used by the user to explicitly ask for this
-          if [ ${GITHUB_REF} = 'refs/heads/main' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/ -e ^.cargo -e '^Cargo\.lock$' -e '^Cargo\.toml$' -e ^dist/ -e ^scripts/ || git log -1 --format='%s %b' | grep -qF '#build-all'
+          if [ ${GITHUB_REF} = 'refs/heads/main' ] || [ ${GITHUB_REF_TYPE} = 'tag' ] || git diff --name-only $lcommit..HEAD | grep -qe ^.github/workflows/ -e ^.cargo -e '^Cargo\.lock$' -e '^Cargo\.toml$' -e ^dist/ -e ^scripts/ || git log -1 --format='%s %b' | grep -qF '#build-all'
           then
             echo "building everything"
             echo code_count=forced >> "$GITHUB_OUTPUT"
