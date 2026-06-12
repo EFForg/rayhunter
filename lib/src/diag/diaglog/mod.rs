@@ -3,8 +3,11 @@
 use chrono::{DateTime, FixedOffset};
 use deku::prelude::*;
 
+pub mod mac;
 pub mod measurement;
 pub mod rrc;
+#[cfg(test)]
+mod test_util;
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(ctx = "log_type: u16, hdr_len: u16", id = "log_type")]

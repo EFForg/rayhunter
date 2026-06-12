@@ -198,16 +198,8 @@ mod test {
     use super::*;
     use crate::diag::diaglog::LogBody;
     use crate::log_codes::{LOG_LTE_ML1_NEIGHBOR_MEAS, LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C};
-    use std::io::{Cursor, Seek};
-
-    fn unhexlify(hexlified_bytes: &str) -> (usize, Reader<Cursor<Vec<u8>>>) {
-        let byte_len = hexlified_bytes.len() / 2;
-        let bytes = (0..hexlified_bytes.len())
-            .step_by(2)
-            .map(|i| u8::from_str_radix(&hexlified_bytes[i..i+2], 16).unwrap())
-            .collect();
-        (byte_len, Reader::new(Cursor::new(bytes)))
-    }
+    use super::super::test_util::unhexlify;
+    use std::io::Seek;
 
     fn parse_ncell_measurements(hexlified_bytes: &str) -> (u8, neighbor_cells::Measurements) {
         let (total_size, mut reader) = unhexlify(hexlified_bytes);
