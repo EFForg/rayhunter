@@ -33,6 +33,7 @@ pub struct AnalyzerConfig {
     pub imsi_requested: bool,
     pub wifi_oui_analyzer: bool,
     pub wifi_ouis: Vec<String>,
+    pub wifi_log_path: String,
 }
 
 impl Default for AnalyzerConfig {
@@ -48,11 +49,13 @@ impl Default for AnalyzerConfig {
             test_analyzer: false,
             wifi_oui_analyzer: true,
             wifi_ouis: Vec::new(),
+            wifi_log_path: WIFI_LOG_PATH.to_string(),
         }
     }
 }
 
 pub const REPORT_VERSION: u32 = 2;
+const WIFI_LOG_PATH: &str = "/data/rayhunter/wifi.log";
 
 /// The severity level of an event.
 ///
@@ -375,7 +378,10 @@ impl Harness {
         }
 
         if analyzer_config.wifi_oui_analyzer {
-            harness.add_analyzer(Box::new(WifiOUIAnalyzer::new(&analyzer_config.wifi_ouis)));
+            harness.add_analyzer(Box::new(WifiOUIAnalyzer::new(
+                &analyzer_config.wifi_ouis,
+                analyzer_config.wifi_log_path.clone(),
+            )));
         }
 
         harness
@@ -573,13 +579,15 @@ mod tests {
     #[test]
     fn test_analyze_wifi_ouis() {
         let mut analyzer_config = AnalyzerConfig::default();
+
         analyzer_config.wifi_oui_analyzer = true;
         analyzer_config.wifi_ouis = vec!["AA:BB:CC".to_string()];
+        analyzer_config.wifi_log_path = "/tmp/wifi.log".to_string();
         let mut harness = Harness::new_with_config(&analyzer_config);
         let events = harness.analyze_wifi_ouis(vec!["00:11:22:33:44:55".to_string()]);
         assert!(events.is_empty());
         let events = harness.analyze_wifi_ouis(vec!["AA:BB:CC:33:44:55".to_string()]);
         assert_eq!(1, events.len());
-        assert_eq!(EventType::High, events[0].event_type);
+        assert_eq!(EventType::Informational, events[0].event_type);
     }
 }
