@@ -116,6 +116,7 @@ pub fn get_analyzers_metadata() -> Vec<AnalyzerMetadata> {
 }
 
 pub const REPORT_VERSION: u32 = 2;
+const WIFI_LOG_PATH: &str = "/data/rayhunter/wifi.log";
 
 /// The severity level of an event.
 ///

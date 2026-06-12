@@ -3308,7 +3308,7 @@ dependencies = [
  "anyhow",
  "arc-swap",
  "chrono",
- "derive_more 2.1.1",
+ "derive_more",
  "fnv",
  "humantime",
  "libc",
@@ -3316,7 +3316,7 @@ dependencies = [
  "log-mdc",
  "mock_instant",
  "parking_lot",
- "rand 0.9.1",
+ "rand 0.9.5",
  "serde",
  "serde-value",
  "serde_json",
@@ -3469,6 +3469,12 @@ dependencies = [
  "serialport",
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "mock_instant"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bb517913cfcfb9eeda59f36020269075a152701a01606c612f547e4890be399"
 
 [[package]]
 name = "muda"

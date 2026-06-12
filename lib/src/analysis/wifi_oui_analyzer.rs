@@ -19,17 +19,18 @@ pub struct WifiOUIAnalyzer {
 }
 
 impl WifiOUIAnalyzer {
-    pub fn new(ouis: &[String]) -> Self {
+    pub fn new(ouis: &[String], logfile: String) -> Self {
+        let logger = Self::init_logger(logfile);
         Self {
             wifi_ouis: ouis.to_vec(),
-            logger: Box::new(Self::init_logger()),
+            logger: Box::new(logger),
         }
     }
 
-    fn init_logger() -> impl Log {
+    fn init_logger(logfile: String) -> impl Log {
         let logfile = FileAppender::builder()
             .encoder(Box::new(PatternEncoder::new("{l} - {m}\n")))
-            .build("/data/rayhunter/wifi.log")
+            .build(logfile)
             .expect("Error creating FileAppender for wifi logs");
 
         let config = Config::builder()
