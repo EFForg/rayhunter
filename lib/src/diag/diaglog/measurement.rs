@@ -2,8 +2,8 @@
 //! much entirely based on Shinjo Park's work in scat, since we couldn't find
 //! any other documentation for the logs' structure.
 
-use deku::prelude::*;
 use deku::ctx::Order;
+use deku::prelude::*;
 
 fn decode_rsrp(rsrp: u16) -> f32 {
     rsrp as f32 / 16.0 - 180.0
@@ -141,7 +141,7 @@ pub mod neighbor_cells {
     pub struct Measurements {
         pub header: MeasurementsHeader,
         #[deku(count = "header.get_n_cells()")]
-        pub cells: Vec<MeasurementsCell>
+        pub cells: Vec<MeasurementsCell>,
     }
 
     impl Measurements {
@@ -152,7 +152,6 @@ pub mod neighbor_cells {
             }
         }
     }
-
 
     #[derive(Clone, Debug, DekuRead, DekuWrite, PartialEq)]
     #[deku(bit_order = "lsb")]
@@ -195,10 +194,10 @@ pub mod neighbor_cells {
 
 #[cfg(test)]
 mod test {
+    use super::super::test_util::unhexlify;
     use super::*;
     use crate::diag::diaglog::LogBody;
     use crate::log_codes::{LOG_LTE_ML1_NEIGHBOR_MEAS, LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C};
-    use super::super::test_util::unhexlify;
     use std::io::Seek;
 
     fn parse_ncell_measurements(hexlified_bytes: &str) -> (u8, neighbor_cells::Measurements) {
@@ -208,14 +207,18 @@ mod test {
                 if !reader.end() {
                     let leftover_bits = reader.rest();
                     let leftover_bytes = total_size - reader.stream_position().unwrap() as usize;
-                    panic!("failed to read entire buffer ({} bytes, {} bits left)", leftover_bytes, leftover_bits.len());
+                    panic!(
+                        "failed to read entire buffer ({} bytes, {} bits left)",
+                        leftover_bytes,
+                        leftover_bits.len()
+                    );
                 }
                 let pkt_version = match data.header {
                     neighbor_cells::MeasurementsHeader::V4 { .. } => 4,
                     neighbor_cells::MeasurementsHeader::V5 { .. } => 5,
                 };
                 (pkt_version, data)
-            },
+            }
             Ok(x) => panic!("expected MeasurementAndEvaluation, but parsed {:?}", x),
             Err(x) => panic!("failed to parse MeasurementAndEvaluation {:?}", x),
         }
@@ -223,19 +226,26 @@ mod test {
 
     fn parse_meas_eval(hexlified_bytes: &str) -> (u8, serving_cell::MeasurementAndEvaluation) {
         let (total_size, mut reader) = unhexlify(hexlified_bytes);
-        match LogBody::from_reader_with_ctx(&mut reader, (LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C as u16, 0)) {
+        match LogBody::from_reader_with_ctx(
+            &mut reader,
+            (LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C as u16, 0),
+        ) {
             Ok(LogBody::LteMl1ServingCellMeasurementAndEvaluation { data }) => {
                 if !reader.end() {
                     let leftover_bits = reader.rest();
                     let leftover_bytes = total_size - reader.stream_position().unwrap() as usize;
-                    panic!("failed to read entire buffer ({} bytes, {} bits left)", leftover_bytes, leftover_bits.len());
+                    panic!(
+                        "failed to read entire buffer ({} bytes, {} bits left)",
+                        leftover_bytes,
+                        leftover_bits.len()
+                    );
                 }
                 let pkt_version = match data.header {
                     serving_cell::MeasurementAndEvaluationHeader::V4 { .. } => 4,
                     serving_cell::MeasurementAndEvaluationHeader::V5 { .. } => 5,
                 };
                 (pkt_version, data)
-            },
+            }
             Ok(x) => panic!("expected MeasurementAndEvaluation, but parsed {:?}", x),
             Err(x) => panic!("failed to parse MeasurementAndEvaluation {:?}", x),
         }
@@ -248,7 +258,7 @@ mod test {
         earfcn: u32,
         rsrp: f32,
         rsrq: f32,
-        rssi: f32
+        rssi: f32,
     ) {
         let (parsed_pkt_version, data) = parse_meas_eval(hexlified_bytes);
         assert_eq!(parsed_pkt_version, pkt_version);
@@ -270,7 +280,7 @@ mod test {
             6300,
             -101.25,
             -14.0625,
-            -66.625
+            -66.625,
         );
         scell_meas_and_eval_case(
             "05010000160d0000d40e00004bb444005444450039e514133149070048adfe019f310100a23f0000",
@@ -327,17 +337,13 @@ mod test {
             "040100009C1847008348E44DDEA44C00CAB4CC32B6D8420300000000FF773301FF77330122020100",
             4,
             6300,
-            vec![
-                (131, -102.125, -75.75, -17.3125),
-            ]
+            vec![(131, -102.125, -75.75, -17.3125)],
         );
-         ncell_meas_case(
-             "05010000160d0000480000006cea413bb4433b00b4f3cc33cf3c130200000000ffefc00fffefc00f45081600",
-             5,
-             3350,
-             vec![
-                 (108, -120.75, -94.6875, -17.0625),
-             ]
-         );
+        ncell_meas_case(
+            "05010000160d0000480000006cea413bb4433b00b4f3cc33cf3c130200000000ffefc00fffefc00f45081600",
+            5,
+            3350,
+            vec![(108, -120.75, -94.6875, -17.0625)],
+        );
     }
 }
