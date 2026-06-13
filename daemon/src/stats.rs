@@ -7,11 +7,11 @@ use crate::server::ServerState;
 use crate::update::UpdateStatus;
 use crate::{battery::BatteryState, qmdl_store::ManifestEntry};
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::Json;
 use log::error;
-use rayhunter::{util::RuntimeMetadata, Device};
+use rayhunter::{Device, util::RuntimeMetadata};
 use serde::Serialize;
 use tokio::process::Command;
 

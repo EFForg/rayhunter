@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
-use log::{debug, info, LevelFilter, Log};
+use log::{LevelFilter, Log, debug, info};
 use log4rs::{
+    Config, Logger,
     append::file::FileAppender,
     config::{Appender, Root},
     encode::pattern::PatternEncoder,
-    Config, Logger,
 };
 
 use crate::analysis::{
