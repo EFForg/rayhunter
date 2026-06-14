@@ -79,8 +79,8 @@
     });
 </script>
 
-<LogView bind:shown={rayhunter_logview_shown} log={'rayhunter.log'} title={'Rayhunter Logs'} />
-<LogView bind:shown={wifi_logview_shown} log={'wifi.log'} title={'WiFi Logs'} />
+<LogView bind:shown={rayhunter_logview_shown} log="rayhunter.log" title="Rayhunter Logs" />
+<LogView bind:shown={wifi_logview_shown} log="wifi.log" title="WiFi Logs" />
 <ConfigForm bind:shown={config_shown} />
 <div
     class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow-sm flex flex-row justify-between items-center"
