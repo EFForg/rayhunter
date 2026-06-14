@@ -247,7 +247,7 @@ pub async fn get_update_status(State(state): State<Arc<ServerState>>) -> Json<Up
     ),
     params(
         ("log_name" = String, Path, description = "Name of log to return")
-    )
+    ),
     summary = "Display log",
     description = "Download the current device log in UTF-8 plaintext."
 ))]
