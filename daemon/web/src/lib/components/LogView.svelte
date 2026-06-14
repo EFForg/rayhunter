@@ -2,7 +2,11 @@
     import { get_logs } from '$lib/utils.svelte';
     import Modal from './Modal.svelte';
 
-    let { shown = $bindable(), log, title }: { shown: boolean, log: string, title: string } = $props();
+    let {
+        shown = $bindable(),
+        log,
+        title,
+    }: { shown: boolean; log: string; title: string } = $props();
     let content: string | undefined = $state(undefined);
 
     $effect(() => {
@@ -21,7 +25,7 @@
     });
 </script>
 
-<Modal bind:shown title={title}>
+<Modal bind:shown {title}>
     <div class="bg-gray-100 border border-gray-100 rounded-md overflow-scroll">
         <pre class="m-2">{content}</pre>
     </div>
