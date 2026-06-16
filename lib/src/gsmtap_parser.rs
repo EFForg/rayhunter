@@ -135,7 +135,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 }
             };
             let mut header = GsmtapHeader::new(gsmtap_type);
-            header.arfcn = packet.get_earfcn().try_into().unwrap_or(0);
+            header.arfcn = (packet.get_earfcn() as u16) & 0x3FFF;
             header.frame_number = packet.get_sfn();
             header.subslot = packet.get_subfn();
             Ok(Some(GsmtapMessage {
@@ -156,5 +156,25 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
             error!("gsmtap_sink: ignoring unhandled log type: {value:?}");
             Ok(None)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use deku::DekuContainerWrite;
+
+    #[test]
+    fn test_arfcn_exceeding_14_bits_does_not_panic() {
+        let mut header = GsmtapHeader::new(GsmtapType::LteRrc(LteRrcSubtype::DlDcch));
+        // EARFCN 54540 (band 46) exceeds 14-bit max of 16383
+        let large_earfcn: u32 = 54540;
+        header.arfcn = (large_earfcn as u16) & 0x3FFF;
+        let msg = GsmtapMessage {
+            header,
+            payload: vec![0x00],
+        };
+        // This would panic before the fix with "bit size of input is larger than bit requested size"
+        assert!(msg.to_bytes().is_ok());
     }
 }
