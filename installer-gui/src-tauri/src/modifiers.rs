@@ -34,7 +34,8 @@ pub struct SubcommandModifier<'a> {
 /// Provides "modifiers" or additional metadata about each subcommand.
 ///
 /// The order of the subcommands in the returned vector is the same order that subcommands will be
-/// shown in the GUI.
+/// shown in the GUI. Similarly, the order of the elements in each arg_modifiers field controls the
+/// order that a subcommand's options will be shown in the GUI.
 pub fn subcommand_modifiers() -> Vec<SubcommandModifier<'static>> {
     let admin_ip = ArgumentModifier {
         clap_id: "admin_ip",
