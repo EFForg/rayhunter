@@ -29,7 +29,7 @@ impl WifiOUIAnalyzer {
 
     fn init_logger(logfile: String) -> impl Log {
         let logfile = FileAppender::builder()
-            .encoder(Box::new(PatternEncoder::new("{l} - {m}\n")))
+            .encoder(Box::new(PatternEncoder::new("[{d(%Y-%m-%dT%H:%M:%SZ)(utc)} {l}  {M}] {m}\n")))
             .build(logfile)
             .expect("Error creating FileAppender for wifi logs");
 
