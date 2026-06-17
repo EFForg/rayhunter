@@ -590,4 +590,19 @@ mod tests {
         assert_eq!(1, events.len());
         assert_eq!(EventType::Informational, events[0].event_type);
     }
+
+    #[test]
+    fn test_analyze_nonstandard_wifi_ouis() {
+        let mut analyzer_config = AnalyzerConfig::default();
+
+        analyzer_config.wifi_oui_analyzer = true;
+        analyzer_config.wifi_ouis = vec!["70:b3:d5:7c:b".to_string()];
+        analyzer_config.wifi_log_path = "/tmp/wifi.log".to_string();
+        let mut harness = Harness::new_with_config(&analyzer_config);
+        let events = harness.analyze_wifi_ouis(vec!["00:11:22:33:44:55".to_string()]);
+        assert!(events.is_empty());
+        let events = harness.analyze_wifi_ouis(vec!["70:B3:D5:7C:BA:6E".to_string()]);
+        assert_eq!(1, events.len());
+        assert_eq!(EventType::Informational, events[0].event_type);
+    }
 }
