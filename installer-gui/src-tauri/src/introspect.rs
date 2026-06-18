@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use anyhow::Context;
+use log::error;
 use serde::Serialize;
 
 use crate::modifiers;
@@ -88,12 +89,17 @@ impl Subcommand<'_> {
                 .arg_modifiers
                 .iter()
                 .filter_map(|arg_modifier| {
-                    argument_map
-                        .get(arg_modifier.clap_id)
-                        // if Argument::try_new fails, the argument is silently dropped from the
-                        // GUI, however, tests should prevent this from happening and we could add
-                        // logging messages about this in the future if desired
-                        .and_then(|arg| Argument::try_new(arg, arg_modifier).ok())
+                    let Some(arg) = argument_map.get(arg_modifier.clap_id) else {
+                        error!("failed to get argument with id {arg_modifier.clap_id}");
+                        return None;
+                    };
+                    match Argument::try_new(arg, arg_modifier) {
+                        Ok(modified_arg) => Some(modified_arg),
+                        Err(err) => {
+                            error!("failed to modify arg: {err:?}");
+                            None
+                        }
+                    }
                 })
                 .collect(),
             command: modifier.command,
