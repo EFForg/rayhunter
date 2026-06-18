@@ -20,6 +20,8 @@ pub mod log_codes;
 pub mod pcap;
 pub mod qmdl;
 pub mod util;
+#[cfg(test)]
+mod test_util;
 
 // bin/check.rs may target windows and does not use this mod
 #[cfg(target_family = "unix")]

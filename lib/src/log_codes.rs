@@ -37,6 +37,8 @@ pub const LOG_LTE_ML1_SERVING_CELL_MEAS_RESPONSE: u32 = 0xb193;
 pub const LOG_LTE_ML1_NEIGHBOR_MEAS: u32 = 0xb180;
 // Qualcomm MAC layer RACH response log: contains Timing Advance from Random Access Response
 pub const LOG_LTE_MAC_RACH_RESPONSE_C: u32 = 0xb062;
+pub const LOG_LTE_MAC_DL: u32 = 0xb063;
+pub const LOG_LTE_MAC_UL: u32 = 0xb064;
 pub const LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C: u32 = 0xb0e2;
 pub const LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C: u32 = 0xb0e3;
 pub const LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C: u32 = 0xb0ec;

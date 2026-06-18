@@ -194,7 +194,7 @@ pub mod neighbor_cells {
 
 #[cfg(test)]
 mod test {
-    use super::super::test_util::unhexlify;
+    use crate::test_util::unhexlify;
     use super::*;
     use crate::diag::diaglog::LogBody;
     use crate::log_codes::{LOG_LTE_ML1_NEIGHBOR_MEAS, LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C};
