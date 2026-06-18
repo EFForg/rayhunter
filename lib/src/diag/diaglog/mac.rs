@@ -41,6 +41,7 @@ pub mod rach {
         #[deku(ctx = "version")]
         pub msg1: Msg1,
         pub msg2: Msg2,
+        #[deku(ctx = "version")]
         pub msg3: Msg3,
         #[deku(cond = "version == 0x31 || version == 0x32")]
         pub additional_info: Option<AdditionalInfo>,
@@ -106,6 +107,16 @@ pub mod rach {
         },
     }
 
+    impl Msg1 {
+        pub fn get_preamble_index(&self) -> u8 {
+            match self {
+                Msg1::V2 { preamble_index, .. } => *preamble_index,
+                Msg1::V3Or31 { preamble_index, .. } => *preamble_index,
+                Msg1::V32 { preamble_index, .. } => *preamble_index,
+            }
+        }
+    }
+
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
     pub struct Msg2 {
         pub backoff: u16,
@@ -115,11 +126,37 @@ pub mod rach {
     }
 
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
+    #[deku(ctx = "version: u8")]
     pub struct Msg3 {
-        pub grant_raw: u32,
-        pub grant: u16,
+        #[deku(ctx = "version")]
+        pub grant: Msg3Grant,
+        pub unk_grant: u16,
         pub harq_id: u8,
         pub mac_pdu: [u8; 10],
+    }
+
+    impl Msg3 {
+        pub fn get_grant(&self) -> u32 {
+            match &self.grant {
+                Msg3Grant::V1 { grant } => *grant & 0xfffff,
+                Msg3Grant::V32 { grant } => *grant & 0xfffff,
+            }
+        }
+    }
+
+    #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
+    #[deku(ctx = "version: u8", id = "version")]
+    pub enum Msg3Grant {
+        #[deku(id_pat = "0..0x32")]
+        V1 {
+            #[deku(endian = "little")]
+            grant: u32,
+        },
+        #[deku(id_pat = "0x32..")]
+        V32 {
+            #[deku(endian = "big")]
+            grant: u32,
+        }
     }
 
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
@@ -166,12 +203,24 @@ pub mod rach {
 }
 
 #[cfg(test)]
-mod test {
-    use super::super::test_util::unhexlify;
+pub(crate) mod test {
+    use crate::{diag::diaglog::mac::rach::Msg3Grant, test_util::unhexlify};
     use super::*;
     use crate::diag::diaglog::mac::rach::{AdditionalInfo, AttemptHeader, Msg1, Msg2, Msg3};
 
     use std::io::Seek;
+
+    pub fn mac_rach_test_packets_from_scat() -> Vec<Packet> {
+        // test data from SCAT unit tests: https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/tests/test_diagltelogparser.py#L129
+        vec![
+            parse_rach_packet("0101a06906022400010001071BFF98FF000001231A0400181C010007000600465C80BD0648000000"),
+            parse_rach_packet("0101a0690603280001000100010718ffa4ff000001c6610b00b4a2000012000120061f423f8d95075800"),
+            parse_rach_packet("0101739e063134000100010000033f0098ff0000013c6b070058ac010007000000468f47e2d446000000644b0000180001000000d5040000"),
+            parse_rach_packet("01010000063134000100010001070aff98ff0000011c48070018e2000007000000523b7dfd69b6000000f5540000ff0001000000d6040000"),
+            parse_rach_packet("01010000063238000100010000032900a4ffeb000000000195b603000000a0b412000420061f425dc9be41b800885e000017000100000065050000"),
+            parse_rach_packet("010100000632380001000100010713ffa0ffeb0000000001ad5a0500000146b412000420061f425dc9be41b400665300001800010000001a050000"),
+        ]
+    }
 
     fn parse_rach_packet(bytes_str: &str) -> Packet {
         let (total_size, mut reader) = unhexlify(bytes_str);
@@ -184,14 +233,13 @@ mod test {
     }
 
     fn assert_rach_subpacket(
-        hexstring: &str,
+        packet: &Packet,
         header: AttemptHeader,
         msg1: Option<Msg1>,
         msg2: Option<Msg2>,
         msg3: Option<Msg3>,
         additional_info: Option<AdditionalInfo>,
     ) {
-        let packet = parse_rach_packet(hexstring);
         assert_eq!(packet.version, 0x01);
         assert_eq!(packet.num_subpackets, 1);
         assert_eq!(packet.subpackets.len(), 1);
@@ -215,8 +263,9 @@ mod test {
          * the changes in this commit for more info:
          * https://github.com/wgreenberg/scat/commit/adb21575832b4f3b30c8f2aaca9ee843ef74f38b
          */
+         let test_packets = mac_rach_test_packets_from_scat();
         assert_rach_subpacket(
-            "0101a06906022400010001071BFF98FF000001231A0400181C010007000600465C80BD0648000000",
+            &test_packets[0],
             rach::AttemptHeader::V2 {
                 num_attempt: 1,
                 rach_result: 0,
@@ -235,8 +284,8 @@ mod test {
                 ta: 4,
             }),
             Some(Msg3 {
-                grant_raw: 72728,
-                grant: 7,
+                grant: Msg3Grant::V1 { grant: 72728 },
+                unk_grant: 7,
                 harq_id: 6,
                 mac_pdu: [0x00, 0x46, 0x5c, 0x80, 0xbd, 0x06, 0x48, 0x00, 0x00, 0x00],
             }),
@@ -244,7 +293,7 @@ mod test {
         );
 
         assert_rach_subpacket(
-            "0101a0690603280001000100010718ffa4ff000001c6610b00b4a2000012000120061f423f8d95075800",
+            &test_packets[1],
             rach::AttemptHeader::V3 {
                 sub_id: 1,
                 cell_id: 0,
@@ -265,8 +314,8 @@ mod test {
                 ta: 11,
             }),
             Some(Msg3 {
-                grant_raw: 41652,
-                grant: 18,
+                grant: Msg3Grant::V1 { grant: 41652 },
+                unk_grant: 18,
                 harq_id: 1,
                 mac_pdu: [0x20, 0x06, 0x1f, 0x42, 0x3f, 0x8d, 0x95, 0x07, 0x58, 0x00],
             }),
@@ -274,7 +323,7 @@ mod test {
         );
 
         assert_rach_subpacket(
-            "0101739e063134000100010000033f0098ff0000013c6b070058ac010007000000468f47e2d446000000644b0000180001000000d5040000",
+            &test_packets[2],
             rach::AttemptHeader::V3 {
                 sub_id: 1,
                 cell_id: 0,
@@ -305,7 +354,7 @@ mod test {
         );
 
         assert_rach_subpacket(
-            "01010000063134000100010001070aff98ff0000011c48070018e2000007000000523b7dfd69b6000000f5540000ff0001000000d6040000",
+            &test_packets[3],
             AttemptHeader::V3 {
                 sub_id: 1,
                 cell_id: 0,
@@ -326,8 +375,8 @@ mod test {
                 ta: 7,
             }),
             Some(Msg3 {
-                grant_raw: 57880,
-                grant: 7,
+                grant: Msg3Grant::V1 { grant: 57880 },
+                unk_grant: 7,
                 harq_id: 0,
                 mac_pdu: [0x00, 0x52, 0x3b, 0x7d, 0xfd, 0x69, 0xb6, 0x00, 0x00, 0x00],
             }),
@@ -341,7 +390,7 @@ mod test {
         );
 
         assert_rach_subpacket(
-            "01010000063238000100010000032900a4ffeb000000000195b603000000a0b412000420061f425dc9be41b800885e000017000100000065050000",
+            &test_packets[4],
             AttemptHeader::V3 {
                 sub_id: 1,
                 cell_id: 0,
@@ -374,7 +423,7 @@ mod test {
         );
 
         assert_rach_subpacket(
-            "010100000632380001000100010713ffa0ffeb0000000001ad5a0500000146b412000420061f425dc9be41b400665300001800010000001a050000",
+            &test_packets[5],
             AttemptHeader::V3 {
                 sub_id: 1,
                 cell_id: 0,
@@ -397,8 +446,8 @@ mod test {
                 ta: 5,
             }),
             Some(Msg3 {
-                grant_raw: 3024486656,
-                grant: 18,
+                grant: Msg3Grant::V32 { grant: 83636 },
+                unk_grant: 18,
                 harq_id: 4,
                 mac_pdu: [0x20, 0x06, 0x1f, 0x42, 0x5d, 0xc9, 0xbe, 0x41, 0xb4, 0x00],
             }),

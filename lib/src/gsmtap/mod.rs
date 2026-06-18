@@ -4,6 +4,7 @@ use deku::prelude::*;
 use num_enum::TryFromPrimitive;
 
 pub mod parser;
+mod mac;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum GsmtapType {
