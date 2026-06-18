@@ -55,9 +55,6 @@ impl Argument<'_> {
         argument: &'a clap::Arg,
         modifier: &modifiers::ArgumentModifier<'static>,
     ) -> anyhow::Result<Argument<'a>> {
-        // if an argument doesn't have the data we need, it's silently dropped from the GUI, however,
-        // tests should prevent this from happening and we could add logging messages about this in
-        // the future if desired
         let partial_flag = argument.get_long().with_context(|| {
             format!(
                 "Missing long form command line flag for {}",
@@ -93,6 +90,9 @@ impl Subcommand<'_> {
                 .filter_map(|arg_modifier| {
                     argument_map
                         .get(arg_modifier.clap_id)
+                        // if Argument::try_new fails, the argument is silently dropped from the
+                        // GUI, however, tests should prevent this from happening and we could add
+                        // logging messages about this in the future if desired
                         .and_then(|arg| Argument::try_new(arg, arg_modifier).ok())
                 })
                 .collect(),
