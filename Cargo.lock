@@ -2949,6 +2949,7 @@ dependencies = [
  "anyhow",
  "clap",
  "installer",
+ "log",
  "serde",
  "serde_json",
  "shlex",
