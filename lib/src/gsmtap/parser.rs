@@ -170,16 +170,22 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
         }
         LogBody::LteMacRachResponse { packet } => {
             if packet.subpackets.len() > 1 {
-                warn!("expected 1 MAC subpacket for LogBody::LteMacRachResponse, but got {}! ignoring all but the first", packet.subpackets.len());
+                warn!(
+                    "expected 1 MAC subpacket for LogBody::LteMacRachResponse, but got {}! ignoring all but the first",
+                    packet.subpackets.len()
+                );
             }
             let Some(subpacket) = packet.subpackets.get(0) else {
-                return Err(GsmtapParserError::InvalidLteMacRachResponse(format!("no subpackets")));
+                return Err(GsmtapParserError::InvalidLteMacRachResponse(format!(
+                    "no subpackets"
+                )));
             };
-            mac_subpacket_to_gsmtap(&subpacket.body)
-                .map_err(|err| {
-                    GsmtapParserError::InvalidLteMacRachResponse(format!("unable to serialize GSMTAP payload: {err:?}"))
-                })
-        },
+            mac_subpacket_to_gsmtap(&subpacket.body).map_err(|err| {
+                GsmtapParserError::InvalidLteMacRachResponse(format!(
+                    "unable to serialize GSMTAP payload: {err:?}"
+                ))
+            })
+        }
         _ => {
             debug!("gsmtap_sink: ignoring unhandled log type: {value:?}");
             Ok(None)

@@ -194,10 +194,10 @@ pub mod neighbor_cells {
 
 #[cfg(test)]
 mod test {
-    use crate::test_util::unhexlify;
     use super::*;
     use crate::diag::diaglog::LogBody;
     use crate::log_codes::{LOG_LTE_ML1_NEIGHBOR_MEAS, LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C};
+    use crate::test_util::unhexlify;
     use std::io::Seek;
 
     fn parse_ncell_measurements(hexlified_bytes: &str) -> (u8, neighbor_cells::Measurements) {

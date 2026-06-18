@@ -1,6 +1,9 @@
 use deku::prelude::*;
 
-use crate::{diag::diaglog::mac::SubpacketBody, gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType}};
+use crate::{
+    diag::diaglog::mac::SubpacketBody,
+    gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType},
+};
 use deku::{DekuContainerWrite, DekuError};
 
 // based primarily off of SCAT's gsmtap responses and https://www.sharetechnote.com/html/MAC_LTE.html#MAC_PDU_Structure_RAR
@@ -76,34 +79,47 @@ pub struct RACHResponse {
     pub tc_rnti: u16,
 }
 
-pub fn mac_subpacket_to_gsmtap(subpacket: &SubpacketBody) -> Result<Option<GsmtapMessage>, DekuError> {
+pub fn mac_subpacket_to_gsmtap(
+    subpacket: &SubpacketBody,
+) -> Result<Option<GsmtapMessage>, DekuError> {
     match subpacket {
         SubpacketBody::RachAttempt(attempt) => {
-            let (Some(msg1), Some(msg2), Some(msg3)) = (attempt.get_msg1(), attempt.get_msg2(), attempt.get_msg3()) else {
+            let (Some(msg1), Some(msg2), Some(msg3)) =
+                (attempt.get_msg1(), attempt.get_msg2(), attempt.get_msg3())
+            else {
                 return Ok(None);
             };
             let mut payload = Vec::new();
-            payload.extend(Header {
-                radio_type: RadioType::Fdd,
-                direction: Direction::Downlink,
-                rnti_type: RntiType::RA,
-            }.to_bytes()?);
+            payload.extend(
+                Header {
+                    radio_type: RadioType::Fdd,
+                    direction: Direction::Downlink,
+                    rnti_type: RntiType::RA,
+                }
+                .to_bytes()?,
+            );
             payload.push(0x01); // MAC Payload Tag
-            payload.extend(ETRAPIDSubheader {
-                extended: false,
-                type_field: true,
-                rapid: msg1.get_preamble_index(),
-            }.to_bytes()?);
-            payload.extend(RACHResponse {
-                tac: msg2.ta,
-                ul_grant: msg3.get_grant(),
-                tc_rnti: msg2.tc_rnti,
-            }.to_bytes()?);
+            payload.extend(
+                ETRAPIDSubheader {
+                    extended: false,
+                    type_field: true,
+                    rapid: msg1.get_preamble_index(),
+                }
+                .to_bytes()?,
+            );
+            payload.extend(
+                RACHResponse {
+                    tac: msg2.ta,
+                    ul_grant: msg3.get_grant(),
+                    tc_rnti: msg2.tc_rnti,
+                }
+                .to_bytes()?,
+            );
             Ok(Some(GsmtapMessage {
-                 header: GsmtapHeader::new(GsmtapType::LteMacFramed),
-                 payload,
+                header: GsmtapHeader::new(GsmtapType::LteMacFramed),
+                payload,
             }))
-        },
+        }
         _ => Ok(None),
     }
 }
@@ -127,10 +143,10 @@ mod tests {
                 // their GSMTAP header
                 let expected_bytes = &data.into_inner().into_inner()[34..];
                 assert_eq!(&msg.payload, expected_bytes);
-            },
+            }
             (Some(msg), None) => panic!("expected no GSMTAP message, got {msg:?}"),
             (None, Some(_)) => panic!("expected GSMTAP message, got None"),
-            _ => {},
+            _ => {}
         }
     }
 
@@ -140,21 +156,29 @@ mod tests {
         let test_packets = mac_rach_test_packets_from_scat();
         assert_mac_gsmtap(
             &test_packets[0],
-            Some("03000009040000000000000c0000000012d53d80000000000002000400000000fffe010102015b00411c181a23"),
+            Some(
+                "03000009040000000000000c0000000012d53d80000000000002000400000000fffe010102015b00411c181a23",
+            ),
         );
         assert_mac_gsmtap(
             &test_packets[1],
-            Some("03000009040000000000000c0000000012d53d80000000000002000400000000fffe010102015800b0a2b461c6"),
+            Some(
+                "03000009040000000000000c0000000012d53d80000000000002000400000000fffe010102015800b0a2b461c6",
+            ),
         );
         assert_mac_gsmtap(&test_packets[2], None);
         assert_mac_gsmtap(
             &test_packets[3],
-            Some("03000009040000000000000c0000000012d53d80000000000002000400000ea5fffe010102014a0070e218481c"),
+            Some(
+                "03000009040000000000000c0000000012d53d80000000000002000400000ea5fffe010102014a0070e218481c",
+            ),
         );
         assert_mac_gsmtap(&test_packets[4], None);
         assert_mac_gsmtap(
             &test_packets[5],
-            Some("03000009040000000000000c0000000012d53d80000000000002000400000d16fffe0101020153005146b45aad"),
+            Some(
+                "03000009040000000000000c0000000012d53d80000000000002000400000d16fffe0101020153005146b45aad",
+            ),
         );
     }
 }
