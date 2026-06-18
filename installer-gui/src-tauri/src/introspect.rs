@@ -26,10 +26,15 @@ impl Command<'_> {
             // by subcommand_modifiers()
             subcommands: modifiers::subcommand_modifiers()
                 .iter()
-                .filter_map(|modifier| {
-                    subcommand_map
-                        .get(modifier.command)
-                        .map(|subcommand| Subcommand::new(subcommand, modifier))
+                .filter_map(|modifier| match subcommand_map.get(modifier.command) {
+                    Some(clap_command) => Some(Subcommand::new(clap_command, modifier)),
+                    None => {
+                        error!(
+                            "failed to find clap command for subcommand {}",
+                            modifier.command
+                        );
+                        None
+                    }
                 })
                 .collect(),
         }
@@ -90,13 +95,16 @@ impl Subcommand<'_> {
                 .iter()
                 .filter_map(|arg_modifier| {
                     let Some(arg) = argument_map.get(arg_modifier.clap_id) else {
-                        error!("failed to get argument with id {arg_modifier.clap_id}");
+                        error!(
+                            "failed to find clap argument with id {}",
+                            arg_modifier.clap_id
+                        );
                         return None;
                     };
                     match Argument::try_new(arg, arg_modifier) {
                         Ok(modified_arg) => Some(modified_arg),
                         Err(err) => {
-                            error!("failed to modify arg: {err:?}");
+                            error!("failed to create modified argument: {:?}", err);
                             None
                         }
                     }
