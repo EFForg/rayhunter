@@ -140,9 +140,9 @@ mod tests {
             (Some(msg), Some(hexstr)) => {
                 let (_, data) = unhexlify(hexstr);
                 // SCAT's test cases use GSMTAP v3, but we're on V2, so skip
-                // their GSMTAP header
-                let expected_bytes = &data.into_inner().into_inner()[34..];
-                assert_eq!(&msg.payload, expected_bytes);
+                // their GSMTAP header and just compare the payloads
+                let expected_payload = &data.into_inner().into_inner()[34..];
+                assert_eq!(&msg.payload, expected_payload);
             }
             (Some(msg), None) => panic!("expected no GSMTAP message, got {msg:?}"),
             (None, Some(_)) => panic!("expected GSMTAP message, got None"),
