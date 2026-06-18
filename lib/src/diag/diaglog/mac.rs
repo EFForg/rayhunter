@@ -156,7 +156,7 @@ pub mod rach {
         V32 {
             #[deku(endian = "big")]
             grant: u32,
-        }
+        },
     }
 
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
@@ -204,21 +204,33 @@ pub mod rach {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use crate::{diag::diaglog::mac::rach::Msg3Grant, test_util::unhexlify};
     use super::*;
     use crate::diag::diaglog::mac::rach::{AdditionalInfo, AttemptHeader, Msg1, Msg2, Msg3};
+    use crate::{diag::diaglog::mac::rach::Msg3Grant, test_util::unhexlify};
 
     use std::io::Seek;
 
     pub fn mac_rach_test_packets_from_scat() -> Vec<Packet> {
         // test data from SCAT unit tests: https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/tests/test_diagltelogparser.py#L129
         vec![
-            parse_rach_packet("0101a06906022400010001071BFF98FF000001231A0400181C010007000600465C80BD0648000000"),
-            parse_rach_packet("0101a0690603280001000100010718ffa4ff000001c6610b00b4a2000012000120061f423f8d95075800"),
-            parse_rach_packet("0101739e063134000100010000033f0098ff0000013c6b070058ac010007000000468f47e2d446000000644b0000180001000000d5040000"),
-            parse_rach_packet("01010000063134000100010001070aff98ff0000011c48070018e2000007000000523b7dfd69b6000000f5540000ff0001000000d6040000"),
-            parse_rach_packet("01010000063238000100010000032900a4ffeb000000000195b603000000a0b412000420061f425dc9be41b800885e000017000100000065050000"),
-            parse_rach_packet("010100000632380001000100010713ffa0ffeb0000000001ad5a0500000146b412000420061f425dc9be41b400665300001800010000001a050000"),
+            parse_rach_packet(
+                "0101a06906022400010001071BFF98FF000001231A0400181C010007000600465C80BD0648000000",
+            ),
+            parse_rach_packet(
+                "0101a0690603280001000100010718ffa4ff000001c6610b00b4a2000012000120061f423f8d95075800",
+            ),
+            parse_rach_packet(
+                "0101739e063134000100010000033f0098ff0000013c6b070058ac010007000000468f47e2d446000000644b0000180001000000d5040000",
+            ),
+            parse_rach_packet(
+                "01010000063134000100010001070aff98ff0000011c48070018e2000007000000523b7dfd69b6000000f5540000ff0001000000d6040000",
+            ),
+            parse_rach_packet(
+                "01010000063238000100010000032900a4ffeb000000000195b603000000a0b412000420061f425dc9be41b800885e000017000100000065050000",
+            ),
+            parse_rach_packet(
+                "010100000632380001000100010713ffa0ffeb0000000001ad5a0500000146b412000420061f425dc9be41b400665300001800010000001a050000",
+            ),
         ]
     }
 
@@ -263,7 +275,7 @@ pub(crate) mod test {
          * the changes in this commit for more info:
          * https://github.com/wgreenberg/scat/commit/adb21575832b4f3b30c8f2aaca9ee843ef74f38b
          */
-         let test_packets = mac_rach_test_packets_from_scat();
+        let test_packets = mac_rach_test_packets_from_scat();
         assert_rach_subpacket(
             &test_packets[0],
             rach::AttemptHeader::V2 {
