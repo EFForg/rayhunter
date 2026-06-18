@@ -2,7 +2,7 @@ use deku::prelude::*;
 use rayhunter::{
     diag::Message,
     diag::diaglog::{LogBody, Timestamp, rrc::LteRrcOtaPacket},
-    gsmtap_parser,
+    gsmtap::parser as gsmtap_parser,
 };
 
 // Tests here are based on https://github.com/fgsect/scat/blob/97442580e628de414c9f7c2a185f4e28d0ee7523/tests/test_diagltelogparser.py
