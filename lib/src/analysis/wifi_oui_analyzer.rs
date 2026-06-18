@@ -29,7 +29,9 @@ impl WifiOUIAnalyzer {
 
     fn init_logger(logfile: String) -> impl Log {
         let logfile = FileAppender::builder()
-            .encoder(Box::new(PatternEncoder::new("[{d(%Y-%m-%dT%H:%M:%SZ)(utc)} {l}  {M}] {m}\n")))
+            .encoder(Box::new(PatternEncoder::new(
+                "[{d(%Y-%m-%dT%H:%M:%SZ)(utc)} {l}  {M}] {m}\n",
+            )))
             .build(logfile)
             .expect("Error creating FileAppender for wifi logs");
 
@@ -71,6 +73,7 @@ impl Analyzer for WifiOUIAnalyzer {
                         .is_some()
                     {
                         info!(logger: self.logger, "Found match for bssid {bssid}");
+                        self.logger.flush();
                         return Some(Event {
                             event_type: EventType::Informational,
                             message: "Detected possible IMSI catcher wifi endpoint".to_string(),
