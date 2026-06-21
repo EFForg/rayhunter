@@ -623,6 +623,7 @@
                             bind:checked={config.analyzers.incomplete_sib}
                         />
 
+<<<<<<< HEAD
                         <CheckboxField
                             id="no_nas_messages"
                             label="No NAS Messages Heuristic (experimental)"
@@ -638,6 +639,81 @@
                             label="Diagnostic Analyzer"
                             bind:checked={config.analyzers.diagnostic_analyzer}
                         />
+=======
+                        <div class="flex items-center">
+                            <input
+                                id="no_nas_messages"
+                                type="checkbox"
+                                bind:checked={config.analyzers.no_nas_messages}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                            />
+                            <label for="no_nas_messages" class="ml-2 block text-sm text-gray-700">
+                                No NAS Messages Heuristic (experimental)
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input
+                                id="test_analyzer"
+                                type="checkbox"
+                                bind:checked={config.analyzers.test_analyzer}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                            />
+                            <label for="test_analyzer" class="ml-2 block text-sm text-gray-700">
+                                Test Heuristic (noisy!)
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input
+                                id="diagnostic_analyzer"
+                                type="checkbox"
+                                bind:checked={config.analyzers.diagnostic_analyzer}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                            />
+                            <label
+                                for="diagnostic_analyzer"
+                                class="ml-2 block text-sm text-gray-700"
+                            >
+                                Diagnostic Analyzer
+                            </label>
+                        </div>
+
+                        {#if config.device === 'orbic' || config.device === 'moxee' || config.device === 'tmobile' || config.device === 'wingtech'}
+                          <div class="flex items-center">
+                              <input
+                                  id="wifi_oui_analyzer"
+                                  type="checkbox"
+                                  bind:checked={config.analyzers.wifi_oui_analyzer}
+                                  class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                              />
+                              <label for="wifi_oui_analyzer" class="ml-2 block text-sm text-gray-700">
+                                  WiFi OUI Analyzer
+                              </label>
+                          </div>
+
+                          {#if config.analyzers.wifi_oui_analyzer}
+                              <div>
+                                  <label
+                                      for="wifi_ouis"
+                                      class="block text-sm font-medium text-gray-700 mb-1"
+                                  >
+                                      WiFi OUIs
+                                  </label>
+                                  <input
+                                      id="wifi_ouis"
+                                      type="text"
+                                      bind:value={wifiOUIsInput}
+                                      placeholder=""
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                  />
+                                  <p class="text-xs text-gray-500 mt-1">
+                                      Comma-separated triplets of hex octets, of the form "AB:CD:EF".
+                                      Used when WiFi OUI Analyzer is active.
+                                  </p>
+                              </div>
+                          {/if}
+                        {/if}
+>>>>>>> 06e3b02 (Gate the WiFI OUI analyzer for devices that support it)
                     </div>
                 </div>
 
