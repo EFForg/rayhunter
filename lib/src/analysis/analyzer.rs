@@ -14,7 +14,7 @@ use super::{
     imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
     information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
     null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
-    test_analyzer::TestAnalyzer,
+    test_analyzer::TestAnalyzer, wifi_oui_analyzer::WifiOUIAnalyzer,
 };
 
 /// A list of booleans which stores information about which analyzers are enabled
@@ -30,6 +30,9 @@ pub struct AnalyzerConfig {
     pub incomplete_sib: bool,
     pub test_analyzer: bool,
     pub imsi_requested: bool,
+    pub wifi_oui_analyzer: bool,
+    pub wifi_ouis: Vec<String>,
+    pub wifi_log_path: String,
 }
 
 impl Default for AnalyzerConfig {
@@ -43,11 +46,15 @@ impl Default for AnalyzerConfig {
             nas_null_cipher: true,
             incomplete_sib: true,
             test_analyzer: false,
+            wifi_oui_analyzer: true,
+            wifi_ouis: Vec::new(),
+            wifi_log_path: WIFI_LOG_PATH.to_string(),
         }
     }
 }
 
 pub const REPORT_VERSION: u32 = 2;
+const WIFI_LOG_PATH: &str = "/data/rayhunter/wifi.log";
 
 /// The severity level of an event.
 ///
@@ -365,11 +372,25 @@ impl Harness {
             harness.add_analyzer(Box::new(DiagnosticAnalyzer {}));
         }
 
+        if analyzer_config.wifi_oui_analyzer {
+            harness.add_analyzer(Box::new(WifiOUIAnalyzer::new(
+                &analyzer_config.wifi_ouis,
+                analyzer_config.wifi_log_path.clone(),
+            )));
+        }
+
         harness
     }
 
     pub fn add_analyzer(&mut self, analyzer: Box<dyn Analyzer + Send>) {
         self.analyzers.push(analyzer);
+    }
+
+    pub fn analyze_wifi_ouis(&mut self, bssids: Vec<String>) -> Vec<Event> {
+        self.analyze_information_element(&InformationElement::WifiBSSIDList(bssids))
+            .iter()
+            .flat_map(|e| e.clone())
+            .collect::<Vec<Event>>()
     }
 
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {
@@ -547,5 +568,35 @@ mod tests {
             EventType::Informational
         );
         assert!(row.events[2].is_none());
+    }
+
+    #[test]
+    fn test_analyze_wifi_ouis() {
+        let mut analyzer_config = AnalyzerConfig::default();
+
+        analyzer_config.wifi_oui_analyzer = true;
+        analyzer_config.wifi_ouis = vec!["AA:BB:CC".to_string()];
+        analyzer_config.wifi_log_path = "/tmp/wifi.log".to_string();
+        let mut harness = Harness::new_with_config(&analyzer_config);
+        let events = harness.analyze_wifi_ouis(vec!["00:11:22:33:44:55".to_string()]);
+        assert!(events.is_empty());
+        let events = harness.analyze_wifi_ouis(vec!["AA:BB:CC:33:44:55".to_string()]);
+        assert_eq!(1, events.len());
+        assert_eq!(EventType::Informational, events[0].event_type);
+    }
+
+    #[test]
+    fn test_analyze_nonstandard_wifi_ouis() {
+        let mut analyzer_config = AnalyzerConfig::default();
+
+        analyzer_config.wifi_oui_analyzer = true;
+        analyzer_config.wifi_ouis = vec!["70:b3:d5:7c:b".to_string()];
+        analyzer_config.wifi_log_path = "/tmp/wifi.log".to_string();
+        let mut harness = Harness::new_with_config(&analyzer_config);
+        let events = harness.analyze_wifi_ouis(vec!["00:11:22:33:44:55".to_string()]);
+        assert!(events.is_empty());
+        let events = harness.analyze_wifi_ouis(vec!["70:B3:D5:7C:BA:6E".to_string()]);
+        assert_eq!(1, events.len());
+        assert_eq!(EventType::Informational, events[0].event_type);
     }
 }
