@@ -56,7 +56,7 @@ impl WebDavClient {
             url.push('/');
         }
         Ok(Self {
-            client: reqwest::Client::builder().timeout(timeout).build()?,
+            client: crate::http_client::builder().timeout(timeout).build()?,
             url,
             username,
             password,

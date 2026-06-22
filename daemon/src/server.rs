@@ -227,7 +227,12 @@ pub async fn test_notification(
         ));
     }
 
-    let http_client = reqwest::Client::new();
+    let http_client = crate::http_client::client().map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to create HTTP client: {err}"),
+        )
+    })?;
     let message = "Test notification from Rayhunter".to_string();
 
     crate::notifications::send_notification(
