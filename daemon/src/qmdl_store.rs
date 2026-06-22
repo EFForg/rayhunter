@@ -388,12 +388,14 @@ impl RecordingStore {
         }
     }
 
-    // Sets the given entry's size and updates the last_message_time to now, updating the manifest
-    pub async fn update_entry_qmdl_size(
+    // Sets the current entry's size and updates the last_message_time to now, updating the manifest
+    pub async fn update_current_entry_qmdl_size(
         &mut self,
-        entry_index: usize,
         size_bytes: usize,
     ) -> Result<(), RecordingStoreError> {
+        let Some(entry_index) = self.current_entry else {
+            return Err(RecordingStoreError::NoCurrentEntry);
+        };
         self.manifest.entries[entry_index].qmdl_size_bytes = size_bytes;
         self.manifest.entries[entry_index].last_message_time =
             Some(rayhunter::clock::get_adjusted_now());
@@ -594,10 +596,7 @@ mod tests {
                 .is_none()
         );
 
-        store
-            .update_entry_qmdl_size(entry_index, 1000)
-            .await
-            .unwrap();
+        store.update_current_entry_qmdl_size(1000).await.unwrap();
         let (entry_index, entry) = store
             .entry_for_name(&store.manifest.entries[entry_index].name)
             .unwrap();
@@ -620,11 +619,7 @@ mod tests {
         let dir = make_temp_dir();
         let mut store = RecordingStore::create(dir.path()).await.unwrap();
         let _ = store.new_entry(GpsMode::Disabled).await.unwrap();
-        let entry_index = store.current_entry.unwrap();
-        store
-            .update_entry_qmdl_size(entry_index, 1000)
-            .await
-            .unwrap();
+        store.update_current_entry_qmdl_size(1000).await.unwrap();
         let store = RecordingStore::create(dir.path()).await.unwrap();
         assert_eq!(store.manifest.entries.len(), 0);
     }

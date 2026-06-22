@@ -300,7 +300,7 @@ mod tests {
         analysis_file.flush().await.unwrap();
         let entry_index = store.current_entry.unwrap();
         let name = store.manifest.entries[entry_index].name.clone();
-        store.update_entry_qmdl_size(entry_index, 17).await.unwrap();
+        store.update_current_entry_qmdl_size(17).await.unwrap();
         store.close_current_entry().await.unwrap();
         (Arc::new(RwLock::new(store)), name)
     }

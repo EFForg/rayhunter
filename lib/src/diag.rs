@@ -1,6 +1,5 @@
 //! Diag protocol serialization/deserialization
 
-use bytes::Bytes;
 use chrono::{DateTime, FixedOffset};
 use crc::{Algorithm, Crc};
 use deku::prelude::*;
@@ -94,12 +93,6 @@ impl MessagesContainer {
             }
         }
         result
-    }
-}
-
-impl From<MessagesContainer> for Bytes {
-    fn from(value: MessagesContainer) -> Self {
-        value.to_bytes().unwrap().into()
     }
 }
 

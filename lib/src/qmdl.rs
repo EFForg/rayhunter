@@ -45,14 +45,14 @@ where
     pub async fn write_container(&mut self, container: &MessagesContainer) -> std::io::Result<()> {
         for msg in &container.messages {
             self.writer.write_all(&msg.data).await?;
-            self.writer.flush().await?;
         }
+        self.writer.flush().await?;
         Ok(())
     }
 
-    pub async fn close(mut self) -> std::io::Result<()> {
+    pub async fn close(mut self) -> std::io::Result<usize> {
         self.writer.shutdown().await?;
-        Ok(())
+        self.size().await
     }
 }
 
@@ -298,7 +298,7 @@ mod test {
                 hdlcs.iter().map(|hdlc| hdlc.data.len()).collect(),
             )
         };
-        for truncated_hdlc_i in 1..hdlcs.len() - 1 {
+        for truncated_hdlc_i in 1..hdlcs.len() {
             let whole_bytes: usize = message_lengths.iter().take(truncated_hdlc_i).sum();
             for truncated_byte in 1..message_lengths[truncated_hdlc_i] {
                 let mut truncated_bytes = Cursor::new(&bytes[0..whole_bytes + truncated_byte]);
@@ -360,15 +360,18 @@ mod test {
     async fn run_compressed_reading_and_writing_tests(do_close: bool) {
         let containers = get_test_containers();
         let mut buf = Cursor::new(Vec::new());
-        {
+        let writer_size = {
             let mut writer = QmdlWriter::new(&mut buf);
             for container in &containers {
                 writer.write_container(&container).await.unwrap();
             }
             if do_close {
-                writer.close().await.unwrap();
+                writer.close().await.unwrap()
+            } else {
+                writer.size().await.unwrap()
             }
-        }
+        };
+        assert_eq!(buf.position() as usize, writer_size);
         buf.set_position(0);
         let mut reader = QmdlMessageReader::new(buf).await.unwrap();
         assert!(reader.is_compressed());
