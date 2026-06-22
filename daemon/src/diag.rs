@@ -185,7 +185,7 @@ impl DiagTask {
                 .await
                 .map_err(RecordingStoreError::WriteFileError)?;
         }
-        self.stop_current_recording().await;
+        self.stop_current_recording(qmdl_store).await;
         let qmdl_writer = Box::new(QmdlWriter::new(qmdl_gz_file));
         let analysis_writer = AnalysisWriter::new(analysis_file, &self.analyzer_config)
             .await
@@ -207,7 +207,7 @@ impl DiagTask {
 
     /// Stop recording, optionally annotating the entry with a reason.
     async fn stop(&mut self, qmdl_store: &mut RecordingStore, reason: Option<String>) {
-        self.stop_current_recording().await;
+        self.stop_current_recording(qmdl_store).await;
         if let Some(reason) = reason
             && let Err(e) = qmdl_store.set_current_stop_reason(reason).await
         {
@@ -294,7 +294,7 @@ impl DiagTask {
         }
     }
 
-    async fn stop_current_recording(&mut self) {
+    async fn stop_current_recording(&mut self, qmdl_store: &mut RecordingStore) {
         let mut state = DiagState::Stopped;
         std::mem::swap(&mut self.state, &mut state);
         if let DiagState::Recording {
@@ -304,13 +304,17 @@ impl DiagTask {
         } = state
         {
             match (qmdl_writer.close().await, analysis_writer.close().await) {
-                (Ok(()), Ok(())) => {}
+                (Ok(size), Ok(())) => {
+                    if let Err(err) = qmdl_store.update_current_entry_qmdl_size(size).await {
+                        error!("failed to update QMDL entry size while closing it: {err:?}");
+                    }
+                }
                 (qmdl_result, analysis_result) => {
                     if let Err(err) = qmdl_result {
-                        error!("failed to close QmdlWriter: {:?}", err);
+                        error!("failed to close QmdlWriter: {err:?}");
                     }
                     if let Err(err) = analysis_result {
-                        error!("failed to close AnalysisWriter: {:?}", err);
+                        error!("failed to close AnalysisWriter: {err:?}");
                     }
                     panic!();
                 }
@@ -387,10 +391,7 @@ impl DiagTask {
                     "total QMDL bytes written: {}, updating manifest...",
                     file_size
                 );
-                let index = qmdl_store.current_entry.expect(
-                    "DiagDevice had qmdl_writer, but QmdlStore didn't have current entry???",
-                );
-                if let Err(e) = qmdl_store.update_entry_qmdl_size(index, file_size).await {
+                if let Err(e) = qmdl_store.update_current_entry_qmdl_size(file_size).await {
                     let reason = format!("failed to update manifest (disk full?): {e}");
                     error!("{reason}");
                     self.stop(qmdl_store, Some(reason)).await;
@@ -508,7 +509,8 @@ pub fn run_diag_read_thread(
                         // time to go
                         Some(DiagDeviceCtrlMessage::Exit) | None => {
                             info!("Diag reader thread exiting...");
-                            diag_task.stop_current_recording().await;
+                            let mut qmdl_store = qmdl_store_lock.write().await;
+                            diag_task.stop_current_recording(qmdl_store.deref_mut()).await;
                             return Ok(())
                         },
                         Some(DiagDeviceCtrlMessage::DeleteEntry { name, response_tx }) => {

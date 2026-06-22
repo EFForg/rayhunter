@@ -6,20 +6,22 @@ use axum::Json;
 use axum::body::Body;
 use axum::extract::Path;
 use axum::extract::State;
-use axum::http::header::{self, CONTENT_LENGTH, CONTENT_TYPE};
+use axum::http::header::{self, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, Local};
+use futures::TryStreamExt;
 use log::{error, warn};
 use rayhunter::qmdl::QmdlMessageReader;
 use serde::{Deserialize, Serialize};
+use std::pin::pin;
 use std::sync::Arc;
 use tokio::fs::write;
-use tokio::io::AsyncReadExt;
 use tokio::io::copy;
 use tokio::io::duplex;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::Sender;
+use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tokio_util::compat::FuturesAsyncWriteCompatExt;
 use tokio_util::io::ReaderStream;
 use tokio_util::sync::CancellationToken;
@@ -70,7 +72,7 @@ pub async fn get_qmdl(
 ) -> Result<Response, (StatusCode, String)> {
     let qmdl_idx = qmdl_name.trim_end_matches(".qmdl");
     let qmdl_store = state.qmdl_store_lock.read().await;
-    let (entry_index, entry) = qmdl_store.entry_for_name(qmdl_idx).ok_or((
+    let (entry_index, _) = qmdl_store.entry_for_name(qmdl_idx).ok_or((
         StatusCode::NOT_FOUND,
         format!("couldn't find qmdl file with name {qmdl_idx}"),
     ))?;
@@ -91,10 +93,7 @@ pub async fn get_qmdl(
         )
     })?;
 
-    let headers = [
-        (CONTENT_TYPE, "application/octet-stream"),
-        (CONTENT_LENGTH, &entry.qmdl_size_bytes.to_string()),
-    ];
+    let headers = [(CONTENT_TYPE, "application/octet-stream")];
     let body = Body::from_stream(qmdl_reader.into_qmdl_stream());
     Ok((headers, body).into_response())
 }
@@ -341,7 +340,7 @@ pub async fn get_zip(
     Path(entry_name): Path<String>,
 ) -> Result<Response, (StatusCode, String)> {
     let qmdl_idx = entry_name.trim_end_matches(".zip").to_owned();
-    let (entry_index, compressed, qmdl_file_size) = {
+    let entry_index = {
         let qmdl_store = state.qmdl_store_lock.read().await;
         let (entry_index, entry) = qmdl_store.entry_for_name(&qmdl_idx).ok_or((
             StatusCode::NOT_FOUND,
@@ -355,7 +354,7 @@ pub async fn get_zip(
             ));
         }
 
-        (entry_index, entry.compressed, entry.qmdl_size_bytes)
+        entry_index
     };
 
     let qmdl_store_lock = state.qmdl_store_lock.clone();
@@ -384,8 +383,19 @@ pub async fn get_zip(
                     continue;
                 };
 
+                /*
+                 * `qmdl_compressed` is always false here because even if the
+                 * QMDL was already compressed, we decompress it before zipping.
+                 * This is for two reasons
+                 * 1. If this is the current entry, it's still being written and
+                 *    lacks a GZIP footer. If we zipped up this partial .gz
+                 *    file, some software might consider it damaged and refuse to
+                 *    extract it.
+                 * 2. Zipping an already-GZIP'd file is redundant and
+                 *    inconvenient for the user.
+                 */
                 let zip_entry = ZipEntryBuilder::new(
-                    file_kind.get_filename(&qmdl_idx, compressed).into(),
+                    file_kind.get_filename(&qmdl_idx, false).into(),
                     Compression::Stored,
                 );
                 // FuturesAsyncWriteCompatExt::compat_write because async-zip's entrystream does
@@ -393,10 +403,11 @@ pub async fn get_zip(
                 // once https://github.com/Majored/rs-async-zip/pull/160 is released.
                 let mut entry_writer = zip.write_entry_stream(zip_entry).await?.compat_write();
 
-                // Truncating to qmdl_size_bytes is an attempt to ignore partial writes by the diag
-                // thread.
                 if file_kind == FileKind::Qmdl {
-                    copy(&mut file.take(qmdl_file_size as u64), &mut entry_writer).await?;
+                    let reader = QmdlMessageReader::new(&mut file).await?;
+                    let stream = reader.into_qmdl_stream();
+                    let mut reader = pin!(stream.into_async_read().compat());
+                    copy(&mut reader, &mut entry_writer).await?;
                 } else {
                     copy(&mut file, &mut entry_writer).await?;
                 }
@@ -575,7 +586,7 @@ mod tests {
             let entry_name = entry.name.clone();
 
             store
-                .update_entry_qmdl_size(current_entry, qmdl_file_size)
+                .update_current_entry_qmdl_size(qmdl_file_size)
                 .await
                 .unwrap();
             entry_name
@@ -656,7 +667,7 @@ mod tests {
         assert_eq!(
             filenames,
             vec![
-                format!("{entry_name}.qmdl.gz"),
+                format!("{entry_name}.qmdl"),
                 format!("{entry_name}-gps.ndjson"),
                 format!("{entry_name}.pcapng"),
             ]
