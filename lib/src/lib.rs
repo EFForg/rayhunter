@@ -15,11 +15,12 @@ pub mod analysis;
 pub mod clock;
 pub mod diag;
 pub mod gsmtap;
-pub mod gsmtap_parser;
 pub mod hdlc;
 pub mod log_codes;
 pub mod pcap;
 pub mod qmdl;
+#[cfg(test)]
+mod test_util;
 pub mod util;
 
 // bin/check.rs may target windows and does not use this mod

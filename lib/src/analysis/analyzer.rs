@@ -5,10 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 use crate::analysis::diagnostic::DiagnosticAnalyzer;
-use crate::diag::{DiagParsingError, Message};
-use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType};
+use crate::diag::{DiagParsingError, Message, MessagesContainer};
+use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, parser as gsmtap_parser};
 use crate::util::RuntimeMetadata;
-use crate::{diag::MessagesContainer, gsmtap_parser};
 
 use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,

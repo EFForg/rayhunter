@@ -40,7 +40,7 @@ pub enum DiagDeviceError {
     ParseMessagesContainerError(deku::DekuError),
 }
 
-pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
+pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 17] = [
     // Layer 2:
     log_codes::LOG_GPRS_MAC_SIGNALLING_MESSAGE_C, // 0x5226
     // Layer 3:
@@ -56,6 +56,14 @@ pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 11] = [
     log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C,     // 0xb0ed
     // User IP traffic:
     log_codes::LOG_DATA_PROTOCOL_LOGGING_C, // 0x11eb
+    // LTE physical layer serving cell measurements: RSRP, RSRQ, RSSI
+    log_codes::LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C, // 0xb17f
+    log_codes::LOG_LTE_ML1_SERVING_CELL_MEAS_RESPONSE,   // 0xb193
+    log_codes::LOG_LTE_ML1_NEIGHBOR_MEAS,                // 0xb180
+    // LTE MAC Random Access Channel response: contains Timing Advance
+    log_codes::LOG_LTE_MAC_RACH_RESPONSE_C, // 0xb062
+    log_codes::LOG_LTE_MAC_DL,              // 0xb063
+    log_codes::LOG_LTE_MAC_UL,              // 0xb064
 ];
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;

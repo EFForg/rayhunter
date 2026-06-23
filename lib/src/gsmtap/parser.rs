@@ -1,7 +1,9 @@
-use crate::diag::*;
-use crate::gsmtap::*;
+use crate::diag::Message;
+use crate::diag::diaglog::{LogBody, Nas4GMessageDirection, Timestamp};
+use crate::gsmtap::mac::mac_subpacket_to_gsmtap;
+use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
 
-use log::error;
+use log::{debug, warn};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -10,6 +12,8 @@ pub enum GsmtapParserError {
     InvalidLteRrcOtaExtHeaderVersion(u8),
     #[error("Invalid LteRrcOtaMessage header/PDU number combination: {0}/{1}")]
     InvalidLteRrcOtaHeaderPduNum(u8, u8),
+    #[error("Invalid LteMacRachResponse packet: {0}")]
+    InvalidLteMacRachResponse(String),
 }
 
 pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapParserError> {
@@ -152,8 +156,38 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                 payload: msg,
             }))
         }
+        LogBody::LteMl1ServingCellMeasurementAndEvaluation { data, .. } => {
+            // frame_number reused for PCI (normally SFN in RRC frames) so all three
+            // serving-cell fields are accessible in Wireshark as gsmtap.* columns.
+            let mut header = GsmtapHeader::new(GsmtapType::QcDiag);
+            header.signal_dbm = data.get_meas_rsrp() as i8;
+            header.arfcn = data.get_earfcn().try_into().unwrap_or(0);
+            header.frame_number = data.get_pci() as u32;
+            Ok(Some(GsmtapMessage {
+                header,
+                payload: vec![],
+            }))
+        }
+        LogBody::LteMacRachResponse { packet } => {
+            if packet.subpackets.len() > 1 {
+                warn!(
+                    "expected 1 MAC subpacket for LogBody::LteMacRachResponse, but got {}! ignoring all but the first",
+                    packet.subpackets.len()
+                );
+            }
+            let Some(subpacket) = packet.subpackets.first() else {
+                return Err(GsmtapParserError::InvalidLteMacRachResponse(
+                    "no subpackets".to_string(),
+                ));
+            };
+            mac_subpacket_to_gsmtap(&subpacket.body).map_err(|err| {
+                GsmtapParserError::InvalidLteMacRachResponse(format!(
+                    "unable to serialize GSMTAP payload: {err:?}"
+                ))
+            })
+        }
         _ => {
-            error!("gsmtap_sink: ignoring unhandled log type: {value:?}");
+            debug!("gsmtap_sink: ignoring unhandled log type: {value:?}");
             Ok(None)
         }
     }
@@ -162,6 +196,7 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gsmtap::GsmtapType;
     use deku::DekuContainerWrite;
 
     #[test]

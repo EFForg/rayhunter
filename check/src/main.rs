@@ -3,7 +3,7 @@ use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
     analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness},
-    gsmtap_parser,
+    gsmtap::parser as gsmtap_parser,
     pcap::GsmtapPcapWriter,
     qmdl::QmdlMessageReader,
 };
