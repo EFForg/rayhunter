@@ -1,6 +1,7 @@
-//! Diag ML1 measurement log serialization/deserialization. These are pretty
-//! much entirely based on Shinjo Park's work in scat, since we couldn't find
-//! any other documentation for the logs' structure.
+//! Diag ML1 measurement log serialization/deserialization. As with most of our
+//! diag parsers, these structs were derived SCAT:
+//! Neighbor cell measurements: https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/src/scat/parsers/qualcomm/diagltelogparser.py#L192
+//! Serving cell measurements: https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/src/scat/parsers/qualcomm/diagltelogparser.py#L114
 
 use deku::ctx::Order;
 use deku::prelude::*;
@@ -194,6 +195,11 @@ pub mod neighbor_cells {
 
 #[cfg(test)]
 mod test {
+    //! The tests for serving cell/neighbor cell measurements were adapted from
+    //! SCAT's tests. The expected values were collected by modifying SCAT to
+    //! print out the full-precision expected values. See:
+    //! https://github.com/wgreenberg/scat/commit/e53d657861e8a66b52d635ff9518ac896c23ab06
+
     use super::*;
     use crate::diag::diaglog::LogBody;
     use crate::log_codes::{LOG_LTE_ML1_NEIGHBOR_MEAS, LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C};
@@ -269,8 +275,6 @@ mod test {
         assert_eq!(data.get_meas_rssi(), rssi, "incorrect rssi");
     }
 
-    // Adapted from scat's TestDiagLteLogParser::test_parse_lte_ml1_scell_meas,
-    // but edited to print full-precision floats
     #[test]
     fn test_scell_meas() {
         scell_meas_and_eval_case(
@@ -329,8 +333,6 @@ mod test {
         }
     }
 
-    // Adapted from scat's TestDiagLteLogParser::test_parse_lte_ml1_ncell_meas,
-    // but edited to print full-precision floats
     #[test]
     fn test_ncell_meas() {
         ncell_meas_case(

@@ -1,3 +1,7 @@
+//! Diag MAC RACH serialization/deserialization. As with most of our diag
+//! parsers, these structs were derived SCAT:
+//! https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/src/scat/parsers/qualcomm/diagltelogparser.py#L853
+
 use deku::prelude::*;
 
 #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
@@ -31,6 +35,7 @@ pub enum SubpacketBody {
 }
 
 pub mod rach {
+    //! Derived from https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/src/scat/parsers/qualcomm/diagltelogparser.py#L496
     use super::*;
 
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
@@ -204,6 +209,12 @@ pub mod rach {
 
 #[cfg(test)]
 pub(crate) mod test {
+    //! These tests were adapted from SCAT's MAC RACH parser's unit tests,
+    //! and the values were produced by modifying the tests to output the
+    //! entire parsed struct rather than the hexlified gsmtap packets. See
+    //! the changes in this commit for more info:
+    //! https://github.com/wgreenberg/scat/commit/adb21575832b4f3b30c8f2aaca9ee843ef74f38b
+
     use super::*;
     use crate::diag::diaglog::mac::rach::{AdditionalInfo, AttemptHeader, Msg1, Msg2, Msg3};
     use crate::{diag::diaglog::mac::rach::Msg3Grant, test_util::unhexlify};
@@ -268,13 +279,6 @@ pub(crate) mod test {
 
     #[test]
     fn test_rach_attempt_parsing() {
-        /*
-         * These tests were adapted from SCAT's MAC RACH parser's unit tests,
-         * and the values were produced by modifying the tests to output the
-         * entire parsed struct rather than the hexlified gsmtap packets. See
-         * the changes in this commit for more info:
-         * https://github.com/wgreenberg/scat/commit/adb21575832b4f3b30c8f2aaca9ee843ef74f38b
-         */
         let test_packets = mac_rach_test_packets_from_scat();
         assert_rach_subpacket(
             &test_packets[0],
