@@ -175,10 +175,10 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
                     packet.subpackets.len()
                 );
             }
-            let Some(subpacket) = packet.subpackets.get(0) else {
-                return Err(GsmtapParserError::InvalidLteMacRachResponse(format!(
-                    "no subpackets"
-                )));
+            let Some(subpacket) = packet.subpackets.first() else {
+                return Err(GsmtapParserError::InvalidLteMacRachResponse(
+                    "no subpackets".to_string(),
+                ));
             };
             mac_subpacket_to_gsmtap(&subpacket.body).map_err(|err| {
                 GsmtapParserError::InvalidLteMacRachResponse(format!(
