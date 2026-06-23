@@ -10,7 +10,6 @@ use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use log::error;
-use rayhunter::diag::DataType;
 use rayhunter::gsmtap::parser as gsmtap_parser;
 use rayhunter::pcap::{GpsPoint, GsmtapPcapWriter};
 use rayhunter::qmdl::QmdlMessageReader;
