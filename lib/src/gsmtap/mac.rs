@@ -1,3 +1,8 @@
+//! The structs/enum values defined here are derived from a number of sources:
+//! * SCAT's construction of MAC GSMTAP packets: https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/src/scat/parsers/qualcomm/diagltelogparser.py#L562-L640
+//! * https://www.sharetechnote.com/html/MAC_LTE.html#MAC_PDU_Structure_RAR
+//! * 3GPP's TS 36.321, mostly sections 6.1.4, 6.1.5, and 6.1.6
+
 use deku::prelude::*;
 
 use crate::{
@@ -6,7 +11,6 @@ use crate::{
 };
 use deku::{DekuContainerWrite, DekuError};
 
-// based primarily off of SCAT's gsmtap responses and https://www.sharetechnote.com/html/MAC_LTE.html#MAC_PDU_Structure_RAR
 #[derive(DekuRead, DekuWrite)]
 pub struct Header {
     pub radio_type: RadioType,
@@ -57,7 +61,6 @@ pub enum RntiType {
     G,
 }
 
-// defined in 6.5.1 of 3GPP TS 36.321
 #[derive(DekuRead, DekuWrite)]
 #[deku(endian = "big")]
 pub struct ETRAPIDSubheader {
