@@ -40,23 +40,23 @@ pub enum Direction {
 #[deku(id_type = "u8")]
 pub enum RntiType {
     #[deku(id = "0")]
-    NO,
+    No,
     #[deku(id = "1")]
     P,
     #[deku(id = "2")]
-    RA,
+    Ra,
     #[deku(id = "3")]
     C,
     #[deku(id = "4")]
-    SI,
+    Ri,
     #[deku(id = "5")]
-    SPS,
+    Sps,
     #[deku(id = "6")]
     M,
     #[deku(id = "7")]
-    SL,
+    Sl,
     #[deku(id = "9")]
-    SC,
+    Sc,
     #[deku(id = "10")]
     G,
 }
@@ -97,7 +97,7 @@ pub fn mac_subpacket_to_gsmtap(
                 Header {
                     radio_type: RadioType::Fdd,
                     direction: Direction::Downlink,
-                    rnti_type: RntiType::RA,
+                    rnti_type: RntiType::Ra,
                 }
                 .to_bytes()?,
             );
