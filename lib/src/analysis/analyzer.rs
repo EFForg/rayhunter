@@ -8,7 +8,7 @@ use crate::analysis::diagnostic::DiagnosticAnalyzer;
 use crate::diag::{DiagParsingError, Message};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType};
 use crate::util::RuntimeMetadata;
-use crate::{diag::MessagesContainer, gsmtap_parser};
+use crate::{diag::MessagesContainer, gsmtap::parser as gsmtap_parser};
 
 use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
