@@ -1,7 +1,7 @@
 use deku::prelude::*;
 use rayhunter::{
     diag::Message,
-    diag::diaglog::{LogBody, rrc::LteRrcOtaPacket, Timestamp},
+    diag::diaglog::{LogBody, Timestamp, rrc::LteRrcOtaPacket},
     gsmtap::parser as gsmtap_parser,
 };
 
