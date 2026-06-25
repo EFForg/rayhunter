@@ -167,7 +167,7 @@ impl Message {
             LogBody::LteRrcOtaMessage { .. } => true,
             LogBody::LteMacRachResponse { .. } => true,
             LogBody::Nas4GMessage { .. } => true,
-            _ => false
+            _ => false,
         }
     }
 }
