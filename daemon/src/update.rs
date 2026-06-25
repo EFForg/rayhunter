@@ -100,7 +100,6 @@ async fn refresh_update_status(
     let response = http_client
         .get(GITHUB_LATEST_RELEASE_URL)
         .timeout(Duration::from_secs(5))
-        .header(reqwest::header::USER_AGENT, "rayhunter-update-checker")
         .send()
         .await
         .map_err(|err| format!("failed to query GitHub releases: {err}"))?;
@@ -156,7 +155,7 @@ pub fn run_update_check_worker(
     enabled_notifications: Vec<NotificationType>,
 ) {
     task_tracker.spawn(async move {
-        let http_client = match reqwest::Client::builder().build() {
+        let http_client = match crate::http_client::client() {
             Ok(client) => client,
             Err(err) => {
                 error!("failed to create update check client: {err}");
