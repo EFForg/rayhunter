@@ -11,7 +11,7 @@ You can enable the `Test Heuristic` under `Analyzer Heuristic Settings` in the c
 
 ### Help, Rayhunter's line is red/orange/yellow/dotted/dashed! What should I do?
 
-Unfortunately, the circumstances that might lead to a positive cell site simulator (CSS) signal are quite varied, so we don't have a universal recommendation for how to deal with the a positive signal. Depending on your circumstances and threat model, you may want to turn off your phone until you are out of the area and tell your friends to do the same!
+Unfortunately, the circumstances that might lead to a positive cell site simulator (CSS) signal are quite varied, so we don't have a universal recommendation for how to deal with a positive signal. Depending on your circumstances and threat model, you may want to turn off your phone until you are out of the area and tell your friends to do the same!
 
 If you've received a Rayhunter warning and would like to help us with our research, please send your Rayhunter data captures (Zip file downloaded from the web interface) to us at our [Signal](https://signal.org/) username [**ElectronicFrontierFoundation.90**](https://signal.me/#eu/HZbPPED5LyMkbTxJsG2PtWc2TXxPUR1OxBMcJGLOPeeCDGPuaTpOi5cfGRY6RrGf) with the following information: capture date, capture location, device, device model, and Rayhunter version. If you're unfamiliar with Signal, feel free to check out our [Security Self Defense guide on it](https://ssd.eff.org/module/how-to-use-signal).
 

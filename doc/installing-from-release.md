@@ -32,11 +32,12 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
    <http://192.168.1.1> (Orbic) or <http://192.168.0.1> (TP-Link) and see the
    hardware's own admin menu.
 
-5. **On MacOS only**, you have to run `xattr -d
-   com.apple.quarantine installer` to allow execution of
-   the binary.
+5. **Note before install (optional, depending on OS)**
 
-6. **Run the installer.**
+   - **On Windows only**, you don't need to use the `''` symbols for the `--admin-password` argument
+   - **On MacOS only**, you have to run `xattr -d com.apple.quarantine installer` to allow execution of the binary.
+
+7. **Run the installer.**
 
    ```bash
    # For Orbic:
@@ -57,9 +58,9 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
    respective page in the sidebar under "Supported
    Devices" for the installation command.
 
-7. The installer will eventually tell you it's done, and the device will reboot.
+5. The installer will eventually tell you it's done, and the device will reboot.
 
-8. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter.md). You should also see a green line flash along the top of top the display on the device.
+6. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter.md). You should also see a green line flash along the top of top the display on the device.
 
 ## Troubleshooting
 
