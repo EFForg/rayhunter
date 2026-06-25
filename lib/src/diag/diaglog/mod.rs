@@ -87,10 +87,6 @@ pub enum LogBody {
     },
     #[deku(id = "0xb062")]
     LteMacRachResponse { packet: mac::Packet },
-    #[deku(id = "0xb063")]
-    LteMacDl { packet: mac::Packet },
-    #[deku(id = "0xb064")]
-    LteMacUl { packet: mac::Packet },
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
