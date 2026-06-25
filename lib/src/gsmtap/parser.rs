@@ -17,6 +17,9 @@ pub enum GsmtapParserError {
 }
 
 pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapParserError> {
+    if !msg.is_gsmtap_message() {
+        return Ok(None);
+    }
     if let Message::Log {
         timestamp, body, ..
     } = msg
@@ -31,6 +34,8 @@ pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapP
 }
 
 fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserError> {
+    // Note: if support for another LogBody variant is added here, it should
+    // also be added to Message::is_gsmtap_message
     match value {
         LogBody::LteRrcOtaMessage {
             ext_header_version,
@@ -154,18 +159,6 @@ fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserEr
             Ok(Some(GsmtapMessage {
                 header,
                 payload: msg,
-            }))
-        }
-        LogBody::LteMl1ServingCellMeasurementAndEvaluation { data, .. } => {
-            // frame_number reused for PCI (normally SFN in RRC frames) so all three
-            // serving-cell fields are accessible in Wireshark as gsmtap.* columns.
-            let mut header = GsmtapHeader::new(GsmtapType::QcDiag);
-            header.signal_dbm = data.get_meas_rsrp() as i8;
-            header.arfcn = data.get_earfcn().try_into().unwrap_or(0);
-            header.frame_number = data.get_pci() as u32;
-            Ok(Some(GsmtapMessage {
-                header,
-                payload: vec![],
             }))
         }
         LogBody::LteMacRachResponse { packet } => {
