@@ -199,6 +199,22 @@ where
 
         Ok(Some(Message::from_hdlc(&buf)))
     }
+
+    pub async fn get_next_buf(
+        &mut self,
+    ) -> Result<Option<Vec<u8>>, std::io::Error> {
+        let mut buf = vec![];
+        if self
+            .buf_reader
+            .read_until(MESSAGE_TERMINATOR, &mut buf)
+            .await?
+            == 0
+        {
+            return Ok(None);
+        }
+
+        Ok(Some(buf))
+    }
 }
 
 impl<T> AsyncRead for QmdlMessageReader<T>

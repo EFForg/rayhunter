@@ -2,10 +2,7 @@ use clap::Parser;
 use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
-    analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness},
-    gsmtap::parser as gsmtap_parser,
-    pcap::GsmtapPcapWriter,
-    qmdl::QmdlMessageReader,
+    analysis::analyzer::{AnalysisRow, AnalyzerConfig, EventType, Harness}, diag::Message, gsmtap::parser as gsmtap_parser, pcap::GsmtapPcapWriter, qmdl::QmdlMessageReader,
 };
 use std::{collections::HashMap, path::PathBuf};
 use tokio::fs::File;
@@ -115,12 +112,20 @@ async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool) {
         .await
         .expect("failed to open QmdlReader");
     let mut report = Report::new(qmdl_path);
-    while let Some(maybe_message) = qmdl_reader
-        .get_next_message()
+    let mut stats = HashMap::new();
+    while let Some(buf) = qmdl_reader
+        .get_next_buf()
         .await
         .expect("failed to get message")
     {
-        report.process_row(harness.analyze_qmdl_message(maybe_message));
+        let log_type = u16::from_le_bytes([buf[6], buf[7]]);
+        stats.entry(log_type)
+            .and_modify(|total| *total += buf.len())
+            .or_insert(buf.len());
+        report.process_row(harness.analyze_qmdl_message(Message::from_hdlc(&buf)));
+    }
+    for (id, size) in stats {
+        println!("{id:04x}: {size}");
     }
     report.print_summary(show_skipped);
 }

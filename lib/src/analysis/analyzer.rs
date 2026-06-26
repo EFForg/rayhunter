@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 use crate::analysis::diagnostic::DiagnosticAnalyzer;
+use crate::diag::diaglog::LogBody;
 use crate::diag::{DiagParsingError, Message, MessagesContainer};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, parser as gsmtap_parser};
 use crate::util::RuntimeMetadata;
@@ -430,6 +431,21 @@ impl Harness {
                 return row;
             }
         };
+        if let Message::Log { body, .. } = &qmdl_message {
+            match body {
+                LogBody::LteLl1ServingCellTiming { data } => {
+                    for t in &data.timing_adjustment {
+                        if t.timing_advance != 0 {
+                            println!("ta {}", t.timing_advance);
+                        }
+                    }
+                }
+                LogBody::LteMl1ServingCellMeasurementAndEvaluation { data } => {
+                    // println!("serving cell pci {}, earfcn {}", data.get_pci(), data.get_earfcn());
+                }
+                _ => {},
+            }
+        }
         let (timestamp, gsmtap_msg) = match gsmtap_parser::parse(qmdl_message) {
             Ok(Some(msg)) => msg,
             Ok(None) => return row,
