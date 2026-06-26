@@ -3,8 +3,9 @@
 use chrono::{DateTime, FixedOffset};
 use deku::prelude::*;
 
+pub mod ll1;
 pub mod mac;
-pub mod measurement;
+pub mod ml1;
 pub mod rrc;
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -79,14 +80,23 @@ pub enum LogBody {
     },
     #[deku(id = "0xb17f")]
     LteMl1ServingCellMeasurementAndEvaluation {
-        data: measurement::serving_cell::MeasurementAndEvaluation,
+        data: ml1::serving_cell::MeasurementAndEvaluation,
     },
     #[deku(id = "0xb180")]
     LteMl1NeighborCellsMeasurements {
-        data: measurement::neighbor_cells::Measurements,
+        data: ml1::neighbor_cells::Measurements,
     },
     #[deku(id = "0xb062")]
     LteMacRachResponse { packet: mac::Packet },
+    #[deku(id = "0xb063")]
+    LteMacDl { packet: mac::Packet },
+    #[deku(id = "0xb064")]
+    LteMacUl { packet: mac::Packet },
+    #[deku(id = "0xb114")]
+    LteLl1ServingCellTiming {
+        #[deku(ctx = "deku::ctx::Order::Lsb0")]
+        data: ll1::ServingCellTiming,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]

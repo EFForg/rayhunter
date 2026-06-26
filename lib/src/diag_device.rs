@@ -40,27 +40,30 @@ pub enum DiagDeviceError {
     ParseMessagesContainerError(deku::DekuError),
 }
 
-pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 14] = [
+pub const LOG_CODES_FOR_RAW_PACKET_LOGGING: [u32; 17] = [
     // Layer 2:
-    log_codes::LOG_GPRS_MAC_SIGNALLING_MESSAGE_C, // 0x5226
+    log_codes::LOG_GPRS_MAC_SIGNALLING_MESSAGE_C,
     // Layer 3:
-    log_codes::LOG_GSM_RR_SIGNALING_MESSAGE_C, // 0x512f
-    log_codes::WCDMA_SIGNALLING_MESSAGE,       // 0x412f
-    log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C,      // 0xb0c0
-    log_codes::LOG_NR_RRC_OTA_MSG_LOG_C,       // 0xb821
+    log_codes::LOG_GSM_RR_SIGNALING_MESSAGE_C,
+    log_codes::WCDMA_SIGNALLING_MESSAGE,
+    log_codes::LOG_LTE_RRC_OTA_MSG_LOG_C,
+    log_codes::LOG_NR_RRC_OTA_MSG_LOG_C,
     // NAS:
-    log_codes::LOG_UMTS_NAS_OTA_MESSAGE_LOG_PACKET_C, // 0x713a
-    log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C,      // 0xb0e2
-    log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C,     // 0xb0e3
-    log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C,      // 0xb0ec
-    log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C,     // 0xb0ed
+    log_codes::LOG_UMTS_NAS_OTA_MESSAGE_LOG_PACKET_C,
+    log_codes::LOG_LTE_NAS_ESM_OTA_IN_MSG_LOG_C,
+    log_codes::LOG_LTE_NAS_ESM_OTA_OUT_MSG_LOG_C,
+    log_codes::LOG_LTE_NAS_EMM_OTA_IN_MSG_LOG_C,
+    log_codes::LOG_LTE_NAS_EMM_OTA_OUT_MSG_LOG_C,
     // User IP traffic:
-    log_codes::LOG_DATA_PROTOCOL_LOGGING_C, // 0x11eb
+    log_codes::LOG_DATA_PROTOCOL_LOGGING_C,
     // LTE physical layer serving cell measurements: RSRP, RSRQ, RSSI
-    log_codes::LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C, // 0xb17f
-    log_codes::LOG_LTE_ML1_NEIGHBOR_MEAS,                // 0xb180
+    log_codes::LOG_LTE_ML1_SERVING_CELL_MEAS_AND_EVAL_C,
+    log_codes::LOG_LTE_ML1_NEIGHBOR_MEAS,
     // LTE MAC Random Access Channel response: contains Timing Advance
-    log_codes::LOG_LTE_MAC_RACH_RESPONSE_C, // 0xb062
+    log_codes::LOG_LTE_MAC_RACH_RESPONSE_C,
+    log_codes::LOG_LTE_MAC_DL,
+    log_codes::LOG_LTE_MAC_UL,
+    0xb114, // maybe timing advance related?
 ];
 
 const BUFFER_LEN: usize = 1024 * 1024 * 10;
