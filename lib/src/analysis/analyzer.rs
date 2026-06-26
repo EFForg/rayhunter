@@ -434,10 +434,8 @@ impl Harness {
         if let Message::Log { body, .. } = &qmdl_message {
             match body {
                 LogBody::LteLl1ServingCellTiming { data } => {
-                    for t in &data.timing_adjustment {
-                        if t.timing_advance != 0 {
-                            println!("ta {}", t.timing_advance);
-                        }
+                    if data.starting_ul_timing_advance != 0 {
+                        println!("ta {}", data.starting_ul_timing_advance);
                     }
                 }
                 LogBody::LteMl1ServingCellMeasurementAndEvaluation { data } => {
