@@ -430,16 +430,13 @@ impl Harness {
                 return row;
             }
         };
-        let gsmtap_message = match gsmtap_parser::parse(qmdl_message) {
-            Ok(msg) => msg,
+        let (timestamp, gsmtap_msg) = match gsmtap_parser::parse(qmdl_message) {
+            Ok(Some(msg)) => msg,
+            Ok(None) => return row,
             Err(err) => {
                 row.skipped_message_reason = Some(format!("{err:?}"));
                 return row;
             }
-        };
-
-        let Some((timestamp, gsmtap_msg)) = gsmtap_message else {
-            return row;
         };
         row.packet_timestamp = Some(timestamp.to_datetime());
 

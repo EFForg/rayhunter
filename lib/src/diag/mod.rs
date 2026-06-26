@@ -166,8 +166,9 @@ impl Message {
         match body {
             LogBody::LteRrcOtaMessage { .. } => true,
             LogBody::LteMacRachResponse { .. } => true,
+            LogBody::LteMl1NeighborCellsMeasurements { .. } => true,
             LogBody::Nas4GMessage { .. } => true,
-            _ => false,
+            _ => false
         }
     }
 }
