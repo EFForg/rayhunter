@@ -18,7 +18,8 @@ pub struct Subpacket {
     pub id: u8,
     pub version: u8,
     pub size: u16,
-    #[deku(ctx = "*id, *version, *size")]
+    // size includes the header length, so subtract that
+    #[deku(ctx = "*id, *version, *size - 4")]
     pub body: SubpacketBody,
 }
 
