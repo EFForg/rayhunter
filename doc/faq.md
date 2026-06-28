@@ -6,7 +6,7 @@
 
 ### If I am located outside of the United States, should I use the SIM card that came with my device?
 
-We recommend using a SIM card from a carrier in whichever country you are located in.
+We recommend using a SIM card from a carrier from whichever country you are located in.
 
 ### How can I test that my device is working?
 
