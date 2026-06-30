@@ -4881,6 +4881,8 @@ dependencies = [
  "log",
  "pcap-file-tokio",
  "rayhunter",
+ "serde",
+ "serde_json",
  "tokio",
  "walkdir",
 ]
