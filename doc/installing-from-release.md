@@ -42,8 +42,11 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
    # For Orbic:
    ./installer orbic --admin-password 'mypassword'
 
-   # Note: the arguments --admin-username 'myusername' and --admin-ip 'mydeviceip'
-   #       may be required if different from the default.
+   # Important notes:
+   # - the arguments --admin-username 'myusername' and --admin-ip 'mydeviceip'
+   #   may be required if different from the default.
+   # - on Windows this command should be run in PowerShell and not the Command
+   #   Prompt (CMD) where characters like quotes are treated differently.
 
    # For TP-Link:
    ./installer tplink
