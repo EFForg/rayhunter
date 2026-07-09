@@ -163,13 +163,13 @@ impl Message {
         let Message::Log { body, .. } = self else {
             return false;
         };
-        match body {
-            LogBody::LteRrcOtaMessage { .. } => true,
-            LogBody::LteMacRachResponse { .. } => true,
-            LogBody::LteMl1NeighborCellsMeasurements { .. } => true,
-            LogBody::Nas4GMessage { .. } => true,
-            _ => false,
-        }
+        matches!(
+            body,
+            LogBody::LteRrcOtaMessage { .. }
+                | LogBody::LteMacRachResponse { .. }
+                | LogBody::LteMl1NeighborCellsMeasurements { .. }
+                | LogBody::Nas4GMessage { .. }
+        )
     }
 }
 
