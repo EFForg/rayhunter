@@ -168,7 +168,7 @@ impl Message {
             LogBody::LteMacRachResponse { .. } => true,
             LogBody::LteMl1NeighborCellsMeasurements { .. } => true,
             LogBody::Nas4GMessage { .. } => true,
-            _ => false
+            _ => false,
         }
     }
 }

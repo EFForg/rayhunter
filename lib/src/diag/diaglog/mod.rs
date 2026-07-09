@@ -96,7 +96,7 @@ pub enum LogBody {
     LteLl1ServingCellTiming {
         #[deku(ctx = "deku::ctx::Order::Lsb0")]
         data: ll1::ServingCellTiming,
-    }
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
