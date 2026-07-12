@@ -117,15 +117,15 @@ pub struct MemoryStats {
 
 // runs the given command and returns its stdout as a string
 async fn get_cmd_output(mut cmd: Command) -> Result<String, String> {
-    let cmd_str = format!("{:?}", &cmd);
+    let cmd_str = format!("{:?}", cmd);
     let output = cmd
         .output()
         .await
-        .map_err(|e| format!("error running command {}: {}", &cmd_str, e))?;
+        .map_err(|e| format!("error running command {}: {}", cmd_str, e))?;
     if !output.status.success() {
         return Err(format!(
             "command {} failed with exit code {}",
-            &cmd_str,
+            cmd_str,
             output.status.code().unwrap()
         ));
     }
