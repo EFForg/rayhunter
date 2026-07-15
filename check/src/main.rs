@@ -153,7 +153,7 @@ async fn pcapify(qmdl_path: &PathBuf) {
                 .expect("failed to write");
         }
     }
-    info!("wrote pcap to {:?}", &pcap_path);
+    info!("wrote pcap to {:?}", pcap_path);
 }
 
 #[tokio::main]
