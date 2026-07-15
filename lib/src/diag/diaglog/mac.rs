@@ -1,5 +1,5 @@
 //! Diag MAC RACH serialization/deserialization. As with most of our diag
-//! parsers, these structs were derived SCAT:
+//! parsers, these structs were derived from SCAT:
 //! https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/src/scat/parsers/qualcomm/diagltelogparser.py#L853
 
 use deku::prelude::*;
@@ -9,7 +9,7 @@ pub struct Packet {
     #[deku(assert_eq = "1")]
     pub version: u8,
     pub num_subpackets: u8,
-    #[deku(pad_bytes_before = "2", count = "*num_subpackets")]
+    #[deku(pad_bytes_before = "2", count = "num_subpackets")]
     pub subpackets: Vec<Subpacket>,
 }
 
@@ -44,11 +44,13 @@ pub mod rach {
     pub struct Attempt {
         #[deku(ctx = "version")]
         pub header: AttemptHeader,
+        // since we may not have meaningful msg fields, they're marked private and the get_msg
+        // functions should be used instead
         #[deku(ctx = "version")]
-        pub msg1: Msg1,
-        pub msg2: Msg2,
+        msg1: Msg1,
+        msg2: Msg2,
         #[deku(ctx = "version")]
-        pub msg3: Msg3,
+        msg3: Msg3,
         #[deku(cond = "version == 0x31 || version == 0x32")]
         pub additional_info: Option<AdditionalInfo>,
     }
@@ -143,27 +145,33 @@ pub mod rach {
 
     impl Msg3 {
         pub fn get_grant(&self) -> u32 {
-            match &self.grant {
-                Msg3Grant::V1 { grant } => *grant & 0xfffff,
-                Msg3Grant::V32 { grant } => *grant & 0xfffff,
-            }
-        }
-    }
+            match self.grant {
+                Msg3Grant::V1 { grant } => grant,
+                Msg3Grant::V32 { grant } => grant,
+            }   
+        }   
+    }   
 
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
     #[deku(ctx = "version: u8", id = "version")]
     pub enum Msg3Grant {
         #[deku(id_pat = "0..0x32")]
         V1 {
-            #[deku(endian = "little")]
+            #[deku(endian = "little", map = "Msg3Grant::map_grant")]
             grant: u32,
-        },
+        },  
         #[deku(id_pat = "0x32..")]
         V32 {
-            #[deku(endian = "big")]
+            #[deku(endian = "big", map = "Msg3Grant::map_grant")]
             grant: u32,
-        },
-    }
+        },  
+    }   
+
+    impl Msg3Grant {
+        fn map_grant(grant: u32) -> Result<u32, DekuError> {
+            Ok(grant & 0xfffff)
+        }   
+    }   
 
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
     #[deku(ctx = "version: u8", id = "version")]

@@ -94,7 +94,6 @@ pub enum LogBody {
     LteMacUl { packet: mac::Packet },
     #[deku(id = "0xb114")]
     LteLl1ServingCellTiming {
-        #[deku(ctx = "deku::ctx::Order::Lsb0")]
         data: ll1::ServingCellTiming,
     },
 }

@@ -48,7 +48,7 @@ pub enum RntiType {
     #[deku(id = "3")]
     C,
     #[deku(id = "4")]
-    Ri,
+    Si,
     #[deku(id = "5")]
     Sps,
     #[deku(id = "6")]
@@ -106,13 +106,13 @@ pub fn mac_subpacket_to_gsmtap(
                 ETRAPIDSubheader {
                     extended: false,
                     type_field: true,
-                    rapid: msg1.get_preamble_index(),
+                    rapid: msg1.get_preamble_index() & 0b111111
                 }
                 .to_bytes()?,
             );
             payload.extend(
                 RACHResponse {
-                    tac: msg2.ta,
+                    tac: msg2.ta & 0b11111111111,
                     ul_grant: msg3.get_grant(),
                     tc_rnti: msg2.tc_rnti,
                 }
