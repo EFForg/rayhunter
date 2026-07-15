@@ -17,9 +17,6 @@ pub enum GsmtapParserError {
 }
 
 pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapParserError> {
-    if !msg.is_gsmtap_message() {
-        return Ok(None);
-    }
     if let Message::Log {
         timestamp, body, ..
     } = msg
