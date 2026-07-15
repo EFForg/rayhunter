@@ -156,21 +156,6 @@ impl Message {
             Err(err) => Err(DiagParsingError::HdlcDecapsulationError(err, data.to_vec())),
         }
     }
-
-    /// Returns whether this message should be parsed into a GSMTAP packet for
-    /// display in pcap files
-    pub fn is_gsmtap_message(&self) -> bool {
-        let Message::Log { body, .. } = self else {
-            return false;
-        };
-        matches!(
-            body,
-            LogBody::LteRrcOtaMessage { .. }
-                | LogBody::LteMacRachResponse { .. }
-                | LogBody::LteMl1NeighborCellsMeasurements { .. }
-                | LogBody::Nas4GMessage { .. }
-        )
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
