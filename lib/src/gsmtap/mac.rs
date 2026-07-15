@@ -106,7 +106,7 @@ pub fn mac_subpacket_to_gsmtap(
                 ETRAPIDSubheader {
                     extended: false,
                     type_field: true,
-                    rapid: msg1.get_preamble_index() & 0b111111
+                    rapid: msg1.get_preamble_index() & 0b111111,
                 }
                 .to_bytes()?,
             );

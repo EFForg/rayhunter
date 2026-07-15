@@ -148,9 +148,9 @@ pub mod rach {
             match self.grant {
                 Msg3Grant::V1 { grant } => grant,
                 Msg3Grant::V32 { grant } => grant,
-            }   
-        }   
-    }   
+            }
+        }
+    }
 
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
     #[deku(ctx = "version: u8", id = "version")]
@@ -159,19 +159,19 @@ pub mod rach {
         V1 {
             #[deku(endian = "little", map = "Msg3Grant::map_grant")]
             grant: u32,
-        },  
+        },
         #[deku(id_pat = "0x32..")]
         V32 {
             #[deku(endian = "big", map = "Msg3Grant::map_grant")]
             grant: u32,
-        },  
-    }   
+        },
+    }
 
     impl Msg3Grant {
         fn map_grant(grant: u32) -> Result<u32, DekuError> {
             Ok(grant & 0xfffff)
-        }   
-    }   
+        }
+    }
 
     #[derive(DekuRead, DekuWrite, Debug, Clone, PartialEq)]
     #[deku(ctx = "version: u8", id = "version")]
