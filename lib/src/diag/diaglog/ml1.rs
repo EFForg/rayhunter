@@ -1,5 +1,5 @@
 //! Diag ML1 measurement log serialization/deserialization. As with most of our
-//! diag parsers, these structs were derived SCAT:
+//! diag parsers, these structs were derived from SCAT:
 //! Neighbor cell measurements: https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/src/scat/parsers/qualcomm/diagltelogparser.py#L192
 //! Serving cell measurements: https://github.com/fgsect/scat/blob/9763cb5b1dcd5ee980f5b0ead9a8d520c8c51a51/src/scat/parsers/qualcomm/diagltelogparser.py#L114
 
@@ -27,7 +27,8 @@ pub mod serving_cell {
         pub header: MeasurementAndEvaluationHeader,
         #[deku(bits = 12, pad_bits_after = "20")]
         meas_rsrp: u16,
-        avg_rsrp: u32,
+        #[deku(bits = 12, pad_bits_after = "20")]
+        avg_rsrp: u16,
         #[deku(bits = 10, pad_bits_after = "22")]
         meas_rsrq: u16,
         #[deku(pad_bits_before = "10", bits = 11, pad_bits_after = "11")]
@@ -170,7 +171,7 @@ pub mod neighbor_cells {
         #[deku(bits = 10, pad_bits_after = "10")]
         avg_rsrq: u16,
         #[deku(bits = 6, pad_bits_after = "6")]
-        s_rxlev: u16,
+        s_rxlev: u8,
         n_freq_offset: u16,
         val5: u16,
         ant0_offset: u32,
