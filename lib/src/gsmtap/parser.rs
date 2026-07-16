@@ -31,8 +31,6 @@ pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapP
 }
 
 fn log_to_gsmtap(value: LogBody) -> Result<Option<GsmtapMessage>, GsmtapParserError> {
-    // Note: if support for another LogBody variant is added here, it should
-    // also be added to Message::is_gsmtap_message
     match value {
         LogBody::LteRrcOtaMessage {
             ext_header_version,
