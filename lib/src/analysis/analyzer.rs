@@ -3,6 +3,7 @@ use log::debug;
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::sync::LazyLock;
 
 use crate::analysis::diagnostic::DiagnosticAnalyzer;
 use crate::diag::{DiagParsingError, Message, MessagesContainer};
@@ -16,6 +17,11 @@ use super::{
     null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
     test_analyzer::TestAnalyzer,
 };
+
+// gps epoch (1980-01-06), what gsmtap pcap timestamps count from. parse it once
+// here instead of on every packet.
+static GPS_EPOCH: LazyLock<DateTime<FixedOffset>> =
+    LazyLock::new(|| DateTime::parse_from_rfc3339("1980-01-06T00:00:00-00:00").unwrap());
 
 /// A list of booleans which stores information about which analyzers are enabled
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -379,14 +385,26 @@ impl Harness {
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {
         self.packet_num += 1;
 
-        let epoch = DateTime::parse_from_rfc3339("1980-01-06T00:00:00-00:00").unwrap();
         let mut row = AnalysisRow {
-            packet_timestamp: Some(epoch + packet.timestamp),
+            packet_timestamp: Some(*GPS_EPOCH + packet.timestamp),
             skipped_message_reason: None,
             events: Vec::new(),
         };
         let gsmtap_offset = 20 + 8;
-        let gsmtap_data = &packet.data[gsmtap_offset..];
+        let gsmtap_header_len = 16;
+        // packets from arbitrary captures can be shorter than the IP/UDP + gsmtap
+        // header we expect; skip those instead of indexing out of bounds.
+        let Some(gsmtap_data) = packet
+            .data
+            .get(gsmtap_offset..)
+            .filter(|data| data.len() >= gsmtap_header_len)
+        else {
+            row.skipped_message_reason = Some(format!(
+                "packet too short for GSMTAP ({} bytes)",
+                packet.data.len()
+            ));
+            return row;
+        };
         // the type and subtype are at byte offsets 3 and 13, respectively
         let gsmtap_header = match GsmtapType::new(gsmtap_data[2], gsmtap_data[12]) {
             Ok(gsmtap_type) => GsmtapHeader::new(gsmtap_type),
@@ -395,8 +413,7 @@ impl Harness {
                 return row;
             }
         };
-        let packet_offset = gsmtap_offset + 16;
-        let packet_data = &packet.data[packet_offset..];
+        let packet_data = &gsmtap_data[gsmtap_header_len..];
         let gsmtap_message = GsmtapMessage {
             header: gsmtap_header,
             payload: packet_data.to_vec(),
@@ -502,6 +519,26 @@ impl Harness {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::borrow::Cow;
+    use std::time::Duration;
+
+    #[test]
+    fn test_analyze_pcap_packet_too_short() {
+        let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
+        // shorter than the IP/UDP + gsmtap header; should be skipped, not panic
+        for len in [0, 10, 28, 40] {
+            let packet = EnhancedPacketBlock {
+                interface_id: 0,
+                timestamp: Duration::from_secs(0),
+                original_len: len as u32,
+                data: Cow::Owned(vec![0u8; len]),
+                options: Vec::new(),
+            };
+            let row = harness.analyze_pcap_packet(packet);
+            let reason = row.skipped_message_reason.expect("row should be skipped");
+            assert!(reason.contains("too short"), "unexpected reason: {reason}");
+        }
+    }
 
     #[test]
     fn test_analysis_row_deserialize_old_format() {
