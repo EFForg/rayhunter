@@ -106,7 +106,7 @@ impl<'de> Deserialize<'de> for EventType {
 /// Events are user-facing signals that can be emitted by an [Analyzer] upon a
 /// message being received. They can be used to signifiy an IC detection
 /// warning, or just to display some relevant information to the user.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Event {
     pub event_type: EventType,
     pub message: String,
@@ -144,7 +144,7 @@ pub trait Analyzer {
 }
 
 /// Specific information on a given analyzer
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct AnalyzerMetadata {
     /// The analyzer name
@@ -156,7 +156,7 @@ pub struct AnalyzerMetadata {
 }
 
 /// The metadata for an analyzed report
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(default)]
 #[derive(Default)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]

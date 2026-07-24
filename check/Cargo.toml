@@ -6,8 +6,12 @@ edition = "2024"
 [dependencies]
 rayhunter = { path = "../lib" }
 futures = { version = "0.3.30", default-features = false }
+chrono = { version = "0.4.31", features = ["serde"] }
 log = "0.4.20"
 tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt-multi-thread"] }
 pcap-file-tokio = "0.1.0"
 clap = { version = "4.5.2", features = ["derive"] }
 walkdir = "2.5.0"
+serde = "1.0.229"
+serde_json = "1.0.151"
+json = "0.12.4"
