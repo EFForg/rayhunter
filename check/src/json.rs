@@ -3,6 +3,10 @@ use tokio::io::{AsyncWrite, AsyncWriteExt, BufWriter};
 
 use crate::Report;
 
+/// Writes JSON output files incrementally. The reasoning here is that each QMDL
+/// report file may contain a huge number of events, and each JSON file may
+/// contain many reports, so instead of keeping them all in memory until the
+/// end, we simply serialize them to JSON as we go along.
 pub struct IncrementalJsonWriter<T> {
     writer: BufWriter<T>,
     reports_written: usize,
@@ -14,6 +18,8 @@ impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
         check_path: &str,
         metadata: &ReportMetadata,
     ) -> std::io::Result<Self> {
+        // Writes the "static" part of the report, i.e. the initial curly brace
+        // & fields that don't change depending on QMDL reports
         let mut writer = BufWriter::new(file);
         let path_str = serde_json::to_string(check_path)?;
         let metadata_str = serde_json::to_string(metadata)?;
@@ -29,6 +35,8 @@ impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
     }
 
     pub async fn write_report(&mut self, report: &Report) -> std::io::Result<()> {
+        // If we've already written a report, we need to separate it from the
+        // next one w/ a comma
         if self.reports_written > 0 {
             self.writer.write_u8(b',').await?;
         }
@@ -39,6 +47,7 @@ impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
     }
 
     pub async fn finish(mut self) -> std::io::Result<()> {
+        // Close the list of reports, and then the JSON object itself
         self.writer.write_all("]}".as_bytes()).await?;
         self.writer.flush().await?;
         Ok(())
