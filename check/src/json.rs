@@ -1,5 +1,5 @@
 use rayhunter::analysis::analyzer::ReportMetadata;
-use tokio::{io::{AsyncWrite, AsyncWriteExt, BufWriter}};
+use tokio::io::{AsyncWrite, AsyncWriteExt, BufWriter};
 
 use crate::Report;
 
@@ -9,11 +9,18 @@ pub struct IncrementalJsonWriter<T> {
 }
 
 impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
-    pub async fn new(file: T, check_path: &str, metadata: &ReportMetadata) -> std::io::Result<Self> {
+    pub async fn new(
+        file: T,
+        check_path: &str,
+        metadata: &ReportMetadata,
+    ) -> std::io::Result<Self> {
         let mut writer = BufWriter::new(file);
         let path_str = serde_json::to_string(check_path)?;
         let metadata_str = serde_json::to_string(metadata)?;
-        let s = format!(r#"{{ "path": {}, "metadata": {}, "reports": ["#, path_str, metadata_str);
+        let s = format!(
+            r#"{{ "path": {}, "metadata": {}, "reports": ["#,
+            path_str, metadata_str
+        );
         writer.write_all(s.as_bytes()).await?;
         Ok(Self {
             writer,
@@ -23,7 +30,7 @@ impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
 
     pub async fn write_report(&mut self, report: &Report) -> std::io::Result<()> {
         if self.reports_written > 0 {
-            self.writer.write_u8(',' as u8).await?;
+            self.writer.write_u8(b',').await?;
         }
         let report_str = serde_json::to_string(report)?;
         self.writer.write_all(report_str.as_bytes()).await?;
@@ -40,7 +47,9 @@ impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
 
 #[cfg(test)]
 mod test {
-    use rayhunter::analysis::analyzer::{AnalyzerConfig, Event, EventType, Harness, ReportMetadata};
+    use rayhunter::analysis::analyzer::{
+        AnalyzerConfig, Event, EventType, Harness, ReportMetadata,
+    };
     use serde::Deserialize;
     use tokio::io::{AsyncReadExt, DuplexStream, duplex};
 
@@ -58,7 +67,10 @@ mod test {
         report.skipped = 13;
         report.warnings = 12;
         report.events.push(EventWithTimestamp {
-            event: Event { event_type: EventType::High, message: "hi".into() },
+            event: Event {
+                event_type: EventType::High,
+                message: "hi".into(),
+            },
             timestamp: chrono::DateTime::default(),
         });
         report
@@ -67,7 +79,12 @@ mod test {
     async fn create_test_writer(path: &str) -> (IncrementalJsonWriter<DuplexStream>, DuplexStream) {
         let (writer, reader) = duplex(1_000_000);
         let harness = Harness::new_with_config(&AnalyzerConfig::default());
-        (IncrementalJsonWriter::new(writer, path, &harness.get_metadata()).await.unwrap(), reader)
+        (
+            IncrementalJsonWriter::new(writer, path, &harness.get_metadata())
+                .await
+                .unwrap(),
+            reader,
+        )
     }
 
     async fn parse_json(mut reader: DuplexStream) -> ExpectedJsonLayout {
