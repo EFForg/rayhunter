@@ -3,7 +3,10 @@ use clap::Parser;
 use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
-    analysis::analyzer::{AnalysisRow, AnalyzerConfig, Event, EventType, Harness}, gsmtap::parser as gsmtap_parser, pcap::GsmtapPcapWriter, qmdl::QmdlMessageReader,
+    analysis::analyzer::{AnalysisRow, AnalyzerConfig, Event, EventType, Harness},
+    gsmtap::parser as gsmtap_parser,
+    pcap::GsmtapPcapWriter,
+    qmdl::QmdlMessageReader,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
@@ -102,7 +105,11 @@ impl Report {
     }
 }
 
-async fn analyze_pcap(pcap_path: &str, show_skipped: bool, json_writer: Option<&mut IncrementalJsonWriter<File>>) {
+async fn analyze_pcap(
+    pcap_path: &str,
+    show_skipped: bool,
+    json_writer: Option<&mut IncrementalJsonWriter<File>>,
+) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let pcap_file = &mut File::open(&pcap_path).await.expect("failed to open file");
     let mut pcap_reader = PcapNgReader::new(pcap_file)
@@ -121,11 +128,18 @@ async fn analyze_pcap(pcap_path: &str, show_skipped: bool, json_writer: Option<&
     }
     report.print_summary(show_skipped);
     if let Some(writer) = json_writer {
-        writer.write_report(&report).await.expect("failed to write report to JSON");
+        writer
+            .write_report(&report)
+            .await
+            .expect("failed to write report to JSON");
     }
 }
 
-async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool, json_writer: Option<&mut IncrementalJsonWriter<File>>) {
+async fn analyze_qmdl(
+    qmdl_path: &str,
+    show_skipped: bool,
+    json_writer: Option<&mut IncrementalJsonWriter<File>>,
+) {
     let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
     let mut qmdl_reader = QmdlMessageReader::new(qmdl_file)
@@ -141,7 +155,10 @@ async fn analyze_qmdl(qmdl_path: &str, show_skipped: bool, json_writer: Option<&
     }
     report.print_summary(show_skipped);
     if let Some(writer) = json_writer {
-        writer.write_report(&report).await.expect("failed to write report to JSON");
+        writer
+            .write_report(&report)
+            .await
+            .expect("failed to write report to JSON");
     }
 }
 
@@ -208,9 +225,11 @@ async fn main() {
             .await
             .expect("failed to create JSON output file");
         let check_path_str = args.path.to_string_lossy();
-        json_writer = Some(IncrementalJsonWriter::new(json_file, &check_path_str, &metadata)
-            .await
-            .expect("failed to create JSON writer"));
+        json_writer = Some(
+            IncrementalJsonWriter::new(json_file, &check_path_str, &metadata)
+                .await
+                .expect("failed to create JSON writer"),
+        );
     }
 
     for maybe_entry in WalkDir::new(&args.path) {
@@ -238,6 +257,9 @@ async fn main() {
     if let Some(writer) = json_writer {
         // if we have a json_writer, we also have args.json
         info!("Writing report to {:?}", args.json.unwrap());
-        writer.finish().await.expect("failed to finish writing to JSON file");
+        writer
+            .finish()
+            .await
+            .expect("failed to finish writing to JSON file");
     }
 }
