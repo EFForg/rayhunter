@@ -83,7 +83,7 @@ impl ImsiRequestedAnalyzer {
 
             // IMSI to Disconnect without AuthAccept
             (State::IdentityRequest, State::Disconnect) => {
-                if self.likely_enb_plmn == self.likely_ue_plmn {
+                if self.likely_ue_plmn != "Unknown" && self.likely_enb_plmn == self.likely_ue_plmn {
                     self.flag = Some(Event {
                         event_type: EventType::High,
                         message: "Disconnected after Identity Request without Auth Accept on home network!".to_string(),
@@ -217,8 +217,9 @@ impl Analyzer for ImsiRequestedAnalyzer {
             match &**inner {
                 LteInformationElement::NAS(payload) => match payload {
                     NASMessage::EMMMessage(EMMMessage::EMMAttachRequest(request)) => {
-                        if self.likely_ue_plmn == "Unknown" {
-                            self.likely_ue_plmn = self.extract_plmn(&request.old_tai.inner);
+                        let plmn = self.extract_plmn(&request.old_tai.inner);
+                        if plmn != "Unknown" {
+                            self.likely_ue_plmn = plmn;
                         }
                         self.transition(State::AttachRequest, packet_num);
                     }
