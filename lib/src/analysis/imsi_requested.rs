@@ -90,9 +90,11 @@ impl ImsiRequestedAnalyzer {
 
             // IMSI to Disconnect without AuthAccept
             (State::IdentityRequest, State::Disconnect) => {
-                if self.likely_ue_plmn.as_ref().is_some_and(|p| {
-                    self.likely_enb_plmns.len() == 1 && self.likely_enb_plmns.contains(p)
-                }) {
+                if self
+                    .likely_ue_plmn
+                    .as_ref()
+                    .is_some_and(|p| self.likely_enb_plmns.contains(p))
+                {
                     self.flag = Some(Event {
                         event_type: EventType::High,
                         message: "Disconnected after Identity Request without Auth Accept on home network!".to_string(),
