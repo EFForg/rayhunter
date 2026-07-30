@@ -5,7 +5,7 @@ use pycrate_rs::nas::emm::EMMMessage;
 
 use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
-use log::debug;
+use log::{debug, error};
 
 use pycrate_rs::nas::generated::emm::emm_attach_reject::EMMCauseEMMCause as AttachRejectEMMCause;
 use pycrate_rs::nas::generated::emm::emm_attach_request::TAI;
@@ -25,14 +25,15 @@ pub enum State {
     IdentityRequest,
     AuthAccept,
     Disconnect,
+    LikelyValidAttachReject,
 }
 
 pub struct ImsiRequestedAnalyzer {
     state: State,
     timeout_counter: usize,
     flag: Option<Event>,
-    likely_enb_plmn: String,
-    likely_ue_plmn: String,
+    likely_enb_plmns: Vec<String>,
+    likely_ue_plmn: Option<String>,
 }
 
 impl Default for ImsiRequestedAnalyzer {
@@ -47,10 +48,8 @@ impl ImsiRequestedAnalyzer {
             state: State::Unattached,
             timeout_counter: 0,
             flag: None,
-            // You will likely wonder why this isn't an Option<PLMN{mcc: u32, mnc: u32}>
-            // The answer is that I like strings.
-            likely_enb_plmn: "Unknown".to_string(),
-            likely_ue_plmn: "Unknown".to_string(),
+            likely_enb_plmns: vec![],
+            likely_ue_plmn: None,
         }
     }
 
@@ -81,19 +80,36 @@ impl ImsiRequestedAnalyzer {
                 });
             }
 
+            // Expected AttachReject for inactive SIMs
+            (_, State::LikelyValidAttachReject) => {
+                self.flag = Some(Event {
+                    event_type: EventType::Low,
+                    message: "Identity requested without authentication but its likely a false positive unless your SIM card has an active plan".to_string(),
+                });
+            }
+
             // IMSI to Disconnect without AuthAccept
             (State::IdentityRequest, State::Disconnect) => {
-                if self.likely_ue_plmn != "Unknown" && self.likely_enb_plmn == self.likely_ue_plmn {
+                if self.likely_ue_plmn.as_ref().is_some_and(|p| {
+                    self.likely_enb_plmns.len() == 1 && self.likely_enb_plmns.contains(p)
+                }) {
                     self.flag = Some(Event {
                         event_type: EventType::High,
                         message: "Disconnected after Identity Request without Auth Accept on home network!".to_string(),
                     });
                 } else {
+                    let enb_plmn_string = if self.likely_enb_plmns.is_empty() {
+                        "Unknown"
+                    } else {
+                        &self.likely_enb_plmns.join(", ")
+                    };
+                    let ue_plmn_string = self.likely_ue_plmn.as_deref().unwrap_or("Unknown");
+
                     self.flag = Some(Event {
                         event_type: EventType::Low,
                         message: format!(
                             "Disconnected after Identity Request without Auth Accept, but this could be a false positive roaming issue - Tower PLMN: {}, UE PLMN: {}",
-                            self.likely_enb_plmn, self.likely_ue_plmn
+                            enb_plmn_string, ue_plmn_string,
                         ),
                     });
                 }
@@ -111,22 +127,28 @@ impl ImsiRequestedAnalyzer {
                 );
             }
         }
-        self.state = next_state;
+
+        // LikelyValidAttachReject is a special case of Disconnect so after handling any special
+        // behavior above, we transition to the standard Disconnect state.
+        if next_state == State::LikelyValidAttachReject {
+            self.state = State::Disconnect;
+        } else {
+            self.state = next_state;
+        }
     }
 
     // Sometimes an ENB can have multiple PLMNS
-    fn format_plmn_list(&mut self, plmn_list: &PLMN_IdentityList) -> String {
+    fn format_plmn_list(&self, plmn_list: &PLMN_IdentityList) -> Vec<String> {
         plmn_list
             .0
             .iter()
             .map(|info| self.plmn_identity_to_str(&info.plmn_identity))
-            .collect::<Vec<_>>()
-            .join(", ")
+            .collect()
     }
 
     // PLMN is represented in two very different ways in the LTE spec so we need
     // two very different functions to decode them. I hate this.
-    fn plmn_identity_to_str(&mut self, plmn: &PLMN_Identity) -> String {
+    fn plmn_identity_to_str(&self, plmn: &PLMN_Identity) -> String {
         let mcc_digits: String = plmn
             .mcc
             .as_ref()
@@ -148,14 +170,20 @@ impl ImsiRequestedAnalyzer {
         format!("{}-{}", mcc_digits, mnc_digits)
     }
 
-    fn plmn_vec_to_str(&mut self, bytes: &[u8]) -> String {
-        let mcc_digit1 = bytes[0] & 0x0F;
-        let mcc_digit2 = (bytes[0] >> 4) & 0x0F;
-        let mcc_digit3 = bytes[1] & 0x0F;
+    fn tai_to_plmn_str(&self, maybe_tai: Option<&TAI>) -> Option<String> {
+        let plmn = &maybe_tai?.plmn;
+        if plmn.len() != 3 {
+            error!("TAI.plmn vector has unexpected length of {}", plmn.len());
+            return None;
+        }
 
-        let mnc_digit1 = bytes[2] & 0x0F;
-        let mnc_digit2 = (bytes[2] >> 4) & 0x0F;
-        let mnc_digit3 = (bytes[1] >> 4) & 0x0F;
+        let mcc_digit1 = plmn[0] & 0x0F;
+        let mcc_digit2 = (plmn[0] >> 4) & 0x0F;
+        let mcc_digit3 = plmn[1] & 0x0F;
+
+        let mnc_digit1 = plmn[2] & 0x0F;
+        let mnc_digit2 = (plmn[2] >> 4) & 0x0F;
+        let mnc_digit3 = (plmn[1] >> 4) & 0x0F;
 
         let mcc = mcc_digit1 as u32 * 100 + mcc_digit2 as u32 * 10 + mcc_digit3 as u32;
 
@@ -169,14 +197,7 @@ impl ImsiRequestedAnalyzer {
             )
         };
 
-        format!("{}-{}", mcc_str, mnc_str)
-    }
-
-    fn extract_plmn(&mut self, old_tai: &Option<TAI>) -> String {
-        match old_tai {
-            Some(t) => self.plmn_vec_to_str(&t.plmn),
-            None => "Unknown".to_string(),
-        }
+        Some(format!("{}-{}", mcc_str, mnc_str))
     }
 }
 
@@ -208,7 +229,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
             && let BCCH_DL_SCH_MessageType_c1::SystemInformationBlockType1(sib1) = c1
         {
             let plmn = &sib1.cell_access_related_info.plmn_identity_list;
-            self.likely_enb_plmn = self.format_plmn_list(plmn);
+            self.likely_enb_plmns = self.format_plmn_list(plmn);
 
             return None;
         }
@@ -217,9 +238,9 @@ impl Analyzer for ImsiRequestedAnalyzer {
             match &**inner {
                 LteInformationElement::NAS(payload) => match payload {
                     NASMessage::EMMMessage(EMMMessage::EMMAttachRequest(request)) => {
-                        let plmn = self.extract_plmn(&request.old_tai.inner);
-                        if plmn != "Unknown" {
-                            self.likely_ue_plmn = plmn;
+                        let maybe_plmn = self.tai_to_plmn_str(request.old_tai.inner.as_ref());
+                        if maybe_plmn.is_some() {
+                            self.likely_ue_plmn = maybe_plmn;
                         }
                         self.transition(State::AttachRequest, packet_num);
                     }
@@ -240,14 +261,12 @@ impl Analyzer for ImsiRequestedAnalyzer {
                         self.transition(State::Disconnect, packet_num);
                     }
                     NASMessage::EMMMessage(EMMMessage::EMMAttachReject(reject)) => {
-                        self.transition(State::Disconnect, packet_num);
                         if reject.emm_cause.inner
                             == AttachRejectEMMCause::EPSServicesAndNonEPSServicesNotAllowed
                         {
-                            self.flag = Some(Event {
-                                event_type: EventType::Low,
-                                message: "Identity requested without authentication but its likely a false positive unless your SIM card has an active plan".to_string(),
-                            });
+                            self.transition(State::LikelyValidAttachReject, packet_num);
+                        } else {
+                            self.transition(State::Disconnect, packet_num);
                         }
                     }
                     _ => {}
