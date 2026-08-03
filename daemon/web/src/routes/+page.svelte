@@ -206,7 +206,7 @@
         </a>
         <a
             class="flex flex-row gap-1 group"
-            href="https://supporters.eff.org/donate"
+            href="https://eff.org/donate-rayhunter"
             target="_blank"
         >
             <span class="hidden text-white group-hover:text-gray-400 lg:flex">Donate</span>
