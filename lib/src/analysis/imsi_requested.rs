@@ -81,7 +81,7 @@ impl ImsiRequestedAnalyzer {
             }
 
             // Expected AttachReject for inactive SIMs
-            (_, State::LikelyValidAttachReject) => {
+            (State::IdentityRequest, State::LikelyValidAttachReject) => {
                 self.flag = Some(Event {
                     event_type: EventType::Low,
                     message: "Identity requested without authentication but its likely a false positive unless your SIM card has an active plan".to_string(),
