@@ -3,6 +3,7 @@ use clap::Parser;
 use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
+    DeviceMetadata,
     analysis::analyzer::{AnalysisRow, AnalyzerConfig, Event, EventType, Harness},
     gsmtap::parser as gsmtap_parser,
     pcap::GsmtapPcapWriter,
@@ -110,7 +111,8 @@ async fn analyze_pcap(
     show_skipped: bool,
     json_writer: Option<&mut IncrementalJsonWriter<File>>,
 ) {
-    let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
+    let mut harness =
+        Harness::new_with_config(&AnalyzerConfig::default(), &DeviceMetadata::default());
     let pcap_file = &mut File::open(&pcap_path).await.expect("failed to open file");
     let mut pcap_reader = PcapNgReader::new(pcap_file)
         .await
@@ -140,7 +142,8 @@ async fn analyze_qmdl(
     show_skipped: bool,
     json_writer: Option<&mut IncrementalJsonWriter<File>>,
 ) {
-    let mut harness = Harness::new_with_config(&AnalyzerConfig::default());
+    let mut harness =
+        Harness::new_with_config(&AnalyzerConfig::default(), &DeviceMetadata::default());
     let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
     let mut qmdl_reader = QmdlMessageReader::new(qmdl_file)
         .await
@@ -205,7 +208,7 @@ async fn main() {
     };
     rayhunter::init_logging(level);
 
-    let harness = Harness::new_with_config(&AnalyzerConfig::default());
+    let harness = Harness::new_with_config(&AnalyzerConfig::default(), &DeviceMetadata::default());
     let metadata = harness.get_metadata();
     info!("Analyzers:");
     for analyzer in &metadata.analyzers {

@@ -7,6 +7,8 @@ use axum::{
     http::StatusCode,
 };
 use log::{error, info};
+use rayhunter::Device;
+use rayhunter::DeviceMetadata;
 use rayhunter::analysis::analyzer::{AnalyzerConfig, EventType, Harness};
 use rayhunter::diag::{DiagParsingError, Message, MessagesContainer};
 use rayhunter::qmdl::QmdlMessageReader;
@@ -32,8 +34,12 @@ pub struct AnalysisWriter {
 // lets us simply append new rows to the end without parsing the entire JSON
 // object beforehand.
 impl AnalysisWriter {
-    pub async fn new(file: File, analyzer_config: &AnalyzerConfig) -> Result<Self, std::io::Error> {
-        let harness = Harness::new_with_config(analyzer_config);
+    pub async fn new(
+        file: File,
+        analyzer_config: &AnalyzerConfig,
+        device_metadata: &DeviceMetadata,
+    ) -> Result<Self, std::io::Error> {
+        let harness = Harness::new_with_config(analyzer_config, device_metadata);
 
         let mut result = Self {
             writer: BufWriter::new(file),
@@ -143,6 +149,7 @@ async fn perform_analysis(
     name: &str,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analyzer_config: &AnalyzerConfig,
+    device_metadata: &DeviceMetadata,
 ) -> Result<(), String> {
     info!("Opening QMDL and analysis file for {name}...");
     let (analysis_file, mut qmdl_reader) = {
@@ -166,7 +173,7 @@ async fn perform_analysis(
         (analysis_file, qmdl_reader)
     };
 
-    let mut analysis_writer = AnalysisWriter::new(analysis_file, analyzer_config)
+    let mut analysis_writer = AnalysisWriter::new(analysis_file, analyzer_config, device_metadata)
         .await
         .map_err(|e| format!("{e:?}"))?;
 
@@ -197,16 +204,27 @@ pub fn run_analysis_thread(
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     analyzer_config: AnalyzerConfig,
+    device: Device,
+    debug_mode: bool,
 ) {
     task_tracker.spawn(async move {
         loop {
             match analysis_rx.recv().await {
                 Some(AnalysisCtrlMessage::NewFilesQueued) => {
                     let count = queued_len(analysis_status_lock.clone()).await;
+                    let mut device_metadata = DeviceMetadata::default();
+                    if !debug_mode {
+                        device_metadata.home_plmn = rayhunter::sim::home_plmn(&device).await;
+                    }
                     for _ in 0..count {
                         let name = dequeue_to_running(analysis_status_lock.clone()).await;
-                        if let Err(err) =
-                            perform_analysis(&name, qmdl_store_lock.clone(), &analyzer_config).await
+                        if let Err(err) = perform_analysis(
+                            &name,
+                            qmdl_store_lock.clone(),
+                            &analyzer_config,
+                            &device_metadata,
+                        )
+                        .await
                         {
                             error!("failed to analyze {name}: {err}");
                         }

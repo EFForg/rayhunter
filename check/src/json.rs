@@ -56,6 +56,7 @@ impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
 
 #[cfg(test)]
 mod test {
+    use rayhunter::DeviceMetadata;
     use rayhunter::analysis::analyzer::{
         AnalyzerConfig, Event, EventType, Harness, ReportMetadata,
     };
@@ -87,7 +88,8 @@ mod test {
 
     async fn create_test_writer(path: &str) -> (IncrementalJsonWriter<DuplexStream>, DuplexStream) {
         let (writer, reader) = duplex(1_000_000);
-        let harness = Harness::new_with_config(&AnalyzerConfig::default());
+        let harness =
+            Harness::new_with_config(&AnalyzerConfig::default(), &DeviceMetadata::default());
         (
             IncrementalJsonWriter::new(writer, path, &harness.get_metadata())
                 .await
@@ -109,7 +111,11 @@ mod test {
         let value = parse_json(reader).await;
         let expected = ExpectedJsonLayout {
             path: "test_path".to_string(),
-            metadata: Harness::new_with_config(&AnalyzerConfig::default()).get_metadata(),
+            metadata: Harness::new_with_config(
+                &AnalyzerConfig::default(),
+                &DeviceMetadata::default(),
+            )
+            .get_metadata(),
             reports: vec![],
         };
         assert_eq!(value, expected);

@@ -18,14 +18,17 @@ pub mod gsmtap;
 pub mod hdlc;
 pub mod log_codes;
 pub mod pcap;
+pub mod plmn;
 pub mod qmdl;
 #[cfg(test)]
 mod test_util;
 pub mod util;
 
-// bin/check.rs may target windows and does not use this mod
+// bin/check.rs may target windows and does not use these mods
 #[cfg(target_family = "unix")]
 pub mod diag_device;
+#[cfg(target_family = "unix")]
+pub mod sim;
 
 // re-export telcom_parser, since we use its types in our API
 pub use telcom_parser;
@@ -42,4 +45,18 @@ pub enum Device {
     Pinephone,
     Uz801,
     Moxee,
+}
+
+/// Facts about the device rayhunter is running on, gathered at runtime and
+/// made available to analyzers.
+///
+/// Every field is optional. `None` means unknown and must never be used to
+/// lower the severity of a finding.
+#[derive(PartialEq, Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(default)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
+pub struct DeviceMetadata {
+    /// The subscriber's home PLMN as `"MCC-MNC"`, read from EF_HPLMNwAcT
+    /// (`6F62`) on the SIM.
+    pub home_plmn: Option<String>,
 }

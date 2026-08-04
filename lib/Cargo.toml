@@ -24,13 +24,18 @@ pcap-file-tokio = "0.1.0"
 pycrate-rs = { git = "https://github.com/EFForg/pycrate-rs" }
 thiserror = "1.0.50"
 telcom-parser = { path = "../telcom-parser" }
-tokio = { version = "1.44.2", default-features = false, features = ["time", "rt", "macros", "fs"] }
+tokio = { version = "1.44.2", default-features = false, features = ["time", "rt", "macros", "fs", "io-util"] }
 futures = { version = "0.3.30", default-features = false }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0"
 num_enum = "0.7.4"
 utoipa = { version = "5.4.0", optional = true }
 async-compression = { version = "0.4.41", features = ["tokio", "gzip"] }
+
+# Only needed by the `sim` module, which is unix-only. Kept out of the default
+# dependency set so that `check` can still target windows.
+[target.'cfg(unix)'.dependencies]
+tokio-serial = { version = "5.5", default-features = false }
 
 [dev-dependencies]
 tempfile = "3"
