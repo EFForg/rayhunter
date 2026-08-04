@@ -333,7 +333,7 @@ pub async fn set_time_offset(Json(req): Json<SetTimeOffsetRequest>) -> StatusCod
         ("name" = String, Path, description = "QMDL filename to convert and download")
     ),
     summary = "Download a ZIP file",
-    description = "Stream a ZIP file to the client which contains the QMDL file {name} and a PCAP generated from the same file."
+    description = "Stream a ZIP file to the client which contains the QMDL file {name}, its NDJSON analysis report, its GPS NDJSON file (if present), and a PCAP generated from the QMDL."
 ))]
 pub async fn get_zip(
     State(state): State<Arc<ServerState>>,
@@ -366,14 +366,8 @@ pub async fn get_zip(
         let result: Result<(), Error> = async {
             let mut zip = ZipFileWriter::with_tokio(writer);
 
-            const EXCLUDED_FROM_ZIP: &[FileKind] = &[FileKind::Analysis];
-
             // Add stored files
             for &file_kind in FileKind::ALL {
-                if EXCLUDED_FROM_ZIP.contains(&file_kind) {
-                    continue;
-                }
-
                 let file_opt = {
                     let qmdl_store = qmdl_store_lock.read().await;
                     qmdl_store.open_file(entry_index, file_kind).await?
@@ -668,6 +662,7 @@ mod tests {
             filenames,
             vec![
                 format!("{entry_name}.qmdl"),
+                format!("{entry_name}.ndjson"),
                 format!("{entry_name}-gps.ndjson"),
                 format!("{entry_name}.pcapng"),
             ]
