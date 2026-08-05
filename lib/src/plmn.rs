@@ -1,6 +1,11 @@
 //! The "packed BCD" PLMN encoding, used by 3GPP NAS IEs (`TAI`, `LAI`) and by
 //! USIM elementary files (EF_HPLMNwAcT, EF_EHPLMN, EF_FPLMN).
 //!
+//! TS 31.102 §4.2.54 defines the PLMN in EF_HPLMNwAcT as coded "according to
+//! TS 24.008". The nibble order below is easiest to check against pysim's
+//! decoders, permalinked at commit `25e43e1`:
+//! <https://github.com/osmocom/pysim/blob/25e43e1540144be9026a2733bc3a4271b8fa7d25/pySim/utils.py#L150-L183>
+//!
 //! ```text
 //! byte0: [MCC2][MCC1]
 //! byte1: [MNC3][MCC3]     MNC3 == 0xF when the MNC is 2 digits
@@ -19,6 +24,7 @@ pub fn decode_packed_bcd(bytes: &[u8]) -> Option<String> {
     };
 
     // Unused entries in USIM PLMN lists are padded with 0xFF.
+    // <https://github.com/osmocom/pysim/blob/25e43e1540144be9026a2733bc3a4271b8fa7d25/pySim/ts_51_011.py#L868-L869>
     if *b0 == 0xFF && *b1 == 0xFF && *b2 == 0xFF {
         return None;
     }
