@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use log::{debug, info, warn};
 use thiserror::Error;
 
@@ -15,25 +17,26 @@ pub enum SimError {
     IoError(#[from] std::io::Error),
 }
 
-/// Read the subscriber's home PLMN from the SIM, as `"MCC-MNC"`.
-pub async fn home_plmn(device: &Device) -> Option<String> {
+/// Read the subscriber's home PLMNs from the SIM, as `"MCC-MNC"`. Empty on any
+/// failure, which callers must treat as "unknown".
+pub async fn home_plmn(device: &Device) -> BTreeSet<String> {
     let result = match device {
         Device::Tplink | Device::Orbic => generic_at::get_home_plmn("/dev/smd7").await,
         _ => Err(SimError::UnsupportedDevice),
     };
 
     match result {
-        Ok(plmn) => {
-            info!("read home PLMN {plmn} from SIM");
-            Some(plmn)
+        Ok(plmns) => {
+            info!("read home PLMNs {plmns:?} from SIM");
+            plmns
         }
         Err(SimError::UnsupportedDevice) => {
             debug!("reading the home PLMN from the SIM isn't supported for this device");
-            None
+            BTreeSet::new()
         }
         Err(e) => {
             warn!("couldn't read the home PLMN from the SIM: {e}");
-            None
+            BTreeSet::new()
         }
     }
 }

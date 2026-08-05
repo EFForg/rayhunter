@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::time::Duration;
 
 use log::debug;
@@ -18,7 +19,7 @@ const READ_EF_HPLMNWACT: &str = "AT+CRSM=176,28514,0,0,10";
 /// 3-byte packed-BCD PLMN plus a 2-byte Access Technology identifier.
 const RECORD_LEN: usize = 5;
 
-pub async fn get_home_plmn(port: &str) -> Result<String, SimError> {
+pub async fn get_home_plmn(port: &str) -> Result<BTreeSet<String>, SimError> {
     let response = send_at_command(port, READ_EF_HPLMNWACT).await?;
     let (sw1, sw2, payload) = parse_crsm_response(&response)?;
 
@@ -29,9 +30,13 @@ pub async fn get_home_plmn(port: &str) -> Result<String, SimError> {
         )));
     }
 
-    parse_hplmnwact(&payload).ok_or_else(|| {
-        SimError::AtCommandError("EF_HPLMNwAcT contained no usable PLMN".to_string())
-    })
+    let plmns = parse_hplmnwact(&payload);
+    if plmns.is_empty() {
+        return Err(SimError::AtCommandError(
+            "EF_HPLMNwAcT contained no usable PLMN".to_string(),
+        ));
+    }
+    Ok(plmns)
 }
 
 /// Send one AT command and read until a terminating status line. Command echo
@@ -120,18 +125,23 @@ fn decode_hex(s: &str) -> Option<Vec<u8>> {
     Some(digits.chunks(2).map(|c| (c[0] << 4) | c[1]).collect())
 }
 
-/// Pull the first usable PLMN out of an EF_HPLMNwAcT payload. Further records
-/// are dropped (usually the same PLMN on another access technology).
-fn parse_hplmnwact(payload: &[u8]) -> Option<String> {
+/// Pull every usable PLMN out of an EF_HPLMNwAcT payload. Records for the same
+/// PLMN on different access technologies collapse into one set entry.
+fn parse_hplmnwact(payload: &[u8]) -> BTreeSet<String> {
     payload
         .chunks(RECORD_LEN)
         .filter(|record| record.len() >= PACKED_BCD_LEN)
-        .find_map(|record| decode_packed_bcd(&record[..PACKED_BCD_LEN]))
+        .filter_map(|record| decode_packed_bcd(&record[..PACKED_BCD_LEN]))
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn set(plmns: &[&str]) -> BTreeSet<String> {
+        plmns.iter().map(|p| p.to_string()).collect()
+    }
 
     #[test]
     fn detects_terminators() {
@@ -177,7 +187,7 @@ mod tests {
     fn parses_real_tplink_payload() {
         // 232-03 on E-UTRAN (0x4000), then the same PLMN on UTRAN (0x8000).
         let payload = [0x32, 0xF2, 0x30, 0x40, 0x00, 0x32, 0xF2, 0x30, 0x80, 0x00];
-        assert_eq!(parse_hplmnwact(&payload), Some("232-03".to_string()));
+        assert_eq!(parse_hplmnwact(&payload), set(&["232-03"]));
     }
 
     #[test]
@@ -185,7 +195,7 @@ mod tests {
         // 311-480 (Verizon) on E-UTRAN, then an unused record: covers a
         // 3-digit MNC and trailing 0xFF padding.
         let payload = [0x13, 0x01, 0x84, 0x40, 0x00, 0xFF, 0xFF, 0xFF, 0x00, 0x00];
-        assert_eq!(parse_hplmnwact(&payload), Some("311-480".to_string()));
+        assert_eq!(parse_hplmnwact(&payload), set(&["311-480"]));
     }
 
     #[test]
@@ -193,30 +203,37 @@ mod tests {
         let raw = "\r\n+CRSM: 144,0,\"1301844000FFFFFF0000\"\r\n\r\nOK\r\n";
         let (sw1, _, payload) = parse_crsm_response(raw).unwrap();
         assert_eq!(sw1, 144);
-        assert_eq!(parse_hplmnwact(&payload), Some("311-480".to_string()));
+        assert_eq!(parse_hplmnwact(&payload), set(&["311-480"]));
     }
 
     #[test]
     fn skips_unused_leading_records() {
         let payload = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x32, 0xF2, 0x30, 0x40, 0x00];
-        assert_eq!(parse_hplmnwact(&payload), Some("232-03".to_string()));
+        assert_eq!(parse_hplmnwact(&payload), set(&["232-03"]));
     }
 
     #[test]
     fn handles_three_digit_mnc() {
         let payload = [0x13, 0x00, 0x62, 0x40, 0x00];
-        assert_eq!(parse_hplmnwact(&payload), Some("310-260".to_string()));
+        assert_eq!(parse_hplmnwact(&payload), set(&["310-260"]));
     }
 
     #[test]
     fn returns_none_for_empty_or_padded_file() {
-        assert_eq!(parse_hplmnwact(&[]), None);
-        assert_eq!(parse_hplmnwact(&[0xFF; 10]), None);
+        assert!(parse_hplmnwact(&[]).is_empty());
+        assert!(parse_hplmnwact(&[0xFF; 10]).is_empty());
     }
 
     #[test]
     fn ignores_trailing_partial_record() {
         let payload = [0x32, 0xF2, 0x30, 0x40, 0x00, 0xFF, 0xFF];
-        assert_eq!(parse_hplmnwact(&payload), Some("232-03".to_string()));
+        assert_eq!(parse_hplmnwact(&payload), set(&["232-03"]));
+    }
+
+    #[test]
+    fn keeps_distinct_plmns() {
+        // 232-03 on E-UTRAN, then 232-07 on UTRAN.
+        let payload = [0x32, 0xF2, 0x30, 0x40, 0x00, 0x32, 0xF2, 0x70, 0x80, 0x00];
+        assert_eq!(parse_hplmnwact(&payload), set(&["232-03", "232-07"]));
     }
 }
