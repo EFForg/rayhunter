@@ -130,8 +130,7 @@ fn decode_hex(s: &str) -> Option<Vec<u8>> {
 fn parse_hplmnwact(payload: &[u8]) -> BTreeSet<String> {
     payload
         .chunks(RECORD_LEN)
-        .filter(|record| record.len() >= PACKED_BCD_LEN)
-        .filter_map(|record| decode_packed_bcd(&record[..PACKED_BCD_LEN]))
+        .filter_map(|record| decode_packed_bcd(record.get(..PACKED_BCD_LEN)?))
         .collect()
 }
 
