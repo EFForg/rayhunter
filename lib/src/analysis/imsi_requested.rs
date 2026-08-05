@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::BTreeSet;
 
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
@@ -35,18 +36,18 @@ pub struct ImsiRequestedAnalyzer {
     flag: Option<Event>,
     likely_enb_plmns: Vec<String>,
     likely_ue_plmn: Option<String>,
-    /// From the SIM (EF_HPLMNwAcT). `None` means unknown, not a mismatch.
-    home_plmn: Option<String>,
+    /// From the SIM (EF_HPLMNwAcT). Empty means unknown, not a mismatch.
+    home_plmn: BTreeSet<String>,
 }
 
 impl Default for ImsiRequestedAnalyzer {
     fn default() -> Self {
-        Self::new(None)
+        Self::new(BTreeSet::new())
     }
 }
 
 impl ImsiRequestedAnalyzer {
-    pub fn new(home_plmn: Option<String>) -> Self {
+    pub fn new(home_plmn: BTreeSet<String>) -> Self {
         Self {
             state: State::Unattached,
             timeout_counter: 0,
@@ -62,10 +63,13 @@ impl ImsiRequestedAnalyzer {
     fn enb_is_home_network(&self) -> bool {
         // home_plmn and likely_ue_plmn can disagree, so we check both. Incorrectly returning true
         // is safer than Incorrectly returning false, as severity is higher on the home network.
-        [self.likely_ue_plmn.as_ref(), self.home_plmn.as_ref()]
-            .into_iter()
-            .flatten()
-            .any(|plmn| self.likely_enb_plmns.contains(plmn))
+        self.likely_ue_plmn
+            .as_ref()
+            .is_some_and(|p| self.likely_enb_plmns.contains(p))
+            || self
+                .home_plmn
+                .iter()
+                .any(|p| self.likely_enb_plmns.contains(p))
     }
 
     fn transition(&mut self, next_state: State, packet_num: usize) {
@@ -117,7 +121,15 @@ impl ImsiRequestedAnalyzer {
                         &self.likely_enb_plmns.join(", ")
                     };
                     let ue_plmn_string = self.likely_ue_plmn.as_deref().unwrap_or("Unknown");
-                    let home_plmn_string = self.home_plmn.as_deref().unwrap_or("Unknown");
+                    let home_plmn_string = if self.home_plmn.is_empty() {
+                        "Unknown".to_string()
+                    } else {
+                        self.home_plmn
+                            .iter()
+                            .cloned()
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    };
 
                     self.flag = Some(Event {
                         event_type: EventType::Low,

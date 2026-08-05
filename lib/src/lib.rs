@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use serde::{Deserialize, Serialize};
 
 /// Initialize logging with the given default level, suppressing noisy warnings
@@ -56,7 +58,7 @@ pub enum Device {
 #[serde(default)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct DeviceMetadata {
-    /// The subscriber's home PLMN as `"MCC-MNC"`, read from EF_HPLMNwAcT
-    /// (`6F62`) on the SIM.
-    pub home_plmn: Option<String>,
+    /// The subscriber's home PLMNs as `"MCC-MNC"`, read from EF_HPLMNwAcT
+    /// (`6F62`) on the SIM. Empty when unknown.
+    pub home_plmn: BTreeSet<String>,
 }
