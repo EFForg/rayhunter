@@ -41,7 +41,7 @@ qmdl_store_path = "./qmdl"
 port = 8080
 debug_mode = true
 EOF
-cargo run --bin rayhunter-daemon -- ./config.toml
+cargo run -p rayhunter-daemon --bin rayhunter-daemon -- ./config.toml
 ```
 
 Open `http://127.0.0.1:8080`.
