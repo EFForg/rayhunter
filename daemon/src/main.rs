@@ -281,6 +281,8 @@ async fn run_with_config(
         qmdl_store_lock.clone(),
         analysis_status_lock.clone(),
         config.analyzers.clone(),
+        config.device.clone(),
+        config.debug_mode,
     );
 
     run_shutdown_thread(

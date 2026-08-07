@@ -4,6 +4,7 @@ use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
+use crate::DeviceMetadata;
 use crate::analysis::diagnostic::DiagnosticAnalyzer;
 use crate::diag::{DiagParsingError, Message, MessagesContainer};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, parser as gsmtap_parser};
@@ -337,11 +338,16 @@ impl Harness {
         }
     }
 
-    pub fn new_with_config(analyzer_config: &AnalyzerConfig) -> Self {
+    pub fn new_with_config(
+        analyzer_config: &AnalyzerConfig,
+        device_metadata: &DeviceMetadata,
+    ) -> Self {
         let mut harness = Harness::new();
 
         if analyzer_config.imsi_requested {
-            harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new()));
+            harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new(
+                device_metadata.home_plmn.clone(),
+            )));
         }
         if analyzer_config.connection_redirect_2g_downgrade {
             harness.add_analyzer(Box::new(ConnectionRedirect2GDowngradeAnalyzer {}));
