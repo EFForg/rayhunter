@@ -31,6 +31,7 @@ serde_json = "1.0"
 num_enum = "0.7.4"
 utoipa = { version = "5.4.0", optional = true }
 async-compression = { version = "0.4.41", features = ["tokio", "gzip"] }
+log4rs = { version = "1.4.0", features = ["file_appender"] }
 
 [dev-dependencies]
 tempfile = "3"

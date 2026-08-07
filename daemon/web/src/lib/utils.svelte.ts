@@ -11,6 +11,8 @@ export interface AnalyzerConfig {
     incomplete_sib: boolean;
     test_analyzer: boolean;
     diagnostic_analyzer: boolean;
+    wifi_oui_analyzer: boolean;
+    wifi_ouis: string[] | null;
 }
 
 export enum enabled_notifications {
@@ -132,8 +134,8 @@ export async function get_system_stats(): Promise<SystemStats> {
     return JSON.parse(await req('GET', '/api/system-stats'));
 }
 
-export async function get_logs(): Promise<string> {
-    return await req('GET', '/api/log');
+export async function get_logs(log: string): Promise<string> {
+    return await req('GET', `/api/log/${log}`);
 }
 
 export async function get_config(): Promise<Config> {
