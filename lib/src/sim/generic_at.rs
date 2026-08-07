@@ -1,15 +1,5 @@
 //! Reading the subscriber's home PLMN list off the SIM over a serial AT
 //! command interface.
-//!
-//! On the supported devices the modem exposes a Qualcomm Shared Memory Driver
-//! (SMD) character device that speaks the AT command set. We use it to issue a
-//! single RESTRICTED SIM ACCESS command, which asks the modem to run one APDU
-//! against the (U)SIM on our behalf and hand back the raw response.
-//!
-//! Wire formats are cited inline. pysim permalinks (pinned to commit `25e43e1`)
-//! are preferred where they cover the format, being cheaper to cross-check than
-//! a spec PDF; TS 27.007 is linked directly because pysim doesn't implement
-//! `+CRSM`.
 
 use std::collections::BTreeSet;
 use std::time::Duration;
