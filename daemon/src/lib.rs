@@ -6,6 +6,7 @@ pub mod diag;
 pub mod display;
 pub mod error;
 pub mod gps;
+pub mod http_client;
 pub mod key_input;
 pub mod notifications;
 pub mod pcap;
