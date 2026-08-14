@@ -111,7 +111,13 @@ pub fn run_notification_worker(
             && !url.is_empty()
         {
             let mut notification_statuses = HashMap::new();
-            let http_client = reqwest::Client::new();
+            let http_client = match crate::http_client::client() {
+                Ok(client) => client,
+                Err(err) => {
+                    error!("failed to create notification HTTP client: {err}");
+                    return;
+                }
+            };
 
             loop {
                 // Get any notifications since the last time we checked
@@ -277,7 +283,7 @@ mod tests {
         let timeout: u64 = 2;
         let url = setup_timeout_server(timeout).await;
 
-        let http_client = reqwest::Client::new();
+        let http_client = crate::http_client::client().unwrap();
         let result = send_notification(
             &http_client,
             &url,

@@ -6,6 +6,7 @@ mod diag;
 mod display;
 mod error;
 mod gps;
+mod http_client;
 mod key_input;
 mod notifications;
 mod pcap;
