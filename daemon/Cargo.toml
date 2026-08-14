@@ -45,7 +45,12 @@ reqwest = { version = "0.12.20", default-features = false, features = ["stream"]
 rustls-rustcrypto = { version = "0.0.2-alpha", optional = true }
 rustls-post-quantum = { version = "0.2.4", optional = true }
 async-trait = "0.1.88"
-utoipa = { version = "5.4.0", optional = true }
+# The "repr" feature makes ToSchema honor #[repr(uN)] on serde_repr enums.
+#
+# Using a feature is a pretty huge footgun, since feature unification can
+# silently change behavior across crates. We should switch to
+# https://github.com/juhaku/utoipa/pull/1539 as soon as it lands.
+utoipa = { version = "5.4.0", features = ["repr"], optional = true }
 url = "2.5.4"
 
 [dev-dependencies]

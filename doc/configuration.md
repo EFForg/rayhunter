@@ -15,6 +15,12 @@ Through web UI you can set:
   - *Disable button control*: built-in power button of the device is not used by Rayhunter.
   - *Double-tap power button to start new recording*: double clicking on a built-in power button of the device stops and immediately restarts the recording. This could be useful if Rayhunter's heuristics is triggered and you get the red line, and you want to "reset" the past warnings. Normally you can do that through web UI, but sometimes it is easier to double tap on power button.
 - **Colorblind Mode** enables color blind mode (blue line is shown instead of green line, red line remains red). Please note that this does not cover all types of color blindness, but switching green to blue should be about enough to differentiate the color change for most types of color blindness.
+- **Clock Sync** controls what happens when Rayhunter's clock drifts from the clock of the browser you're viewing the web UI with. Some devices have no battery-backed real-time clock, so they lose the time whenever they reboot, and an incorrect clock means incorrect timestamps on your recordings. The modes are:
+  - *Prompt (ask before syncing)*, the default, shows a warning with both clocks and lets you decide whether to copy the browser's time to the device.
+  - *Autosync (copy browser clock automatically)* silently corrects the device clock whenever you open the web UI and the difference is more than 30 seconds. Useful for devices that reset their clock on every reboot.
+  - *Off (never warn or sync)* disables both the warning and any automatic correction.
+
+  Note that the correction is an offset held in memory only: it is **not** written to the device's clock and is lost when the daemon restarts, so with *Autosync* it is re-applied each time you load the web UI.
 - **Automatically check for software updates** enables periodic checks against the Rayhunter GitHub releases page. When a newer release is found, the web UI shows a notice and, if ntfy update notifications are enabled, a notification is sent.
 - **ntfy URL**, which allows setting a [ntfy](https://ntfy.sh/) URL to which notifications of new detections will be sent. The topic should be unique to your device, e.g., `https://ntfy.sh/rayhunter_notifications_ba9di7ie` or `https://myserver.example.com/rayhunter_notifications_ba9di7ie`. The ntfy Android and iOS apps can then be used to receive notifications. More information can be found in the [ntfy docs](https://docs.ntfy.sh/).
 - **Enabled Notification Types** allows enabling or disabling the following types of notifications:

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { get_daemon_time } from '$lib/utils.svelte';
+    import { get_daemon_time, get_config, set_time_offset, ClockSyncMode } from '$lib/utils.svelte';
     import ApiRequestButton from './ApiRequestButton.svelte';
 
     let show_alert = $state(false);
@@ -21,13 +21,33 @@
         if (check_completed) return;
 
         try {
+            const config = await get_config();
+            if (config.clock_sync_mode === ClockSyncMode.Off) {
+                check_completed = true;
+                return;
+            }
+
             const daemon_time_response = await get_daemon_time();
             const browser_now = new Date();
             const daemon_system_ms = new Date(daemon_time_response.system_time).getTime();
             const device_adjusted_ms = new Date(daemon_time_response.adjusted_time).getTime();
             const drift_seconds = Math.round((browser_now.getTime() - device_adjusted_ms) / 1000);
 
-            if (Math.abs(drift_seconds) > DRIFT_THRESHOLD_SECONDS && !dismissed) {
+            if (Math.abs(drift_seconds) <= DRIFT_THRESHOLD_SECONDS) {
+                check_completed = true;
+                return;
+            }
+
+            if (config.clock_sync_mode === ClockSyncMode.Autosync) {
+                // Offset needed: browser_time - daemon_system_time
+                await set_time_offset(
+                    Math.round((browser_now.getTime() - daemon_system_ms) / 1000)
+                );
+                check_completed = true;
+                return;
+            }
+
+            if (!dismissed) {
                 device_system_time = format_time(new Date(daemon_time_response.system_time));
                 device_adjusted_time = format_time(new Date(daemon_time_response.adjusted_time));
                 browser_time = format_time(browser_now);
@@ -100,7 +120,10 @@
             </tbody>
         </table>
         <p>Copy browser clock to device?</p>
-        <div class="flex flex-row gap-2 justify-end">
+        <div class="flex flex-row flex-wrap gap-2 items-center justify-end">
+            <p class="text-sm text-yellow-700 mr-auto">
+                Rayhunter can sync this automatically with the "Clock Sync" setting in Config.
+            </p>
             <button
                 class="font-medium py-2 px-4 rounded-md border border-gray-400 hover:bg-yellow-200"
                 onclick={dismiss}

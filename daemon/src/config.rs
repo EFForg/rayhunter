@@ -28,6 +28,24 @@ pub enum UiLevel {
     TransFlag = 128,
 }
 
+/// How Rayhunter should keep its clock in sync when it drifts from a known-good
+/// time source. Currently the only source is the browser talking to the web UI;
+/// additional sources (e.g. network/NTP, GPS) may be added later.
+///
+/// Serialized as an integer: 0 = off (never warn or sync), 1 = autosync (silently
+/// correct the drift), 2 = prompt (warn and let the user choose).
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
+pub enum ClockSyncMode {
+    /// Never warn about or correct clock drift.
+    Off = 0,
+    /// Silently sync the device clock to the time source when drift is detected.
+    Autosync = 1,
+    /// Show a warning and let the user choose whether to sync.
+    Prompt = 2,
+}
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize_repr, Deserialize_repr)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
@@ -62,6 +80,8 @@ pub struct Config {
     pub enabled_notifications: Vec<NotificationType>,
     /// Whether Rayhunter should periodically check GitHub for new releases
     pub auto_check_updates: bool,
+    /// How Rayhunter should handle its clock drifting from a known-good time source
+    pub clock_sync_mode: ClockSyncMode,
     /// Vector containing the list of enabled analyzers
     pub analyzers: AnalyzerConfig,
     /// Minimum disk space required to start a recording
@@ -137,6 +157,7 @@ impl Default for Config {
             ntfy_url: None,
             enabled_notifications: vec![NotificationType::Warning, NotificationType::LowBattery],
             auto_check_updates: true,
+            clock_sync_mode: ClockSyncMode::Prompt,
             min_space_to_start_recording_mb: 1,
             min_space_to_continue_recording_mb: 1,
             gps_mode: GpsMode::Disabled,
