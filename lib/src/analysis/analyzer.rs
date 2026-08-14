@@ -13,8 +13,8 @@ use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
     information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
-    null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
-    test_analyzer::TestAnalyzer,
+    no_nas_messages::NoNasMessagesAnalyzer, null_cipher::NullCipherAnalyzer,
+    priority_2g_downgrade::LteSib6And7DowngradeAnalyzer, test_analyzer::TestAnalyzer,
 };
 
 /// A list of booleans which stores information about which analyzers are enabled
@@ -30,6 +30,7 @@ pub struct AnalyzerConfig {
     pub incomplete_sib: bool,
     pub test_analyzer: bool,
     pub imsi_requested: bool,
+    pub no_nas_messages: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -43,6 +44,7 @@ impl Default for AnalyzerConfig {
             nas_null_cipher: true,
             incomplete_sib: true,
             test_analyzer: false,
+            no_nas_messages: false,
         }
     }
 }
@@ -136,6 +138,10 @@ pub trait Analyzer {
         ie: &InformationElement,
         packet_num: usize,
     ) -> Option<Event>;
+
+    fn update_timestamp(&mut self, _timestamp: DateTime<FixedOffset>) -> Option<Event> {
+        None
+    }
 
     /// Returns a version number for this Analyzer. This should only ever
     /// increase in value, and do so whenever substantial changes are made to
@@ -365,6 +371,10 @@ impl Harness {
             harness.add_analyzer(Box::new(TestAnalyzer {}))
         }
 
+        if analyzer_config.no_nas_messages {
+            harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()))
+        }
+
         if analyzer_config.diagnostic_analyzer {
             harness.add_analyzer(Box::new(DiagnosticAnalyzer {}));
         }
@@ -380,10 +390,11 @@ impl Harness {
         self.packet_num += 1;
 
         let epoch = DateTime::parse_from_rfc3339("1980-01-06T00:00:00-00:00").unwrap();
+        let packet_timestamp = epoch + packet.timestamp;
         let mut row = AnalysisRow {
-            packet_timestamp: Some(epoch + packet.timestamp),
+            packet_timestamp: Some(packet_timestamp),
             skipped_message_reason: None,
-            events: Vec::new(),
+            events: self.update_timestamp(packet_timestamp),
         };
         let gsmtap_offset = 20 + 8;
         let gsmtap_data = &packet.data[gsmtap_offset..];
@@ -401,8 +412,8 @@ impl Harness {
             header: gsmtap_header,
             payload: packet_data.to_vec(),
         };
-        row.events = match InformationElement::try_from(&gsmtap_message) {
-            Ok(element) => self.analyze_information_element(&element),
+        let element = match InformationElement::try_from(&gsmtap_message) {
+            Ok(element) => element,
             Err(err) => {
                 let msg = format!(
                     "in packet {}, failed to convert gsmtap message to IE: {err:?}",
@@ -413,6 +424,8 @@ impl Harness {
                 return row;
             }
         };
+        row.events
+            .extend(self.analyze_information_element(&element));
         row
     }
 
@@ -430,6 +443,12 @@ impl Harness {
                 return row;
             }
         };
+        if let Message::Log { timestamp, .. } = &qmdl_message {
+            let timestamp = timestamp.to_datetime();
+            row.packet_timestamp = Some(timestamp);
+            row.events = self.update_timestamp(timestamp);
+        }
+
         let (timestamp, gsmtap_msg) = match gsmtap_parser::parse(qmdl_message) {
             Ok(Some(msg)) => msg,
             Ok(None) => return row,
@@ -448,7 +467,8 @@ impl Harness {
             }
         };
 
-        row.events = self.analyze_information_element(&element);
+        row.events
+            .extend(self.analyze_information_element(&element));
         row
     }
 
@@ -475,6 +495,13 @@ impl Harness {
                 }
                 maybe_event
             })
+            .collect()
+    }
+
+    fn update_timestamp(&mut self, timestamp: DateTime<FixedOffset>) -> Vec<Option<Event>> {
+        self.analyzers
+            .iter_mut()
+            .map(|analyzer| analyzer.update_timestamp(timestamp))
             .collect()
     }
 

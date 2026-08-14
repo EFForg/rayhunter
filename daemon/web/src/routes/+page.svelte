@@ -22,6 +22,7 @@
     import ClockDriftAlert from '$lib/components/ClockDriftAlert.svelte';
     import LogView from '$lib/components/LogView.svelte';
     import UpdateNotice from '$lib/components/UpdateNotice.svelte';
+    import NoDiagMessagesAlert from '$lib/components/NoDiagMessagesAlert.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -263,6 +264,7 @@
     {/if}
     <ActionErrors />
     <ClockDriftAlert />
+    <NoDiagMessagesAlert entry={current_entry} />
     <UpdateNotice status={update_status} />
     {#if loaded}
         <div class="flex flex-col lg:flex-row gap-4">

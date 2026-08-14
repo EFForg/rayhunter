@@ -767,6 +767,18 @@
 
                         <div class="flex items-center">
                             <input
+                                id="no_nas_messages"
+                                type="checkbox"
+                                bind:checked={config.analyzers.no_nas_messages}
+                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                            />
+                            <label for="no_nas_messages" class="ml-2 block text-sm text-gray-700">
+                                No NAS Messages Heuristic (experimental)
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input
                                 id="test_analyzer"
                                 type="checkbox"
                                 bind:checked={config.analyzers.test_analyzer}
