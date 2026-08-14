@@ -3,6 +3,7 @@ use log::debug;
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::time::{Duration, Instant};
 
 use crate::analysis::diagnostic::DiagnosticAnalyzer;
 use crate::diag::{DiagParsingError, Message, MessagesContainer};
@@ -13,8 +14,8 @@ use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
     information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
-    null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
-    test_analyzer::TestAnalyzer,
+    no_nas_messages::NoNasMessagesAnalyzer, null_cipher::NullCipherAnalyzer,
+    priority_2g_downgrade::LteSib6And7DowngradeAnalyzer, test_analyzer::TestAnalyzer,
 };
 
 /// A list of booleans which stores information about which analyzers are enabled
@@ -30,6 +31,7 @@ pub struct AnalyzerConfig {
     pub incomplete_sib: bool,
     pub test_analyzer: bool,
     pub imsi_requested: bool,
+    pub no_nas_messages: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -43,6 +45,7 @@ impl Default for AnalyzerConfig {
             nas_null_cipher: true,
             incomplete_sib: true,
             test_analyzer: false,
+            no_nas_messages: false,
         }
     }
 }
@@ -136,6 +139,16 @@ pub trait Analyzer {
         ie: &InformationElement,
         packet_num: usize,
     ) -> Option<Event>;
+
+    /// The harness calls this method in irregular intervalls to inform the analyzer that some
+    /// amount of time has passed.
+    ///
+    /// `elapsed` is how much time the [Harness] believes has passed since the last
+    /// call. The value is the max delta of either OS time or modem time.
+    fn poll(&mut self, elapsed: Duration) -> Option<Event> {
+        let _ = elapsed;
+        None
+    }
 
     /// Returns a version number for this Analyzer. This should only ever
     /// increase in value, and do so whenever substantial changes are made to
@@ -318,9 +331,69 @@ impl<'de> Deserialize<'de> for AnalysisRow {
     }
 }
 
+/// Estimates how much time has passed between [Harness::poll] calls.
+///
+/// This comes from two sources:
+///
+/// - Packet timestamps
+/// - The device's system clock
+///
+/// We need to use both:
+///
+/// - Packet timestamps are not available when there are no packets (i.e. no reception at all)
+/// - System clock cannot be used during offline analysis (reanalyze, rayhunter-check)
+///
+/// So we just use whichever clock moves fastest.
+///
+/// An alternative design would be to periodically record and persist system time as part of
+/// captures, but this would bloat storage quite a bit.
+struct AnalysisClock {
+    last_tick: Instant,
+    /// Timestamp of the most recent packet we saw, from the modem's clock.
+    latest_packet: Option<DateTime<FixedOffset>>,
+    /// Value of `latest_packet` at the previous tick.
+    last_tick_packet: Option<DateTime<FixedOffset>>,
+}
+
+impl Default for AnalysisClock {
+    fn default() -> Self {
+        Self {
+            last_tick: Instant::now(),
+            latest_packet: None,
+            last_tick_packet: None,
+        }
+    }
+}
+
+impl AnalysisClock {
+    fn observe_packet(&mut self, timestamp: DateTime<FixedOffset>) {
+        // Guard against the modem's clock jumping backwards, e.g. on a counter reset.
+        if self.latest_packet.is_none_or(|latest| timestamp > latest) {
+            self.latest_packet = Some(timestamp);
+        }
+    }
+
+    /// How much time has passed since the last call.
+    fn tick(&mut self) -> Duration {
+        let wall_clock = self.last_tick.elapsed();
+        self.last_tick = Instant::now();
+
+        let packet_clock = self
+            .last_tick_packet
+            .zip(self.latest_packet)
+            .and_then(|(previous, latest)| (latest - previous).to_std().ok())
+            .unwrap_or(Duration::ZERO);
+        self.last_tick_packet = self.latest_packet;
+
+        wall_clock.max(packet_clock)
+    }
+}
+
 pub struct Harness {
     analyzers: Vec<Box<dyn Analyzer + Send>>,
     packet_num: usize,
+    /// Tracks how much time has passed, for [Analyzer::poll].
+    clock: AnalysisClock,
 }
 
 impl Default for Harness {
@@ -334,6 +407,7 @@ impl Harness {
         Self {
             analyzers: Vec::new(),
             packet_num: 0,
+            clock: AnalysisClock::default(),
         }
     }
 
@@ -363,6 +437,10 @@ impl Harness {
 
         if analyzer_config.test_analyzer {
             harness.add_analyzer(Box::new(TestAnalyzer {}))
+        }
+
+        if analyzer_config.no_nas_messages {
+            harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()))
         }
 
         if analyzer_config.diagnostic_analyzer {
@@ -430,6 +508,12 @@ impl Harness {
                 return row;
             }
         };
+        // Note the time before parsing: most messages are log types we don't decode,
+        // but they still tell us how much time the recording covers.
+        if let Message::Log { timestamp, .. } = &qmdl_message {
+            self.clock.observe_packet(timestamp.to_datetime());
+        }
+
         let (timestamp, gsmtap_msg) = match gsmtap_parser::parse(qmdl_message) {
             Ok(Some(msg)) => msg,
             Ok(None) => return row,
@@ -478,6 +562,22 @@ impl Harness {
             .collect()
     }
 
+    /// Collect any [Events](Event) the [Analyzers](Analyzer) produced based on time passing,
+    /// without a packet triggering them.
+    ///
+    /// Call this regularly.
+    ///
+    /// Returns an empty row if there's nothing to report, so callers should check
+    /// [AnalysisRow::is_empty] before writing it out.
+    pub fn poll(&mut self) -> AnalysisRow {
+        let elapsed = self.clock.tick();
+        AnalysisRow {
+            packet_timestamp: None,
+            skipped_message_reason: None,
+            events: self.analyzers.iter_mut().map(|a| a.poll(elapsed)).collect(),
+        }
+    }
+
     pub fn get_metadata(&self) -> ReportMetadata {
         let mut analyzers = Vec::new();
         for analyzer in &self.analyzers {
@@ -502,6 +602,52 @@ impl Harness {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn packet_time(seconds: i64) -> DateTime<FixedOffset> {
+        DateTime::parse_from_rfc3339("2025-01-01T00:00:00+00:00").unwrap()
+            + chrono::TimeDelta::seconds(seconds)
+    }
+
+    #[test]
+    fn test_clock_uses_packet_timestamps_when_replaying() {
+        let mut clock = AnalysisClock::default();
+        // the first tick has no previous packet to compare against
+        clock.observe_packet(packet_time(0));
+        assert!(clock.tick() < Duration::from_secs(1));
+
+        // replaying an hour of packets in an instant should still report an hour
+        clock.observe_packet(packet_time(3600));
+        assert_eq!(clock.tick(), Duration::from_secs(3600));
+
+        // and no new packets means no packet-clock progress
+        assert!(clock.tick() < Duration::from_secs(1));
+    }
+
+    #[test]
+    fn test_clock_prefers_whichever_source_advanced_more() {
+        let mut clock = AnalysisClock::default();
+        clock.observe_packet(packet_time(0));
+        clock.tick();
+
+        // no packets at all: we fall back to (a very small amount of) wall-clock time
+        let elapsed = clock.tick();
+        assert!(elapsed < Duration::from_secs(1));
+
+        // packets that jump far ahead dominate the tiny wall-clock delta
+        clock.observe_packet(packet_time(600));
+        assert_eq!(clock.tick(), Duration::from_secs(600));
+    }
+
+    #[test]
+    fn test_clock_ignores_backwards_packet_timestamps() {
+        let mut clock = AnalysisClock::default();
+        clock.observe_packet(packet_time(3600));
+        clock.tick();
+
+        // a modem clock reset shouldn't rewind our notion of elapsed time
+        clock.observe_packet(packet_time(0));
+        assert!(clock.tick() < Duration::from_secs(1));
+    }
 
     #[test]
     fn test_analysis_row_deserialize_old_format() {

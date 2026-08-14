@@ -76,6 +76,18 @@ On its own this might just be a misconfigured base station (though we have only 
 ### Diagnostic Information 
 This analyzer displays some diagnostic information about when your device connects and disconnects from certain towers. It is helpful for analysis of suspicious PCAPs. The informational warnings in here can safely be ignored until there is a low, medium, or high severity warning. 
 
+### No NAS Messages
+
+*(disabled by default)*
+
+This analyzer warns once per recording if 5 minutes have passed without a single NAS (*Non-Access Stratum*) message being observed. NAS is the signaling layer between your device and the core network, and a working SIM card will regularly produce NAS traffic (attach, tracking area updates, authentication, etc.).
+
+If Rayhunter never sees any NAS messages, the most likely explanation is that the SIM card isn't working: it may be missing, deactivated, not provisioned for the network, or not seated properly. In that case Rayhunter can still see broadcast messages from nearby towers, but it can't observe the signaling that most of the other heuristics rely on, so the recording is largely useless for detecting IMSI catchers.
+
+This heuristic is experimental. It may false-positive if you are in an area with no coverage at all, or if your device stays idle on a single cell for a long time without needing to talk to the core network.
+
 ### Test Analyzer
+
+*(disabled by default)*
 
 This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisy so we do not recommend leaving it on but if this alerts it means your Rayhunter device is working! 
