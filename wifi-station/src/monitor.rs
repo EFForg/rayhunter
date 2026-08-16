@@ -82,7 +82,7 @@ pub fn run_wifi_client(
                     attempt += 1;
 
                     // Reload covers two cases: UZ801 scan -EIO (radio locked to AP), and
-                    // `iw interface add` rejected because hostapd is actively serving clients.
+                    // Interface creation rejected because hostapd is actively serving clients.
                     // In both we need to tear hostapd down, clear the radio, create wlan1, then
                     // restore hostapd once the STA has associated.
                     let err_str = format!("{e}");

@@ -155,7 +155,7 @@ pub(crate) const HOSTAPD_CONF: &str = "/data/misc/wifi/hostapd.conf";
 pub(crate) const AP_IFACE: &str = "wlan0";
 pub const STA_IFACE: &str = "wlan1";
 
-/// Error prefix emitted when `iw interface add` can't create the STA iface.
+/// Error prefix emitted when the STA interface can't be created.
 /// Matched in monitor.rs to decide whether a module reload should recover.
 pub(crate) const ERR_CREATE_STA: &str = "failed to create STA interface";
 
