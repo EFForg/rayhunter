@@ -48,6 +48,16 @@ Because the modem does not have its own display or network interface, Rayhunter 
 adb forward tcp:8080 tcp:8080
 ```
 
+The forward belongs to the adb connection to the modem, so it is dropped whenever that connection
+is re-established — for example after the modem resets. When this happens `adb devices` still lists
+the modem and Rayhunter keeps recording, but the web UI stops answering. Re-run the `adb forward`
+command to get it back:
+
+```sh
+adb forward --list          # empty means the forward is gone
+adb forward tcp:8080 tcp:8080
+```
+
 ## Shell access
 Use this command to enable adb access:
 
@@ -61,4 +71,40 @@ The modem won't be able to sleep (power save) with adb enabled, even if Rayhunte
 
 ```sh
 ./installer util pinephone-stop-adb
+```
+
+## Toggling adb resets the modem
+
+Both `pinephone-start-adb` and `pinephone-stop-adb` change the modem's USB composition with
+`AT+QCFG="usbcfg"`, and the modem resets whenever that value is written — even if the requested
+composition is the one already in use. The modem then needs roughly a minute to boot, during which
+the phone has **no cellular service**.
+
+Take this into account when scripting the commands: only enable adb when it is actually absent, and
+give the modem time to come back before trying again. Calling `pinephone-start-adb` in a retry loop
+that is faster than the modem's boot time keeps the modem in a permanent reset cycle. In that state
+ModemManager never completes its QMI probe (`port cdc-wdm0 timed out N consecutive times`, then
+`modem couldn't be initialized: Failed to load current capabilities`), and the phone loses mobile
+data entirely until the modem is left alone long enough to finish booting.
+
+## `Resource busy` when enabling adb
+
+On distributions where ModemManager (or another modem daemon such as `eg25-manager`) manages the
+EG25-G, it claims the AT interface that the installer needs, and enabling adb fails:
+
+```text
+Failed to start adb on the PinePhone's modem
+
+Caused by:
+    0: detach_and_claim_interface({USB_INTERFACE_NUMBER}) failed
+    1: Resource busy (os error 16)
+```
+
+Stop the daemon for the duration of the call and start it again afterwards. The modem resets as a
+result of the usbcfg write anyway, so ModemManager re-probes it when it comes back:
+
+```sh
+sudo systemctl stop ModemManager
+sudo ./installer util pinephone-start-adb
+sudo systemctl start ModemManager
 ```
