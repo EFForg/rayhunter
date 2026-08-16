@@ -199,7 +199,14 @@ impl DeviceConnection for ADBUSBDevice {
     /// Run an adb shell command, append '; echo exit code $?' to the command and return output.
     async fn run_command(&mut self, command: &str) -> Result<String> {
         let mut buf = Vec::<u8>::new();
-        let cmd = ["sh", "-c", &format!("{command}; echo exit code $?")];
+        // The modem's legacy adbd re-parses the argv it receives through its own
+        // shell, so the `-c` payload has to be quoted or the outer shell splits
+        // it and `sh -c` only sees the first word. Without the quotes,
+        // `mkdir -p /data/rayhunter` reaches the device as `sh -c mkdir -p …`,
+        // which runs `mkdir` with no arguments and fails with a usage error
+        // (see EFForg/rayhunter#1056). This mirrors the quoting already used for
+        // the Orbic in `orbic.rs`.
+        let cmd = ["sh", "-c", &format!("\"{command}; echo exit code $?\"")];
         self.shell_command(&cmd, &mut buf)?;
         Ok(String::from_utf8_lossy(&buf).into_owned())
     }
