@@ -156,11 +156,8 @@ pub(crate) async fn attempt_data_path_recovery(
     wifi_status: &Arc<RwLock<WifiStatus>>,
     shutdown_token: &CancellationToken,
 ) -> bool {
-    info!("data path recovery step 1: wpa_cli reassociate");
-    let _ = Command::new("wpa_cli")
-        .args(["-i", STA_IFACE, "reassociate"])
-        .output()
-        .await;
+    info!("data path recovery step 1: supplicant reassociate");
+    client.reassociate().await;
     tokio::select! {
         _ = shutdown_token.cancelled() => return false,
         _ = sleep(Duration::from_secs(10)) => {}
@@ -172,12 +169,8 @@ pub(crate) async fn attempt_data_path_recovery(
         return true;
     }
 
-    info!("data path recovery step 2: restart wpa_supplicant");
-    if let Some(ref mut child) = client.wpa_child {
-        let _ = child.kill().await;
-        let _ = child.wait().await;
-    }
-    client.wpa_child = None;
+    info!("data path recovery step 2: restart supplicant");
+    client.stop_supplicant().await;
     if let Err(e) = client.start_wpa_supplicant().await {
         warn!("wpa_supplicant restart failed in recovery: {e}");
     } else {

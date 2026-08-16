@@ -97,3 +97,29 @@ pub fn read_network_from_wpa_conf(path: &str) -> Option<(String, SecurityType)> 
 pub fn read_ssid_from_wpa_conf(path: &str) -> Option<String> {
     read_network_from_wpa_conf(path).map(|(ssid, _)| ssid)
 }
+
+/// Read the pre-shared key from a wpa_supplicant configuration file,
+/// reversing the escaping applied by [`format_wpa_conf`].
+///
+/// Accepts both `psk=` (WPA-PSK) and `sae_password=` (SAE). Returns `None`
+/// when the file is missing or carries no passphrase.
+///
+/// This is deliberately **not** public: the password must not leak outside
+/// the crate. Only in-process supplicant backends, which need the passphrase
+/// to run the handshake themselves, may call it.
+#[cfg(any(feature = "rust-supplicant", test))]
+pub(crate) fn read_password_from_wpa_conf(path: &str) -> Option<String> {
+    let content = std::fs::read_to_string(path).ok()?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        for prefix in ["psk=\"", "sae_password=\""] {
+            if let Some(value) = trimmed
+                .strip_prefix(prefix)
+                .and_then(|s| s.strip_suffix('"'))
+            {
+                return Some(value.replace("\\\"", "\"").replace("\\\\", "\\"));
+            }
+        }
+    }
+    None
+}

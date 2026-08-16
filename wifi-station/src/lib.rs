@@ -11,14 +11,12 @@
 //! # Mental model
 //!
 //! [`run_wifi_client`] spawns a long-lived Tokio task that creates the STA
-//! interface (via nl80211 netlink), runs `wpa_supplicant` and `udhcpc`,
-//! installs policy routing so
-//! STA traffic does not displace an existing default route (e.g. cellular
-//! `rmnet`), and watches the link. When the data path stalls or the interface
-//! disappears it walks a graduated recovery ladder — `wpa_cli reassociate`
-//! (best-effort; skipped when `wpa_cli` is absent),
-//! `wpa_supplicant` restart, interface cycle, and finally a full `wlan.ko`
-//! `rmmod`/`insmod` — before giving up after a fixed cap.
+//! interface (via nl80211 netlink), runs a supplicant and `udhcpc`, installs
+//! policy routing so STA traffic does not displace an existing default route
+//! (e.g. cellular `rmnet`), and watches the link. When the data path stalls or
+//! the interface disappears it walks a graduated recovery ladder —
+//! reassociate (best-effort), supplicant restart, interface cycle, and finally
+//! a full `wlan.ko` `rmmod`/`insmod` — before giving up after a fixed cap.
 //!
 //! Live state is published through a [`WifiStatus`] held behind an
 //! `Arc<RwLock<_>>` so the rest of the application can read it. Shutdown is
@@ -68,6 +66,9 @@
 //!
 //! - `utoipa` — derives `utoipa::ToSchema` on [`WifiStatus`], [`WifiState`],
 //!   [`SecurityType`], and [`WifiNetwork`] for inclusion in OpenAPI specs.
+//! - `rust-supplicant` — run the pure-Rust `shuli` supplicant in-process
+//!   instead of spawning `wpa_supplicant`. Off by default: it pulls in
+//!   `aws-lc-rs` (C code, needs a cross-compiler) and requires rustc 1.96.
 
 use std::path::Path;
 
@@ -82,6 +83,7 @@ mod netlink;
 mod recovery;
 mod routing;
 mod scan;
+mod supplicant;
 
 pub use config::{
     format_wpa_conf, read_network_from_wpa_conf, read_ssid_from_wpa_conf, update_wpa_conf,
@@ -494,6 +496,45 @@ BSS 77:88:99:aa:bb:cc(on wlan1)
         let (ssid, sec) = read_network_from_wpa_conf(path.to_str().unwrap()).unwrap();
         assert_eq!(ssid, "PskNet");
         assert_eq!(sec, SecurityType::WpaPsk);
+    }
+
+    /// The in-process supplicant reads the passphrase back out of the same
+    /// wpa_supplicant-format store, so escaping must round-trip exactly.
+    #[test]
+    fn test_read_password_roundtrips_psk_and_sae() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let psk_path = dir.path().join("psk.conf");
+        std::fs::write(
+            &psk_path,
+            format_wpa_conf(
+                "PskNet",
+                r#"p@ss "with" \slashes"#,
+                None,
+                SecurityType::WpaPsk,
+            ),
+        )
+        .unwrap();
+        assert_eq!(
+            config::read_password_from_wpa_conf(psk_path.to_str().unwrap()).unwrap(),
+            r#"p@ss "with" \slashes"#
+        );
+
+        let sae_path = dir.path().join("sae.conf");
+        std::fs::write(
+            &sae_path,
+            format_wpa_conf("SaeNet", "saepass", None, SecurityType::Sae),
+        )
+        .unwrap();
+        assert_eq!(
+            config::read_password_from_wpa_conf(sae_path.to_str().unwrap()).unwrap(),
+            "saepass"
+        );
+    }
+
+    #[test]
+    fn test_read_password_missing_file() {
+        assert!(config::read_password_from_wpa_conf("/nonexistent/wpa.conf").is_none());
     }
 
     #[test]

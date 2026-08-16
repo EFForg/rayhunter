@@ -211,13 +211,11 @@ pub fn run_wifi_client(
                         continue;
                     }
 
-                    if let Some(ref mut child) = client.wpa_child
-                        && let Ok(Some(_)) = child.try_wait()
-                    {
-                        warn!("wpa_supplicant exited, restarting");
-                        client.wpa_child = None;
+                    if client.supplicant_exited().await {
+                        warn!("supplicant exited, restarting");
+                        client.stop_supplicant().await;
                         if let Err(e) = client.start_wpa_supplicant().await {
-                            warn!("wpa_supplicant restart failed: {e}");
+                            warn!("supplicant restart failed: {e}");
                         }
                     }
 

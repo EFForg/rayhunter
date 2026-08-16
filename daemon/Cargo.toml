@@ -16,7 +16,13 @@ required-features = ["apidocs"]
 [features]
 default = ["rustcrypto-tls"]
 rustcrypto-tls = ["reqwest/rustls-tls-webpki-roots-no-provider", "dep:rustls-rustcrypto"]
-pq-tls = ["reqwest/rustls-tls-webpki-roots-no-provider", "dep:rustls-post-quantum"]
+# Production build: post-quantum TLS already pulls in aws-lc-rs, so the
+# pure-Rust supplicant (which also needs it) is free to enable here.
+pq-tls = [
+    "reqwest/rustls-tls-webpki-roots-no-provider",
+    "dep:rustls-post-quantum",
+    "wifi-station/rust-supplicant",
+]
 apidocs = ["dep:utoipa", "wifi-station/utoipa"]
 
 [dependencies]

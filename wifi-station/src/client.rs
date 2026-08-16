@@ -7,6 +7,7 @@ use tokio::process::{Child, Command};
 use tokio::time::sleep;
 use wl_nl80211::Nl80211InterfaceType as IfType;
 
+use crate::supplicant::{ActiveSupplicant, Supplicant, SupplicantParams};
 use crate::{
     DEFAULT_CRASH_LOG_DIR, DEFAULT_DHCP_LEASE_PATH, DEFAULT_UDHCPC_HOOK_PATH, DEFAULT_WPA_BIN,
     DEFAULT_WPA_CONF_PATH, ERR_CREATE_STA, HOSTAPD_CONF, STA_IFACE, UDHCPC_HOOK_SCRIPT, WifiConfig,
@@ -18,7 +19,7 @@ pub(crate) struct WifiClient {
     pub(crate) iface: String,
     pub(crate) wpa_bin: String,
     pub(crate) hostapd_conf: String,
-    pub(crate) wpa_child: Option<Child>,
+    pub(crate) supplicant: ActiveSupplicant,
     pub(crate) dhcp_child: Option<Child>,
     pub(crate) rt_table: u32,
     pub(crate) dns_servers: Vec<String>,
@@ -45,7 +46,7 @@ impl WifiClient {
                 .hostapd_conf
                 .clone()
                 .unwrap_or_else(|| HOSTAPD_CONF.to_string()),
-            wpa_child: None,
+            supplicant: ActiveSupplicant::default(),
             dhcp_child: None,
             rt_table: 100,
             dns_servers,
@@ -87,10 +88,7 @@ impl WifiClient {
     }
 
     pub(crate) async fn stop(&mut self) {
-        if let Some(mut child) = self.wpa_child.take() {
-            let _ = child.kill().await;
-            let _ = child.wait().await;
-        }
+        self.supplicant.stop().await;
         if let Some(mut child) = self.dhcp_child.take() {
             let _ = child.kill().await;
             let _ = child.wait().await;
@@ -157,30 +155,13 @@ impl WifiClient {
     }
 
     pub(crate) async fn start_wpa_supplicant(&mut self) -> Result<()> {
-        use std::process::Stdio;
-
-        // Kill any stale wpa_supplicant from a previous daemon run.
-        // Use killall instead of pkill -f: older busybox (e.g. Moxee v1.23.2)
-        // silently fails with pkill -f regex patterns.
-        let _ = Command::new("killall")
-            .args(["wpa_supplicant"])
-            .output()
-            .await;
-        sleep(Duration::from_millis(500)).await;
-
-        let child = Command::new(&self.wpa_bin)
-            .args(["-i", &self.iface, "-Dnl80211", "-c", &self.wpa_conf_path])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
-        self.wpa_child = Some(child);
-        if self.wait_for_association().await.is_ok() {
+        let params = SupplicantParams {
+            iface: &self.iface,
+            wpa_conf_path: &self.wpa_conf_path,
+            wpa_bin: &self.wpa_bin,
+        };
+        if self.supplicant.start(params).await.is_ok() {
             return Ok(());
-        }
-
-        if let Some(mut child) = self.wpa_child.take() {
-            let _ = child.kill().await;
-            let _ = child.wait().await;
         }
 
         // A scan that fails with -EIO means the radio is wedged; monitor.rs
@@ -191,21 +172,22 @@ impl WifiClient {
                 bail!("{msg}");
             }
         }
-        bail!("wpa_supplicant did not associate within 30s");
+        bail!("supplicant did not associate within 30s");
     }
 
-    async fn wait_for_association(&self) -> Result<()> {
-        let operstate_path = format!("/sys/class/net/{}/operstate", self.iface);
-        for i in 0..30 {
-            if let Ok(state) = tokio::fs::read_to_string(&operstate_path).await
-                && state.trim() == "up"
-            {
-                info!("wpa_supplicant associated after {}s", i + 1);
-                return Ok(());
-            }
-            sleep(Duration::from_secs(1)).await;
-        }
-        bail!("wpa_supplicant did not associate within 30s");
+    /// Ask the supplicant to reassociate (recovery ladder step 1).
+    pub(crate) async fn reassociate(&mut self) {
+        self.supplicant.reassociate(&self.iface).await;
+    }
+
+    /// Tear down just the supplicant, leaving routing and DHCP in place.
+    pub(crate) async fn stop_supplicant(&mut self) {
+        self.supplicant.stop().await;
+    }
+
+    /// Whether the supplicant died and needs restarting.
+    pub(crate) async fn supplicant_exited(&mut self) -> bool {
+        self.supplicant.has_exited().await
     }
 
     pub(crate) async fn start_dhcp(&mut self) -> Result<()> {
