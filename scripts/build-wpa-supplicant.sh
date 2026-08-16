@@ -1,6 +1,10 @@
 #!/bin/bash
-# Cross-compile wpa_supplicant, wpa_cli, and iw for ARMv7 (musl static).
-# Output: tools/build-wpa-supplicant/out/{wpa_supplicant,wpa_cli,iw}
+# Cross-compile wpa_supplicant for ARMv7 (musl static).
+# Output: tools/build-wpa-supplicant/out/wpa_supplicant
+#
+# `iw` and `wpa_cli` are no longer built: Rayhunter talks to nl80211/rtnetlink
+# directly (see wifi-station/src/netlink.rs). libnl is still needed here for
+# wpa_supplicant's own nl80211 driver.
 #
 # Requires: arm-linux-musleabihf-gcc (brew install FiloSottile/musl-cross/musl-cross)
 set -e
@@ -9,8 +13,6 @@ WPA_VERSION="2.11"
 WPA_URL="https://w1.fi/releases/wpa_supplicant-${WPA_VERSION}.tar.gz"
 LIBNL_VERSION="3.11.0"
 LIBNL_URL="https://github.com/thom311/libnl/releases/download/libnl${LIBNL_VERSION//\./_}/libnl-${LIBNL_VERSION}.tar.gz"
-IW_VERSION="6.9"
-IW_URL="https://www.kernel.org/pub/software/network/iw/iw-${IW_VERSION}.tar.xz"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OUT_DIR="$SCRIPT_DIR/../tools/build-wpa-supplicant/out"
@@ -72,21 +74,10 @@ make CC="$CC" \
     -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 
 echo "Stripping..."
-$STRIP wpa_supplicant wpa_cli
-cp wpa_supplicant wpa_cli "$OUT_DIR/"
-
-echo "Building iw ${IW_VERSION}..."
-cd "$BUILD_DIR"
-curl -Lf "$IW_URL" | tar xJ
-cd "iw-${IW_VERSION}"
-PKG_CONFIG_LIBDIR="$SYSROOT/lib/pkgconfig" \
-make CC="$CC" \
-    LDFLAGS="-static" \
-    -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
-$STRIP iw
-cp iw "$OUT_DIR/"
+$STRIP wpa_supplicant
+cp wpa_supplicant "$OUT_DIR/"
 
 rm -rf "$BUILD_DIR"
 
 echo "Done. Binaries in $OUT_DIR:"
-ls -lh "$OUT_DIR"/{wpa_supplicant,wpa_cli,iw}
+ls -lh "$OUT_DIR/wpa_supplicant"

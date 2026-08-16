@@ -12,8 +12,6 @@ env:
   FILE_ROOTSHELL: ../../rootshell/rootshell
   FILE_RAYHUNTER_DAEMON: ../../rayhunter-daemon/rayhunter-daemon
   FILE_WPA_SUPPLICANT: ../../wpa-supplicant/wpa_supplicant
-  FILE_WPA_CLI: ../../wpa-supplicant/wpa_cli
-  FILE_IW: ../../wpa-supplicant/iw
   RUSTFLAGS: "-Dwarnings"
 
 jobs:

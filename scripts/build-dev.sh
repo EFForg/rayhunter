@@ -44,9 +44,7 @@ build_frontend() {
 }
 
 build_wifi_tools() {
-    if [ -f "tools/build-wpa-supplicant/out/wpa_supplicant" ] \
-        && [ -f "tools/build-wpa-supplicant/out/wpa_cli" ] \
-        && [ -f "tools/build-wpa-supplicant/out/iw" ]; then
+    if [ -f "tools/build-wpa-supplicant/out/wpa_supplicant" ]; then
         echo "WiFi tools already built, skipping."
         return
     fi

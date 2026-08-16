@@ -92,7 +92,7 @@ pub fn run_wifi_client(
                         info!(
                             "wifi start blocked (likely AP busy), reloading module and creating STA first"
                         );
-                        match reload_wifi_module_sta_first(&client.iw_bin).await {
+                        match reload_wifi_module_sta_first().await {
                             Ok(()) => {
                                 tried_module_reload = true;
                                 attempt = 0;
@@ -177,7 +177,7 @@ pub fn run_wifi_client(
 
                         client.stop().await;
 
-                        if let Err(e) = reload_wifi_module(&client.hostapd_conf, &client.iw_bin).await {
+                        if let Err(e) = reload_wifi_module(&client.hostapd_conf).await {
                             error!("module reload failed: {e}");
                             let mut status = wifi_status.write().await;
                             status.state = WifiState::Recovering;
@@ -282,7 +282,7 @@ pub fn run_wifi_client(
                                 }
                                 warn!("module reload attempt {recovery_attempts}/{MAX_RECOVERY_ATTEMPTS}");
                                 client.stop().await;
-                                if let Err(e) = reload_wifi_module(&client.hostapd_conf, &client.iw_bin).await {
+                                if let Err(e) = reload_wifi_module(&client.hostapd_conf).await {
                                     error!("module reload failed: {e}");
                                     let mut status = wifi_status.write().await;
                                     status.state = WifiState::Recovering;

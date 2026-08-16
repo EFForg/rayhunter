@@ -1,6 +1,5 @@
 use anyhow::Result;
 use serde::Serialize;
-use tokio::process::Command;
 
 /// A struct defining a wifi network
 #[derive(Serialize)]
@@ -15,36 +14,23 @@ pub struct WifiNetwork {
 }
 
 pub async fn scan_wifi_networks(iface: &str) -> Result<Vec<WifiNetwork>> {
-    let link_out = Command::new("ip")
-        .args(["link", "show", iface])
-        .output()
-        .await?;
-    let link_stdout = String::from_utf8_lossy(&link_out.stdout);
-    let already_up = link_stdout.contains("state UP");
-
-    if !already_up {
-        let _ = Command::new("ip")
-            .args(["link", "set", iface, "down"])
-            .output()
-            .await;
-        let _ = Command::new("iw")
-            .args(["dev", iface, "set", "type", "managed"])
-            .output()
-            .await;
-        let _ = Command::new("ip")
-            .args(["link", "set", iface, "up"])
-            .output()
-            .await;
+    if !crate::link::is_up(iface).await {
+        let _ = crate::link::set_up(iface, false).await;
+        let _ =
+            crate::netlink::set_interface_type(iface, wl_nl80211::Nl80211InterfaceType::Station)
+                .await;
+        let _ = crate::link::set_up(iface, true).await;
     }
 
-    let out = Command::new("iw")
-        .args(["dev", iface, "scan"])
-        .output()
-        .await?;
-    Ok(parse_iw_scan(&String::from_utf8_lossy(&out.stdout)))
+    crate::netlink::scan(iface).await
 }
 
-fn resolve_security(has_rsn: bool, has_wpa: bool, has_sae: bool, has_psk: bool) -> String {
+pub(crate) fn resolve_security(
+    has_rsn: bool,
+    has_wpa: bool,
+    has_sae: bool,
+    has_psk: bool,
+) -> String {
     if has_sae && has_psk {
         "WPA3 (transition)".to_string()
     } else if has_sae {
@@ -58,6 +44,12 @@ fn resolve_security(has_rsn: bool, has_wpa: bool, has_sae: bool, has_psk: bool) 
     }
 }
 
+/// Parser for `iw dev <iface> scan` text output.
+///
+/// Scanning now goes through nl80211 directly ([`crate::netlink::scan`]); this
+/// is kept only so the security-classification test corpus keeps exercising
+/// [`resolve_security`] and [`push_or_update`], which the netlink path shares.
+#[cfg(test)]
 pub(crate) fn parse_iw_scan(output: &str) -> Vec<WifiNetwork> {
     let mut networks: Vec<WifiNetwork> = Vec::new();
     let mut current_ssid: Option<String> = None;
@@ -130,7 +122,12 @@ pub(crate) fn parse_iw_scan(output: &str) -> Vec<WifiNetwork> {
     networks
 }
 
-fn push_or_update(networks: &mut Vec<WifiNetwork>, ssid: String, signal: i32, security: &str) {
+pub(crate) fn push_or_update(
+    networks: &mut Vec<WifiNetwork>,
+    ssid: String,
+    signal: i32,
+    security: &str,
+) {
     if let Some(existing) = networks.iter_mut().find(|n| n.ssid == ssid) {
         if signal > existing.signal_dbm {
             existing.signal_dbm = signal;

@@ -55,6 +55,7 @@ The WiFi kernel module (`wlan.ko`) can occasionally crash or unload, taking both
 On the first detection of a crash, a diagnostic snapshot is saved to `/data/rayhunter/crash-logs/` on the device. You can pull these logs with `adb pull /data/rayhunter/crash-logs/` and inspect them to understand what went wrong. Each log contains:
 
 - **dmesg** output (kernel messages). Look for backtraces, `BUG:`/`Oops:` lines, or `wlan`/`wcnss` errors. The kernel ring buffer is small and gets overwritten quickly, so crash details may already be gone if the crash happened well before detection.
+- **nl80211** state for the STA interface, queried directly from the kernel: interface index, wiphy, type, MAC, SSID, frequency, and the currently visible BSSes. If the interface is missing entirely, the driver tore it down.
 - **/proc/modules** snapshot. If `wlan` is absent, the module fully unloaded. If present but interfaces are gone, the driver is stuck.
 - **ip addr** output confirming which network interfaces existed at snapshot time.
 - **ps** output showing which WiFi-related processes (`hostapd`, `wpa_supplicant`, `wland`) were still running.

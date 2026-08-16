@@ -11,10 +11,12 @@
 //! # Mental model
 //!
 //! [`run_wifi_client`] spawns a long-lived Tokio task that creates the STA
-//! interface, runs `wpa_supplicant` and `udhcpc`, installs policy routing so
+//! interface (via nl80211 netlink), runs `wpa_supplicant` and `udhcpc`,
+//! installs policy routing so
 //! STA traffic does not displace an existing default route (e.g. cellular
 //! `rmnet`), and watches the link. When the data path stalls or the interface
-//! disappears it walks a graduated recovery ladder — `wpa_cli reassociate`,
+//! disappears it walks a graduated recovery ladder — `wpa_cli reassociate`
+//! (best-effort; skipped when `wpa_cli` is absent),
 //! `wpa_supplicant` restart, interface cycle, and finally a full `wlan.ko`
 //! `rmmod`/`insmod` — before giving up after a fixed cap.
 //!
@@ -51,15 +53,16 @@
 //! Provisioning a network means writing the `wpa_supplicant` config file
 //! before (or while) the supervisor is running; [`format_wpa_conf`] and
 //! [`update_wpa_conf`] are safe writers that escape user-supplied SSIDs and
-//! passwords. [`scan_wifi_networks`] performs a one-shot scan via `iw`.
+//! passwords. [`scan_wifi_networks`] performs a one-shot scan via nl80211.
 //!
 //! # Runtime requirements
 //!
-//! The host must provide `iw`, `wpa_supplicant`, `udhcpc`, `ip`, and
-//! `killall` on `PATH` (or paths configured via [`WifiConfig`]).
-//! Module-reload recovery additionally uses `rmmod`, `insmod`, `hostapd`,
-//! `brctl`, and `ifconfig`. Defaults match a typical busybox + Android-derived
-//! rootfs.
+//! Interface creation, mode changes, and scanning use the kernel's nl80211
+//! and rtnetlink interfaces directly, so `iw` is not required. The host must
+//! still provide `wpa_supplicant`, `udhcpc`, `ip`, and `killall` on `PATH`
+//! (or paths configured via [`WifiConfig`]). Module-reload recovery
+//! additionally uses `rmmod`, `insmod`, `hostapd`, `brctl`, and `ifconfig`.
+//! Defaults match a typical busybox + Android-derived rootfs.
 //!
 //! # Cargo features
 //!
@@ -73,7 +76,9 @@ use serde::{Deserialize, Serialize};
 mod client;
 mod config;
 mod diagnostics;
+mod link;
 mod monitor;
+mod netlink;
 mod recovery;
 mod routing;
 mod scan;
@@ -104,7 +109,6 @@ pub struct WifiConfig {
     pub udhcpc_hook_path: Option<String>,
     pub dhcp_lease_path: Option<String>,
     pub wpa_conf_path: Option<String>,
-    pub iw_bin: Option<String>,
     pub udhcpc_bin: Option<String>,
     pub crash_log_dir: Option<String>,
     pub wakelock_name: Option<String>,
@@ -121,7 +125,6 @@ pub enum SecurityType {
 
 pub(crate) const DEFAULT_WPA_CONF_PATH: &str = "/etc/wpa_supplicant/wpa_sta.conf";
 pub(crate) const DEFAULT_WPA_BIN: &str = "wpa_supplicant";
-pub(crate) const DEFAULT_IW_BIN: &str = "iw";
 pub(crate) const DEFAULT_UDHCPC_HOOK_PATH: &str = "/tmp/wifi-station-udhcpc-hook.sh";
 pub(crate) const DEFAULT_DHCP_LEASE_PATH: &str = "/tmp/wifi-station-dhcp-lease";
 pub(crate) const DEFAULT_CRASH_LOG_DIR: &str = "/tmp/wifi-station-crash-logs";

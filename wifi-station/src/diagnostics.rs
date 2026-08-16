@@ -51,29 +51,10 @@ pub(crate) async fn save_wifi_diagnostics(crash_log_dir: &str, reason: &str) -> 
     let path = format!("{crash_log_dir}/wifi-diag-{timestamp}.log");
 
     let iface = STA_IFACE;
-    let (
-        dmesg,
-        iw_link,
-        iw_station,
-        proc_net_dev,
-        wpa_status,
-        proc_arp,
-        ip_route,
-        brctl,
-        iptables,
-        modules,
-        ip_addr,
-        ps,
-    ) = tokio::join!(
+    let (dmesg, nl80211, proc_net_dev, proc_arp, ip_route, brctl, iptables, modules, ip_addr, ps) = tokio::join!(
         Command::new("dmesg").output(),
-        Command::new("iw").args(["dev", iface, "link"]).output(),
-        Command::new("iw")
-            .args(["dev", iface, "station", "dump"])
-            .output(),
+        crate::netlink::diagnostics_dump(iface),
         tokio::fs::read_to_string("/proc/net/dev"),
-        Command::new("wpa_cli")
-            .args(["-i", iface, "status"])
-            .output(),
         tokio::fs::read_to_string("/proc/net/arp"),
         Command::new("ip")
             .args(["route", "show", "table", "all"])
@@ -135,12 +116,9 @@ pub(crate) async fn save_wifi_diagnostics(crash_log_dir: &str, reason: &str) -> 
     }
 
     append_cmd(&mut report, "dmesg", &dmesg);
-    append_cmd(&mut report, &format!("iw dev {iface} link"), &iw_link);
-    append_cmd(
-        &mut report,
-        &format!("iw dev {iface} station dump"),
-        &iw_station,
-    );
+    report.push_str(&format!("=== nl80211 {iface} ===\n"));
+    report.push_str(&nl80211);
+    report.push('\n');
     append_file(&mut report, "/proc/net/dev", &proc_net_dev);
 
     report.push_str(&format!("=== {iface} sysfs ===\n"));
@@ -154,11 +132,6 @@ pub(crate) async fn save_wifi_diagnostics(crash_log_dir: &str, reason: &str) -> 
     report.push_str(&sysfs_report);
     report.push('\n');
 
-    append_cmd(
-        &mut report,
-        &format!("wpa_cli -i {iface} status"),
-        &wpa_status,
-    );
     append_file(&mut report, "/proc/net/arp", &proc_arp);
     append_cmd(&mut report, "ip route show table all", &ip_route);
     append_cmd(&mut report, "brctl show", &brctl);

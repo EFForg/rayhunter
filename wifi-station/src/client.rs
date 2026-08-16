@@ -1,15 +1,15 @@
 use std::path::Path;
 use std::time::Duration;
 
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use log::info;
 use tokio::process::{Child, Command};
 use tokio::time::sleep;
+use wl_nl80211::Nl80211InterfaceType as IfType;
 
 use crate::{
-    DEFAULT_CRASH_LOG_DIR, DEFAULT_DHCP_LEASE_PATH, DEFAULT_IW_BIN, DEFAULT_UDHCPC_HOOK_PATH,
-    DEFAULT_WPA_BIN, DEFAULT_WPA_CONF_PATH, ERR_CREATE_STA, HOSTAPD_CONF, STA_IFACE,
-    UDHCPC_HOOK_SCRIPT, WifiConfig,
+    DEFAULT_CRASH_LOG_DIR, DEFAULT_DHCP_LEASE_PATH, DEFAULT_UDHCPC_HOOK_PATH, DEFAULT_WPA_BIN,
+    DEFAULT_WPA_CONF_PATH, ERR_CREATE_STA, HOSTAPD_CONF, STA_IFACE, UDHCPC_HOOK_SCRIPT, WifiConfig,
 };
 
 pub(crate) const TX_STALL_THRESHOLD: u32 = 3;
@@ -29,7 +29,6 @@ pub(crate) struct WifiClient {
     pub(crate) udhcpc_hook_path: String,
     pub(crate) dhcp_lease_path: String,
     pub(crate) wpa_conf_path: String,
-    pub(crate) iw_bin: String,
     pub(crate) udhcpc_bin: String,
     pub(crate) crash_log_dir: String,
 }
@@ -66,10 +65,6 @@ impl WifiClient {
                 .wpa_conf_path
                 .clone()
                 .unwrap_or_else(|| DEFAULT_WPA_CONF_PATH.to_string()),
-            iw_bin: config
-                .iw_bin
-                .clone()
-                .unwrap_or_else(|| DEFAULT_IW_BIN.to_string()),
             udhcpc_bin: config
                 .udhcpc_bin
                 .clone()
@@ -116,53 +111,23 @@ impl WifiClient {
     }
 
     async fn create_sta_interface(&self) -> Result<()> {
-        let out = Command::new(&self.iw_bin)
-            .args([
-                "dev",
-                crate::AP_IFACE,
-                "interface",
-                "add",
-                &self.iface,
-                "type",
-                "managed",
-            ])
-            .output()
-            .await;
-        if let Ok(ref o) = out
-            && o.status.success()
+        if crate::netlink::create_interface(crate::AP_IFACE, &self.iface, IfType::Station)
+            .await
+            .is_ok()
         {
             return Ok(());
         }
         info!("direct managed creation failed, trying P2P_CLIENT workaround");
-        let out = Command::new(&self.iw_bin)
-            .args([
-                "dev",
-                crate::AP_IFACE,
-                "interface",
-                "add",
-                &self.iface,
-                "type",
-                "__p2pcl",
-            ])
-            .output()
-            .await?;
-        if !out.status.success() {
-            bail!(
-                "{ERR_CREATE_STA} ({}): {}",
-                self.iface,
-                String::from_utf8_lossy(&out.stderr).trim()
-            );
+        // Some vendor drivers (notably the Orbic's QCA6174) refuse a second
+        // managed interface but will hand out a P2P client, which can then be
+        // retyped to managed.
+        if let Err(e) =
+            crate::netlink::create_interface(crate::AP_IFACE, &self.iface, IfType::P2pClient).await
+        {
+            bail!("{ERR_CREATE_STA} ({}): {e:#}", self.iface);
         }
-        let out = Command::new(&self.iw_bin)
-            .args(["dev", &self.iface, "set", "type", "managed"])
-            .output()
-            .await?;
-        if !out.status.success() {
-            bail!(
-                "{ERR_CREATE_STA} ({}: set type managed): {}",
-                self.iface,
-                String::from_utf8_lossy(&out.stderr).trim()
-            );
+        if let Err(e) = crate::netlink::set_interface_type(&self.iface, IfType::Station).await {
+            bail!("{ERR_CREATE_STA} ({}: set type managed): {e:#}", self.iface);
         }
         Ok(())
     }
@@ -182,26 +147,12 @@ impl WifiClient {
     }
 
     async fn set_managed_mode(&self) -> Result<()> {
-        let out = Command::new(&self.iw_bin)
-            .args(["dev", &self.iface, "set", "type", "managed"])
-            .output()
-            .await?;
-        if !out.status.success() {
-            bail!(
-                "iw set type managed failed: {}",
-                String::from_utf8_lossy(&out.stderr)
-            );
-        }
-        let out = Command::new("ip")
-            .args(["link", "set", &self.iface, "up"])
-            .output()
-            .await?;
-        if !out.status.success() {
-            bail!(
-                "ip link set up failed: {}",
-                String::from_utf8_lossy(&out.stderr)
-            );
-        }
+        crate::netlink::set_interface_type(&self.iface, IfType::Station)
+            .await
+            .map_err(|e| anyhow!("set type managed failed: {e:#}"))?;
+        crate::link::set_up(&self.iface, true)
+            .await
+            .map_err(|e| anyhow!("link set up failed: {e:#}"))?;
         Ok(())
     }
 
@@ -232,15 +183,12 @@ impl WifiClient {
             let _ = child.wait().await;
         }
 
-        if let Ok(out) = Command::new(&self.iw_bin)
-            .args(["dev", &self.iface, "scan"])
-            .output()
-            .await
-            && !out.status.success()
-        {
-            let stderr = String::from_utf8_lossy(&out.stderr);
-            if stderr.contains("I/O error") || stderr.contains("(-5)") {
-                bail!("scan failed with -EIO; radio may be busy (module reload needed)");
+        // A scan that fails with -EIO means the radio is wedged; monitor.rs
+        // keys off this message to escalate to a module reload.
+        if let Err(e) = crate::netlink::scan(&self.iface).await {
+            let msg = e.to_string();
+            if msg.contains("-EIO") {
+                bail!("{msg}");
             }
         }
         bail!("wpa_supplicant did not associate within 30s");
@@ -301,10 +249,7 @@ impl WifiClient {
     }
 
     pub(crate) async fn interface_down(&self) {
-        let _ = Command::new("ip")
-            .args(["link", "set", &self.iface, "down"])
-            .output()
-            .await;
+        let _ = crate::link::set_up(&self.iface, false).await;
     }
 
     pub(crate) fn interface_exists(&self) -> bool {

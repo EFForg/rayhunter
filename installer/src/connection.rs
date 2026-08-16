@@ -43,32 +43,27 @@ pub async fn install_config<C: DeviceConnection>(
     Ok(())
 }
 
-/// Install wifi tools (wpa_supplicant, wpa_cli, iw) to /data/rayhunter/bin.
+/// Install wifi tools (wpa_supplicant) to /data/rayhunter/bin.
 ///
-/// Skips any binary that is already present on the device (e.g. provided by firmware),
-/// since those may be newer or better-integrated than the bundled versions.
+/// Skips the binary if it is already present on the device (e.g. provided by firmware),
+/// since that may be newer or better-integrated than the bundled version.
 ///
-/// In debug builds the wpa-supplicant binaries may not be bundled (build.rs sets the
-/// env vars to empty in that case); when so, this is a no-op so devs don't have to
+/// `iw` and `wpa_cli` are no longer shipped: interface creation, mode changes, and
+/// scanning go through nl80211/rtnetlink in-process.
+///
+/// In debug builds the wpa-supplicant binary may not be bundled (build.rs sets the
+/// env var to empty in that case); when so, this is a no-op so devs don't have to
 /// build wpa-supplicant just to install on Orbic.
 pub async fn install_wifi_tools<C: DeviceConnection>(conn: &mut C) -> Result<()> {
     if env!("FILE_WPA_SUPPLICANT").is_empty() {
         println!("wifi tools were not built into this installer, skipping");
         return Ok(());
     }
-    let tools: &[(&str, &str, &[u8])] = &[
-        (
-            "wpa_supplicant",
-            "/data/rayhunter/bin/wpa_supplicant",
-            crate::get_file!("FILE_WPA_SUPPLICANT"),
-        ),
-        (
-            "wpa_cli",
-            "/data/rayhunter/bin/wpa_cli",
-            crate::get_file!("FILE_WPA_CLI"),
-        ),
-        ("iw", "/data/rayhunter/bin/iw", crate::get_file!("FILE_IW")),
-    ];
+    let tools: &[(&str, &str, &[u8])] = &[(
+        "wpa_supplicant",
+        "/data/rayhunter/bin/wpa_supplicant",
+        crate::get_file!("FILE_WPA_SUPPLICANT"),
+    )];
     for &(name, dest, payload) in tools {
         if device_has_binary(conn, name).await {
             println!("{name} already on device, skipping");

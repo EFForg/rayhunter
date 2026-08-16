@@ -9,6 +9,8 @@ use tokio::sync::RwLock;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 
+use wl_nl80211::Nl80211InterfaceType as IfType;
+
 use crate::client::WifiClient;
 use crate::{AP_IFACE, ERR_CREATE_STA, STA_IFACE, WifiState, WifiStatus, detect_bridge_iface};
 
@@ -44,52 +46,19 @@ async fn get_kernel_version() -> Result<String> {
         .ok_or_else(|| anyhow::anyhow!("could not parse kernel version from /proc/version"))
 }
 
-async fn create_sta_with_iw(iw_bin: &str) -> Result<()> {
-    let out = Command::new(iw_bin)
-        .args([
-            "dev",
-            AP_IFACE,
-            "interface",
-            "add",
-            STA_IFACE,
-            "type",
-            "managed",
-        ])
-        .output()
-        .await;
-    if let Ok(ref o) = out
-        && o.status.success()
+async fn create_sta_iface() -> Result<()> {
+    if crate::netlink::create_interface(AP_IFACE, STA_IFACE, IfType::Station)
+        .await
+        .is_ok()
     {
         return Ok(());
     }
     info!("direct managed creation failed, trying P2P_CLIENT workaround");
-    let out = Command::new(iw_bin)
-        .args([
-            "dev",
-            AP_IFACE,
-            "interface",
-            "add",
-            STA_IFACE,
-            "type",
-            "__p2pcl",
-        ])
-        .output()
-        .await?;
-    if !out.status.success() {
-        bail!(
-            "{ERR_CREATE_STA} ({STA_IFACE}): {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
+    if let Err(e) = crate::netlink::create_interface(AP_IFACE, STA_IFACE, IfType::P2pClient).await {
+        bail!("{ERR_CREATE_STA} ({STA_IFACE}): {e:#}");
     }
-    let out = Command::new(iw_bin)
-        .args(["dev", STA_IFACE, "set", "type", "managed"])
-        .output()
-        .await?;
-    if !out.status.success() {
-        bail!(
-            "{ERR_CREATE_STA} ({STA_IFACE}: set type managed): {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        );
+    if let Err(e) = crate::netlink::set_interface_type(STA_IFACE, IfType::Station).await {
+        bail!("{ERR_CREATE_STA} ({STA_IFACE}: set type managed): {e:#}");
     }
     Ok(())
 }
@@ -126,10 +95,10 @@ async fn teardown_and_reload_module() -> Result<()> {
     bail!("{AP_IFACE} did not appear after insmod");
 }
 
-pub(crate) async fn reload_wifi_module(hostapd_conf: &str, iw_bin: &str) -> Result<()> {
+pub(crate) async fn reload_wifi_module(hostapd_conf: &str) -> Result<()> {
     teardown_and_reload_module().await?;
     start_hostapd_and_bridge(hostapd_conf).await;
-    create_sta_with_iw(iw_bin).await?;
+    create_sta_iface().await?;
     info!("WiFi module reloaded and AP restored");
     Ok(())
 }
@@ -145,9 +114,9 @@ pub(crate) async fn reload_wifi_module(hostapd_conf: &str, iw_bin: &str) -> Resu
 /// Killing hostapd directly doesn't work because Android's netd daemon detects
 /// the death and tears down the entire wifi stack (rmmod + insmod + hostapd
 /// restart). Doing our own module reload preempts netd's lifecycle management.
-pub(crate) async fn reload_wifi_module_sta_first(iw_bin: &str) -> Result<()> {
+pub(crate) async fn reload_wifi_module_sta_first() -> Result<()> {
     teardown_and_reload_module().await?;
-    create_sta_with_iw(iw_bin).await?;
+    create_sta_iface().await?;
     Ok(())
 }
 
@@ -230,18 +199,12 @@ pub(crate) async fn attempt_data_path_recovery(
 
     info!("data path recovery step 3: interface cycle");
     client.stop().await;
-    let _ = Command::new("ip")
-        .args(["link", "set", STA_IFACE, "down"])
-        .output()
-        .await;
+    let _ = crate::link::set_up(STA_IFACE, false).await;
     tokio::select! {
         _ = shutdown_token.cancelled() => return false,
         _ = sleep(Duration::from_secs(2)) => {}
     }
-    let _ = Command::new("ip")
-        .args(["link", "set", STA_IFACE, "up"])
-        .output()
-        .await;
+    let _ = crate::link::set_up(STA_IFACE, true).await;
     tokio::select! {
         _ = shutdown_token.cancelled() => return false,
         _ = sleep(Duration::from_secs(2)) => {}
