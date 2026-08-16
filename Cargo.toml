@@ -19,5 +19,6 @@ default-members = [
     "rootshell",
     "telcom-parser",
     "installer",
+    "wifi-station",
 ]
 resolver = "2"
