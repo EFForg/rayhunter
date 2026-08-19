@@ -24,6 +24,7 @@ The TP-Link comes in many different *hardware versions*. Support for installatio
 * `6.2`: **One user reported it is working, not tested**
 * `4.0`: **Manual firmware downgrade required** ([issue](https://github.com/EFForg/rayhunter/issues/332))
 * `9.0`: **Working since 0.3.2.**
+* `10.0`: **Not working** ([issue](https://github.com/EFForg/rayhunter/issues/1105))
 
 TP-Link versions newer than `3.0` have cyan packaging and a color display. Version `3.0` has a one-bit display and white packaging.
 
