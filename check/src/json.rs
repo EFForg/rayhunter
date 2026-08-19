@@ -109,6 +109,8 @@ mod test {
         let (writer, reader) = create_test_writer("test_path").await;
         writer.finish().await.unwrap();
         let value = parse_json(reader).await;
+        let mut analyzer_config = AnalyzerConfig::default();
+        analyzer_config.wifi_log_path = "/tmp/wifi.log".to_string();
         let expected = ExpectedJsonLayout {
             path: "test_path".to_string(),
             metadata: Harness::new_with_config(
