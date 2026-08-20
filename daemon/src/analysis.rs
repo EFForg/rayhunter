@@ -58,6 +58,19 @@ impl AnalysisWriter {
             }
             max_type = cmp::max(max_type, row.get_max_event_type());
         }
+
+        Ok(max_type)
+    }
+
+    /// Give analyzers a chance to report findings that aren't triggered by a packet.
+    ///
+    /// This needs to happen even when no messages are coming in.
+    pub async fn poll(&mut self) -> Result<EventType, std::io::Error> {
+        let row = self.harness.poll();
+        let max_type = row.get_max_event_type();
+        if !row.is_empty() {
+            self.write(&row).await?;
+        }
         Ok(max_type)
     }
 
@@ -180,6 +193,9 @@ async fn perform_analysis(
             .analyze_message(maybe_message)
             .await
             .map_err(|e| format!("{e:?}"))?;
+
+        // Poll analyzers here as well, as reanalyzing/check doesn't poll analyzers every 30s.
+        analysis_writer.poll().await.map_err(|e| format!("{e:?}"))?;
     }
 
     analysis_writer

@@ -37,6 +37,9 @@ use crate::stats::DiskStats;
 
 const DISK_CHECK_BYTES_INTERVAL: usize = 256 * 1024;
 
+/// How often to give analyzers a chance to report findings on their own.
+const ANALYZER_POLL_INTERVAL: Duration = Duration::from_secs(30);
+
 pub enum DiagDeviceCtrlMessage {
     StopRecording,
     StartRecording {
@@ -423,32 +426,58 @@ impl DiagTask {
                 }
             };
 
-            if max_type > EventType::Informational {
-                info!("a heuristic triggered on this run!");
-                self.notification_channel
-                    .send(Notification::new(
-                        NotificationType::Warning,
-                        format!("Rayhunter has detected a {:?} severity event", max_type),
-                        Some(Duration::from_secs(60 * 5)),
-                    ))
-                    .await
-                    .expect("Failed to send to notification channel");
-            }
-
-            if max_type > self.max_type_seen {
-                self.max_type_seen = max_type;
-                if self.max_type_seen > EventType::Informational {
-                    self.ui_update_sender
-                        .send(display::DisplayState::WarningDetected {
-                            event_type: self.max_type_seen,
-                        })
-                        .await
-                        .expect("couldn't send ui update message: {}");
-                }
-            }
+            self.report_max_event_type(max_type).await;
         } else {
             debug!("no qmdl_writer set, continuing...");
         }
+    }
+
+    /// Notify the user and update the display if analysis turned up anything.
+    async fn report_max_event_type(&mut self, max_type: EventType) {
+        if max_type > EventType::Informational {
+            info!("a heuristic triggered on this run!");
+            self.notification_channel
+                .send(Notification::new(
+                    NotificationType::Warning,
+                    format!("Rayhunter has detected a {:?} severity event", max_type),
+                    Some(Duration::from_secs(60 * 5)),
+                ))
+                .await
+                .expect("Failed to send to notification channel");
+        }
+
+        if max_type > self.max_type_seen {
+            self.max_type_seen = max_type;
+            if self.max_type_seen > EventType::Informational {
+                self.ui_update_sender
+                    .send(display::DisplayState::WarningDetected {
+                        event_type: self.max_type_seen,
+                    })
+                    .await
+                    .expect("couldn't send ui update message: {}");
+            }
+        }
+    }
+
+    /// Give analyzers a chance to report findings that aren't triggered by a packet,
+    /// e.g. ones that alert on the *absence* of some message.
+    async fn poll_analyzers(&mut self) {
+        let DiagState::Recording {
+            analysis_writer, ..
+        } = &mut self.state
+        else {
+            return;
+        };
+
+        let max_type = match analysis_writer.poll().await {
+            Ok(t) => t,
+            Err(e) => {
+                warn!("failed to poll analyzers: {e}");
+                return;
+            }
+        };
+
+        self.report_max_event_type(max_type).await;
     }
 }
 
@@ -490,8 +519,16 @@ pub fn run_diag_read_thread(
             .send(DiagDeviceCtrlMessage::StartRecording { response_tx: None })
             .await
             .unwrap();
+        // Poll analyzers regularly, so that heuristics reporting on the absence of
+        // messages still fire when the modem goes quiet.
+        let mut poll_interval = tokio::time::interval(ANALYZER_POLL_INTERVAL);
+        poll_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
         loop {
             tokio::select! {
+                _ = poll_interval.tick() => {
+                    diag_task.poll_analyzers().await;
+                }
                 msg = qmdl_file_rx.recv() => {
                     match msg {
                         Some(DiagDeviceCtrlMessage::StartRecording { response_tx }) => {
