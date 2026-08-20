@@ -41,9 +41,12 @@ fn rayhunter_options() -> introspect::Command<'static> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![install_rayhunter])
-        .invoke_handler(tauri::generate_handler![rayhunter_options])
+        .invoke_handler(tauri::generate_handler![
+            install_rayhunter,
+            rayhunter_options
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,31 +1,24 @@
 <script lang="ts">
-    import { invoke } from '@tauri-apps/api/core';
-    import { listen } from '@tauri-apps/api/event';
+    import InstallProgress from '$lib/InstallProgress.svelte';
+    import StylizedButton from '$lib/StylizedButton.svelte';
 
-    let buttonEnabled = $state(true);
+    type GUIScreen = 'ArgSelection' | 'Installation';
+
+    let currentScreen: GUIScreen = $state('ArgSelection');
     let installerArgs = $state('');
-    let installerOutput = $state('');
 
-    listen<string>('installer-output', (event) => {
-        installerOutput += event.payload;
-    });
+    function reselect_args() {
+        currentScreen = 'ArgSelection';
+    }
 
-    async function run_installer(event: Event) {
-        event.preventDefault();
-        buttonEnabled = false;
-        installerOutput = '';
-        try {
-            await invoke('install_rayhunter', { args: installerArgs });
-        } catch (error) {
-            installerOutput +=
-                'Rayhunter GUI installer encountered an internal error. Error was:\n';
-            installerOutput += error;
-        }
-        buttonEnabled = true;
+    function submit_args() {
+        currentScreen = 'Installation';
     }
 </script>
 
-<div class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center">
+<div
+    class="mb-4 p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center"
+>
     <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
     <img src="/rayhunter_text.png" alt="" class="h-10 xl:h-12" />
     <div class="flex flex-row gap-4">
@@ -97,22 +90,18 @@
         </a>
     </div>
 </div>
-<form class="flex justify-center pt-5" onsubmit={run_installer}>
-    <input
-        class="mr-1 px-5 py-2 rounded-lg shadow-md"
-        placeholder="Enter CLI installer args..."
-        autocapitalize="off"
-        autocorrect="off"
-        spellcheck="false"
-        bind:value={installerArgs}
-    />
-    <button
-        class="{buttonEnabled ? 'cursor-pointer' : ''} px-5 py-2 rounded-lg shadow-md"
-        disabled={!buttonEnabled}
-        type="submit">Run</button
-    >
-</form>
-<p class="p-4">Installer output:</p>
-<p class="bg-gray-100 px-5 py-2 rounded-lg shadow-md whitespace-pre-line">
-    {installerOutput}
-</p>
+{#if currentScreen === 'ArgSelection'}
+    <div class="flex justify-center pt-5">
+        <input
+            class="mr-1 px-5 py-2 rounded-lg shadow-md"
+            placeholder="Enter CLI installer args..."
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            bind:value={installerArgs}
+        />
+        <StylizedButton label="Run" onclick={submit_args} />
+    </div>
+{:else}
+    <InstallProgress {installerArgs} {reselect_args} />
+{/if}

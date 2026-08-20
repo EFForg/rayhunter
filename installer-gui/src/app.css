@@ -5,3 +5,9 @@
     --color-rayhunter-dark-blue: #3f3da0;
     --color-rayhunter-green: #94ea18;
 }
+
+@layer components {
+    .rayhunter-button {
+        @apply px-6 py-2 rounded-lg shadow-md;
+    }
+}
