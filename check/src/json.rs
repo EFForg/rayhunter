@@ -87,7 +87,9 @@ mod test {
 
     async fn create_test_writer(path: &str) -> (IncrementalJsonWriter<DuplexStream>, DuplexStream) {
         let (writer, reader) = duplex(1_000_000);
-        let harness = Harness::new_with_config(&AnalyzerConfig::default());
+        let mut analyzer_config = AnalyzerConfig::default();
+        analyzer_config.wifi_log_path = "/tmp/wifi.log".to_string();
+        let harness = Harness::new_with_config(&analyzer_config);
         (
             IncrementalJsonWriter::new(writer, path, &harness.get_metadata())
                 .await
@@ -107,9 +109,11 @@ mod test {
         let (writer, reader) = create_test_writer("test_path").await;
         writer.finish().await.unwrap();
         let value = parse_json(reader).await;
+        let mut analyzer_config = AnalyzerConfig::default();
+        analyzer_config.wifi_log_path = "/tmp/wifi.log".to_string();
         let expected = ExpectedJsonLayout {
             path: "test_path".to_string(),
-            metadata: Harness::new_with_config(&AnalyzerConfig::default()).get_metadata(),
+            metadata: Harness::new_with_config(&analyzer_config).get_metadata(),
             reports: vec![],
         };
         assert_eq!(value, expected);
