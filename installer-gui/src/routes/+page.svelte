@@ -1,17 +1,33 @@
 <script lang="ts">
+    import ArgMenu from '$lib/ArgMenu.svelte';
+    import DeviceSelect from '$lib/DeviceSelect.svelte';
     import InstallProgress from '$lib/InstallProgress.svelte';
-    import StylizedButton from '$lib/StylizedButton.svelte';
+    import { ArgMenuInputData } from '$lib/types.svelte';
+    import type { InstallerSubcommand } from '$lib/types.svelte';
+    import type { PageProps } from './$types';
 
-    type GUIScreen = 'ArgSelection' | 'Installation';
+    type GUIScreen = 'DeviceSelection' | 'ArgSelection' | 'Installation';
 
-    let currentScreen: GUIScreen = $state('ArgSelection');
-    let installerArgs = $state('');
+    let { data }: PageProps = $props();
+    let argMenuData = $state(new ArgMenuInputData());
+    let currentScreen: GUIScreen = $state('DeviceSelection');
+    let installerArgs: string = $state('');
+    let selectedDevice: InstallerSubcommand | null = $state(null);
 
-    function reselect_args() {
+    function reselect_device() {
+        currentScreen = 'DeviceSelection';
+    }
+
+    function set_device(device: InstallerSubcommand) {
+        if (device != selectedDevice) {
+            argMenuData = new ArgMenuInputData();
+        }
+        selectedDevice = device;
         currentScreen = 'ArgSelection';
     }
 
-    function submit_args() {
+    function set_args(args: string) {
+        installerArgs = args;
         currentScreen = 'Installation';
     }
 </script>
@@ -90,18 +106,20 @@
         </a>
     </div>
 </div>
-{#if currentScreen === 'ArgSelection'}
-    <div class="flex justify-center pt-5">
-        <input
-            class="mr-1 px-5 py-2 rounded-lg shadow-md"
-            placeholder="Enter CLI installer args..."
-            autocapitalize="off"
-            autocorrect="off"
-            spellcheck="false"
-            bind:value={installerArgs}
-        />
-        <StylizedButton label="Run" onclick={submit_args} />
-    </div>
+{#if currentScreen === 'DeviceSelection' || selectedDevice === null}
+    <DeviceSelect initialSelection={selectedDevice} {set_device} subcommands={data.subcommands} />
+{:else if currentScreen === 'ArgSelection'}
+    <ArgMenu
+        bind:inputData={argMenuData}
+        {reselect_device}
+        {set_args}
+        subcommand={selectedDevice}
+    />
 {:else}
-    <InstallProgress {installerArgs} {reselect_args} />
+    <InstallProgress
+        deviceName={selectedDevice.label}
+        {installerArgs}
+        reselect_args={() => (currentScreen = 'ArgSelection')}
+        {reselect_device}
+    />
 {/if}

@@ -9,11 +9,15 @@
     type InstallerState = 'Running' | 'Succeeded' | 'Failed';
 
     let {
+        deviceName,
         installerArgs,
         reselect_args,
+        reselect_device,
     }: {
+        deviceName: string;
         installerArgs: string;
         reselect_args: () => void;
+        reselect_device: () => void;
     } = $props();
 
     let currentState: InstallerState = $state('Running');
@@ -64,7 +68,7 @@
 <div class="mx-8">
     <h1 class="font-semibold mb-4 text-center text-2xl">
         {#if currentState === 'Running'}
-            Installing Rayhunter
+            Installing on {deviceName}
         {:else if currentState === 'Succeeded'}
             Installation succeeded!
         {:else}
@@ -80,7 +84,7 @@
     {#if currentState !== 'Running'}
         <div class="flex justify-evenly mt-6">
             {#if currentState === 'Succeeded'}
-                <StylizedButton label="Install another device" onclick={reselect_args} />
+                <StylizedButton label="Install another device" onclick={reselect_device} />
                 <StylizedButton color="blue" label="Exit" onclick={() => exit(0)} />
             {:else}
                 <StylizedButton color="blue" label="Retry" onclick={reselect_args} />

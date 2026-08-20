@@ -1,3 +1,8 @@
+export class ArgMenuInputData {
+    booleans: Record<string, boolean> = $state({});
+    strings: Record<string, string> = $state({});
+}
+
 export interface InstallerCommand {
     subcommands: InstallerSubcommand[];
 }
