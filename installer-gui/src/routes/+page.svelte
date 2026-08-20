@@ -16,7 +16,9 @@
     }
 </script>
 
-<div class="mb-4 p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center">
+<div
+    class="mb-4 p-4 xl:px-8 bg-rayhunter-blue drop-shadow flex flex-row justify-between items-center"
+>
     <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
     <img src="/rayhunter_text.png" alt="" class="h-10 xl:h-12" />
     <div class="flex flex-row gap-4">
