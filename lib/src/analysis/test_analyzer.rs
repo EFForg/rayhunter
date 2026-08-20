@@ -55,15 +55,15 @@ impl Analyzer for TestAnalyzer {
                 mcc_string = "nomcc".to_string();
             }
             let mnc = &plmn[0].plmn_identity.mnc;
-            let mnc_string: String;
+
             // MNC can be 2 or 3 digits
-            if mnc.0.len() == 3 {
-                mnc_string = format!("{}{}{}", mnc.0[0].0, mnc.0[1].0, mnc.0[2].0);
+            let mnc_string: String = if mnc.0.len() == 3 {
+                format!("{}{}{}", mnc.0[0].0, mnc.0[1].0, mnc.0[2].0)
             } else if mnc.0.len() == 2 {
-                mnc_string = format!("{}{}", mnc.0[0].0, mnc.0[1].0);
+                format!("{}{}", mnc.0[0].0, mnc.0[1].0)
             } else {
-                mnc_string = format!("{:?}", mnc.0);
-            }
+                format!("{:?}", mnc.0)
+            };
 
             return Some(Event {
                 event_type: EventType::Low,
