@@ -11,7 +11,7 @@
     }: {
         inputData: ArgMenuInputData;
         reselect_device: () => void;
-        set_args: (args: string) => void;
+        set_args: (args: string[]) => void;
         subcommand: InstallerSubcommand;
     } = $props();
 
@@ -32,7 +32,7 @@
             }
         }
 
-        set_args(args.join(' '));
+        set_args(args);
     }
 </script>
 

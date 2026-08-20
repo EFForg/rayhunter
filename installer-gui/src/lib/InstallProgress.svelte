@@ -15,7 +15,7 @@
         reselect_device,
     }: {
         deviceName: string;
-        installerArgs: string;
+        installerArgs: string[];
         reselect_args: () => void;
         reselect_device: () => void;
     } = $props();

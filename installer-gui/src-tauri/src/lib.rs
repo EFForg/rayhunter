@@ -1,6 +1,5 @@
 use std::sync::LazyLock;
 
-use anyhow::Context;
 use clap::CommandFactory;
 use tauri::Emitter;
 
@@ -9,11 +8,10 @@ mod modifiers;
 
 static INSTALLER_COMMAND: LazyLock<clap::Command> = LazyLock::new(installer::Args::command);
 
-async fn run_installer(app_handle: tauri::AppHandle, args: String) -> anyhow::Result<()> {
-    let args_vec = shlex::split(&args).context("Failed to parse arguments: unclosed quote")?;
+async fn run_installer(app_handle: tauri::AppHandle, args: Vec<String>) -> anyhow::Result<()> {
     tauri::async_runtime::spawn_blocking(move || {
         installer::run_with_callback(
-            args_vec.iter().map(|s| s.as_str()),
+            args,
             Some(Box::new(move |output| {
                 app_handle
                     .emit("installer-output", output)
@@ -25,7 +23,7 @@ async fn run_installer(app_handle: tauri::AppHandle, args: String) -> anyhow::Re
 }
 
 #[tauri::command]
-async fn install_rayhunter(app_handle: tauri::AppHandle, args: String) -> Result<(), String> {
+async fn install_rayhunter(app_handle: tauri::AppHandle, args: Vec<String>) -> Result<(), String> {
     // the return value of tauri commands needs to be serializable by serde which we accomplish
     // here by converting anyhow::Error to a string
     run_installer(app_handle, args)

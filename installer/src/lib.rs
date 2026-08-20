@@ -1,3 +1,5 @@
+use std::ffi::OsString;
+
 use anyhow::{Context, Error};
 use clap::{Parser, Subcommand};
 use env_logger::Env;
@@ -361,10 +363,11 @@ pub type OutputCallback = Box<dyn Fn(&str) + Send + Sync>;
 ///     }))
 /// );
 /// ```
-pub fn run_with_callback<'a>(
-    args: impl IntoIterator<Item = &'a str>,
-    callback: Option<OutputCallback>,
-) -> Result<(), Error> {
+pub fn run_with_callback<I, T>(args: I, callback: Option<OutputCallback>) -> Result<(), Error>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString>,
+{
     let _guard;
     if let Some(cb) = callback {
         _guard = output::set_output_callback(move |s: &str| cb(s));
@@ -375,7 +378,8 @@ pub fn run_with_callback<'a>(
         .build()
         .context("Failed to create Tokio runtime")?
         .block_on(async {
-            let args = std::iter::once("installer").chain(args);
+            let args = std::iter::once(OsString::from("installer"))
+                .chain(args.into_iter().map(Into::into));
             match Args::try_parse_from(args) {
                 Ok(parsed_args) => run(parsed_args).await,
                 Err(e) => {
