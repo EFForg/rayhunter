@@ -46,6 +46,12 @@ export function gps_mode_label(mode: GpsMode | undefined | null): string {
     }
 }
 
+export enum ClockSyncMode {
+    Off = 0,
+    Autosync = 1,
+    Prompt = 2,
+}
+
 export interface Config {
     device: string;
     ui_level: number;
@@ -54,6 +60,7 @@ export interface Config {
     ntfy_url: string | null;
     enabled_notifications: enabled_notifications[];
     auto_check_updates: boolean;
+    clock_sync_mode: ClockSyncMode;
     analyzers: AnalyzerConfig;
     min_space_to_start_recording_mb: number;
     min_space_to_continue_recording_mb: number;
@@ -183,6 +190,10 @@ export interface UpdateStatus {
 
 export async function get_daemon_time(): Promise<TimeResponse> {
     return JSON.parse(await req('GET', '/api/time'));
+}
+
+export async function set_time_offset(offset_seconds: number): Promise<void> {
+    await req('POST', '/api/time-offset', { offset_seconds });
 }
 
 export async function get_update_status(): Promise<UpdateStatus> {
