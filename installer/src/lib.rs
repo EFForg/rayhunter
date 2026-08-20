@@ -276,8 +276,6 @@ struct Serial {
 }
 
 async fn run(args: Args) -> Result<(), Error> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("off")).init();
-
     match args.command {
         Command::Tmobile(args) => tmobile::install(args).await.context("Failed to install rayhunter on the Tmobile TMOHS1. Make sure your computer is connected to the hotspot using USB tethering or WiFi.")?,
         #[cfg(not(target_os = "android"))]
@@ -398,6 +396,8 @@ pub fn version() -> &'static str {
 /// This function is public so the binary can call it, library users should use `run_with_callback`
 /// instead.
 pub async fn main_cli() -> Result<(), Error> {
+    env_logger::Builder::from_env(Env::default().default_filter_or("off")).init();
+
     let args = Args::parse();
     run(args).await
 }
