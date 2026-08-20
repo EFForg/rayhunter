@@ -11,7 +11,7 @@
     let { data }: PageProps = $props();
     let argMenuData = $state(new ArgMenuInputData());
     let currentScreen: GUIScreen = $state('DeviceSelection');
-    let installerArgs: string = $state('');
+    let installerArgs: string[] = $state([]);
     let selectedDevice: InstallerSubcommand | null = $state(null);
 
     function reselect_device() {
@@ -26,7 +26,7 @@
         currentScreen = 'ArgSelection';
     }
 
-    function set_args(args: string) {
+    function set_args(args: string[]) {
         installerArgs = args;
         currentScreen = 'Installation';
     }
