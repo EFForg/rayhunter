@@ -363,7 +363,7 @@ mod test {
         let writer_size = {
             let mut writer = QmdlWriter::new(&mut buf);
             for container in &containers {
-                writer.write_container(&container).await.unwrap();
+                writer.write_container(container).await.unwrap();
             }
             if do_close {
                 writer.close().await.unwrap()
