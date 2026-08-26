@@ -26,12 +26,12 @@ You can build `rayhunter-check` from source with the following command:
 rayhunter-check [OPTIONS] --path <PATH>
 
 Options:
-  -p, --path <PATH>   Path to the PCAP, or QMDL file. If given a directory will 
-                        recursively scan all pcap, qmdl, and subdirectories 
-  -P, --pcapify       Turn QMDL file into PCAP     
-      --show-skipped  Show skipped messages
-  -q, --quiet         Print only warnings
-  -d, --debug         Print debug info 
+  -p, --path <PATH>   A file or directory of packet captures
+  -P, --pcapify       Convert qmdl files to pcap after analysis
+      --show-skipped  Show why some packets were skipped during analysis
+  -j, --json <JSON>   Output report to a JSON file
+  -q, --quiet         Only print warnings/errors to stdout
+  -d, --debug         Show debug messages
   -h, --help          Print help
   -V, --version       Print version
 ```

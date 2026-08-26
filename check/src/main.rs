@@ -23,7 +23,7 @@ struct Args {
     #[arg(short = 'p', long, help = "A file or directory of packet captures")]
     path: PathBuf,
 
-    #[arg(short = 'P', long, help = "Convert qmdl files to pcap before analysis")]
+    #[arg(short = 'P', long, help = "Convert qmdl files to pcap after analysis")]
     pcapify: bool,
 
     #[arg(long, help = "Show why some packets were skipped during analysis")]
