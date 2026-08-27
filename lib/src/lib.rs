@@ -42,4 +42,5 @@ pub enum Device {
     Pinephone,
     Uz801,
     Moxee,
+    Mifi7730L,
 }
