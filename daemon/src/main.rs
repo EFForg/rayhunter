@@ -253,11 +253,7 @@ async fn run_with_config(
             Device::Wingtech => display::wingtech::update_ui,
             Device::Pinephone => display::headless::update_ui,
             Device::Uz801 => display::uz801::update_ui,
-            // The 7730L's LCD is owned by a stock Qt compositor and isn't
-            // writable as a plain framebuffer; on-screen alerts are handled
-            // out-of-band via the device's native notification system in a
-            // follow-up change. Headless keeps capture/analysis fully working.
-            Device::Mifi7730L => display::headless::update_ui,
+            Device::Mifi7730L => display::mifi7730l::update_ui,
         };
         update_ui(&task_tracker, &config, shutdown_token.clone(), ui_update_rx);
 

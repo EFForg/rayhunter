@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 mod generic_framebuffer;
 
 pub mod headless;
+pub mod mifi7730l;
 pub mod orbic;
 pub mod tmobile;
 pub mod tplink;
