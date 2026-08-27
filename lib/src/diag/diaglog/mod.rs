@@ -93,7 +93,35 @@ pub enum LogBody {
     #[deku(id = "0xb064")]
     LteMacUl { packet: mac::Packet },
     #[deku(id = "0xb114")]
-    LteLl1ServingCellTiming { data: ll1::ServingCellTiming },
+    LteLl1ServingCellTiming {
+        // Captured as an opaque body rather than parsed inline. The structured
+        // form ([`ll1::ServingCellTiming`]) only understands `version == 1`;
+        // some Qualcomm basebands (observed on an MDM9640 / Inseego MiFi
+        // 7730L) emit a different version, and a hard parse failure here used
+        // to take down the parse of the entire enclosing diag `Message`.
+        // Callers that want the timing detail can opt in via
+        // [`LogBody::serving_cell_timing`].
+        #[deku(count = "hdr_len")]
+        body: Vec<u8>,
+    },
+}
+
+impl LogBody {
+    /// Best-effort structured decode of an [`LogBody::LteLl1ServingCellTiming`]
+    /// (`0xb114`) body. Returns `None` for any other variant, or when the body
+    /// doesn't match the known version-1 layout — nothing in the analysis
+    /// pipeline needs this, so an unrecognized version is simply skipped rather
+    /// than failing the message.
+    pub fn serving_cell_timing(&self) -> Option<ll1::ServingCellTiming> {
+        match self {
+            LogBody::LteLl1ServingCellTiming { body } => {
+                ll1::ServingCellTiming::from_bytes((body, 0))
+                    .ok()
+                    .map(|(_, parsed)| parsed)
+            }
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -204,6 +232,25 @@ pub(crate) mod test {
             "Unexpected message: {:?}",
             msg
         );
+    }
+
+    #[test]
+    fn test_b114_unknown_version_is_not_a_parse_error() {
+        // 0xb114 body with version byte 0x02 (only version 1 is understood).
+        // Regression guard: `ll1::ServingCellTiming` asserts `version == 1`,
+        // which previously propagated out as a hard `DekuError`, failing the
+        // parse of the whole enclosing `Message`. The variant now captures the
+        // body opaquely so any version is accepted.
+        let body: [u8; 5] = [0x02, 0xde, 0xad, 0xbe, 0xef];
+        let mut reader = deku::reader::Reader::new(std::io::Cursor::new(body.to_vec()));
+        let parsed = LogBody::from_reader_with_ctx(&mut reader, (0xb114u16, body.len() as u16))
+            .expect("unknown-version 0xb114 body should parse, not error");
+        let LogBody::LteLl1ServingCellTiming { body: captured } = &parsed else {
+            panic!("expected LteLl1ServingCellTiming, got {parsed:?}");
+        };
+        assert_eq!(captured, &body);
+        // Opt-in structured decode declines an unknown version rather than panicking.
+        assert!(parsed.serving_cell_timing().is_none());
     }
 
     #[test]
