@@ -2,8 +2,7 @@
 //! USIM elementary files (EF_HPLMNwAcT, EF_EHPLMN, EF_FPLMN).
 //!
 //! TS 31.102 §4.2.54 defines the PLMN in EF_HPLMNwAcT as coded "according to
-//! TS 24.008". The nibble order below is easiest to check against pysim's
-//! decoders, permalinked at commit `25e43e1`:
+//! TS 24.008". The nibble order below is easiest to check against pysim's:
 //! <https://github.com/osmocom/pysim/blob/25e43e1540144be9026a2733bc3a4271b8fa7d25/pySim/utils.py#L150-L183>
 //!
 //! ```text
