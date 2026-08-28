@@ -20,42 +20,25 @@ const TIMEOUT: Duration = Duration::from_secs(3);
 ///
 /// EF_HPLMNwAcT is the file whose "data field shall contain the HPLMN code, or
 /// codes together with the respected access technology" -- that is, the
-/// operator(s) the card considers to be its own home network. That's exactly
-/// what the `imsi_requested` heuristic needs in order to tell roaming apart from
-/// a serving network that only claims to be home. TS 31.102 §4.2.54 gives
+/// operator(s) the card considers to be its own home network. TS 31.102 §4.2.54 gives
 /// "Identifier: '6F62'", "Structure: Transparent" and "File size: 5n (n >= 1)
-/// bytes"; its clause 5.2 counterpart, "HPLMN selector with Access Technology
-/// request", is the read procedure a normal ME follows, which is what we're
-/// imitating.
+/// bytes".
 ///
 /// Syntax is table 78 of 3GPP TS 27.007 §8.18, p. 138 of
 /// <https://www.etsi.org/deliver/etsi_ts/127000_127099/127007/19.06.00_60/ts_127007v190600p.pdf>:
+///     +CRSM=<command>,<fileid>,<P1>,<P2>,<P3>
+/// where:
+/// * `command` = `176`, or READ BINARY
+/// * `fileid` = `28514`, or `0x6F62`, which is `EFHPLMNwAcT`'s file ID
+/// * `<P1>,<P2>,<P3>` = `0,0,10`, or offset 0, read 10 bytes, i.e. the first two 5-byte records.
 ///
-/// * `176` = READ BINARY, which "reads a string of bytes from the current
-///   transparent EF" (TS 102 221 §11.1.3.1). §8.18 lists the permitted
-///   `<command>` values in decimal; `176` is `0xB0`, its INS byte per table 10.5
-///   of TS 102 221.
-/// * `28514` = `0x6F62`, the `<fileid>`, "identifier of a elementary datafile on
-///   SIM":
-///   <https://github.com/osmocom/pysim/blob/25e43e1540144be9026a2733bc3a4271b8fa7d25/pySim/ts_31_102.py#L1668>
-/// * `0,0,10` are `<P1>,<P2>,<P3>`, "parameters passed on by the MT to the SIM":
-///   offset 0, read 10 bytes, i.e. the first two 5-byte records.
-///
-///   §8.18 defers the coding to TS 51.011, which defers to TS 31.101 §11.1.3,
-///   which defers to ETSI TS 102 221 §11.1.3.2:
+///   If a nonzero offset is needed, refer to TS 102 221 §11.1.3.2:
 ///   <https://www.etsi.org/deliver/etsi_ts/102200_102299/102221/18.03.00_60/ts_102221v180300p.pdf>
-///   There, P2 is "Offset low" and per table 11.10 "b7 to b1 [of P1] is the
-///   offset to the first byte to read" -- so the offset is 15 bits split across
-///   P1 and P2, not a clean two-byte field. Immaterial at offset 0, but worth
-///   knowing before reading further into a file.
 ///
 /// Two records is arbitrary. The file is "5n (n >= 1) bytes" with no upper
 /// bound and we never tried reading more.
 const READ_EF_HPLMNWACT: &str = "AT+CRSM=176,28514,0,0,10";
 
-/// 3-byte PLMN plus 2-byte Access Technology Identifier, i.e. pysim's
-/// `EF_xPLMNwAcT(rec_len=5)`, whose test vectors are the same shape as ours:
-/// <https://github.com/osmocom/pysim/blob/25e43e1540144be9026a2733bc3a4271b8fa7d25/pySim/ts_51_011.py#L859-L865>
 const RECORD_LEN: usize = 5;
 
 pub async fn get_home_plmn(port: &str) -> Result<BTreeSet<String>, SimError> {
@@ -80,19 +63,6 @@ pub async fn get_home_plmn(port: &str) -> Result<BTreeSet<String>, SimError> {
 /// Table 10.7 ("Status byte coding - normal processing") of ETSI TS 102 221
 /// V18.3.0 §10.2.1.1 lists exactly three normal endings, and this matches them:
 /// <https://www.etsi.org/deliver/etsi_ts/102200_102299/102221/18.03.00_60/ts_102221v180300p.pdf>
-///
-/// * `'90' '00'` -- "Normal ending of the command". Note SW2 is `'00'`, not
-///   `'XX'`, so `90` is only a success when paired with zero.
-/// * `'91' 'XX'` -- "Normal ending of the command, with extra information from
-///   the proactive UICC containing a command for the terminal."
-/// * `'92' 'XX'` -- "Normal ending of the command, with extra information
-///   concerning an ongoing data transfer session."
-///
-/// GSM-era `9Exx`/`9Fxx` come from a different table
-/// (<https://github.com/osmocom/pysim/blob/25e43e1540144be9026a2733bc3a4271b8fa7d25/pySim/ts_51_011.py#L1217-L1218>)
-/// and are excluded: they mean the card is holding data for a follow-up GET
-/// RESPONSE, but `+CRSM` returns the payload inline, so accepting them would
-/// parse a payload we never fetched.
 fn is_normal_ending(sw1: u8, sw2: u8) -> bool {
     matches!((sw1, sw2), (0x90, 0x00) | (0x91 | 0x92, _))
 }

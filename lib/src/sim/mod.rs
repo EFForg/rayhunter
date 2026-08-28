@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use log::{debug, info, warn};
+use log::{info, warn};
 use thiserror::Error;
 
 use crate::Device;
@@ -31,7 +31,7 @@ pub async fn home_plmn(device: &Device) -> BTreeSet<String> {
             plmns
         }
         Err(SimError::UnsupportedDevice) => {
-            debug!("reading the home PLMN from the SIM isn't supported for this device");
+            info!("reading the home PLMN from the SIM isn't supported for this device");
             BTreeSet::new()
         }
         Err(e) => {

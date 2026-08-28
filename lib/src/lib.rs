@@ -51,9 +51,6 @@ pub enum Device {
 
 /// Facts about the device rayhunter is running on, gathered at runtime and
 /// made available to analyzers.
-///
-/// Every field is optional. `None` means unknown and must never be used to
-/// lower the severity of a finding.
 #[derive(PartialEq, Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(default)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
