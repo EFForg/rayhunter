@@ -18,6 +18,7 @@
   - [Orbic/Kajeet RC400L](./orbic.md)
   - [TP-Link M7350](./tplink-m7350.md)
   - [TP-Link M7310](./tplink-m7310.md)
+  - [TP-Link M7200](./tplink-m7200.md)
   - [Tmobile TMOHS1](./tmobile-tmohs1.md)
   - [UZ801](./uz801.md)
   - [Wingtech CT2MHS01](./wingtech-ct2mhs01.md)
