@@ -657,13 +657,9 @@ jobs:
           name: api-docs
           path: api-docs
 
-  github_pages_publish:
-    name: Upload new documentation to Github Pages
+  github_pages_stage:
+    name: Stage Github Pages artifact
     if: ${{ github.ref == 'refs/heads/main' }}
-    permissions:
-      pages: write
-      contents: write
-      id-token: write
     needs:
       - mdbook_build
       - openapi_build
@@ -678,5 +674,22 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: book
+
+  github_pages_publish:
+    name: Deploy documentation to Github Pages
+    needs:
+      - github_pages_stage
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy Github Pages
+        id: deployment
         uses: actions/deploy-pages@v4
