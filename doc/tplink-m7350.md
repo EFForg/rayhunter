@@ -4,6 +4,17 @@ Supported in Rayhunter since version 0.3.0.
 
 The TP-Link M7350 supports many more frequency bands than Orbic and therefore works in Europe and also in some Asian and African countries.
 
+<div class="warning-box">
+
+**WARNING: Do not buy hardware version `10.0`. Rayhunter does not work on it, and most likely never will.**
+
+New M7350 units currently on sale are `10.0`. If you want an M7350, buy
+second-hand and confirm the hardware version with the seller before paying.
+
+See [issue #1105](https://github.com/EFForg/rayhunter/issues/1105) for details.
+
+</div>
+
 ## Supported Bands
 
 | Technology | Bands |
@@ -24,7 +35,7 @@ The TP-Link comes in many different *hardware versions*. Support for installatio
 * `6.2`: **One user reported it is working, not tested**
 * `4.0`: **Manual firmware downgrade required** ([issue](https://github.com/EFForg/rayhunter/issues/332))
 * `9.0`: **Working since 0.3.2.**
-* `10.0`: **Not working** ([issue](https://github.com/EFForg/rayhunter/issues/1105))
+* `10.0`: **Not working** ([issue](https://github.com/EFForg/rayhunter/issues/1105)). Do not buy this version, see the warning above.
 
 TP-Link versions newer than `3.0` have cyan packaging and a color display. Version `3.0` has a one-bit display and white packaging.
 
@@ -32,7 +43,9 @@ You can find the exact hardware version of each device under the battery or next
 
 When filing bug reports, particularly with the installer, please always specify the exact hardware version.
 
-You can get your TP-Link M7350 from:
+You can get your TP-Link M7350 from the sources below. **Buy second-hand and
+verify the hardware version is not `10.0` before paying** -- new stock is `10.0`
+and does not work.
 
 * First check for used offers on local sites, sometimes it's much cheaper there.
 * [Geizhals price comparison](https://geizhals.eu/?fs=tp-link+m7350).
