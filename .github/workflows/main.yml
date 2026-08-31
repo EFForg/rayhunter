@@ -101,7 +101,6 @@ jobs:
   mdbook_build:
     name: Build mdBook for Github Pages
     needs: mdbook_test
-    if: ${{ github.ref == 'refs/heads/main' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -659,7 +658,6 @@ jobs:
 
   github_pages_stage:
     name: Stage Github Pages artifact
-    if: ${{ github.ref == 'refs/heads/main' }}
     permissions: {}
     needs:
       - mdbook_build
@@ -678,6 +676,7 @@ jobs:
 
   github_pages_publish:
     name: Deploy documentation to Github Pages
+    if: ${{ github.ref == 'refs/heads/main' }}
     needs:
       - github_pages_stage
     permissions:
