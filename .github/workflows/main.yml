@@ -660,6 +660,7 @@ jobs:
   github_pages_stage:
     name: Stage Github Pages artifact
     if: ${{ github.ref == 'refs/heads/main' }}
+    permissions: {}
     needs:
       - mdbook_build
       - openapi_build
