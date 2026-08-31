@@ -6,6 +6,7 @@
         get_wifi_status,
         scan_wifi_networks,
         GpsMode,
+        ClockSyncMode,
         enabled_notifications,
         type Config,
         type WifiStatus,
@@ -210,6 +211,31 @@
                             Colorblind Mode
                         </label>
                     </div>
+                </div>
+
+                <div>
+                    <label
+                        for="clock_sync_mode"
+                        class="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                        Clock Sync
+                    </label>
+                    <select
+                        id="clock_sync_mode"
+                        bind:value={config.clock_sync_mode}
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                    >
+                        <option value={ClockSyncMode.Off}>Off (never warn or sync)</option>
+                        <option value={ClockSyncMode.Autosync}>
+                            Autosync (copy browser clock automatically)
+                        </option>
+                        <option value={ClockSyncMode.Prompt}>Prompt (ask before syncing)</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        What to do when Rayhunter's clock drifts from your browser's. The offset
+                        isn't saved across daemon restarts, so autosync re-applies it whenever you
+                        open the web UI.
+                    </p>
                 </div>
 
                 <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">

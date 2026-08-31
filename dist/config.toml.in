@@ -32,6 +32,15 @@ enabled_notifications = ["Warning", "LowBattery"]
 # an update notice in the web UI.
 auto_check_updates = false
 
+# How Rayhunter handles its clock drifting from a known-good time source. Today
+# the only source is the browser talking to the web UI.
+#   0 = off (never warn or sync)
+#   1 = autosync (silently copy the source's clock to the device)
+#   2 = prompt (show a warning and let you choose) [default]
+# Note: the clock offset is kept in memory only and is lost when the daemon
+# restarts, so autosync re-applies it whenever you open the web UI.
+clock_sync_mode = 2
+
 # Disk Space Management
 # Minimum free space (MB) required to start recording
 min_space_to_start_recording_mb = 1
