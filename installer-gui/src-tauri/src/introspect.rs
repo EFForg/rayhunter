@@ -45,6 +45,7 @@ impl Command<'_> {
 struct Argument<'a> {
     advanced: bool,
     flag: String,
+    help: String,
     label: &'a str,
     takes_values: bool,
 }
@@ -54,6 +55,31 @@ struct Subcommand<'a> {
     arguments: Vec<Argument<'a>>,
     command: &'a str,
     label: &'a str,
+}
+
+fn argument_help(argument: &clap::Arg) -> String {
+    let mut help = argument
+        .get_help()
+        .map(ToString::to_string)
+        .unwrap_or_default();
+    let default_values = argument.get_default_values();
+
+    if !argument.is_hide_default_value_set() && !default_values.is_empty() {
+        if !help.is_empty() {
+            help.push(' ');
+        }
+        help.push_str("[default: ");
+        help.push_str(
+            &default_values
+                .iter()
+                .map(|value| value.to_string_lossy())
+                .collect::<Vec<_>>()
+                .join(" "),
+        );
+        help.push(']');
+    }
+
+    help
 }
 
 impl Argument<'_> {
@@ -70,6 +96,7 @@ impl Argument<'_> {
         Ok(Argument {
             advanced: modifier.advanced,
             flag: format!("--{}", partial_flag),
+            help: argument_help(argument),
             label: modifier.gui_label,
             takes_values: argument.get_action().takes_values(),
         })
@@ -113,5 +140,32 @@ impl Subcommand<'_> {
             command: modifier.command,
             label: modifier.gui_label,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::argument_help;
+
+    #[test]
+    fn argument_help_includes_default_values() {
+        let argument = clap::Arg::new("example")
+            .help("Choose an example value")
+            .default_values(["one", "two"]);
+
+        assert_eq!(
+            argument_help(&argument),
+            "Choose an example value [default: one two]"
+        );
+    }
+
+    #[test]
+    fn argument_help_respects_hidden_default_values() {
+        let argument = clap::Arg::new("example")
+            .help("Choose an example value")
+            .default_value("one")
+            .hide_default_value(true);
+
+        assert_eq!(argument_help(&argument), "Choose an example value");
     }
 }
