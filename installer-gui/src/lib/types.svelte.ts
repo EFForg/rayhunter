@@ -16,6 +16,7 @@ export interface InstallerSubcommand {
 export interface InstallerArgument {
     advanced: boolean;
     flag: string;
+    help: string;
     label: string;
     takes_values: boolean;
 }
