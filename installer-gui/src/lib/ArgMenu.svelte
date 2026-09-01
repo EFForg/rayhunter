@@ -36,12 +36,35 @@
     }
 </script>
 
+{#snippet argument_label(arg: InstallerArgument)}
+    <label for={arg.flag} class="font-medium text-sm text-gray-700">
+        {arg.label}
+    </label>
+    {#if arg.help}
+        <span class="group relative inline-flex">
+            <button
+                aria-label={`${arg.label}: ${arg.help}`}
+                class="border border-gray-400 flex h-4 items-center justify-center rounded-full text-[10px] text-gray-600 w-4"
+                type="button"
+            >
+                ?
+            </button>
+            <span
+                class="absolute bottom-full left-1/2 mb-2 hidden max-w-72 -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white whitespace-normal w-max z-10 group-focus-within:block group-hover:block"
+                role="tooltip"
+            >
+                {arg.help}
+            </span>
+        </span>
+    {/if}
+{/snippet}
+
 {#snippet submenu(args: InstallerArgument[])}
     {#each args as arg (arg.flag)}
         {#if arg.takes_values}
-            <label class="block font-medium mb-1 text-gray-700 text-sm" for={arg.flag}>
-                {arg.label}
-            </label>
+            <div class="flex items-center gap-1 mb-1">
+                {@render argument_label(arg)}
+            </div>
             <input
                 bind:value={inputData.strings[arg.flag]}
                 class="bg-white border border-gray-300 focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue px-3 py-2 rounded-md w-full"
@@ -58,9 +81,9 @@
                     spellcheck="false"
                     type="checkbox"
                 />
-                <label for={arg.flag} class="font-medium ml-2 text-sm text-gray-700">
-                    {arg.label}
-                </label>
+                <div class="flex items-center gap-1 ml-2">
+                    {@render argument_label(arg)}
+                </div>
             </div>
         {/if}
     {/each}
