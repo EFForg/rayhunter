@@ -14,8 +14,8 @@ use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
     imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
     information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
-    null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
-    test_analyzer::TestAnalyzer,
+    no_nas_messages::NoNasMessagesAnalyzer, null_cipher::NullCipherAnalyzer,
+    priority_2g_downgrade::LteSib6And7DowngradeAnalyzer, test_analyzer::TestAnalyzer,
 };
 
 /// A list of booleans which stores information about which analyzers are enabled
@@ -31,6 +31,7 @@ pub struct AnalyzerConfig {
     pub incomplete_sib: bool,
     pub test_analyzer: bool,
     pub imsi_requested: bool,
+    pub no_nas_messages: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -44,6 +45,7 @@ impl Default for AnalyzerConfig {
             nas_null_cipher: true,
             incomplete_sib: true,
             test_analyzer: false,
+            no_nas_messages: false,
         }
     }
 }
@@ -129,14 +131,24 @@ pub trait Analyzer {
     fn get_description(&self) -> Cow<'_, str>;
 
     /// Analyze a single [InformationElement], possibly returning an [Event] if your
-    /// heuristic deems it relevant. Again, be mindful of any state your
+    /// heuristic deems it relevant. `timestamp` is the timestamp of the packet
+    /// that produced this element. Again, be mindful of any state your
     /// [Analyzer] updates per message, since it may be run over hundreds or
     /// thousands of them alongside many other [Analyzers](Analyzer).
     fn analyze_information_element(
         &mut self,
         ie: &InformationElement,
         packet_num: usize,
+        timestamp: DateTime<FixedOffset>,
     ) -> Option<Event>;
+
+    /// Reports a skipped, unhandled, or otherwise unparsed packet to the analyzer.
+    /// Time-based analyzers can also call this from [Self::analyze_information_element]
+    /// to process the timestamp of a parsed packet. The default implementation does
+    /// nothing.
+    fn report_skipped_packet(&mut self, _timestamp: DateTime<FixedOffset>) -> Option<Event> {
+        None
+    }
 
     /// Returns a version number for this Analyzer. This should only ever
     /// increase in value, and do so whenever substantial changes are made to
@@ -371,6 +383,10 @@ impl Harness {
             harness.add_analyzer(Box::new(TestAnalyzer {}))
         }
 
+        if analyzer_config.no_nas_messages {
+            harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()))
+        }
+
         if analyzer_config.diagnostic_analyzer {
             harness.add_analyzer(Box::new(DiagnosticAnalyzer {}));
         }
@@ -386,8 +402,9 @@ impl Harness {
         self.packet_num += 1;
 
         let epoch = DateTime::parse_from_rfc3339("1980-01-06T00:00:00-00:00").unwrap();
+        let packet_timestamp = epoch + packet.timestamp;
         let mut row = AnalysisRow {
-            packet_timestamp: Some(epoch + packet.timestamp),
+            packet_timestamp: Some(packet_timestamp),
             skipped_message_reason: None,
             events: Vec::new(),
         };
@@ -398,6 +415,8 @@ impl Harness {
             Ok(gsmtap_type) => GsmtapHeader::new(gsmtap_type),
             Err(err) => {
                 row.skipped_message_reason = Some(format!("failed to read GsmtapHeader: {err:?}"));
+                row.events = self.report_skipped_packet(packet_timestamp);
+                self.assert_events_match_analyzers(&row.events);
                 return row;
             }
         };
@@ -407,8 +426,8 @@ impl Harness {
             header: gsmtap_header,
             payload: packet_data.to_vec(),
         };
-        row.events = match InformationElement::try_from(&gsmtap_message) {
-            Ok(element) => self.analyze_information_element(&element),
+        let element = match InformationElement::try_from(&gsmtap_message) {
+            Ok(element) => element,
             Err(err) => {
                 let msg = format!(
                     "in packet {}, failed to convert gsmtap message to IE: {err:?}",
@@ -416,9 +435,13 @@ impl Harness {
                 );
                 debug!("{msg}");
                 row.skipped_message_reason = Some(msg);
+                row.events = self.report_skipped_packet(packet_timestamp);
+                self.assert_events_match_analyzers(&row.events);
                 return row;
             }
         };
+        row.events = self.analyze_information_element(&element, packet_timestamp);
+        self.assert_events_match_analyzers(&row.events);
         row
     }
 
@@ -436,25 +459,44 @@ impl Harness {
                 return row;
             }
         };
+        let packet_timestamp = if let Message::Log { timestamp, .. } = &qmdl_message {
+            Some(timestamp.to_datetime())
+        } else {
+            None
+        };
+        row.packet_timestamp = packet_timestamp;
+
         let (timestamp, gsmtap_msg) = match gsmtap_parser::parse(qmdl_message) {
-            Ok(Some(msg)) => msg,
-            Ok(None) => return row,
+            Ok(Some((timestamp, msg))) => (timestamp.to_datetime(), msg),
+            Ok(None) => {
+                if let Some(timestamp) = packet_timestamp {
+                    row.events = self.report_skipped_packet(timestamp);
+                    self.assert_events_match_analyzers(&row.events);
+                }
+                return row;
+            }
             Err(err) => {
                 row.skipped_message_reason = Some(format!("{err:?}"));
+                if let Some(timestamp) = packet_timestamp {
+                    row.events = self.report_skipped_packet(timestamp);
+                    self.assert_events_match_analyzers(&row.events);
+                }
                 return row;
             }
         };
-        row.packet_timestamp = Some(timestamp.to_datetime());
 
         let element = match InformationElement::try_from(&gsmtap_msg) {
             Ok(element) => element,
             Err(err) => {
                 row.skipped_message_reason = Some(format!("{err:?}"));
+                row.events = self.report_skipped_packet(timestamp);
+                self.assert_events_match_analyzers(&row.events);
                 return row;
             }
         };
 
-        row.events = self.analyze_information_element(&element);
+        row.events = self.analyze_information_element(&element, timestamp);
+        self.assert_events_match_analyzers(&row.events);
         row
     }
 
@@ -466,22 +508,49 @@ impl Harness {
             .collect()
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        timestamp: DateTime<FixedOffset>,
+    ) -> Vec<Option<Event>> {
         // This method is private because incrementing packet_num is currently handled entirely by the other
         // methods that call this one. This could be changed with some careful refactoring, but
         // while this method is only used by other Harness methods, let's keep it private to help
         // ensure we always bump packet_num exactly once for each processed packet.
-        let packet_str = format!(" (packet {})", self.packet_num);
+        let packet_str = self.packet_suffix();
         self.analyzers
             .iter_mut()
             .map(|analyzer| {
-                let mut maybe_event = analyzer.analyze_information_element(ie, self.packet_num);
+                let mut maybe_event =
+                    analyzer.analyze_information_element(ie, self.packet_num, timestamp);
                 if let Some(ref mut event) = maybe_event {
                     event.message.push_str(&packet_str);
                 }
                 maybe_event
             })
             .collect()
+    }
+
+    fn report_skipped_packet(&mut self, timestamp: DateTime<FixedOffset>) -> Vec<Option<Event>> {
+        let packet_str = self.packet_suffix();
+        self.analyzers
+            .iter_mut()
+            .map(|analyzer| {
+                let mut maybe_event = analyzer.report_skipped_packet(timestamp);
+                if let Some(ref mut event) = maybe_event {
+                    event.message.push_str(&packet_str);
+                }
+                maybe_event
+            })
+            .collect()
+    }
+
+    fn packet_suffix(&self) -> String {
+        format!(" (packet {})", self.packet_num)
+    }
+
+    fn assert_events_match_analyzers(&self, events: &[Option<Event>]) {
+        assert_eq!(events.len(), self.analyzers.len());
     }
 
     pub fn get_metadata(&self) -> ReportMetadata {
@@ -555,5 +624,81 @@ mod tests {
             EventType::Informational
         );
         assert!(row.events[2].is_none());
+    }
+
+    use crate::analysis::no_nas_messages::NoNasMessagesAnalyzer;
+    use crate::diag::diaglog::{LogBody, Nas4GMessageDirection, Timestamp};
+
+    fn log_message(ts: u64, body: LogBody) -> Message {
+        Message::Log {
+            pending_msgs: 0,
+            outer_length: 0,
+            inner_length: 0,
+            log_type: 0,
+            timestamp: Timestamp { ts },
+            body,
+        }
+    }
+
+    // The upper 48 bits of a Timestamp tick every 1.25ms (see
+    // Timestamp::to_datetime), so N * 800 ticks == N seconds.
+    const FIVE_MINUTES_TS: u64 = 240_000 << 16;
+    // Just under 5 minutes: close enough to the boundary that the final,
+    // sub-threshold hop won't be treated as a forward-jump discontinuity.
+    const ALMOST_FIVE_MINUTES_TS: u64 = 239_200 << 16;
+
+    #[test]
+    fn test_parsed_message_updates_timestamp_without_changing_event_count() {
+        let mut harness = Harness::new();
+        harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()));
+
+        let row =
+            harness.analyze_qmdl_message(Ok(log_message(0, LogBody::IpTraffic { msg: vec![] })));
+        assert!(row.events.iter().all(|event| event.is_none()));
+
+        let row = harness.analyze_qmdl_message(Ok(log_message(
+            ALMOST_FIVE_MINUTES_TS,
+            LogBody::IpTraffic { msg: vec![] },
+        )));
+        assert!(row.events.iter().all(|event| event.is_none()));
+
+        let nas = log_message(
+            FIVE_MINUTES_TS,
+            LogBody::Nas4GMessage {
+                log_type: 0xb0ec,
+                direction: Nas4GMessageDirection::Downlink,
+                ext_header_version: 0,
+                rrc_rel: 0,
+                rrc_version_minor: 0,
+                rrc_version_major: 0,
+                msg: vec![0x07, 0x55, 0x01],
+            },
+        );
+        let row = harness.analyze_qmdl_message(Ok(nas));
+        assert_eq!(row.events.len(), 1);
+        assert!(row.events.iter().all(|event| event.is_none()));
+    }
+
+    #[test]
+    fn test_skipped_packet_timestamp_event_includes_packet_suffix() {
+        let mut harness = Harness::new();
+        harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()));
+
+        let row =
+            harness.analyze_qmdl_message(Ok(log_message(0, LogBody::IpTraffic { msg: vec![] })));
+        assert!(row.events.iter().all(|event| event.is_none()));
+
+        let row = harness.analyze_qmdl_message(Ok(log_message(
+            ALMOST_FIVE_MINUTES_TS,
+            LogBody::IpTraffic { msg: vec![] },
+        )));
+        assert!(row.events.iter().all(|event| event.is_none()));
+
+        let row = harness.analyze_qmdl_message(Ok(log_message(
+            FIVE_MINUTES_TS,
+            LogBody::IpTraffic { msg: vec![] },
+        )));
+        let event = row.events[0].as_ref().expect("expected a warning event");
+        assert!(event.message.ends_with(" (packet 3)"));
     }
 }

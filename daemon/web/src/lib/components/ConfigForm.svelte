@@ -614,6 +614,11 @@
                         />
 
                         <CheckboxField
+                            id="no_nas_messages"
+                            label="No NAS Messages Heuristic (experimental)"
+                            bind:checked={config.analyzers.no_nas_messages}
+                        />
+                        <CheckboxField
                             id="test_analyzer"
                             label="Test Heuristic (noisy!)"
                             bind:checked={config.analyzers.test_analyzer}

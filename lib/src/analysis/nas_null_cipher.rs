@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use chrono::{DateTime, FixedOffset};
+
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 use pycrate_rs::nas::generated::emm::emm_security_mode_command::NASSecAlgoCiphAlgo::EPSEncryptionAlgorithmEEA0Null;
@@ -28,6 +30,7 @@ impl Analyzer for NasNullCipherAnalyzer {
         &mut self,
         ie: &InformationElement,
         _packet_num: usize,
+        _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         let payload = match ie {
             InformationElement::LTE(inner) => match &**inner {

@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use chrono::{DateTime, FixedOffset};
+
 use telcom_parser::lte_rrc::{
     CipheringAlgorithm_r12, DL_DCCH_MessageType, DL_DCCH_MessageType_c1,
     RRCConnectionReconfiguration, RRCConnectionReconfigurationCriticalExtensions,
@@ -135,6 +137,7 @@ impl Analyzer for NullCipherAnalyzer {
         &mut self,
         ie: &InformationElement,
         _packet_num: usize,
+        _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         let dcch_msg = match ie {
             InformationElement::LTE(lte_ie) => match &**lte_ie {
