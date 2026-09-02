@@ -292,7 +292,7 @@
                         type="checkbox"
                         id="filter_threshold"
                         bind:checked={filter_threshold}
-                        class="px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                     />
                 </div>
             </div>

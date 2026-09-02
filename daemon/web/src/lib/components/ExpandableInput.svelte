@@ -1,5 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
+    import CheckboxField from './CheckboxField.svelte';
+    import FormField from './FormField.svelte';
 
     let {
         value = $bindable(''),
@@ -44,24 +46,10 @@
     }
 </script>
 
-<div class="flex items-center">
-    <input
-        id={checkboxId}
-        type="checkbox"
-        checked={expanded}
-        onchange={handle_checkbox_change}
-        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-    />
-    <label for={checkboxId} class="ml-2 block text-sm text-gray-700">
-        {label}
-    </label>
-</div>
+<CheckboxField id={checkboxId} {label} checked={expanded} onchange={handle_checkbox_change} />
 
 {#if expanded}
-    <div>
-        <label for={inputId} class="block text-sm font-medium text-gray-700 mb-1">
-            {inputLabel}
-        </label>
+    <FormField id={inputId} label={inputLabel} help={inputHelp}>
         <input
             id={inputId}
             type="text"
@@ -69,14 +57,9 @@
             bind:value
             onblur={handle_input_blur}
             placeholder={inputPlaceholder}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+            class="form-control w-full"
         />
-        {#if inputHelp}
-            <p class="text-xs text-gray-500 mt-1">
-                {inputHelp}
-            </p>
-        {/if}
-    </div>
+    </FormField>
 
     {@render children?.()}
 {/if}

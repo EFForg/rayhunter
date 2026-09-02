@@ -14,6 +14,8 @@
     } from '../utils.svelte';
     import Modal from './Modal.svelte';
     import ExpandableInput from './ExpandableInput.svelte';
+    import CheckboxField from './CheckboxField.svelte';
+    import FormField from './FormField.svelte';
 
     let { shown = $bindable() }: { shown: boolean } = $props();
     let config = $state<Config | null>(null);
@@ -30,6 +32,7 @@
     let scanning = $state(false);
     let scanResults = $state<WifiNetwork[]>([]);
     let dnsServersInput = $state('');
+    let gpsMode = $derived(config?.gps_mode);
 
     async function load_config() {
         try {
@@ -161,69 +164,48 @@
                     save_config();
                 }}
             >
-                <div>
-                    <label for="ui_level" class="block text-sm font-medium text-gray-700 mb-1">
-                        Device UI Level
-                    </label>
-                    <select
-                        id="ui_level"
-                        bind:value={config.ui_level}
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
-                    >
+                <FormField
+                    id="ui_level"
+                    label="Device UI Level"
+                    help="Note: Rayhunter draws over the device's native UI, so some flickering is expected"
+                >
+                    <select id="ui_level" bind:value={config.ui_level} class="form-control w-full">
                         <option value={0}>Invisible mode</option>
                         <option value={1}>Subtle mode (colored line)</option>
                         <option value={2}>Demo mode (orca gif)</option>
                         <option value={3}>EFF logo</option>
                         <option value={4}>High visibility (full screen color)</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">
-                        Note: Rayhunter draws over the device's native UI, so some flickering is
-                        expected
-                    </p>
-                </div>
+                </FormField>
 
-                <div>
-                    <label
-                        for="key_input_mode"
-                        class="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                        Device Input Mode
-                    </label>
+                <FormField id="key_input_mode" label="Device Input Mode">
                     <select
                         id="key_input_mode"
                         bind:value={config.key_input_mode}
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                        class="form-control w-full"
                     >
                         <option value={0}>Disable button control</option>
                         <option value={1}>Double-tap power button to start new recording</option>
                     </select>
-                </div>
+                </FormField>
 
                 <div class="space-y-3">
-                    <div class="flex items-center">
-                        <input
-                            id="colorblind_mode"
-                            type="checkbox"
-                            bind:checked={config.colorblind_mode}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                        />
-                        <label for="colorblind_mode" class="ml-2 block text-sm text-gray-700">
-                            Colorblind Mode
-                        </label>
-                    </div>
+                    <CheckboxField
+                        id="colorblind_mode"
+                        label="Colorblind Mode"
+                        bind:checked={config.colorblind_mode}
+                    />
                 </div>
 
-                <div>
-                    <label
-                        for="clock_sync_mode"
-                        class="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                        Clock Sync
-                    </label>
+                <FormField
+                    id="clock_sync_mode"
+                    label="Clock Sync"
+                    help="What to do when Rayhunter's clock drifts from your browser's. The offset isn't saved across daemon restarts, so autosync re-applies it whenever you open the web UI."
+                >
                     <select
                         id="clock_sync_mode"
                         bind:value={config.clock_sync_mode}
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                        class="form-control w-full"
                     >
                         <option value={ClockSyncMode.Off}>Off (never warn or sync)</option>
                         <option value={ClockSyncMode.Autosync}>
@@ -231,31 +213,17 @@
                         </option>
                         <option value={ClockSyncMode.Prompt}>Prompt (ask before syncing)</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">
-                        What to do when Rayhunter's clock drifts from your browser's. The offset
-                        isn't saved across daemon restarts, so autosync re-applies it whenever you
-                        open the web UI.
-                    </p>
-                </div>
+                </FormField>
 
                 <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
 
-                    <div class="flex items-center">
-                        <input
-                            id="auto_check_updates"
-                            type="checkbox"
-                            bind:checked={config.auto_check_updates}
-                            class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                        />
-                        <label for="auto_check_updates" class="ml-2 block text-sm text-gray-700">
-                            Automatically check for software updates
-                        </label>
-                    </div>
-                    <p class="text-xs text-gray-500">
-                        When enabled, Rayhunter periodically checks GitHub for new releases and
-                        shows an update notice in the web UI.
-                    </p>
+                    <CheckboxField
+                        id="auto_check_updates"
+                        label="Automatically check for software updates"
+                        bind:checked={config.auto_check_updates}
+                        help="When enabled, Rayhunter periodically checks GitHub for new releases and shows an update notice in the web UI."
+                    />
 
                     <ExpandableInput
                         bind:value={config.ntfy_url}
@@ -316,6 +284,7 @@
                                     id="enable_warning_notifications"
                                     value="Warning"
                                     bind:group={config.enabled_notifications}
+                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                                 />
                                 <label
                                     for="enable_warning_notifications"
@@ -330,6 +299,7 @@
                                     id="enable_lowbattery_notifications"
                                     value="LowBattery"
                                     bind:group={config.enabled_notifications}
+                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                                 />
                                 <label
                                     for="enable_lowbattery_notifications"
@@ -344,6 +314,7 @@
                                     id="enable_update_notifications"
                                     value={enabled_notifications.Update}
                                     bind:group={config.enabled_notifications}
+                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
                                 />
                                 <label
                                     for="enable_update_notifications"
@@ -359,43 +330,33 @@
                 <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">Storage Management</h3>
 
-                    <div>
-                        <label
-                            for="min_space_to_start_recording_mb"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                            Minimum Space to Start Recording (MB)
-                        </label>
+                    <FormField
+                        id="min_space_to_start_recording_mb"
+                        label="Minimum Space to Start Recording (MB)"
+                        help="Recording will not start if less than this amount of disk space is free"
+                    >
                         <input
                             id="min_space_to_start_recording_mb"
                             type="number"
                             min="1"
                             bind:value={config.min_space_to_start_recording_mb}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                            class="form-control w-full"
                         />
-                        <p class="text-xs text-gray-500 mt-1">
-                            Recording will not start if less than this amount of disk space is free
-                        </p>
-                    </div>
+                    </FormField>
 
-                    <div>
-                        <label
-                            for="min_space_to_continue_recording_mb"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                            Minimum Space to Continue Recording (MB)
-                        </label>
+                    <FormField
+                        id="min_space_to_continue_recording_mb"
+                        label="Minimum Space to Continue Recording (MB)"
+                        help="Recording will stop automatically if disk space drops below this level"
+                    >
                         <input
                             id="min_space_to_continue_recording_mb"
                             type="number"
                             min="1"
                             bind:value={config.min_space_to_continue_recording_mb}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                            class="form-control w-full"
                         />
-                        <p class="text-xs text-gray-500 mt-1">
-                            Recording will stop automatically if disk space drops below this level
-                        </p>
-                    </div>
+                    </FormField>
                 </div>
 
                 <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
@@ -414,116 +375,76 @@
                         inputPlaceholder="https://dav.example.com/rayhunter/"
                         inputHelp="Files are uploaded via HTTP PUT under this base URL. No folders are created, and folders in this base URL are assumed to exist already."
                     >
-                        <div>
-                            <label
-                                for="webdav_username"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Username
-                            </label>
+                        <FormField
+                            id="webdav_username"
+                            label="Username"
+                            help="Optional. Leave blank for unauthenticated uploads."
+                        >
                             <input
                                 id="webdav_username"
                                 type="text"
                                 bind:value={config.webdav.username}
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                class="form-control w-full"
                             />
-                            <p class="text-xs text-gray-500 mt-1">
-                                Optional. Leave blank for unauthenticated uploads.
-                            </p>
-                        </div>
+                        </FormField>
 
-                        <div>
-                            <label
-                                for="webdav_password"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Password
-                            </label>
+                        <FormField
+                            id="webdav_password"
+                            label="Password"
+                            help="A password without a username will be rejected and the request will be sent unauthenticated."
+                        >
                             <input
                                 id="webdav_password"
                                 type="password"
                                 bind:value={config.webdav.password}
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                class="form-control w-full"
                             />
-                            <p class="text-xs text-gray-500 mt-1">
-                                A password without a username will be rejected and the request will
-                                be sent unauthenticated.
-                            </p>
-                        </div>
+                        </FormField>
 
-                        <div>
-                            <label
-                                for="webdav_upload_timeout_secs"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Upload Timeout (seconds)
-                            </label>
+                        <FormField id="webdav_upload_timeout_secs" label="Upload Timeout (seconds)">
                             <input
                                 id="webdav_upload_timeout_secs"
                                 type="number"
                                 min="1"
                                 bind:value={config.webdav.upload_timeout_secs}
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                class="form-control w-full"
                             />
-                        </div>
+                        </FormField>
 
-                        <div>
-                            <label
-                                for="webdav_poll_interval_secs"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Poll Interval (seconds)
-                            </label>
+                        <FormField
+                            id="webdav_poll_interval_secs"
+                            label="Poll Interval (seconds)"
+                            help="How often the worker checks for new entries to upload."
+                        >
                             <input
                                 id="webdav_poll_interval_secs"
                                 type="number"
                                 min="1"
                                 bind:value={config.webdav.poll_interval_secs}
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                class="form-control w-full"
                             />
-                            <p class="text-xs text-gray-500 mt-1">
-                                How often the worker checks for new entries to upload.
-                            </p>
-                        </div>
+                        </FormField>
 
-                        <div>
-                            <label
-                                for="webdav_min_age_secs"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Minimum Age Before Upload (seconds)
-                            </label>
+                        <FormField
+                            id="webdav_min_age_secs"
+                            label="Minimum Age Before Upload (seconds)"
+                            help="How long a recording must be closed before it becomes eligible for upload."
+                        >
                             <input
                                 id="webdav_min_age_secs"
                                 type="number"
                                 min="0"
                                 bind:value={config.webdav.min_age_secs}
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                class="form-control w-full"
                             />
-                            <p class="text-xs text-gray-500 mt-1">
-                                How long a recording must be closed before it becomes eligible for
-                                upload.
-                            </p>
-                        </div>
+                        </FormField>
 
-                        <div class="flex items-center">
-                            <input
-                                id="webdav_delete_on_upload"
-                                type="checkbox"
-                                bind:checked={config.webdav.delete_on_upload}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label
-                                for="webdav_delete_on_upload"
-                                class="ml-2 block text-sm text-gray-700"
-                            >
-                                Delete on successful upload
-                            </label>
-                        </div>
-                        <p class="text-xs text-gray-500">
-                            When enabled, the local files are removed after a successful upload.
-                            Otherwise the manifest is just marked as uploaded.
-                        </p>
+                        <CheckboxField
+                            id="webdav_delete_on_upload"
+                            label="Delete on successful upload"
+                            bind:checked={config.webdav.delete_on_upload}
+                            help="When enabled, the local files are removed after a successful upload. Otherwise the manifest is just marked as uploaded."
+                        />
                     </ExpandableInput>
                 </div>
 
@@ -536,20 +457,12 @@
                             WiFi client mode.
                         </p>
 
-                        <div class="flex items-center">
-                            <input
-                                id="wifi_enabled"
-                                type="checkbox"
-                                bind:checked={config.wifi_enabled}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label for="wifi_enabled" class="ml-2 block text-sm text-gray-700">
-                                Enable WiFi
-                            </label>
-                        </div>
-                        <p class="text-xs text-gray-500">
-                            Unchecking stops WiFi without clearing saved credentials.
-                        </p>
+                        <CheckboxField
+                            id="wifi_enabled"
+                            label="Enable WiFi"
+                            bind:checked={config.wifi_enabled}
+                            help="Unchecking stops WiFi without clearing saved credentials."
+                        />
 
                         {#if wifiStatus && config.wifi_enabled}
                             {#if wifiStatus.state === 'connected'}
@@ -571,20 +484,14 @@
                             {/if}
                         {/if}
 
-                        <div>
-                            <label
-                                for="wifi_ssid"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                WiFi Network Name (SSID)
-                            </label>
+                        <FormField id="wifi_ssid" label="WiFi Network Name (SSID)">
                             <div class="flex gap-2">
                                 <input
                                     id="wifi_ssid"
                                     type="text"
                                     bind:value={config.wifi_ssid}
                                     placeholder="MyWiFiNetwork"
-                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                    class="form-control flex-1"
                                 />
                                 <button
                                     type="button"
@@ -595,7 +502,7 @@
                                     {scanning ? 'Scanning...' : 'Scan'}
                                 </button>
                             </div>
-                        </div>
+                        </FormField>
 
                         {#if scanError}
                             <p class="text-xs text-red-600">{scanError}</p>
@@ -621,63 +528,46 @@
                         {/if}
 
                         {#if config.wifi_ssid}
-                            <div>
-                                <label
-                                    for="wifi_security"
-                                    class="block text-sm font-medium text-gray-700 mb-1"
-                                >
-                                    Security Type
-                                </label>
+                            <FormField id="wifi_security" label="Security Type">
                                 <select
                                     id="wifi_security"
                                     bind:value={config.wifi_security}
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                    class="form-control w-full"
                                 >
                                     <option value="wpa_psk">WPA2 (WPA-PSK)</option>
                                     <option value="sae">WPA3 (SAE)</option>
                                 </select>
-                            </div>
+                            </FormField>
                         {/if}
 
-                        <div>
-                            <label
-                                for="wifi_password"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                WiFi Password
-                            </label>
+                        <FormField
+                            id="wifi_password"
+                            label="WiFi Password"
+                            help="Changing the network requires re-entering the password."
+                        >
                             <input
                                 id="wifi_password"
                                 type="password"
                                 bind:value={config.wifi_password}
                                 placeholder="Enter password"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                class="form-control w-full"
                             />
-                            <p class="text-xs text-gray-500 mt-1">
-                                Changing the network requires re-entering the password.
-                            </p>
-                        </div>
+                        </FormField>
 
                         {#if config.wifi_ssid}
-                            <div>
-                                <label
-                                    for="dns_servers"
-                                    class="block text-sm font-medium text-gray-700 mb-1"
-                                >
-                                    DNS Servers
-                                </label>
+                            <FormField
+                                id="dns_servers"
+                                label="DNS Servers"
+                                help="Comma-separated. Used when WiFi is active. Defaults to 9.9.9.9, 149.112.112.112 (Quad9)."
+                            >
                                 <input
                                     id="dns_servers"
                                     type="text"
                                     bind:value={dnsServersInput}
                                     placeholder="9.9.9.9, 149.112.112.112"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue"
+                                    class="form-control w-full"
                                 />
-                                <p class="text-xs text-gray-500 mt-1">
-                                    Comma-separated. Used when WiFi is active. Defaults to 9.9.9.9,
-                                    149.112.112.112 (Quad9).
-                                </p>
-                            </div>
+                            </FormField>
                         {/if}
                     </div>
                 {/if}
@@ -687,145 +577,84 @@
                         Analyzer Heuristic Settings
                     </h3>
                     <div class="space-y-3">
-                        <div class="flex items-center">
-                            <input
-                                id="imsi_requested"
-                                type="checkbox"
-                                bind:checked={config.analyzers.imsi_requested}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label for="imsi_requested" class="ml-2 block text-sm text-gray-700">
-                                IMSI Requested Heuristic
-                            </label>
-                        </div>
+                        <CheckboxField
+                            id="imsi_requested"
+                            label="IMSI Requested Heuristic"
+                            bind:checked={config.analyzers.imsi_requested}
+                        />
 
-                        <div class="flex items-center">
-                            <input
-                                id="connection_redirect_2g_downgrade"
-                                type="checkbox"
-                                bind:checked={config.analyzers.connection_redirect_2g_downgrade}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label
-                                for="connection_redirect_2g_downgrade"
-                                class="ml-2 block text-sm text-gray-700"
-                            >
-                                Connection Redirect 2G Downgrade Heuristic
-                            </label>
-                        </div>
+                        <CheckboxField
+                            id="connection_redirect_2g_downgrade"
+                            label="Connection Redirect 2G Downgrade Heuristic"
+                            bind:checked={config.analyzers.connection_redirect_2g_downgrade}
+                        />
 
-                        <div class="flex items-center">
-                            <input
-                                id="lte_sib6_and_7_downgrade"
-                                type="checkbox"
-                                bind:checked={config.analyzers.lte_sib6_and_7_downgrade}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label
-                                for="lte_sib6_and_7_downgrade"
-                                class="ml-2 block text-sm text-gray-700"
-                            >
-                                LTE SIB6 and SIB7 Downgrade Heuristic
-                            </label>
-                        </div>
+                        <CheckboxField
+                            id="lte_sib6_and_7_downgrade"
+                            label="LTE SIB6 and SIB7 Downgrade Heuristic"
+                            bind:checked={config.analyzers.lte_sib6_and_7_downgrade}
+                        />
 
-                        <div class="flex items-center">
-                            <input
-                                id="null_cipher"
-                                type="checkbox"
-                                bind:checked={config.analyzers.null_cipher}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label for="null_cipher" class="ml-2 block text-sm text-gray-700">
-                                Null Cipher Heuristic
-                            </label>
-                        </div>
+                        <CheckboxField
+                            id="null_cipher"
+                            label="Null Cipher Heuristic"
+                            bind:checked={config.analyzers.null_cipher}
+                        />
 
-                        <div class="flex items-center">
-                            <input
-                                id="nas_null_cipher"
-                                type="checkbox"
-                                bind:checked={config.analyzers.nas_null_cipher}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label for="nas_null_cipher" class="ml-2 block text-sm text-gray-700">
-                                NAS Null Cipher Heuristic
-                            </label>
-                        </div>
+                        <CheckboxField
+                            id="nas_null_cipher"
+                            label="NAS Null Cipher Heuristic"
+                            bind:checked={config.analyzers.nas_null_cipher}
+                        />
 
-                        <div class="flex items-center">
-                            <input
-                                id="incomplete_sib"
-                                type="checkbox"
-                                bind:checked={config.analyzers.incomplete_sib}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label for="incomplete_sib" class="ml-2 block text-sm text-gray-700">
-                                Incomplete SIB Heuristic
-                            </label>
-                        </div>
+                        <CheckboxField
+                            id="incomplete_sib"
+                            label="Incomplete SIB Heuristic"
+                            bind:checked={config.analyzers.incomplete_sib}
+                        />
 
-                        <div class="flex items-center">
-                            <input
-                                id="test_analyzer"
-                                type="checkbox"
-                                bind:checked={config.analyzers.test_analyzer}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label for="test_analyzer" class="ml-2 block text-sm text-gray-700">
-                                Test Heuristic (noisy!)
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input
-                                id="diagnostic_analyzer"
-                                type="checkbox"
-                                bind:checked={config.analyzers.diagnostic_analyzer}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label
-                                for="diagnostic_analyzer"
-                                class="ml-2 block text-sm text-gray-700"
-                            >
-                                Diagnostic Analyzer
-                            </label>
-                        </div>
+                        <CheckboxField
+                            id="test_analyzer"
+                            label="Test Heuristic (noisy!)"
+                            bind:checked={config.analyzers.test_analyzer}
+                        />
+                        <CheckboxField
+                            id="diagnostic_analyzer"
+                            label="Diagnostic Analyzer"
+                            bind:checked={config.analyzers.diagnostic_analyzer}
+                        />
                     </div>
                 </div>
 
                 <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">GPS Settings</h3>
-                    <div>
-                        <label for="gps_mode" class="block text-sm font-medium text-gray-700 mb-1"
-                            >GPS Mode</label
-                        >
+                    <FormField id="gps_mode" label="GPS Mode">
+                        {#snippet help()}
+                            {#if gpsMode === GpsMode.Api}
+                                POST latitude and longitude to <code>/api/gps</code> from any device on
+                                the network. Timestamp is derived from packet capture timing.
+                            {:else if gpsMode === GpsMode.Fixed}
+                                GPS coordinates are fixed to the values below.
+                            {:else}
+                                GPS is disabled; no coordinates will be tracked.
+                            {/if}
+                        {/snippet}
                         <select
                             id="gps_mode"
                             bind:value={config.gps_mode}
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                            class="form-control w-full"
                         >
                             <option value={GpsMode.Disabled}>Disabled</option>
                             <option value={GpsMode.Fixed}>Fixed coordinates</option>
                             <option value={GpsMode.Api}>API endpoint</option>
                         </select>
-                        <p class="text-xs text-gray-500 mt-1">
-                            {#if config.gps_mode === GpsMode.Api}
-                                POST latitude and longitude to <code>/api/gps</code> from any device on
-                                the network. Timestamp is derived from packet capture timing.
-                            {:else if config.gps_mode === GpsMode.Fixed}
-                                GPS coordinates are fixed to the values below.
-                            {:else}
-                                GPS is disabled; no coordinates will be tracked.
-                            {/if}
-                        </p>
-                    </div>
+                    </FormField>
                     {#if config.gps_mode === GpsMode.Fixed}
-                        <div>
-                            <label
-                                for="gps_fixed_latitude"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                                >Fixed Latitude</label
-                            >
+                        <FormField
+                            id="gps_fixed_latitude"
+                            label="Fixed Latitude"
+                            help="Decimal degrees, -90 to 90"
+                        >
                             <input
                                 id="gps_fixed_latitude"
                                 type="number"
@@ -835,16 +664,14 @@
                                 required
                                 bind:value={config.gps_fixed_latitude}
                                 placeholder="e.g. 37.7749"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                class="form-control w-full"
                             />
-                            <p class="text-xs text-gray-500 mt-1">Decimal degrees, -90 to 90</p>
-                        </div>
-                        <div>
-                            <label
-                                for="gps_fixed_longitude"
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                                >Fixed Longitude</label
-                            >
+                        </FormField>
+                        <FormField
+                            id="gps_fixed_longitude"
+                            label="Fixed Longitude"
+                            help="Decimal degrees, -180 to 180"
+                        >
                             <input
                                 id="gps_fixed_longitude"
                                 type="number"
@@ -854,10 +681,9 @@
                                 required
                                 bind:value={config.gps_fixed_longitude}
                                 placeholder="e.g. -122.4194"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rayhunter-blue"
+                                class="form-control w-full"
                             />
-                            <p class="text-xs text-gray-500 mt-1">Decimal degrees, -180 to 180</p>
-                        </div>
+                        </FormField>
                     {/if}
                 </div>
 
