@@ -413,6 +413,7 @@ impl Harness {
             Err(err) => {
                 row.skipped_message_reason = Some(format!("failed to read GsmtapHeader: {err:?}"));
                 row.events = self.update_timestamp(packet_timestamp);
+                self.assert_events_match_analyzers(&row.events);
                 return row;
             }
         };
@@ -432,10 +433,12 @@ impl Harness {
                 debug!("{msg}");
                 row.skipped_message_reason = Some(msg);
                 row.events = self.update_timestamp(packet_timestamp);
+                self.assert_events_match_analyzers(&row.events);
                 return row;
             }
         };
         row.events = self.analyze_information_element(&element);
+        self.assert_events_match_analyzers(&row.events);
         row
     }
 
@@ -465,6 +468,7 @@ impl Harness {
             Ok(None) => {
                 if let Some(timestamp) = packet_timestamp {
                     row.events = self.update_timestamp(timestamp);
+                    self.assert_events_match_analyzers(&row.events);
                 }
                 return row;
             }
@@ -472,6 +476,7 @@ impl Harness {
                 row.skipped_message_reason = Some(format!("{err:?}"));
                 if let Some(timestamp) = packet_timestamp {
                     row.events = self.update_timestamp(timestamp);
+                    self.assert_events_match_analyzers(&row.events);
                 }
                 return row;
             }
@@ -483,12 +488,14 @@ impl Harness {
                 row.skipped_message_reason = Some(format!("{err:?}"));
                 if let Some(timestamp) = packet_timestamp {
                     row.events = self.update_timestamp(timestamp);
+                    self.assert_events_match_analyzers(&row.events);
                 }
                 return row;
             }
         };
 
         row.events = self.analyze_information_element(&element);
+        self.assert_events_match_analyzers(&row.events);
         row
     }
 
@@ -534,6 +541,10 @@ impl Harness {
 
     fn packet_suffix(&self) -> String {
         format!(" (packet {})", self.packet_num)
+    }
+
+    fn assert_events_match_analyzers(&self, events: &[Option<Event>]) {
+        assert_eq!(events.len(), self.analyzers.len());
     }
 
     pub fn get_metadata(&self) -> ReportMetadata {
