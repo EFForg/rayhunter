@@ -19,7 +19,15 @@ const SAMPLE_V2_REPORT_NDJSON: NewlineDeliminatedJson = [
         report_version: 2,
     },
     {
+        packet_timestamp: '2024-08-19T03:33:54.318Z',
         skipped_message_reason: 'The reason why the message was skipped',
+        events: [
+            {
+                event_type: 'Low',
+                message: 'A warning from a skipped packet',
+            },
+            null,
+        ],
     },
     {
         packet_timestamp: '2024-08-19T03:33:54.318Z',
@@ -49,10 +57,16 @@ describe('analysis report parsing', () => {
                 version: 2,
             },
         ]);
-        expect(report.rows).toHaveLength(2);
+        expect(report.rows).toHaveLength(3);
         expect(report.rows[0].type).toBe(AnalysisRowType.Skipped);
         if (report.rows[1].type === AnalysisRowType.Analysis) {
             const row = report.rows[1];
+            expect(row.events[0]?.message).toEqual('A warning from a skipped packet');
+        } else {
+            throw 'wrong row type';
+        }
+        if (report.rows[2].type === AnalysisRowType.Analysis) {
+            const row = report.rows[2];
             expect(row.events).toHaveLength(2);
             expect(row.events[0]).toBeNull();
             const event = row.events[1];
@@ -62,5 +76,7 @@ describe('analysis report parsing', () => {
         } else {
             throw 'wrong row type';
         }
+        expect(report.statistics.num_warnings).toEqual(2);
+        expect(report.statistics.num_skipped_packets).toEqual(1);
     });
 });

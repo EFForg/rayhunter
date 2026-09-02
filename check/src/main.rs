@@ -69,7 +69,6 @@ impl Report {
         if let Some(reason) = row.skipped_message_reason {
             *self.skipped_reasons.entry(reason).or_insert(0) += 1;
             self.skipped += 1;
-            return;
         }
         for maybe_event in row.events {
             let Some(event) = maybe_event else { continue };
@@ -103,6 +102,32 @@ impl Report {
             "{}: {} messages analyzed, {} warnings, {} messages skipped",
             self.file_path, self.total_messages, self.warnings, self.skipped
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::DateTime;
+
+    #[test]
+    fn process_row_records_skip_reason_and_event() {
+        let mut report = Report::new("test");
+        report.process_row(AnalysisRow {
+            packet_timestamp: Some(
+                DateTime::parse_from_rfc3339("2025-01-01T00:00:00+00:00").unwrap(),
+            ),
+            skipped_message_reason: Some("parse error".to_string()),
+            events: vec![Some(Event {
+                event_type: EventType::Low,
+                message: "warning".to_string(),
+            })],
+        });
+
+        assert_eq!(report.skipped, 1);
+        assert_eq!(report.skipped_reasons["parse error"], 1);
+        assert_eq!(report.warnings, 1);
+        assert_eq!(report.events.len(), 1);
     }
 }
 

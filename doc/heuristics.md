@@ -76,6 +76,22 @@ On its own this might just be a misconfigured base station (though we have only 
 ### Diagnostic Information 
 This analyzer displays some diagnostic information about when your device connects and disconnects from certain towers. It is helpful for analysis of suspicious PCAPs. The informational warnings in here can safely be ignored until there is a low, medium, or high severity warning. 
 
+### No NAS Messages
+
+*(disabled by default)*
+
+This analyzer warns once per recording if Rayhunter receives diagnostic traffic spanning at least 5 minutes without observing a NAS (*Non-Access Stratum*) message. NAS is the signaling layer between your device and the core network, and a working SIM card normally produces NAS traffic during actions such as attachment, tracking area updates, and authentication.
+
+The analyzer uses timestamps stored in the recording rather than the device's wall clock. This makes its results reproducible during reanalysis. Messages that Rayhunter cannot otherwise decode still advance the analyzer's clock. If any NAS message is observed, the analyzer is disabled for the rest of that recording.
+
+If Rayhunter receives diagnostic traffic but never sees a NAS message, the SIM card may be missing, deactivated, improperly provisioned, or not seated correctly. Rayhunter may still capture broadcast messages from nearby towers, but most other heuristics depend on signaling involving the SIM and core network.
+
+A recording containing no diagnostic messages at all cannot trigger this analyzer because it contains no timestamps with which to measure 5 minutes. Separately, while a recording is active, the web interface warns if no diagnostic message has arrived for 5 minutes; that warning is not part of any saved report.
+
+This heuristic is experimental. It may produce a false positive if the device receives radio traffic but cannot reach a network that produces NAS traffic.
+
 ### Test Analyzer
+
+*(disabled by default)*
 
 This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisy so we do not recommend leaving it on but if this alerts it means your Rayhunter device is working! 

@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use chrono::{DateTime, FixedOffset};
+
 use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use telcom_parser::lte_rrc::{
@@ -29,6 +31,7 @@ impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
         &mut self,
         ie: &InformationElement,
         _packet_num: usize,
+        _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::DlDcch(msg_cont) = &**lte_ie

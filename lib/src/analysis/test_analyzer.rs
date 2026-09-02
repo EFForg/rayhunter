@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use chrono::{DateTime, FixedOffset};
+
 use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1};
 
 use super::analyzer::{Analyzer, Event, EventType};
@@ -27,6 +29,7 @@ impl Analyzer for TestAnalyzer {
         &mut self,
         ie: &InformationElement,
         _packet_num: usize,
+        _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::BcchDlSch(sch_msg) = &**lte_ie
