@@ -23,7 +23,7 @@
 
 {#if href}
     <a
-        class="flex flex-row gap-1 group"
+        class="flex flex-row items-center gap-1 group"
         {href}
         {target}
         rel={target === '_blank' ? 'noreferrer noopener' : undefined}
@@ -31,7 +31,7 @@
         {@render content()}
     </a>
 {:else}
-    <button {onclick} class="flex flex-row gap-1 group">
+    <button {onclick} class="flex flex-row items-center gap-1 group">
         {@render content()}
     </button>
 {/if}

@@ -136,11 +136,11 @@
         <NavItem label="Config" onclick={() => (config_shown = true)}>
             {#snippet icon()}
                 <svg
-                    class="w-6 h-6 text-white group-hover:text-gray-400"
+                    class="w-5 h-5 text-white group-hover:text-gray-400"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     fill="currentColor"
                     viewBox="0 0 16 16"
                 >
