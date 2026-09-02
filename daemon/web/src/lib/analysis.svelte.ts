@@ -77,14 +77,17 @@ function get_rows(row_jsons: any[]): AnalysisRow[] {
                 type: AnalysisRowType.Skipped,
                 reason: row_json.skipped_message_reason,
             });
-        } else {
-            const events: Event[] = row_json.events.map((event_json: any): Event | null => {
+        }
+        const events: Event[] = (row_json.events ?? []).map(
+            (event_json: any): Event | null => {
                 if (event_json === null) {
                     return null;
                 } else {
                     return get_event(event_json);
                 }
-            });
+            },
+        );
+        if (events.some((event) => event !== null)) {
             rows.push({
                 type: AnalysisRowType.Analysis,
                 packet_timestamp: new Date(row_json.packet_timestamp),

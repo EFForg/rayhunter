@@ -635,7 +635,7 @@ mod tests {
     }
 
     // The upper 48 bits of a Timestamp tick every 1.25ms (see
-    // Timestamp::to_datetime), so N * 1000 ticks == N seconds.
+    // Timestamp::to_datetime), so N * 800 ticks == N seconds.
     const FIVE_MINUTES_TS: u64 = 240_000 << 16;
     // Just under 5 minutes: close enough to the boundary that the final,
     // sub-threshold hop won't be treated as a forward-jump discontinuity.
