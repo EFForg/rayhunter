@@ -130,25 +130,22 @@ pub trait Analyzer {
     fn get_description(&self) -> Cow<'_, str>;
 
     /// Analyze a single [InformationElement], possibly returning an [Event] if your
-    /// heuristic deems it relevant. Again, be mindful of any state your
+    /// heuristic deems it relevant. `timestamp` is the timestamp of the packet
+    /// that produced this element. Again, be mindful of any state your
     /// [Analyzer] updates per message, since it may be run over hundreds or
     /// thousands of them alongside many other [Analyzers](Analyzer).
     fn analyze_information_element(
         &mut self,
         ie: &InformationElement,
         packet_num: usize,
+        timestamp: DateTime<FixedOffset>,
     ) -> Option<Event>;
 
-    /// Called once for every packet that carries a timestamp, whether or not
-    /// that packet yields an [InformationElement] your analyzer can act on.
-    ///
-    /// This lets an [Analyzer] implement heuristics based on elapsed time
-    /// (e.g. flagging an absence of expected messages within a time window)
-    /// rather than on message content alone. If the packet does contain an
-    /// element, [Self::analyze_information_element] is called first, so by
-    /// the time this runs, this analyzer has already observed it for that
-    /// packet. The default implementation does nothing.
-    fn update_timestamp(&mut self, _timestamp: DateTime<FixedOffset>) -> Option<Event> {
+    /// Reports a skipped, unhandled, or otherwise unparsed packet to the analyzer.
+    /// Time-based analyzers can also call this from [Self::analyze_information_element]
+    /// to process the timestamp of a parsed packet. The default implementation does
+    /// nothing.
+    fn report_skipped_packet(&mut self, _timestamp: DateTime<FixedOffset>) -> Option<Event> {
         None
     }
 
@@ -412,7 +409,7 @@ impl Harness {
             Ok(gsmtap_type) => GsmtapHeader::new(gsmtap_type),
             Err(err) => {
                 row.skipped_message_reason = Some(format!("failed to read GsmtapHeader: {err:?}"));
-                row.events = self.update_timestamp(packet_timestamp);
+                row.events = self.report_skipped_packet(packet_timestamp);
                 self.assert_events_match_analyzers(&row.events);
                 return row;
             }
@@ -432,12 +429,12 @@ impl Harness {
                 );
                 debug!("{msg}");
                 row.skipped_message_reason = Some(msg);
-                row.events = self.update_timestamp(packet_timestamp);
+                row.events = self.report_skipped_packet(packet_timestamp);
                 self.assert_events_match_analyzers(&row.events);
                 return row;
             }
         };
-        row.events = self.analyze_information_element(&element);
+        row.events = self.analyze_information_element(&element, packet_timestamp);
         self.assert_events_match_analyzers(&row.events);
         row
     }
@@ -463,11 +460,11 @@ impl Harness {
         };
         row.packet_timestamp = packet_timestamp;
 
-        let gsmtap_msg = match gsmtap_parser::parse(qmdl_message) {
-            Ok(Some(msg)) => msg,
+        let (timestamp, gsmtap_msg) = match gsmtap_parser::parse(qmdl_message) {
+            Ok(Some((timestamp, msg))) => (timestamp.to_datetime(), msg),
             Ok(None) => {
                 if let Some(timestamp) = packet_timestamp {
-                    row.events = self.update_timestamp(timestamp);
+                    row.events = self.report_skipped_packet(timestamp);
                     self.assert_events_match_analyzers(&row.events);
                 }
                 return row;
@@ -475,7 +472,7 @@ impl Harness {
             Err(err) => {
                 row.skipped_message_reason = Some(format!("{err:?}"));
                 if let Some(timestamp) = packet_timestamp {
-                    row.events = self.update_timestamp(timestamp);
+                    row.events = self.report_skipped_packet(timestamp);
                     self.assert_events_match_analyzers(&row.events);
                 }
                 return row;
@@ -486,15 +483,13 @@ impl Harness {
             Ok(element) => element,
             Err(err) => {
                 row.skipped_message_reason = Some(format!("{err:?}"));
-                if let Some(timestamp) = packet_timestamp {
-                    row.events = self.update_timestamp(timestamp);
-                    self.assert_events_match_analyzers(&row.events);
-                }
+                row.events = self.report_skipped_packet(timestamp);
+                self.assert_events_match_analyzers(&row.events);
                 return row;
             }
         };
 
-        row.events = self.analyze_information_element(&element);
+        row.events = self.analyze_information_element(&element, timestamp);
         self.assert_events_match_analyzers(&row.events);
         row
     }
@@ -507,7 +502,11 @@ impl Harness {
             .collect()
     }
 
-    fn analyze_information_element(&mut self, ie: &InformationElement) -> Vec<Option<Event>> {
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        timestamp: DateTime<FixedOffset>,
+    ) -> Vec<Option<Event>> {
         // This method is private because incrementing packet_num is currently handled entirely by the other
         // methods that call this one. This could be changed with some careful refactoring, but
         // while this method is only used by other Harness methods, let's keep it private to help
@@ -516,7 +515,8 @@ impl Harness {
         self.analyzers
             .iter_mut()
             .map(|analyzer| {
-                let mut maybe_event = analyzer.analyze_information_element(ie, self.packet_num);
+                let mut maybe_event =
+                    analyzer.analyze_information_element(ie, self.packet_num, timestamp);
                 if let Some(ref mut event) = maybe_event {
                     event.message.push_str(&packet_str);
                 }
@@ -525,12 +525,12 @@ impl Harness {
             .collect()
     }
 
-    fn update_timestamp(&mut self, timestamp: DateTime<FixedOffset>) -> Vec<Option<Event>> {
+    fn report_skipped_packet(&mut self, timestamp: DateTime<FixedOffset>) -> Vec<Option<Event>> {
         let packet_str = self.packet_suffix();
         self.analyzers
             .iter_mut()
             .map(|analyzer| {
-                let mut maybe_event = analyzer.update_timestamp(timestamp);
+                let mut maybe_event = analyzer.report_skipped_packet(timestamp);
                 if let Some(ref mut event) = maybe_event {
                     event.message.push_str(&packet_str);
                 }
@@ -642,7 +642,7 @@ mod tests {
     const ALMOST_FIVE_MINUTES_TS: u64 = 239_200 << 16;
 
     #[test]
-    fn test_parsed_message_does_not_update_timestamp() {
+    fn test_parsed_message_updates_timestamp_without_changing_event_count() {
         let mut harness = Harness::new();
         harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()));
 
@@ -669,6 +669,7 @@ mod tests {
             },
         );
         let row = harness.analyze_qmdl_message(Ok(nas));
+        assert_eq!(row.events.len(), 1);
         assert!(row.events.iter().all(|event| event.is_none()));
     }
 

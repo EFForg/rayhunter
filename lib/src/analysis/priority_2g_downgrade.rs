@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use chrono::{DateTime, FixedOffset};
+
 use super::analyzer::{Analyzer, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use log::debug;
@@ -66,6 +68,7 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
         &mut self,
         ie: &InformationElement,
         _packet_num: usize,
+        _timestamp: DateTime<FixedOffset>,
     ) -> Option<super::analyzer::Event> {
         if let InformationElement::LTE(lte_ie) = ie
             && let LteInformationElement::BcchDlSch(sch_msg) = &**lte_ie

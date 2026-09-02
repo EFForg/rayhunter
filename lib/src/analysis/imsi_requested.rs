@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use chrono::{DateTime, FixedOffset};
+
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 
@@ -222,6 +224,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
         &mut self,
         ie: &InformationElement,
         packet_num: usize,
+        _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         // Set the enodeb plmn to the last sib1 we got, we should improve this once we have PCI data, this
         // is a naive approach.

@@ -8,6 +8,8 @@ use pycrate_rs::nas::generated::emm::emm_service_reject::EMMCauseEMMCause as Ser
 use pycrate_rs::nas::generated::emm::emm_tracking_area_update_reject::EMMCauseEMMCause as TAURejectEMMCause;
 use std::borrow::Cow;
 
+use chrono::{DateTime, FixedOffset};
+
 pub struct DiagnosticAnalyzer;
 
 impl Default for DiagnosticAnalyzer {
@@ -112,6 +114,7 @@ impl Analyzer for DiagnosticAnalyzer {
         &mut self,
         ie: &InformationElement,
         _packet_num: usize,
+        _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         let lte_ie = match ie {
             InformationElement::LTE(inner) => inner,

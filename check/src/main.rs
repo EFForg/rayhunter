@@ -4,7 +4,6 @@ use log::{debug, error, info, warn};
 use pcap_file_tokio::pcapng::{Block, PcapNgReader};
 use rayhunter::{
     analysis::analyzer::{AnalysisRow, AnalyzerConfig, Event, EventType, Harness},
-    diag::Message,
     gsmtap::parser as gsmtap_parser,
     pcap::GsmtapPcapWriter,
     qmdl::QmdlMessageReader,
@@ -182,18 +181,13 @@ async fn pcapify(qmdl_path: &PathBuf) {
         .await
         .expect("failed to get message")
     {
-        if let Ok(msg) = maybe_message {
-            let timestamp = if let Message::Log { timestamp, .. } = &msg {
-                Some(timestamp.clone())
-            } else {
-                None
-            };
-            if let (Some(timestamp), Ok(Some(parsed))) = (timestamp, gsmtap_parser::parse(msg)) {
-                pcap_writer
-                    .write_gsmtap_message(parsed, timestamp, None)
-                    .await
-                    .expect("failed to write");
-            }
+        if let Ok(msg) = maybe_message
+            && let Ok(Some((timestamp, parsed))) = gsmtap_parser::parse(msg)
+        {
+            pcap_writer
+                .write_gsmtap_message(parsed, timestamp, None)
+                .await
+                .expect("failed to write");
         }
     }
     info!("wrote pcap to {:?}", pcap_path);

@@ -11,8 +11,7 @@ const NAS_TIMEOUT: chrono::TimeDelta = chrono::TimeDelta::minutes(5);
 pub struct NoNasMessagesAnalyzer {
     first_timestamp: Option<DateTime<FixedOffset>>,
     latest_timestamp: Option<DateTime<FixedOffset>>,
-    nas_seen: bool,
-    warned: bool,
+    finished: bool,
 }
 
 impl NoNasMessagesAnalyzer {
@@ -47,15 +46,16 @@ impl Analyzer for NoNasMessagesAnalyzer {
         &mut self,
         ie: &InformationElement,
         _packet_num: usize,
+        timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         if is_nas(ie) {
-            self.nas_seen = true;
+            self.finished = true;
         }
-        None
+        self.report_skipped_packet(timestamp)
     }
 
-    fn update_timestamp(&mut self, timestamp: DateTime<FixedOffset>) -> Option<Event> {
-        if self.nas_seen || self.warned {
+    fn report_skipped_packet(&mut self, timestamp: DateTime<FixedOffset>) -> Option<Event> {
+        if self.finished {
             return None;
         }
         // A jump backwards, or a single forward jump as large as the timeout
@@ -77,7 +77,7 @@ impl Analyzer for NoNasMessagesAnalyzer {
             return None;
         }
 
-        self.warned = true;
+        self.finished = true;
         Some(Event {
             event_type: EventType::Low,
             message: "No NAS messages seen in 5 minutes, SIM possibly not working".to_string(),
@@ -109,13 +109,13 @@ mod tests {
     fn test_warns_once_after_timeout() {
         let mut analyzer = NoNasMessagesAnalyzer::new();
 
-        assert!(analyzer.update_timestamp(packet_time(0)).is_none());
-        assert!(analyzer.update_timestamp(packet_time(299)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(0)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(299)).is_none());
         let event = analyzer
-            .update_timestamp(packet_time(300))
+            .report_skipped_packet(packet_time(300))
             .expect("expected a warning");
         assert_eq!(event.event_type, EventType::Low);
-        assert!(analyzer.update_timestamp(packet_time(600)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(600)).is_none());
     }
 
     #[test]
@@ -123,37 +123,45 @@ mod tests {
         let mut analyzer = NoNasMessagesAnalyzer::new();
         let nas = nas_information_element();
 
-        assert!(analyzer.update_timestamp(packet_time(0)).is_none());
-        assert!(analyzer.analyze_information_element(&nas, 1).is_none());
-        assert!(analyzer.update_timestamp(packet_time(600)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(0)).is_none());
+        assert!(
+            analyzer
+                .analyze_information_element(&nas, 1, packet_time(0))
+                .is_none()
+        );
+        assert!(analyzer.report_skipped_packet(packet_time(600)).is_none());
     }
 
     #[test]
     fn test_backwards_timestamp_restarts_window() {
         let mut analyzer = NoNasMessagesAnalyzer::new();
 
-        assert!(analyzer.update_timestamp(packet_time(200)).is_none());
-        assert!(analyzer.update_timestamp(packet_time(0)).is_none());
-        assert!(analyzer.update_timestamp(packet_time(299)).is_none());
-        assert!(analyzer.update_timestamp(packet_time(300)).is_some());
+        assert!(analyzer.report_skipped_packet(packet_time(200)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(0)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(299)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(300)).is_some());
     }
 
     #[test]
     fn test_forward_jump_restarts_window() {
         let mut analyzer = NoNasMessagesAnalyzer::new();
 
-        assert!(analyzer.update_timestamp(packet_time(0)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(0)).is_none());
         // A single large forward jump (e.g. a clock resync) shouldn't by
         // itself be treated as 5 minutes of monitored diagnostic traffic.
-        assert!(analyzer.update_timestamp(packet_time(10_000)).is_none());
         assert!(
             analyzer
-                .update_timestamp(packet_time(10_000 + 299))
+                .report_skipped_packet(packet_time(10_000))
                 .is_none()
         );
         assert!(
             analyzer
-                .update_timestamp(packet_time(10_000 + 300))
+                .report_skipped_packet(packet_time(10_000 + 299))
+                .is_none()
+        );
+        assert!(
+            analyzer
+                .report_skipped_packet(packet_time(10_000 + 300))
                 .is_some()
         );
     }
@@ -162,10 +170,50 @@ mod tests {
     fn test_small_forward_gap_does_not_restart_window() {
         let mut analyzer = NoNasMessagesAnalyzer::new();
 
-        assert!(analyzer.update_timestamp(packet_time(0)).is_none());
-        assert!(analyzer.update_timestamp(packet_time(299)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(0)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(299)).is_none());
         // A sub-timeout gap between packets is normal and should still
         // count toward the window.
-        assert!(analyzer.update_timestamp(packet_time(299 + 250)).is_some());
+        assert!(
+            analyzer
+                .report_skipped_packet(packet_time(299 + 250))
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn test_parsed_nas_with_timestamp_suppresses_warning() {
+        let mut analyzer = NoNasMessagesAnalyzer::new();
+        let nas = nas_information_element();
+
+        assert!(analyzer.report_skipped_packet(packet_time(0)).is_none());
+        assert!(analyzer.report_skipped_packet(packet_time(299)).is_none());
+        assert!(
+            analyzer
+                .analyze_information_element(&nas, 3, packet_time(300))
+                .is_none()
+        );
+        assert!(analyzer.report_skipped_packet(packet_time(600)).is_none());
+    }
+
+    #[test]
+    fn test_parsed_non_nas_element_advances_clock_and_warns() {
+        let mut analyzer = NoNasMessagesAnalyzer::new();
+        let non_nas = InformationElement::GSM;
+
+        assert!(
+            analyzer
+                .analyze_information_element(&non_nas, 1, packet_time(0))
+                .is_none()
+        );
+        assert!(
+            analyzer
+                .analyze_information_element(&non_nas, 2, packet_time(299))
+                .is_none()
+        );
+        let event = analyzer
+            .analyze_information_element(&non_nas, 3, packet_time(300))
+            .expect("expected a warning");
+        assert_eq!(event.event_type, EventType::Low);
     }
 }

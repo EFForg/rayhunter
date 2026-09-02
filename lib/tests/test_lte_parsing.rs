@@ -42,7 +42,7 @@ fn test_lte_rrc_ota() {
             }
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(&gsmtap_msg.payload, &[0x10, 0x15]);
     assert_eq!(gsmtap_msg.header.packet_type, 13);
     assert_eq!(gsmtap_msg.header.timeslot, 0);
@@ -86,7 +86,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(&gsmtap_msg.payload, &[0x10, 0x15,]);
     assert_eq!(gsmtap_msg.header.packet_type, 13);
     assert_eq!(gsmtap_msg.header.timeslot, 0);
@@ -131,7 +131,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(
         &gsmtap_msg.payload,
         &[
@@ -182,7 +182,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(
         &gsmtap_msg.payload,
         &[
@@ -230,7 +230,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(
         &gsmtap_msg.payload,
         &[0x28, 0x18, 0x40, 0x16, 0x08, 0x08, 0x80, 0x00, 0x00,]
@@ -275,7 +275,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(
         &gsmtap_msg.payload,
         &[0x40, 0x0c, 0x8e, 0xc9, 0x42, 0x89, 0xe0,]
@@ -326,7 +326,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(
         &gsmtap_msg.payload,
         &[
@@ -374,7 +374,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(&gsmtap_msg.payload, &[0x2c, 0x00]);
     assert_eq!(gsmtap_msg.header.packet_type, 13);
     assert_eq!(gsmtap_msg.header.timeslot, 0);
@@ -416,7 +416,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(
         &gsmtap_msg.payload,
         &[0x40, 0x0b, 0x8e, 0xc1, 0xdd, 0x13, 0xb0,]
@@ -461,7 +461,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(&gsmtap_msg.payload, &[0x2e, 0x02]);
     assert_eq!(gsmtap_msg.header.packet_type, 13);
     assert_eq!(gsmtap_msg.header.timeslot, 0);
@@ -507,7 +507,7 @@ fn test_lte_rrc_ota() {
             },
         }
     );
-    let gsmtap_msg = gsmtap_parser::parse(parsed).unwrap().unwrap();
+    let (_, gsmtap_msg) = gsmtap_parser::parse(parsed).unwrap().unwrap();
     assert_eq!(
         &gsmtap_msg.payload,
         &[
