@@ -1,5 +1,5 @@
 use crate::diag::Message;
-use crate::diag::diaglog::{LogBody, Nas4GMessageDirection, Timestamp};
+use crate::diag::diaglog::{LogBody, Nas4GMessageDirection};
 use crate::gsmtap::mac::mac_subpacket_to_gsmtap;
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, LteNasSubtype, LteRrcSubtype};
 
@@ -16,15 +16,9 @@ pub enum GsmtapParserError {
     InvalidLteMacRachResponse(String),
 }
 
-pub fn parse(msg: Message) -> Result<Option<(Timestamp, GsmtapMessage)>, GsmtapParserError> {
-    if let Message::Log {
-        timestamp, body, ..
-    } = msg
-    {
-        match log_to_gsmtap(body)? {
-            Some(msg) => Ok(Some((timestamp, msg))),
-            None => Ok(None),
-        }
+pub fn parse(msg: Message) -> Result<Option<GsmtapMessage>, GsmtapParserError> {
+    if let Message::Log { body, .. } = msg {
+        log_to_gsmtap(body)
     } else {
         Ok(None)
     }

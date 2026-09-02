@@ -10,6 +10,7 @@ use axum::http::StatusCode;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::{IntoResponse, Response};
 use log::error;
+use rayhunter::diag::Message;
 use rayhunter::gsmtap::parser as gsmtap_parser;
 use rayhunter::pcap::{GpsPoint, GsmtapPcapWriter};
 use rayhunter::qmdl::QmdlMessageReader;
@@ -145,8 +146,13 @@ where
     while let Some(maybe_msg) = reader.get_next_message().await? {
         match maybe_msg {
             Ok(msg) => {
+                let timestamp = if let Message::Log { timestamp, .. } = &msg {
+                    Some(timestamp.clone())
+                } else {
+                    None
+                };
                 let maybe_gsmtap_msg = gsmtap_parser::parse(msg)?;
-                if let Some((timestamp, gsmtap_msg)) = maybe_gsmtap_msg {
+                if let (Some(timestamp), Some(gsmtap_msg)) = (timestamp, maybe_gsmtap_msg) {
                     let packet_unix_ts = timestamp.to_datetime().timestamp();
                     let gps = find_nearest_gps(&gps_records, packet_unix_ts);
                     pcap_writer

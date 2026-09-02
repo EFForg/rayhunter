@@ -58,10 +58,16 @@ impl Analyzer for NoNasMessagesAnalyzer {
         if self.nas_seen || self.warned {
             return None;
         }
-        if self
-            .latest_timestamp
-            .is_some_and(|latest_timestamp| timestamp < latest_timestamp)
-        {
+        // A jump backwards, or a single forward jump as large as the timeout
+        // itself, indicates a clock discontinuity (e.g. a NITZ/GPS resync)
+        // rather than real elapsed monitoring time. Restart the window
+        // instead of letting it count toward (or immediately satisfy) the
+        // timeout, since we only want to warn once 5 real minutes of
+        // diagnostic traffic have gone by without a NAS message.
+        let is_discontinuous = self.latest_timestamp.is_some_and(|latest_timestamp| {
+            timestamp < latest_timestamp || timestamp - latest_timestamp >= NAS_TIMEOUT
+        });
+        if is_discontinuous {
             self.first_timestamp = Some(timestamp);
         }
         self.latest_timestamp = Some(timestamp);
@@ -130,5 +136,36 @@ mod tests {
         assert!(analyzer.update_timestamp(packet_time(0)).is_none());
         assert!(analyzer.update_timestamp(packet_time(299)).is_none());
         assert!(analyzer.update_timestamp(packet_time(300)).is_some());
+    }
+
+    #[test]
+    fn test_forward_jump_restarts_window() {
+        let mut analyzer = NoNasMessagesAnalyzer::new();
+
+        assert!(analyzer.update_timestamp(packet_time(0)).is_none());
+        // A single large forward jump (e.g. a clock resync) shouldn't by
+        // itself be treated as 5 minutes of monitored diagnostic traffic.
+        assert!(analyzer.update_timestamp(packet_time(10_000)).is_none());
+        assert!(
+            analyzer
+                .update_timestamp(packet_time(10_000 + 299))
+                .is_none()
+        );
+        assert!(
+            analyzer
+                .update_timestamp(packet_time(10_000 + 300))
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn test_small_forward_gap_does_not_restart_window() {
+        let mut analyzer = NoNasMessagesAnalyzer::new();
+
+        assert!(analyzer.update_timestamp(packet_time(0)).is_none());
+        assert!(analyzer.update_timestamp(packet_time(299)).is_none());
+        // A sub-timeout gap between packets is normal and should still
+        // count toward the window.
+        assert!(analyzer.update_timestamp(packet_time(299 + 250)).is_some());
     }
 }
