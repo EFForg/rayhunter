@@ -436,7 +436,6 @@ impl Harness {
             }
         };
         row.events = self.analyze_information_element(&element);
-        row.events.extend(self.update_timestamp(packet_timestamp));
         row
     }
 
@@ -490,9 +489,6 @@ impl Harness {
         };
 
         row.events = self.analyze_information_element(&element);
-        if let Some(timestamp) = packet_timestamp {
-            row.events.extend(self.update_timestamp(timestamp));
-        }
         row
     }
 
@@ -635,7 +631,7 @@ mod tests {
     const ALMOST_FIVE_MINUTES_TS: u64 = 239_200 << 16;
 
     #[test]
-    fn test_nas_message_at_exact_boundary_suppresses_warning() {
+    fn test_parsed_message_does_not_update_timestamp() {
         let mut harness = Harness::new();
         harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()));
 
@@ -649,10 +645,6 @@ mod tests {
         )));
         assert!(row.events.iter().all(|event| event.is_none()));
 
-        // A NAS message that lands exactly on the 5-minute boundary must be
-        // observed by analyze_information_element before update_timestamp
-        // runs, so it should suppress the no-NAS warning rather than trigger
-        // it.
         let nas = log_message(
             FIVE_MINUTES_TS,
             LogBody::Nas4GMessage {
@@ -670,7 +662,7 @@ mod tests {
     }
 
     #[test]
-    fn test_update_timestamp_event_includes_packet_suffix() {
+    fn test_skipped_packet_timestamp_event_includes_packet_suffix() {
         let mut harness = Harness::new();
         harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()));
 
