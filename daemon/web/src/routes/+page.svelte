@@ -22,6 +22,7 @@
     import ClockDriftAlert from '$lib/components/ClockDriftAlert.svelte';
     import LogView from '$lib/components/LogView.svelte';
     import UpdateNotice from '$lib/components/UpdateNotice.svelte';
+    import Alert from '$lib/components/Alert.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -228,27 +229,13 @@
 </div>
 <div class="m-4 xl:mx-8 flex flex-col gap-4">
     {#if update_error !== undefined}
-        <div
-            class="bg-red-100 border-red-100 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
+        <Alert
+            severity="error"
+            title="Connection Error"
+            class="flex-1 justify-between"
+            titleClass="text-2xl mb-2 gap-2"
+            iconClass="w-8 h-8"
         >
-            <span class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600">
-                <svg
-                    class="w-8 h-8 text-red-600"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        fill-rule="evenodd"
-                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
-                        clip-rule="evenodd"
-                    />
-                </svg>
-                Connection Error
-            </span>
             <span
                 >This webpage is not currently receiving updates from your Rayhunter device. This
                 could be due to loss of connection or some issue with your device.</span
@@ -259,7 +246,7 @@
                     <code>{update_error}</code>
                 </details>
             {/if}
-        </div>
+        </Alert>
     {/if}
     <ActionErrors />
     <ClockDriftAlert />
@@ -274,36 +261,20 @@
                     {manager}
                 />
             {:else}
-                <div
-                    class="bg-red-100 border-red-100 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md flex-1 justify-between"
+                <Alert
+                    severity="error"
+                    title="WARNING: Not Running"
+                    class="flex-1 justify-between"
+                    titleClass="text-2xl mb-2 gap-2"
+                    iconClass="w-8 h-8"
                 >
-                    <span
-                        class="text-2xl font-bold mb-2 flex flex-row items-center gap-2 text-red-600"
-                    >
-                        <svg
-                            class="w-8 h-8 text-red-600"
-                            aria-hidden="true"
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                fill-rule="evenodd"
-                                d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
-                                clip-rule="evenodd"
-                            />
-                        </svg>
-                        WARNING: Not Running
-                    </span>
                     <span>
                         Rayhunter is not currently running and will not detect abnormal behavior!
                     </span>
                     <div class="flex flex-row justify-end mt-2">
                         <RecordingControls server_is_recording={!!current_entry} />
                     </div>
-                </div>
+                </Alert>
             {/if}
             <SystemStatsTable stats={system_stats!} {gps_data} {gps_mode} />
         </div>
