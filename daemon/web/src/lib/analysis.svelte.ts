@@ -78,15 +78,13 @@ function get_rows(row_jsons: any[]): AnalysisRow[] {
                 reason: row_json.skipped_message_reason,
             });
         }
-        const events: Event[] = (row_json.events ?? []).map(
-            (event_json: any): Event | null => {
-                if (event_json === null) {
-                    return null;
-                } else {
-                    return get_event(event_json);
-                }
-            },
-        );
+        const events: Event[] = (row_json.events ?? []).map((event_json: any): Event | null => {
+            if (event_json === null) {
+                return null;
+            } else {
+                return get_event(event_json);
+            }
+        });
         if (events.some((event) => event !== null)) {
             rows.push({
                 type: AnalysisRowType.Analysis,
