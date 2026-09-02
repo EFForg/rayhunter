@@ -141,6 +141,7 @@ pub trait Analyzer {
 
     /// Called once for every packet that carries a timestamp, whether or not
     /// that packet yields an [InformationElement] your analyzer can act on.
+    ///
     /// This lets an [Analyzer] implement heuristics based on elapsed time
     /// (e.g. flagging an absence of expected messages within a time window)
     /// rather than on message content alone. If the packet does contain an
