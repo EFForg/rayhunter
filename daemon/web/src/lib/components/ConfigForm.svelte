@@ -39,7 +39,6 @@
             loading = true;
             config = await get_config();
             dnsServersInput = config.dns_servers ? config.dns_servers.join(', ') : '';
-            wifiOUIsInput = config.analyzers.wifi_ouis ? config.analyzers.wifi_ouis.join(', ') : '';
             message = '';
             messageType = null;
             poll_wifi_status();
@@ -58,15 +57,6 @@
         config.dns_servers =
             trimmed.length > 0
                 ? trimmed
-                      .split(',')
-                      .map((s) => s.trim())
-                      .filter((s) => s.length > 0)
-                : null;
-
-        const trimmed_ouis = wifiOUIsInput.trim();
-        config.analyzers.wifi_ouis =
-            trimmed_ouis.length > 0
-                ? trimmed_ouis
                       .split(',')
                       .map((s) => s.trim())
                       .filter((s) => s.length > 0)
@@ -623,7 +613,6 @@
                             bind:checked={config.analyzers.incomplete_sib}
                         />
 
-<<<<<<< HEAD
                         <CheckboxField
                             id="no_nas_messages"
                             label="No NAS Messages Heuristic (experimental)"
@@ -639,44 +628,6 @@
                             label="Diagnostic Analyzer"
                             bind:checked={config.analyzers.diagnostic_analyzer}
                         />
-=======
-                        <div class="flex items-center">
-                            <input
-                                id="no_nas_messages"
-                                type="checkbox"
-                                bind:checked={config.analyzers.no_nas_messages}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label for="no_nas_messages" class="ml-2 block text-sm text-gray-700">
-                                No NAS Messages Heuristic (experimental)
-                            </label>
-                        </div>
-
-                        <div class="flex items-center">
-                            <input
-                                id="test_analyzer"
-                                type="checkbox"
-                                bind:checked={config.analyzers.test_analyzer}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label for="test_analyzer" class="ml-2 block text-sm text-gray-700">
-                                Test Heuristic (noisy!)
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input
-                                id="diagnostic_analyzer"
-                                type="checkbox"
-                                bind:checked={config.analyzers.diagnostic_analyzer}
-                                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
-                            />
-                            <label
-                                for="diagnostic_analyzer"
-                                class="ml-2 block text-sm text-gray-700"
-                            >
-                                Diagnostic Analyzer
-                            </label>
-                        </div>
 
                         {#if config.device === 'orbic' || config.device === 'moxee' || config.device === 'tmobile' || config.device === 'wingtech'}
                             <div class="flex items-center">
@@ -716,7 +667,6 @@
                                 </div>
                             {/if}
                         {/if}
->>>>>>> 06e3b02 (Gate the WiFI OUI analyzer for devices that support it)
                     </div>
                 </div>
 
