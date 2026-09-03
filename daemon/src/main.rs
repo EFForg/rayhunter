@@ -28,7 +28,7 @@ use crate::gps::{get_gps, post_gps};
 use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-use crate::scan::run_wifi_scanner;
+//use crate::scan::run_wifi_scanner;
 use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_wifi_status, get_zip,
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
@@ -362,9 +362,9 @@ async fn run_with_config(
     });
     run_server(&task_tracker, state.clone(), shutdown_token.clone()).await;
 
-    if config.analyzers.wifi_oui_analyzer {
-        run_wifi_scanner(&task_tracker, state, shutdown_token.clone()).await;
-    }
+    //if config.analyzers.wifi_oui_analyzer {
+    //    run_wifi_scanner(&task_tracker, state, shutdown_token.clone()).await;
+    //}
 
     task_tracker.close();
     task_tracker.wait().await;

@@ -5,7 +5,7 @@ use tokio::{select, task::JoinHandle, time};
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 use wifi_station::{STA_IFACE, scan_wifi_networks};
 
-use crate::{analysis::AnalysisCtrlMessage, server::ServerState};
+use crate::server::ServerState;
 
 pub async fn run_wifi_scanner(
     task_tracker: &TaskTracker,
@@ -27,11 +27,11 @@ pub async fn run_wifi_scanner(
                     match scan_wifi_networks(STA_IFACE).await {
                         Ok(networks) => {
                             debug!("Found {} networks", networks.len());
-                            if let Err(e) = state.analysis_sender.send(
-                                AnalysisCtrlMessage::WifiNetworksDetected(networks)
-                            ).await {
-                                warn!("couldn't send analysis message: {e}");
-                            }
+                            //if let Err(e) = state.analysis_sender.send(
+                            //    AnalysisCtrlMessage::WifiNetworksDetected(networks)
+                            //).await {
+                            //    warn!("couldn't send analysis message: {e}");
+                            //}
                         }
                         Err(e) => {
                             warn!("Error scanning wifi networks: {e}");
