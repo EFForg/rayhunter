@@ -62,7 +62,7 @@ impl Analyzer for WifiOUIAnalyzer {
         &mut self,
         ie: &InformationElement,
         _packet_num: usize,
-        _timestamp:DateTime<FixedOffset>,
+        _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         if let InformationElement::WifiBSSIDList(bssids) = ie {
             debug!("WifiOUIAnalyzer got BSSIDs {:?}", bssids);
