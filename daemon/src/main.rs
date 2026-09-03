@@ -11,7 +11,7 @@ mod key_input;
 mod notifications;
 mod pcap;
 mod qmdl_store;
-mod scan;
+//mod scan;
 mod server;
 mod stats;
 mod update;
