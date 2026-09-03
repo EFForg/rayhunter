@@ -88,7 +88,7 @@ struct InstallTpLink {
     ///
     /// Only override this when the installer does not work on your hardware version, as otherwise
     /// your custom path may conflict with the builtin storage functionality.
-    #[arg(long, default_value = "")]
+    #[arg(long, default_value = "", hide_default_value = true)]
     sdcard_path: String,
 
     /// Overwrite config.toml even if it already exists on the device.
