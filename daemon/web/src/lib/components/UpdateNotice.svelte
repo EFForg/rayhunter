@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { UpdateStatus } from '$lib/utils.svelte';
+    import Alert from './Alert.svelte';
 
     let { status = null }: { status: UpdateStatus | null } = $props();
 
@@ -9,25 +10,7 @@
 </script>
 
 {#if is_visible && status}
-    <div class="bg-sky-100 border-sky-300 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md">
-        <span class="text-xl font-bold flex flex-row items-center gap-2 text-sky-800">
-            <svg
-                class="w-6 h-6 text-sky-700"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    fill-rule="evenodd"
-                    d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
-                    clip-rule="evenodd"
-                />
-            </svg>
-            Software Update Available
-        </span>
+    <Alert severity="info" title="Software Update Available">
         <p>
             A new version of Rayhunter is available! You are currently running version {status.current_version},
             and the latest release is version {status.latest_version}.
@@ -46,5 +29,5 @@
                 View Release
             </a>
         </div>
-    </div>
+    </Alert>
 {/if}
