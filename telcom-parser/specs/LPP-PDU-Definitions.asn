@@ -2088,7 +2088,7 @@ NR-On-Demand-DL-PRS-Configurations-r17 ::= SEQUENCE {
 	...,
 	[[
 	onDemandDL-PRS-AggregationList-r18			SEQUENCE (SIZE (1.. maxOD-DL-PRS-Configs-r17)) OF
-											OnDemandDL-PRS-AggregationInfo-r18	OPTIONAL-- Need OR
+											OnDemandDL-PRS-AggregationInfo-r18	OPTIONAL -- Need OR
 	]]
 }
 
@@ -4670,7 +4670,7 @@ GNSS-AlmanacElement ::= CHOICE {
 	...,
 	keplerianBDS-Almanac-r12		AlmanacBDS-AlmanacSet-r12,	-- Model-7
 	keplerianNavIC-Almanac-r16		AlmanacNavIC-AlmanacSet-r16,-- Model-8
-	keplerianNavIC-Almanac2-r19		AlmanacNavIC-AlmanacSet2-r19-- Model-9
+	keplerianNavIC-Almanac2-r19		AlmanacNavIC-AlmanacSet2-r19 -- Model-9
 }
 
 -- ASN1STOP
