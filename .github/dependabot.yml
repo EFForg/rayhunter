@@ -28,21 +28,10 @@ updates:
         patterns:
           - "*"
 
-  # daemon/web Node.js dependencies
+  # Node.js dependencies (npm workspace covering both daemon/web and
+  # installer-gui, managed from the root package.json/package-lock.json)
   - package-ecosystem: "npm"
-    directory: "/daemon/web"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 0
-    groups:
-      security:
-        applies-to: "security-updates"
-        patterns:
-          - "*"
-
-  # installer-gui Node.js dependencies
-  - package-ecosystem: "npm"
-    directory: "/installer-gui"
+    directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 0

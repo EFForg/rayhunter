@@ -2,3 +2,4 @@
 /book
 .DS_Store
 /tools/build-wpa-supplicant
+/node_modules
