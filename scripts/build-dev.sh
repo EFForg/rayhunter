@@ -37,10 +37,8 @@ check_dependencies() {
 
 build_frontend() {
     echo "Building web frontend..."
-    pushd daemon/web > /dev/null
     npm install
-    npm run build
-    popd > /dev/null
+    npm run build -w daemon/web
 }
 
 build_wifi_tools() {
