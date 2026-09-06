@@ -144,10 +144,8 @@ jobs:
       run: cargo fmt --all --check
     - name: Check
       run: |
-        pushd daemon/web
         npm install
-        npm run build
-        popd
+        npm run build -w daemon/web
         cargo check --verbose
     - name: Run tests
       run: |
@@ -192,17 +190,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: daemon/web
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - run: npm install
-      - run: npm run lint
-      - run: npm run check
-      - run: npm run test
+      - run: npm run lint -w daemon/web
+      - run: npm run check -w daemon/web
+      - run: npm run test -w daemon/web
 
   test_installer_frontend:
     needs: files_changed
@@ -210,16 +205,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: installer-gui
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - run: npm install
-      - run: npm run lint
-      - run: npm run check
+      - run: npm run lint -w installer-gui
+      - run: npm run check -w installer-gui
 
   windows_installer_check_and_test:
     needs: files_changed
@@ -359,10 +351,8 @@ jobs:
           persist-credentials: false
       - name: Build frontend
         run: |
-          pushd daemon/web
           npm install
-          npm run build
-          popd
+          npm run build -w daemon/web
       - name: Cache musl-cross toolchain
         uses: actions/cache@v4
         with:
@@ -487,9 +477,8 @@ jobs:
       - name: Build GUI installer
         shell: bash
         run: |
-          cd installer-gui
           npm install
-          npm run tauri build -- --target ${{ matrix.platform.target }}
+          npm run tauri build -w installer-gui -- --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: gui-installer-${{ matrix.platform.name }}-appimage
@@ -543,10 +532,8 @@ jobs:
       - name: Build GUI installer
         shell: bash
         run: |
-          cd installer-gui
           npm install
-          npm run tauri build -- --target ${{ matrix.platform.target }}
-          cd ..
+          npm run tauri build -w installer-gui -- --target ${{ matrix.platform.target }}
           mv "target/${{ matrix.platform.target }}/release/bundle/macos/"*.app .
           zip -r "rayhunter-installer-${{ matrix.platform.name }}.app.zip" ./*.app
       - uses: actions/upload-artifact@v4
@@ -583,9 +570,8 @@ jobs:
       - name: Build GUI installer
         shell: bash
         run: |
-          cd installer-gui
           npm install
-          npm run tauri build -- --target ${{ env.TARGET }}
+          npm run tauri build -w installer-gui -- --target ${{ env.TARGET }}
       - uses: actions/upload-artifact@v4
         with:
           name: gui-installer-msi
