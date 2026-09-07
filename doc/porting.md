@@ -21,17 +21,23 @@ Rayhunter is a Linux binary that reads traffic from the Qualcomm diagnostic inte
 
 In the devices we currently support `/dev/diag` is the interface for Qualcomm diagnostics and devices with this will be easiest to support. Newer Qualcomm modems expose the diagnostic interface over a USB gadget which is something we are working on support for, but do not currently have. Thus devices with the former diagnostic interface will be easier to port Rayhunter to.
 
-You can check ahead of purchase whether `/dev/diag` is available by ensuring the device has a Qualcomm MDM* chip. Other Qualcomm LTE chips might work but we haven't encountered one yet. Typically you will be able to get this information from [fcc.report](https://fcc.report), where either the chip is written down in some PDF or at least plainly visible in one of the teardown photos. Sometimes this information can also be found through teardown videos on YouTube. If you find that chip, there's a good chance (but no guarantee) `/dev/diag` is available.
+You can check ahead of purchase whether `/dev/diag` is available by ensuring the device has a Qualcomm MDM* chip. Other Qualcomm LTE chips might work but we haven't encountered one yet.
 
 Any vendor other than Qualcomm (Mediatek, Rockchip, ...) is unlikely to work. Quectel sometimes repackages Qualcomm chips into larger systems and might work. Huawei devices won't work, as they use their own chips.
 
-Getting a root shell varies from device to device. Check the [GitHub discussions](https://github.com/EFForg/rayhunter/discussions) for prior art, and look through the installer source in `installer/src/` for inspiration. These approaches are common:
+You can figure these things out before even buying the device:
 
-* Connecting with `adb shell`.
-* If `adb shell` doesn't work, sending a special USB serial command might enable it.
-* Sometimes there's an unpatched CVE that can be used to launch `telnetd` as root (search "device name CVE", the website [opencve.io](https://opencve.io) is particularly easy to use).
+* **FCC reports**: If your device is sold in the US, you can check out [fcc.report](https://fcc.report), where either the chip is written down in some PDF or at least plainly visible in one of the teardown photos. Sometimes this information can also be found through teardown videos on YouTube. If you find that chip, there's a good chance (but no guarantee) `/dev/diag` is available.
 
-Once you have a root shell, check that `/dev/diag` exists.
+* **Firmware updates:** If your device has publicly available firmware downloads or GPL sourcedumps, you can try to inspect those to find out hardware information. Typically there is a kind of squashfs or other Linux filesystem embedded in those updates. At this point you can also start inspecting binaries using Ghidra or BinaryNinja to find a way to obtain root.
+
+* **Prior art:** Check the [GitHub discussions](https://github.com/EFForg/rayhunter/discussions) for prior art, and look through the installer source in `installer/src/` for inspiration. These approaches are common:
+
+    * Connecting with `adb shell`.
+    * If `adb shell` doesn't work, sending a special USB serial command might enable it.
+    * Sometimes there's an unpatched CVE that can be used to launch `telnetd` as root (search "device name CVE", the website [opencve.io](https://opencve.io) is particularly easy to use).
+
+Once you have a root shell, check that `/dev/diag` exists for sure.
 
 ## Installing Rayhunter manually
 
