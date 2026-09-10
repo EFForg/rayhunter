@@ -89,8 +89,7 @@ pub fn run_key_input_thread(
                             {
                                 error!("Failed to send StartRecording: {e}");
                             }
-                            if let Err(e) = wifi_tx.send(WifiScanCtrlMessage::StopRecording).await
-                            {
+                            if let Err(e) = wifi_tx.send(WifiScanCtrlMessage::StopRecording).await {
                                 error!("Failed to send WiFi StopRecording: {e}");
                             }
                             if let Err(e) = wifi_tx
