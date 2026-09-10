@@ -11,11 +11,12 @@ mod key_input;
 mod notifications;
 mod pcap;
 mod qmdl_store;
-//mod scan;
 mod server;
 mod stats;
 mod update;
 mod webdav;
+mod wifi_scan;
+mod wifi_store;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -28,7 +29,7 @@ use crate::gps::{get_gps, post_gps};
 use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-//use crate::scan::run_wifi_scanner;
+use crate::wifi_scan::run_wifi_scanner;
 use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_wifi_status, get_zip,
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
@@ -36,6 +37,7 @@ use crate::server::{
 use crate::stats::{get_qmdl_manifest, get_system_stats, get_update_status};
 use crate::update::{UpdateStatus, run_update_check_worker};
 use crate::webdav::run_webdav_upload_worker;
+use crate::wifi_scan::WifiScanCtrlMessage;
 use wifi_station::WifiStatus;
 
 use analysis::{
@@ -213,6 +215,7 @@ async fn run_with_config(
     let analysis_status = AnalysisStatus::new(&store);
     let qmdl_store_lock = Arc::new(RwLock::new(store));
     let (diag_tx, diag_rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
+    let (wifi_tx, wifi_rx) = mpsc::channel::<WifiScanCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
     let restart_token = CancellationToken::new();
@@ -237,6 +240,7 @@ async fn run_with_config(
             diag_rx,
             diag_tx.clone(),
             ui_update_tx.clone(),
+            wifi_tx.clone(),
             qmdl_store_lock.clone(),
             analysis_tx.clone(),
             config.analyzers.clone(),
@@ -263,6 +267,7 @@ async fn run_with_config(
             &task_tracker,
             &config,
             diag_tx.clone(),
+            wifi_tx.clone(),
             shutdown_token.clone(),
         );
 
@@ -351,6 +356,7 @@ async fn run_with_config(
         config: config.clone(),
         qmdl_store_lock: qmdl_store_lock.clone(),
         diag_device_ctrl_sender: diag_tx,
+        wifi_scan_sender: wifi_tx,
         analysis_status_lock,
         analysis_sender: analysis_tx,
         daemon_restart_token: restart_token.clone(),
@@ -363,7 +369,7 @@ async fn run_with_config(
     run_server(&task_tracker, state.clone(), shutdown_token.clone()).await;
 
     //if config.analyzers.wifi_oui_analyzer {
-    //    run_wifi_scanner(&task_tracker, state, shutdown_token.clone()).await;
+    run_wifi_scanner(&task_tracker, state, shutdown_token.clone(), wifi_rx).await;
     //}
 
     task_tracker.close();

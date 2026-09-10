@@ -35,12 +35,16 @@ use crate::notifications::DEFAULT_NOTIFICATION_TIMEOUT;
 use crate::pcap::{generate_pcap_data, load_gps_records_for_entry};
 use crate::qmdl_store::{FileKind, RecordingStore};
 use crate::update::UpdateStatus;
+use crate::wifi_scan::WifiScanCtrlMessage;
+use crate::wifi_store::WifiStore;
 
 pub struct ServerState {
     pub config_path: String,
     pub config: Config,
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
+    pub wifi_store_lock: Arc<RwLock<WifiStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
+    pub wifi_scan_sender: Sender<WifiScanCtrlMessage>,
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     pub analysis_sender: Sender<AnalysisCtrlMessage>,
     pub daemon_restart_token: CancellationToken,
