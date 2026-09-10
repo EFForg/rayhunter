@@ -49,6 +49,7 @@ pub enum FileKind {
     Qmdl,
     Analysis,
     Gps,
+    Wifi,
 }
 
 impl FileKind {
@@ -61,6 +62,7 @@ impl FileKind {
             FileKind::Qmdl => format!("{}.qmdl", entry_name),
             FileKind::Analysis => format!("{}.ndjson", entry_name),
             FileKind::Gps => format!("{}-gps.ndjson", entry_name),
+            FileKind::Wifi => format!("{}.json", entry_name),
         }
     }
 
@@ -82,6 +84,7 @@ impl Display for FileKind {
             FileKind::Qmdl => write!(f, "QMDL"),
             FileKind::Analysis => write!(f, "analysis"),
             FileKind::Gps => write!(f, "GPS"),
+            FileKind::Wifi => write!(f, "Wifi"),
         }
     }
 }
