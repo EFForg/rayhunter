@@ -1,5 +1,6 @@
 <script lang="ts">
     import { user_action_req } from '$lib/utils.svelte';
+    import TrashIcon from './TrashIcon.svelte';
     let {
         text,
         url,
@@ -25,10 +26,5 @@
     aria-label="delete"
 >
     <p>{text}</p>
-    <svg style="width:24px;height:24px" viewBox="0 0 24 24">
-        <path
-            fill="white"
-            d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
-        />
-    </svg>
+    <TrashIcon class="w-6 h-6 text-white" />
 </button>

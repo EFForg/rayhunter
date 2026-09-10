@@ -1,8 +1,14 @@
 <script lang="ts">
     import { action_errors } from '../action_errors.svelte';
+    import Alert from './Alert.svelte';
+    import TrashIcon from './TrashIcon.svelte';
 
     let pos = $state(0);
     let current_error = $derived(action_errors[pos]);
+    let error_times = $derived(current_error?.times ?? 1);
+    let error_title = $derived(
+        `Error Completing Action ${error_times > 1 ? `x${error_times}` : ''}`
+    );
 
     function prev_error() {
         if (pos > 0) pos -= 1;
@@ -19,29 +25,13 @@
 </script>
 
 {#if action_errors.length > 0}
-    <div
-        class="bg-red-100 border-red-100 drop-shadow-sm p-4 flex flex-col gap-2
-        border rounded-md flex-1 justify-between fixed z-10 right-3 bottom-3 ml-3"
+    <Alert
+        severity="error"
+        title={error_title}
+        class="flex-1 justify-between fixed z-10 right-3 bottom-3 ml-3"
+        titleClass="text-xl mb-2 mr-5 gap-1"
     >
-        <div class="flex flex-row justify-between">
-            <span class="text-xl font-bold mb-2 mr-5 flex flex-row items-center gap-1 text-red-600">
-                <svg
-                    class="w-6 h-6 text-red-600"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        fill-rule="evenodd"
-                        d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z"
-                        clip-rule="evenodd"
-                    />
-                </svg>
-                Error Completing Action {current_error.times > 1 ? `x${current_error.times}` : ''}
-            </span>
+        {#snippet actions()}
             <div class="flex items-center mb-2">
                 {#if action_errors.length > 1}
                     <span>{pos + 1}/{action_errors.length}</span>
@@ -81,14 +71,10 @@
                     </button>
                 {/if}
                 <button title="clear errors" aria-label="clear errors" onclick={clear_errors}>
-                    <svg style="width:24px;height:24px" viewBox="0 0 24 24">
-                        <path
-                            d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"
-                        />
-                    </svg>
+                    <TrashIcon class="w-6 h-6" />
                 </button>
             </div>
-        </div>
+        {/snippet}
         <span>{current_error.message}</span>
         {#if current_error.cause}
             <details>
@@ -96,5 +82,5 @@
                 <code>{current_error.cause}</code>
             </details>
         {/if}
-    </div>
+    </Alert>
 {/if}
