@@ -32,16 +32,16 @@ impl WifiStore {
         Ok(store)
     }
 
-    pub async fn new_entry(
-        &mut self,
-    ) -> Result<(File, File), WifiStoreError> {
+    pub async fn new_entry(&mut self) -> Result<(File, File), WifiStoreError> {
         // if we've already got an entry open, close it
         let now = rayhunter::clock::get_adjusted_now();
-        let wifi_filepath = FileKind::Wifi.get_filepath(&format!("{}", now.timestamp()), &self.path, false);
+        let wifi_filepath =
+            FileKind::Wifi.get_filepath(&format!("{}", now.timestamp()), &self.path, false);
         let wifi_file = File::create(&wifi_filepath)
             .await
             .map_err(WifiStoreError::CreateFileError)?;
-        let analysis_filepath = FileKind::Analysis.get_filepath(&format!("{}", now.timestamp()), &self.path, false);
+        let analysis_filepath =
+            FileKind::Analysis.get_filepath(&format!("{}", now.timestamp()), &self.path, false);
         let analysis_file = File::create(&analysis_filepath)
             .await
             .map_err(WifiStoreError::CreateFileError)?;

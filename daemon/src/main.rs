@@ -29,7 +29,6 @@ use crate::gps::{get_gps, post_gps};
 use crate::notifications::{NotificationService, run_notification_worker};
 use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
-use crate::wifi_scan::run_wifi_scanner;
 use crate::server::{
     ServerState, debug_set_display_state, get_config, get_qmdl, get_time, get_wifi_status, get_zip,
     scan_wifi, serve_static, set_config, set_time_offset, test_notification,
@@ -38,6 +37,7 @@ use crate::stats::{get_qmdl_manifest, get_system_stats, get_update_status};
 use crate::update::{UpdateStatus, run_update_check_worker};
 use crate::webdav::run_webdav_upload_worker;
 use crate::wifi_scan::WifiScanCtrlMessage;
+use crate::wifi_scan::run_wifi_scanner;
 use wifi_station::WifiStatus;
 
 use analysis::{
