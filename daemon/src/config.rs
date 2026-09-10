@@ -106,6 +106,8 @@ pub struct Config {
     pub dns_servers: Option<Vec<String>>,
     /// WebDAV upload configuration. The upload worker runs whenever `webdav.url` is non-empty.
     pub webdav: WebdavConfig,
+    /// Optional WiFi OUIs for analysis
+    pub wifi_ouis: Option<Vec<String>>,
 }
 
 /// Configuration for uploading finished QMDL recordings to a WebDAV server.
@@ -169,6 +171,7 @@ impl Default for Config {
             wifi_enabled: false,
             dns_servers: None,
             webdav: WebdavConfig::default(),
+            wifi_ouis: None,
         }
     }
 }

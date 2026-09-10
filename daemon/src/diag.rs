@@ -15,6 +15,7 @@ use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use crate::gps::GpsRecord;
+use crate::wifi_scan::WifiScanCtrlMessage;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{RwLock, oneshot};
 use tokio_stream::wrappers::LinesStream;
@@ -467,6 +468,7 @@ pub fn run_diag_read_thread(
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
     qmdl_file_tx: Sender<DiagDeviceCtrlMessage>,
     ui_update_sender: Sender<display::DisplayState>,
+    wifi_tx: Sender<WifiScanCtrlMessage>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
     analyzer_config: AnalyzerConfig,
@@ -497,6 +499,9 @@ pub fn run_diag_read_thread(
         );
         qmdl_file_tx
             .send(DiagDeviceCtrlMessage::StartRecording { response_tx: None })
+            .await
+            .unwrap();
+        wifi_tx.send(WifiScanCtrlMessage::StartRecording { response_tx: None })
             .await
             .unwrap();
         loop {
@@ -593,8 +598,36 @@ pub async fn start_recording(
             )
         })?;
 
-    match response_rx.await {
-        Ok(Ok(())) => Ok((StatusCode::ACCEPTED, "ok".to_string())),
+    let (wifi_response_tx, wifi_response_rx) = oneshot::channel();
+    state
+        .wifi_scan_sender
+        .send(WifiScanCtrlMessage::StartRecording {
+            response_tx: Some(wifi_response_tx),
+        })
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("couldn't send start recording message to wifi scanner: {e}"),
+            )
+        })?;
+
+    let qmdl_return_value: Result<(StatusCode, String), (StatusCode, String)> =
+        match response_rx.await {
+            Ok(Ok(())) => Ok((StatusCode::ACCEPTED, "ok".to_string())),
+            Ok(Err(reason)) => {
+                return Err((StatusCode::INSUFFICIENT_STORAGE, reason.to_string()));
+            }
+            Err(e) => {
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to receive start recording response: {e}"),
+                ));
+            }
+        };
+
+    match wifi_response_rx.await {
+        Ok(Ok(())) => qmdl_return_value,
         Ok(Err(reason)) => Err((StatusCode::INSUFFICIENT_STORAGE, reason.to_string())),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
