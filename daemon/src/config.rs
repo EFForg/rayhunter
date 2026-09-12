@@ -255,3 +255,27 @@ pub fn parse_args() -> Args {
         config_path: args[1].clone(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mr1100_example_uses_bounded_headless_configuration() {
+        let config: Config = toml::from_str(include_str!("../../dist/config.mr1100.toml")).unwrap();
+        assert_eq!(config.device, Device::Mr1100);
+        assert_eq!(config.ui_level, UiLevel::Invisible);
+        assert_eq!(config.key_input_mode, KeyInputMode::Disabled);
+        assert_eq!(config.gps_mode, GpsMode::Disabled);
+        assert_eq!(config.clock_sync_mode, ClockSyncMode::Off);
+        assert!(!config.debug_mode);
+        assert!(!config.wifi_enabled);
+        assert!(!config.auto_check_updates);
+        assert!(config.enabled_notifications.is_empty());
+        assert!(config.ntfy_url.is_none());
+        assert!(config.webdav.url.is_empty());
+        assert_eq!(config.qmdl_store_path, "/media/ram/rayhunter-mr1100/qmdl");
+        assert_eq!(config.min_space_to_start_recording_mb, 175);
+        assert_eq!(config.min_space_to_continue_recording_mb, 165);
+    }
+}

@@ -1,4 +1,5 @@
-use log::{error, info};
+use log::{error, info, warn};
+use rayhunter::Device;
 use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
@@ -24,6 +25,11 @@ pub fn run_key_input_thread(
     cancellation_token: CancellationToken,
 ) {
     if config.key_input_mode == KeyInputMode::Disabled {
+        return;
+    }
+    if config.device == Device::Mr1100 {
+        // Preserve the native power key until its evdev format is supported.
+        warn!("Key input is not supported on MR1100; leaving native input untouched");
         return;
     }
 
@@ -111,6 +117,19 @@ fn parse_event(input: [u8; INPUT_EVENT_SIZE]) -> Event {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mr1100_does_not_start_key_input_even_when_requested() {
+        let config = config::Config {
+            device: Device::Mr1100,
+            key_input_mode: KeyInputMode::DoubleTapPower,
+            ..Default::default()
+        };
+        let tracker = TaskTracker::new();
+        let (diag_tx, _diag_rx) = tokio::sync::mpsc::channel(1);
+        run_key_input_thread(&tracker, &config, diag_tx, CancellationToken::new());
+        assert!(tracker.is_empty());
+    }
 
     #[test]
     fn test_parse_event_keydown_m7350_v5() {

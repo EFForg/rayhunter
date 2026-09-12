@@ -27,8 +27,10 @@ md5crypt = "1.0.0"
 nusb = "0.1.13"
 reqwest = { version = "0.12.15", features = ["json"], default-features = false }
 serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8.8"
 sha2 = "0.10.8"
-tokio = { version = "1.44.2", features = ["io-util", "io-std", "macros", "rt"], default-features = false }
+tokio = { version = "1.44.2", features = ["io-util", "io-std", "macros", "rt", "process"], default-features = false }
 tokio-retry2 = "0.5.7"
 tokio-stream = "0.1.17"
 futures = "0.3"

@@ -45,6 +45,7 @@ pub enum Device {
     Tmobile,
     Wingtech,
     Pinephone,
+    Mr1100,
     Uz801,
     Moxee,
 }
@@ -58,4 +59,16 @@ pub struct DeviceMetadata {
     /// The subscriber's home PLMNs as `"MCC-MNC"`, read from EF_HPLMNwAcT
     /// (`6F62`) on the SIM. Empty when unknown.
     pub home_plmn: BTreeSet<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Device;
+
+    #[test]
+    fn mr1100_device_name_round_trips() {
+        let device: Device = serde_json::from_str("\"mr1100\"").unwrap();
+        assert_eq!(device, Device::Mr1100);
+        assert_eq!(serde_json::to_string(&device).unwrap(), "\"mr1100\"");
+    }
 }
