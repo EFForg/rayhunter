@@ -28,6 +28,14 @@ Rayhunter is confirmed to work on these devices.
 | [FY UZ801](./uz801.md) | Asia, Europe |
 | [Moxee hotspot](./moxee.md) | Americas |
 
+## 3. Experimental devices
+
+These devices require manual setup and have known limitations.
+
+| Device | Tested variant and status |
+| ------ | ------ |
+| [Netgear Nighthawk M1 MR1100](./mr1100.md) | AT&T 12.06.39.00; command-line installer and headless LTE capture verified; RAM-only captures, idle shutdown workaround, limited NAS validation, and opaque timing fields |
+
 ## Adding new devices
 Rayhunter was built and tested primarily on the Orbic RC400L mobile hotspot, but the community has been working hard at adding support for other devices. Theoretically, if a device runs a Qualcomm modem and exposes a `/dev/diag` interface, Rayhunter may work on it.
 

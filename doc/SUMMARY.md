@@ -23,5 +23,6 @@
   - [UZ801](./uz801.md)
   - [Wingtech CT2MHS01](./wingtech-ct2mhs01.md)
   - [PinePhone and PinePhone Pro](./pinephone.md)
+  - [Netgear Nighthawk M1 MR1100](./mr1100.md)
   - [Moxee Hotspot](./moxee.md)
 - [REST API Documentation](./api-docs.md)

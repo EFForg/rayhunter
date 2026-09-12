@@ -12,6 +12,8 @@ mod files;
 pub(crate) use files::*;
 
 mod moxee;
+mod mr1100;
+mod mr1100_transport;
 #[cfg(not(target_os = "android"))]
 mod orbic;
 mod orbic_auth;
@@ -53,6 +55,8 @@ enum Command {
     Orbic(OrbicNetworkArgs),
     /// Install rayhunter on the Moxee Hotspot via network.
     Moxee(MoxeeArgs),
+    /// Install Rayhunter on the tested Netgear MR1100 firmware through USB networking.
+    Mr1100(mr1100::Options),
     /// Install rayhunter on the TMobile TMOHS1.
     Tmobile(TmobileArgs),
     /// Install rayhunter on the Uz801.
@@ -290,6 +294,7 @@ async fn run(args: Args) -> Result<(), Error> {
         Command::OrbicUsb(args) => orbic::install(args.reset_config).await.context("\nFailed to install rayhunter on the Orbic RC400L (USB installer)")?,
         Command::Orbic(args) => orbic_network::install(args.admin_ip, args.admin_username, args.admin_password, args.reset_config, args.data_dir).await.context("\nFailed to install rayhunter on the Orbic RC400L")?,
         Command::Moxee(args) => moxee::install(args).await.context("\nFailed to install rayhunter on the Moxee Hotspot")?,
+        Command::Mr1100(args) => mr1100::install(args).await.context("Failed to install Rayhunter on the MR1100")?,
         Command::Wingtech(args) => wingtech::install(args).await.context("\nFailed to install rayhunter on the Wingtech CT2MHS01")?,
         Command::Util(subcommand) => {
             match subcommand.command {

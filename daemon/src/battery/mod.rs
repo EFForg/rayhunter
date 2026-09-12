@@ -119,3 +119,16 @@ pub fn run_battery_notification_worker(
         }
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn mr1100_does_not_use_generic_battery_sysfs() {
+        assert!(matches!(
+            get_battery_status(&Device::Mr1100).await,
+            Err(RayhunterError::FunctionNotSupportedForDeviceError)
+        ));
+    }
+}

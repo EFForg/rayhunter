@@ -2898,11 +2898,13 @@ dependencies = [
  "nusb",
  "reqwest 0.12.20",
  "serde",
+ "serde_json",
  "sha2",
  "termios",
  "tokio",
  "tokio-retry2",
  "tokio-stream",
+ "toml 0.8.22",
 ]
 
 [[package]]

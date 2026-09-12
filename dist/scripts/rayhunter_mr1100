@@ -1,0 +1,174 @@
+#!/bin/sh
+# rayhunter-mr1100-v1
+# Dedicated MR1100 Rayhunter service. Firewall rules stay installed on stop.
+umask 077
+ROOT=/data/rayhunter
+MARKER=$ROOT/.mr1100-install
+DAEMON=$ROOT/rayhunter-daemon
+CONFIG=$ROOT/config.toml
+RUN=/media/ram/rayhunter-mr1100
+LOG=$RUN/rayhunter.log
+PIDFILE=$RUN/rayhunter.pid
+LOCK=$RUN/start.lock
+CHAIN=RH_MR1100
+
+msg() { echo "rayhunter_mr1100: $*" >&2; }
+mounted() {
+    awk -v d="$1" -v m="$2" -v t="$3" \
+        '$1==d && $2==m && $3==t { found=1 } END { exit !found }' /proc/mounts
+}
+install_ok() {
+    [ -d "$ROOT" ] && [ ! -L "$ROOT" ] &&
+    [ "$(cat "$MARKER" 2>/dev/null)" = mr1100-v1 ] &&
+    [ -x "$DAEMON" ] && [ -f "$CONFIG" ]
+}
+exact_pid() {
+    [ "$1" -gt 1 ] 2>/dev/null &&
+        [ "$(readlink "/proc/$1/exe" 2>/dev/null)" = "$DAEMON" ]
+}
+read_pid() {
+    [ -e "$PIDFILE" ] || [ -L "$PIDFILE" ] || return 1
+    [ -f "$PIDFILE" ] && [ ! -L "$PIDFILE" ] || return 2
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    case "$pid" in ''|*[!0-9]*) return 2;; esac
+    [ "$pid" -gt 1 ] 2>/dev/null || return 2
+}
+lock() {
+    mkdir "$LOCK" 2>/dev/null || { msg "service operation already active"; return 1; }
+    trap 'rmdir "$LOCK" 2>/dev/null' 0 1 2 3 15
+}
+unlock() { rmdir "$LOCK" 2>/dev/null; trap - 0 1 2 3 15; }
+rule_count() {
+    "$1" -n -L "$CHAIN" 2>/dev/null |
+        awk 'NR>2 && NF { n++ } END { print n+0 }'
+}
+chain_ok() {
+    fw=$1; want=$2
+    [ "$(rule_count "$fw")" = "$want" ] || return 1
+    "$fw" -C "$CHAIN" -i lo -j ACCEPT >/dev/null 2>&1 || return 1
+    if [ "$want" = 3 ]; then
+        "$fw" -C "$CHAIN" -m physdev --physdev-in rndis0 -j ACCEPT >/dev/null 2>&1 || return 1
+    fi
+    "$fw" -C "$CHAIN" -j REJECT >/dev/null 2>&1
+}
+ensure_chain() {
+    fw=$1; want=$2
+    if "$fw" -n -L "$CHAIN" >/dev/null 2>&1; then
+        chain_ok "$fw" "$want" || { msg "$fw chain collision or no -C support"; return 1; }
+    else
+        "$fw" -N "$CHAIN" && "$fw" -A "$CHAIN" -i lo -j ACCEPT || return 1
+        if [ "$want" = 3 ]; then
+            "$fw" -A "$CHAIN" -m physdev --physdev-in rndis0 -j ACCEPT || return 1
+        fi
+        "$fw" -A "$CHAIN" -j REJECT || return 1
+        chain_ok "$fw" "$want" || return 1
+    fi
+    for port in 8080 23; do
+        "$fw" -C INPUT -p tcp --dport "$port" -j "$CHAIN" >/dev/null 2>&1 ||
+            "$fw" -I INPUT 1 -p tcp --dport "$port" -j "$CHAIN" || return 1
+    done
+}
+firewall() {
+    command -v iptables >/dev/null 2>&1 || { msg "iptables is unavailable"; return 1; }
+    ensure_chain iptables 3 || { msg "IPv4 protection failed"; return 1; }
+    if [ -e /proc/net/if_inet6 ]; then
+        command -v ip6tables >/dev/null 2>&1 || { msg "IPv6 is active but ip6tables is unavailable"; return 1; }
+        ensure_chain ip6tables 2 || { msg "IPv6 protection failed"; return 1; }
+    fi
+}
+prepare() {
+    install_ok || { msg "invalid MR1100 installation"; return 1; }
+    mounted ubi0:usrfs /data ubifs || { msg "/data is not ubi0:usrfs ubifs"; return 1; }
+    mounted tmpfs /media/ram tmpfs || { msg "/media/ram is not tmpfs"; return 1; }
+    [ -d "$RUN" ] || mkdir "$RUN" || return 1
+    [ ! -L "$RUN" ] || { msg "unsafe runtime path"; return 1; }
+    [ -d "$RUN/qmdl" ] || mkdir "$RUN/qmdl" || return 1
+    [ ! -L "$RUN/qmdl" ] || { msg "unsafe capture path"; return 1; }
+    chmod 700 "$RUN" "$RUN/qmdl" || return 1
+}
+abort_spawn() {
+    if exact_pid "$pid"; then kill -INT "$pid" 2>/dev/null; fi
+    n=0
+    while exact_pid "$pid" && [ "$n" -lt 10 ]; do sleep 1; n=$((n + 1)); done
+    if exact_pid "$pid"; then kill -KILL "$pid" 2>/dev/null; fi
+    # The child may not have reached exec yet. Only signal our own direct child.
+    if [ "$(awk '/^PPid:/ {print $2}' "/proc/$pid/status" 2>/dev/null)" = "$$" ]; then
+        kill -KILL "$pid" 2>/dev/null
+    fi
+    msg "startup failed; stopped new child $pid"
+    return 1
+}
+start_locked() {
+    firewall || return 1
+    read_pid; rc=$?
+    if [ "$rc" = 0 ]; then
+        exact_pid "$pid" && { msg "already running ($pid)"; return 0; }
+        [ -d "/proc/$pid" ] && { msg "PID file refers to another process"; return 1; }
+        rm -f "$PIDFILE" || return 1
+    elif [ "$rc" = 2 ]; then
+        msg "unsafe PID file"; return 1
+    fi
+    [ ! -L "$LOG" ] || { msg "unsafe log path"; return 1; }
+    : >>"$LOG" || return 1
+    chmod 600 "$LOG" || return 1
+    RUST_LOG=info "$DAEMON" "$CONFIG" </dev/null >>"$LOG" 2>&1 & pid=$!
+    n=0
+    while ! exact_pid "$pid" && [ "$n" -lt 5 ]; do sleep 1; n=$((n + 1)); done
+    exact_pid "$pid" || { abort_spawn; return 1; }
+    if ! { [ ! -e "$PIDFILE.$$" ] && [ ! -L "$PIDFILE.$$" ] &&
+        printf '%s\n' "$pid" >"$PIDFILE.$$" && mv "$PIDFILE.$$" "$PIDFILE"; }; then
+        abort_spawn; return 1
+    fi
+    ( trap - 0 1 2 3 15
+      while exact_pid "$pid"; do
+        sleep 30; exact_pid "$pid" || break
+        [ "$(wc -c <"$LOG")" -le 1048576 ] || : >"$LOG"
+      done ) </dev/null >/dev/null 2>&1 &
+    msg "started ($pid)"
+}
+start_service() { prepare && lock || return 1; start_locked; rc=$?; unlock; return "$rc"; }
+
+stop_locked() {
+    read_pid; rc=$?
+    [ "$rc" = 1 ] && { msg "not running"; return 0; }
+    [ "$rc" = 2 ] && { msg "unsafe PID file"; return 1; }
+    if [ ! -d "/proc/$pid" ]; then rm -f "$PIDFILE"; msg "not running"; return 0; fi
+    exact_pid "$pid" || { msg "PID file refers to another process"; return 1; }
+    kill -INT "$pid" || return 1
+    n=0
+    while [ -d "/proc/$pid" ] && [ "$n" -lt 10 ]; do
+        exact_pid "$pid" || { [ -e "/proc/$pid/exe" ] && { msg "PID changed owner"; return 1; }; }
+        sleep 1; n=$((n + 1))
+    done
+    if exact_pid "$pid"; then
+        kill -KILL "$pid" || return 1
+        sleep 1
+    fi
+    [ ! -d "/proc/$pid" ] || { msg "process did not exit"; return 1; }
+    rm -f "$PIDFILE" || return 1
+    msg "stopped"
+}
+stop_service() {
+    [ -d "$RUN" ] || { msg "not running"; return 0; }
+    [ ! -L "$RUN" ] && lock || return 1
+    stop_locked; rc=$?; unlock; return "$rc"
+}
+status_service() {
+    read_pid; rc=$?
+    [ "$rc" = 0 ] && exact_pid "$pid" && { msg "running ($pid)"; return 0; }
+    [ "$rc" = 0 ] && [ -d "/proc/$pid" ] && msg "unsafe PID owner" || msg "not running"
+    return 1
+}
+
+# S88 runs before the stock S90swiapplaunch.sh can start root Telnet.
+case "${0##*/}" in
+    S88rayhunter_mr1100_firewall) firewall; exit $?;;
+esac
+case "${1-}" in
+    start) start_service;;
+    stop) stop_service;;
+    restart) stop_service && start_service;;
+    status) status_service;;
+    *) echo "Usage: $0 {start|stop|restart|status}" >&2; exit 2;;
+esac
+exit $?

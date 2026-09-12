@@ -1,0 +1,23 @@
+# Short MR1100 tests only. See doc/mr1100.md before starting the daemon.
+# /media/ram must be the existing tmpfs, not a directory on internal NAND.
+qmdl_store_path = "/media/ram/rayhunter-mr1100/qmdl"
+port = 8080
+device = "mr1100"
+ui_level = 0
+key_input_mode = 0
+debug_mode = false
+
+# Preserve native router operation; do not enable untested integrations.
+wifi_enabled = false
+gps_mode = 0
+enabled_notifications = []
+auto_check_updates = false
+clock_sync_mode = 0
+
+# Tested tmpfs capacity: about 195 MiB. These are reserves, not size limits.
+# Also use an external runtime limit; free-space checks do not bound RAM use.
+min_space_to_start_recording_mb = 175
+min_space_to_continue_recording_mb = 165
+
+[webdav]
+url = ""
