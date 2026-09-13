@@ -36,6 +36,10 @@ const KEY: &[u8] = b"abcdefghijklmn12";
 /// Returns password encrypted in AES128 ECB mode with the key b"abcdefghijklmn12",
 /// with Pkcs7 padding, encoded in base64.
 fn encrypt_password(password: &[u8]) -> Result<String> {
+    if password.len() > 16 {
+        bail!("Wingtech admin password must be at most 16 bytes");
+    }
+
     let c = Aes128::new_from_slice(KEY)?;
     let mut b = GenericArray::from([0u8; 16]);
     b[..password.len()].copy_from_slice(password);
@@ -56,7 +60,7 @@ pub async fn run_command(admin_ip: &str, admin_password: &str, cmd: &str) -> Res
     let qcmap_auth_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_auth");
     let qcmap_web_cgi_endpoint = format!("http://{admin_ip}/cgi-bin/qcmap_web_cgi");
 
-    let encrypted_pw = encrypt_password(admin_password.as_bytes()).ok().unwrap();
+    let encrypted_pw = encrypt_password(admin_password.as_bytes())?;
 
     let client = Client::new();
     let LoginResponse { token } = client
@@ -158,4 +162,13 @@ fn test_encrypt_password() {
     let s = encrypt_password(p).ok();
     let expected = Some("5brvd8xl732cSoFTAy67ig==".to_string());
     assert_eq!(s, expected);
+}
+
+#[test]
+fn test_encrypt_password_rejects_passwords_longer_than_block() {
+    let error = encrypt_password(b"12345678901234567").unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "Wingtech admin password must be at most 16 bytes"
+    );
 }
