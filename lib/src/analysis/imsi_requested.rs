@@ -16,7 +16,7 @@ use pycrate_rs::nas::generated::emm::emm_attach_request::TAI;
 use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1};
 use telcom_parser::lte_rrc::{MCC_MNC_Digit, PLMN_Identity, PLMN_IdentityList};
 use telcom_parser::lte_rrc::{
-    /* DL_DCCH_MessageType, DL_DCCH_MessageType_c1,*/ UL_CCCH_MessageType,
+    DL_DCCH_MessageType, DL_DCCH_MessageType_c1, UL_CCCH_MessageType,
     UL_CCCH_MessageType_c1,
 };
 
@@ -290,9 +290,6 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     _ => {}
                 },
 
-                // This causes two messages in the event of a false positive when we should always get an attach reject anyway so
-                // I'm commentingit out until I figure out a smarter way to deal with it.
-                /*
                 LteInformationElement::DlDcch(rrc_payload) => {
                     if let DL_DCCH_MessageType::C1(DL_DCCH_MessageType_c1::RrcConnectionRelease(
                         _,
@@ -301,7 +298,6 @@ impl Analyzer for ImsiRequestedAnalyzer {
                         self.transition(State::Disconnect, packet_num)
                     }
                 }
-                */
                 _ => {}
             }
         };
