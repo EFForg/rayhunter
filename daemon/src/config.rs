@@ -82,7 +82,7 @@ pub struct Config {
     pub auto_check_updates: bool,
     /// How Rayhunter should handle its clock drifting from a known-good time source
     pub clock_sync_mode: ClockSyncMode,
-    /// Vector containing the list of enabled analyzers
+    /// Map from analyzer key to whether it is enabled
     pub analyzers: AnalyzerConfig,
     /// Minimum disk space required to start a recording
     pub min_space_to_start_recording_mb: u64,

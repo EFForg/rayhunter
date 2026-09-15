@@ -12,6 +12,7 @@ use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, Local};
 use futures::TryStreamExt;
 use log::{error, warn};
+use rayhunter::analysis::analyzer::{AnalyzerMetadata, get_analyzers_metadata};
 use rayhunter::qmdl::QmdlMessageReader;
 use serde::{Deserialize, Serialize};
 use std::pin::pin;
@@ -151,6 +152,20 @@ pub async fn get_config(
     let mut config = state.config.clone();
     config.wifi_password = None;
     Ok(Json(config))
+}
+
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    get,
+    path = "/api/analyzers",
+    tag = "Configuration",
+    responses(
+        (status = StatusCode::OK, description = "Success", body = Vec<AnalyzerMetadata>)
+    ),
+    summary = "List analyzers",
+    description = "List the analyzers compiled into Rayhunter, including the config key that enables each of them."
+))]
+pub async fn get_analyzers() -> Json<Vec<AnalyzerMetadata>> {
+    Json(get_analyzers_metadata())
 }
 
 #[cfg_attr(feature = "apidocs", utoipa::path(

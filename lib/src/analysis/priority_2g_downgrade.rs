@@ -1,8 +1,6 @@
-use std::borrow::Cow;
-
 use chrono::{DateTime, FixedOffset};
 
-use super::analyzer::{Analyzer, Event, EventType};
+use super::analyzer::{Analyzer, AnalyzerMetadata, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use log::debug;
 use telcom_parser::lte_rrc::{
@@ -50,18 +48,14 @@ impl LteSib6And7DowngradeAnalyzer {
 
 // TODO: keep track of SIB state to compare LTE reselection blocks w/ 2g/3g ones
 impl Analyzer for LteSib6And7DowngradeAnalyzer {
-    fn get_name(&self) -> Cow<'_, str> {
-        Cow::from("LTE SIB 6/7 Downgrade")
-    }
-
-    fn get_description(&self) -> Cow<'_, str> {
-        Cow::from(
-            "Tests for LTE cells broadcasting a SIB type 6 and 7 which include 2G/3G frequencies with higher priorities.",
-        )
-    }
-
-    fn get_version(&self) -> u32 {
-        2
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "lte_sib6_and_7_downgrade".into(),
+            default_enabled: true,
+            name: "LTE SIB6/7 Downgrade".into(),
+            description: "Tests for LTE cells broadcasting a SIB type 6 and 7 which include 2G/3G frequencies with higher priorities.".into(),
+            version: 2,
+        }
     }
 
     fn analyze_information_element(
