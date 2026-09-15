@@ -14,11 +14,10 @@ use log::{debug, error};
 use pycrate_rs::nas::generated::emm::emm_attach_reject::EMMCauseEMMCause as AttachRejectEMMCause;
 use pycrate_rs::nas::generated::emm::emm_attach_request::TAI;
 use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1};
-use telcom_parser::lte_rrc::{MCC_MNC_Digit, PLMN_Identity, PLMN_IdentityList};
 use telcom_parser::lte_rrc::{
-    DL_DCCH_MessageType, DL_DCCH_MessageType_c1, UL_CCCH_MessageType,
-    UL_CCCH_MessageType_c1,
+    DL_DCCH_MessageType, DL_DCCH_MessageType_c1, UL_CCCH_MessageType, UL_CCCH_MessageType_c1,
 };
+use telcom_parser::lte_rrc::{MCC_MNC_Digit, PLMN_Identity, PLMN_IdentityList};
 
 const TIMEOUT_THRESHHOLD: usize = 50;
 
