@@ -2,17 +2,15 @@ import { add_error } from './action_errors.svelte';
 import { Manifest } from './manifest.svelte';
 import type { SystemStats } from './systemStats';
 
-export interface AnalyzerConfig {
-    imsi_requested: boolean;
-    connection_redirect_2g_downgrade: boolean;
-    lte_sib6_and_7_downgrade: boolean;
-    null_cipher: boolean;
-    nas_null_cipher: boolean;
-    incomplete_sib: boolean;
-    test_analyzer: boolean;
-    diagnostic_analyzer: boolean;
-    no_nas_messages: boolean;
+export interface AnalyzerMetadata {
+    key: string;
+    default_enabled: boolean;
+    name: string;
+    description: string;
+    version: number;
 }
+
+export type AnalyzerConfig = Record<string, boolean>;
 
 export enum enabled_notifications {
     Warning = 'Warning',
@@ -146,6 +144,10 @@ export async function get_logs(): Promise<string> {
 
 export async function get_config(): Promise<Config> {
     return JSON.parse(await req('GET', '/api/config'));
+}
+
+export async function get_analyzers(): Promise<AnalyzerMetadata[]> {
+    return JSON.parse(await req('GET', '/api/analyzers'));
 }
 
 export async function set_config(config: Config): Promise<void> {

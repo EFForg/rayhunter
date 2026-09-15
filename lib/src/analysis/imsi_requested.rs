@@ -1,12 +1,10 @@
-use std::borrow::Cow;
-use std::collections::BTreeSet;
-
 use chrono::{DateTime, FixedOffset};
+use std::collections::BTreeSet;
 
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 
-use super::analyzer::{Analyzer, Event, EventType};
+use super::analyzer::{Analyzer, AnalyzerMetadata, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use crate::plmn::{PACKED_BCD_LEN, decode_packed_bcd};
 use log::{debug, error};
@@ -208,18 +206,14 @@ impl ImsiRequestedAnalyzer {
 }
 
 impl Analyzer for ImsiRequestedAnalyzer {
-    fn get_name(&self) -> Cow<'_, str> {
-        Cow::from("Identity (IMSI or IMEI) requested in suspicious manner")
-    }
-
-    fn get_description(&self) -> Cow<'_, str> {
-        Cow::from(
-            "Tests whether the ME sends an Identity Request NAS message without either an associated attach request or auth accept message",
-        )
-    }
-
-    fn get_version(&self) -> u32 {
-        5
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "imsi_requested".into(),
+            default_enabled: true,
+            name: "IMSI Requested".into(),
+            description: "Tests whether the ME sends an Identity Request NAS message without either an associated attach request or auth accept message".into(),
+            version: 5,
+        }
     }
 
     fn analyze_information_element(

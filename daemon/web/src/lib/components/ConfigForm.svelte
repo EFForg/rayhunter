@@ -5,10 +5,12 @@
         test_notification,
         get_wifi_status,
         scan_wifi_networks,
+        get_analyzers,
         GpsMode,
         ClockSyncMode,
         enabled_notifications,
         type Config,
+        type AnalyzerMetadata,
         type WifiStatus,
         type WifiNetwork,
     } from '../utils.svelte';
@@ -19,6 +21,7 @@
 
     let { shown = $bindable() }: { shown: boolean } = $props();
     let config = $state<Config | null>(null);
+    let analyzers = $state<AnalyzerMetadata[]>([]);
 
     let loading = $state(false);
     let saving = $state(false);
@@ -37,7 +40,10 @@
     async function load_config() {
         try {
             loading = true;
-            config = await get_config();
+            [config, analyzers] = await Promise.all([get_config(), get_analyzers()]);
+            for (const analyzer of analyzers) {
+                config.analyzers[analyzer.key] ??= analyzer.default_enabled;
+            }
             dnsServersInput = config.dns_servers ? config.dns_servers.join(', ') : '';
             message = '';
             messageType = null;
@@ -577,57 +583,14 @@
                         Analyzer Heuristic Settings
                     </h3>
                     <div class="space-y-3">
-                        <CheckboxField
-                            id="imsi_requested"
-                            label="IMSI Requested Heuristic"
-                            bind:checked={config.analyzers.imsi_requested}
-                        />
-
-                        <CheckboxField
-                            id="connection_redirect_2g_downgrade"
-                            label="Connection Redirect 2G Downgrade Heuristic"
-                            bind:checked={config.analyzers.connection_redirect_2g_downgrade}
-                        />
-
-                        <CheckboxField
-                            id="lte_sib6_and_7_downgrade"
-                            label="LTE SIB6 and SIB7 Downgrade Heuristic"
-                            bind:checked={config.analyzers.lte_sib6_and_7_downgrade}
-                        />
-
-                        <CheckboxField
-                            id="null_cipher"
-                            label="Null Cipher Heuristic"
-                            bind:checked={config.analyzers.null_cipher}
-                        />
-
-                        <CheckboxField
-                            id="nas_null_cipher"
-                            label="NAS Null Cipher Heuristic"
-                            bind:checked={config.analyzers.nas_null_cipher}
-                        />
-
-                        <CheckboxField
-                            id="incomplete_sib"
-                            label="Incomplete SIB Heuristic"
-                            bind:checked={config.analyzers.incomplete_sib}
-                        />
-
-                        <CheckboxField
-                            id="no_nas_messages"
-                            label="No NAS Messages Heuristic (experimental)"
-                            bind:checked={config.analyzers.no_nas_messages}
-                        />
-                        <CheckboxField
-                            id="test_analyzer"
-                            label="Test Heuristic (noisy!)"
-                            bind:checked={config.analyzers.test_analyzer}
-                        />
-                        <CheckboxField
-                            id="diagnostic_analyzer"
-                            label="Diagnostic Analyzer"
-                            bind:checked={config.analyzers.diagnostic_analyzer}
-                        />
+                        {#each analyzers as analyzer (analyzer.key)}
+                            <CheckboxField
+                                id={analyzer.key}
+                                label={analyzer.name}
+                                help={analyzer.description}
+                                bind:checked={config.analyzers[analyzer.key]}
+                            />
+                        {/each}
                     </div>
                 </div>
 

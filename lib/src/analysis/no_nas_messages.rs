@@ -1,8 +1,6 @@
-use std::borrow::Cow;
-
 use chrono::{DateTime, FixedOffset};
 
-use super::analyzer::{Analyzer, Event, EventType};
+use super::analyzer::{Analyzer, AnalyzerMetadata, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 
 const NAS_TIMEOUT: chrono::TimeDelta = chrono::TimeDelta::minutes(5);
@@ -28,18 +26,14 @@ fn is_nas(ie: &InformationElement) -> bool {
 }
 
 impl Analyzer for NoNasMessagesAnalyzer {
-    fn get_name(&self) -> Cow<'_, str> {
-        Cow::from("No NAS Messages")
-    }
-
-    fn get_description(&self) -> Cow<'_, str> {
-        Cow::from(
-            "Warns if a recording contains diagnostic traffic spanning 5 minutes but no NAS messages, which usually means the SIM card is not working and the recording is not usable for detecting IMSI catchers.",
-        )
-    }
-
-    fn get_version(&self) -> u32 {
-        1
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "no_nas_messages".into(),
+            default_enabled: false,
+            name: "No NAS Messages".into(),
+            description: "Warns if a recording contains diagnostic traffic spanning 5 minutes but no NAS messages, which usually means the SIM card is not working and the recording is not usable for detecting IMSI catchers.".into(),
+            version: 1,
+        }
     }
 
     fn analyze_information_element(

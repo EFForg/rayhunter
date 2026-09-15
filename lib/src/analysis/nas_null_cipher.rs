@@ -1,29 +1,23 @@
-use std::borrow::Cow;
-
 use chrono::{DateTime, FixedOffset};
 
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 use pycrate_rs::nas::generated::emm::emm_security_mode_command::NASSecAlgoCiphAlgo::EPSEncryptionAlgorithmEEA0Null;
 
-use super::analyzer::{Analyzer, Event, EventType};
+use super::analyzer::{Analyzer, AnalyzerMetadata, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 
 pub struct NasNullCipherAnalyzer {}
 
 impl Analyzer for NasNullCipherAnalyzer {
-    fn get_name(&self) -> Cow<'_, str> {
-        Cow::from("NAS Null Cipher Requested")
-    }
-
-    fn get_description(&self) -> Cow<'_, str> {
-        Cow::from(
-            "Tests whether the MME requests to use a null cipher in the NAS security mode command",
-        )
-    }
-
-    fn get_version(&self) -> u32 {
-        1
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "nas_null_cipher".into(),
+            default_enabled: true,
+            name: "NAS Null Cipher".into(),
+            description: "Tests whether the MME requests to use a null cipher in the NAS security mode command".into(),
+            version: 1,
+        }
     }
 
     fn analyze_information_element(

@@ -1,14 +1,12 @@
-use crate::analysis::analyzer::{Analyzer, Event, EventType};
+use crate::analysis::analyzer::{Analyzer, AnalyzerMetadata, Event, EventType};
 use crate::analysis::information_element::{InformationElement, LteInformationElement};
+use chrono::{DateTime, FixedOffset};
 use pycrate_rs::nas::NASMessage;
 use pycrate_rs::nas::emm::EMMMessage;
 use pycrate_rs::nas::generated::emm::emm_attach_reject::EMMCauseEMMCause as AttachRejectEMMCause;
 use pycrate_rs::nas::generated::emm::emm_detach_request_mt::EPSDetachTypeMTType;
 use pycrate_rs::nas::generated::emm::emm_service_reject::EMMCauseEMMCause as ServiceRejectEMMCause;
 use pycrate_rs::nas::generated::emm::emm_tracking_area_update_reject::EMMCauseEMMCause as TAURejectEMMCause;
-use std::borrow::Cow;
-
-use chrono::{DateTime, FixedOffset};
 
 pub struct DiagnosticAnalyzer;
 
@@ -92,22 +90,21 @@ impl DiagnosticAnalyzer {
 }
 
 impl Analyzer for DiagnosticAnalyzer {
-    fn get_name(&self) -> Cow<'_, str> {
-        "Diagnostic detector for messages which might lead to IMSI exposure".into()
-    }
-
-    fn get_description(&self) -> Cow<'_, str> {
-        "Catches any messages that may lead to IMSI Exposure. Can be quite noisy. \
-        Useful as a diagnostic for finding out why an IMSI was sent or what \
-        the reason for a reject message was. Not a useful indicator on its own \
-        but a helpful diagnostic for understanding why another indicator was \
-        triggered. Based on the list of IMSI exposing messages identified in \
-        the 'Marlin' paper."
-            .into()
-    }
-
-    fn get_version(&self) -> u32 {
-        1
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "diagnostic_analyzer".into(),
+            default_enabled: true,
+            name: "Diagnostic Information".into(),
+            description:
+                "Catches any messages that may lead to IMSI Exposure. Can be quite noisy. \
+                Useful as a diagnostic for finding out why an IMSI was sent or what \
+                the reason for a reject message was. Not a useful indicator on its own \
+                but a helpful diagnostic for understanding why another indicator was \
+                triggered. Based on the list of IMSI exposing messages identified in \
+                the 'Marlin' paper."
+                    .into(),
+            version: 1,
+        }
     }
 
     fn analyze_information_element(

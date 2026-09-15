@@ -3,51 +3,115 @@ use log::debug;
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 
 use crate::DeviceMetadata;
-use crate::analysis::diagnostic::DiagnosticAnalyzer;
 use crate::diag::{DiagParsingError, Message, MessagesContainer};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, parser as gsmtap_parser};
 use crate::util::RuntimeMetadata;
 
 use super::{
     connection_redirect_downgrade::ConnectionRedirect2GDowngradeAnalyzer,
-    imsi_requested::ImsiRequestedAnalyzer, incomplete_sib::IncompleteSibAnalyzer,
-    information_element::InformationElement, nas_null_cipher::NasNullCipherAnalyzer,
-    no_nas_messages::NoNasMessagesAnalyzer, null_cipher::NullCipherAnalyzer,
-    priority_2g_downgrade::LteSib6And7DowngradeAnalyzer, test_analyzer::TestAnalyzer,
+    diagnostic::DiagnosticAnalyzer, imsi_requested::ImsiRequestedAnalyzer,
+    incomplete_sib::IncompleteSibAnalyzer, information_element::InformationElement,
+    nas_null_cipher::NasNullCipherAnalyzer, no_nas_messages::NoNasMessagesAnalyzer,
+    null_cipher::NullCipherAnalyzer, priority_2g_downgrade::LteSib6And7DowngradeAnalyzer,
+    test_analyzer::TestAnalyzer,
 };
 
-/// A list of booleans which stores information about which analyzers are enabled
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(default)]
-#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
-pub struct AnalyzerConfig {
-    pub diagnostic_analyzer: bool,
-    pub connection_redirect_2g_downgrade: bool,
-    pub lte_sib6_and_7_downgrade: bool,
-    pub null_cipher: bool,
-    pub nas_null_cipher: bool,
-    pub incomplete_sib: bool,
-    pub test_analyzer: bool,
-    pub imsi_requested: bool,
-    pub no_nas_messages: bool,
+fn boxed(analyzer: impl Analyzer + Send + 'static) -> Box<dyn Analyzer + Send> {
+    Box::new(analyzer)
 }
+
+fn all_analyzers(
+    device_metadata: &DeviceMetadata,
+) -> impl Iterator<Item = (AnalyzerMetadata, Box<dyn Analyzer + Send>)> {
+    [
+        (
+            ImsiRequestedAnalyzer::metadata(),
+            boxed(ImsiRequestedAnalyzer::new(
+                device_metadata.home_plmn.clone(),
+            )),
+        ),
+        (
+            ConnectionRedirect2GDowngradeAnalyzer::metadata(),
+            boxed(ConnectionRedirect2GDowngradeAnalyzer {}),
+        ),
+        (
+            LteSib6And7DowngradeAnalyzer::metadata(),
+            boxed(LteSib6And7DowngradeAnalyzer::new()),
+        ),
+        (NullCipherAnalyzer::metadata(), boxed(NullCipherAnalyzer {})),
+        (
+            NasNullCipherAnalyzer::metadata(),
+            boxed(NasNullCipherAnalyzer {}),
+        ),
+        (
+            IncompleteSibAnalyzer::metadata(),
+            boxed(IncompleteSibAnalyzer {}),
+        ),
+        (TestAnalyzer::metadata(), boxed(TestAnalyzer {})),
+        (
+            NoNasMessagesAnalyzer::metadata(),
+            boxed(NoNasMessagesAnalyzer::new()),
+        ),
+        (DiagnosticAnalyzer::metadata(), boxed(DiagnosticAnalyzer {})),
+    ]
+    .into_iter()
+}
+
+/// Analyzer enablement overrides keyed by [AnalyzerMetadata::key]. Missing
+/// keys use the analyzer default; unknown keys are retained and produce a
+/// warning when deserialized.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
+#[serde(transparent)]
+pub struct AnalyzerConfig(BTreeMap<String, bool>);
 
 impl Default for AnalyzerConfig {
     fn default() -> Self {
-        AnalyzerConfig {
-            imsi_requested: true,
-            diagnostic_analyzer: true,
-            connection_redirect_2g_downgrade: true,
-            lte_sib6_and_7_downgrade: true,
-            null_cipher: true,
-            nas_null_cipher: true,
-            incomplete_sib: true,
-            test_analyzer: false,
-            no_nas_messages: false,
-        }
+        AnalyzerConfig(
+            get_analyzers_metadata()
+                .into_iter()
+                .map(|metadata| (metadata.key.to_string(), metadata.default_enabled))
+                .collect(),
+        )
     }
+}
+
+impl AnalyzerConfig {
+    /// Returns `default` when `key` has no configured override.
+    fn is_enabled(&self, key: &str, default: bool) -> bool {
+        self.0.get(key).copied().unwrap_or(default)
+    }
+}
+
+impl<'de> Deserialize<'de> for AnalyzerConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let map = <BTreeMap<String, bool>>::deserialize(deserializer)?;
+        let known_keys: Vec<String> = get_analyzers_metadata()
+            .into_iter()
+            .map(|metadata| metadata.key.to_string())
+            .collect();
+        let mut unknown_keys: Vec<&String> =
+            map.keys().filter(|key| !known_keys.contains(key)).collect();
+        unknown_keys.sort_unstable();
+        if !unknown_keys.is_empty() {
+            log::warn!(
+                "config contains unknown analyzer(s) {unknown_keys:?}; valid keys are {known_keys:?}"
+            );
+        }
+        Ok(AnalyzerConfig(map))
+    }
+}
+
+pub fn get_analyzers_metadata() -> Vec<AnalyzerMetadata> {
+    all_analyzers(&DeviceMetadata::default())
+        .map(|(metadata, _)| metadata)
+        .collect()
 }
 
 pub const REPORT_VERSION: u32 = 2;
@@ -120,15 +184,11 @@ pub struct Event {
 /// much memory your [Analyzer] uses at runtime, since rayhunter may run for
 /// many hours at a time with dozens of [Analyzers](Analyzer) working in parallel.
 pub trait Analyzer {
-    /// Returns a user-friendly, concise name for your heuristic.
-    fn get_name(&self) -> Cow<'_, str>;
-
-    /// Returns a user-friendly description of what your heuristic looks for,
-    /// the types of [Events](Event) it may return, as well as possible false-positive
-    /// conditions that may trigger an [Event]. If different [Events](Event) have
-    /// different false-positive conditions, consider including them in its
-    /// `message` field.
-    fn get_description(&self) -> Cow<'_, str>;
+    /// Returns static metadata for this analyzer type; it must not depend on
+    /// instance state.
+    fn metadata() -> AnalyzerMetadata
+    where
+        Self: Sized;
 
     /// Analyze a single [InformationElement], possibly returning an [Event] if your
     /// heuristic deems it relevant. `timestamp` is the timestamp of the packet
@@ -149,22 +209,24 @@ pub trait Analyzer {
     fn report_skipped_packet(&mut self, _timestamp: DateTime<FixedOffset>) -> Option<Event> {
         None
     }
-
-    /// Returns a version number for this Analyzer. This should only ever
-    /// increase in value, and do so whenever substantial changes are made to
-    /// the Analyzer's heuristic.
-    fn get_version(&self) -> u32;
 }
 
-/// Specific information on a given analyzer
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+/// Static analyzer metadata exposed in configuration and analysis reports.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct AnalyzerMetadata {
-    /// The analyzer name
-    pub name: String,
-    /// A description of what the analyzer does
-    pub description: String,
-    /// The deployed version of the analyzer code
+    /// Stable configuration key.
+    #[cfg_attr(feature = "apidocs", schema(value_type = String))]
+    pub key: Cow<'static, str>,
+    pub default_enabled: bool,
+    #[cfg_attr(feature = "apidocs", schema(value_type = String))]
+    pub name: Cow<'static, str>,
+    /// User-facing summary of the heuristic, relevant events, and notable
+    /// false-positive conditions.
+    #[cfg_attr(feature = "apidocs", schema(value_type = String))]
+    pub description: Cow<'static, str>,
+    /// Monotonically increasing heuristic version; bump for substantial
+    /// behavior changes.
     pub version: u32,
 }
 
@@ -333,6 +395,7 @@ impl<'de> Deserialize<'de> for AnalysisRow {
 
 pub struct Harness {
     analyzers: Vec<Box<dyn Analyzer + Send>>,
+    metadata: Vec<AnalyzerMetadata>,
     packet_num: usize,
 }
 
@@ -346,6 +409,7 @@ impl Harness {
     pub fn new() -> Self {
         Self {
             analyzers: Vec::new(),
+            metadata: Vec::new(),
             packet_num: 0,
         }
     }
@@ -356,45 +420,17 @@ impl Harness {
     ) -> Self {
         let mut harness = Harness::new();
 
-        if analyzer_config.imsi_requested {
-            harness.add_analyzer(Box::new(ImsiRequestedAnalyzer::new(
-                device_metadata.home_plmn.clone(),
-            )));
-        }
-        if analyzer_config.connection_redirect_2g_downgrade {
-            harness.add_analyzer(Box::new(ConnectionRedirect2GDowngradeAnalyzer {}));
-        }
-        if analyzer_config.lte_sib6_and_7_downgrade {
-            harness.add_analyzer(Box::new(LteSib6And7DowngradeAnalyzer::new()));
-        }
-        if analyzer_config.null_cipher {
-            harness.add_analyzer(Box::new(NullCipherAnalyzer {}));
-        }
-
-        if analyzer_config.nas_null_cipher {
-            harness.add_analyzer(Box::new(NasNullCipherAnalyzer {}))
-        }
-
-        if analyzer_config.incomplete_sib {
-            harness.add_analyzer(Box::new(IncompleteSibAnalyzer {}))
-        }
-
-        if analyzer_config.test_analyzer {
-            harness.add_analyzer(Box::new(TestAnalyzer {}))
-        }
-
-        if analyzer_config.no_nas_messages {
-            harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()))
-        }
-
-        if analyzer_config.diagnostic_analyzer {
-            harness.add_analyzer(Box::new(DiagnosticAnalyzer {}));
+        for (metadata, analyzer) in all_analyzers(device_metadata) {
+            if analyzer_config.is_enabled(metadata.key.as_ref(), metadata.default_enabled) {
+                harness.add_analyzer(metadata, analyzer);
+            }
         }
 
         harness
     }
 
-    pub fn add_analyzer(&mut self, analyzer: Box<dyn Analyzer + Send>) {
+    pub fn add_analyzer(&mut self, metadata: AnalyzerMetadata, analyzer: Box<dyn Analyzer + Send>) {
+        self.metadata.push(metadata);
         self.analyzers.push(analyzer);
     }
 
@@ -554,19 +590,10 @@ impl Harness {
     }
 
     pub fn get_metadata(&self) -> ReportMetadata {
-        let mut analyzers = Vec::new();
-        for analyzer in &self.analyzers {
-            analyzers.push(AnalyzerMetadata {
-                name: analyzer.get_name().to_string(),
-                description: analyzer.get_description().to_string(),
-                version: analyzer.get_version(),
-            });
-        }
-
         let rayhunter = RuntimeMetadata::new();
 
         ReportMetadata {
-            analyzers,
+            analyzers: self.metadata.clone(),
             rayhunter,
             report_version: REPORT_VERSION,
         }
@@ -650,7 +677,10 @@ mod tests {
     #[test]
     fn test_parsed_message_updates_timestamp_without_changing_event_count() {
         let mut harness = Harness::new();
-        harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()));
+        harness.add_analyzer(
+            NoNasMessagesAnalyzer::metadata(),
+            Box::new(NoNasMessagesAnalyzer::new()),
+        );
 
         let row =
             harness.analyze_qmdl_message(Ok(log_message(0, LogBody::IpTraffic { msg: vec![] })));
@@ -682,7 +712,10 @@ mod tests {
     #[test]
     fn test_skipped_packet_timestamp_event_includes_packet_suffix() {
         let mut harness = Harness::new();
-        harness.add_analyzer(Box::new(NoNasMessagesAnalyzer::new()));
+        harness.add_analyzer(
+            NoNasMessagesAnalyzer::metadata(),
+            Box::new(NoNasMessagesAnalyzer::new()),
+        );
 
         let row =
             harness.analyze_qmdl_message(Ok(log_message(0, LogBody::IpTraffic { msg: vec![] })));

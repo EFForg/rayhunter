@@ -47,6 +47,7 @@ use utoipa::OpenApi;
         analysis::start_analysis,
         server::get_config,
         server::set_config,
+        server::get_analyzers,
         server::test_notification,
         server::get_time,
         server::set_time_offset,

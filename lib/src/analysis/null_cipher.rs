@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use chrono::{DateTime, FixedOffset};
 
 use telcom_parser::lte_rrc::{
@@ -10,7 +8,7 @@ use telcom_parser::lte_rrc::{
     SecurityModeCommandCriticalExtensions, SecurityModeCommandCriticalExtensions_c1,
 };
 
-use super::analyzer::{Analyzer, Event, EventType};
+use super::analyzer::{Analyzer, AnalyzerMetadata, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 
 pub struct NullCipherAnalyzer {}
@@ -121,16 +119,14 @@ impl NullCipherAnalyzer {
 }
 
 impl Analyzer for NullCipherAnalyzer {
-    fn get_name(&self) -> Cow<'_, str> {
-        Cow::from("Null Cipher")
-    }
-
-    fn get_description(&self) -> Cow<'_, str> {
-        Cow::from("Tests whether the cell suggests using a null cipher (EEA0)")
-    }
-
-    fn get_version(&self) -> u32 {
-        1
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "null_cipher".into(),
+            default_enabled: true,
+            name: "Null Cipher".into(),
+            description: "Tests whether the cell suggests using a null cipher (EEA0)".into(),
+            version: 1,
+        }
     }
 
     fn analyze_information_element(

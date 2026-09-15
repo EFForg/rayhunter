@@ -1,8 +1,6 @@
-use std::borrow::Cow;
-
 use chrono::{DateTime, FixedOffset};
 
-use super::analyzer::{Analyzer, Event, EventType};
+use super::analyzer::{Analyzer, AnalyzerMetadata, Event, EventType};
 use super::information_element::{InformationElement, LteInformationElement};
 use telcom_parser::lte_rrc::{
     DL_DCCH_MessageType, DL_DCCH_MessageType_c1, RRCConnectionReleaseCriticalExtensions,
@@ -15,16 +13,15 @@ pub struct ConnectionRedirect2GDowngradeAnalyzer {}
 
 // TODO: keep track of SIB state to compare LTE reselection blocks w/ 2g/3g ones
 impl Analyzer for ConnectionRedirect2GDowngradeAnalyzer {
-    fn get_name(&self) -> Cow<'_, str> {
-        Cow::from("Connection Release/Redirected Carrier 2G Downgrade")
-    }
-
-    fn get_description(&self) -> Cow<'_, str> {
-        Cow::from("Tests if a cell releases our connection and redirects us to a 2G cell.")
-    }
-
-    fn get_version(&self) -> u32 {
-        1
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "connection_redirect_2g_downgrade".into(),
+            default_enabled: true,
+            name: "Connection Release/Redirected Carrier 2G Downgrade".into(),
+            description: "Tests if a cell releases our connection and redirects us to a 2G cell."
+                .into(),
+            version: 1,
+        }
     }
 
     fn analyze_information_element(
