@@ -1,6 +1,7 @@
 <script lang="ts">
     import { get_daemon_time, get_config, set_time_offset, ClockSyncMode } from '$lib/utils.svelte';
     import ApiRequestButton from './ApiRequestButton.svelte';
+    import Alert from './Alert.svelte';
 
     let show_alert = $state(false);
     let device_system_time = $state('');
@@ -74,27 +75,7 @@
 </script>
 
 {#if show_alert}
-    <div
-        class="bg-yellow-100 border-yellow-400 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md"
-    >
-        <span class="text-xl font-bold flex flex-row items-center gap-2 text-yellow-700">
-            <svg
-                class="w-6 h-6 text-yellow-600"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-            >
-                <path
-                    fill-rule="evenodd"
-                    d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v4a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V8Z"
-                    clip-rule="evenodd"
-                />
-            </svg>
-            Clock Mismatch Detected
-        </span>
+    <Alert severity="warning" title="Clock Mismatch Detected">
         <p>
             Rayhunter's clock doesn't match your browser's, and may be incorrect. This can happen if
             Rayhunter is unable to get the correct time from the internet. Consider synchronizing
@@ -140,5 +121,5 @@
                 errorMessage="Error syncing clock"
             />
         </div>
-    </div>
+    </Alert>
 {/if}

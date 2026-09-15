@@ -6,6 +6,10 @@
     --color-rayhunter-green: #94ea18;
 }
 
+@utility form-control {
+    @apply px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue;
+}
+
 /* v4 dropped the v3 preflight rule that set `cursor: pointer` on buttons.
  * Restore it so enabled buttons get the pointer cursor. */
 @layer base {
