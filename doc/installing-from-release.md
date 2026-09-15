@@ -11,6 +11,8 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
     - for MacOS on ARM (M1/M2 etc.) architecture: `macos-arm`
     - for Windows: `windows-x86_64`
 
+    > **Note:** Download the `rayhunter-vX.X.X-PLATFORM.zip` asset for your platform, **not** the automatically generated "Source code (zip)" archive at the bottom of the release. The source archive does not contain the prebuilt `installer` binary, so the commands below will fail with an error like `./installer: command not found`.
+
 3. Decompress the `rayhunter-vX.X.X-PLATFORM.zip` archive. Open the terminal and navigate to the folder. (Be sure to replace X.X.X with the correct version number!)
 
     ```bash
@@ -62,7 +64,7 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
 
 7. The installer will eventually tell you it's done, and the device will reboot.
 
-8. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter.md). You should also see a green line flash along the top of top the display on the device.
+8. Rayhunter should now be running! You can verify this by [viewing Rayhunter's web UI](./using-rayhunter.md). You should also see a green line flash along the top of the display on the device.
 
 ## Troubleshooting
 
