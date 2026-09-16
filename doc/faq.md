@@ -32,6 +32,12 @@ Some hotspots (notably the T-Mobile TMOHS1 and Wingtech CT2MHS01) shut down thei
 
 To avoid this, set Wi-Fi Standby to "Always on" in the hotspot's native admin UI. See [TMOHS1](./tmobile-tmohs1.md#wi-fi-auto-shutdown) or [CT2MHS01](./wingtech-ct2mhs01.md#wi-fi-auto-shutdown) for step-by-step instructions.
 
+### The web UI opens my router instead of Rayhunter
+
+The Orbic (like most hotspots) serves both its admin page and Rayhunter at `192.168.1.1`. Many home routers use that same address, so if your computer is connected to your home network **and** the device at the same time — for example, the device over USB tethering while your Wi-Fi or Ethernet is still on a `192.168.1.x` network — your operating system cannot tell the two `192.168.1.1`s apart, and `http://192.168.1.1:8080` may reach your router instead of the device.
+
+To avoid the clash, either connect **only** to the device while using the web UI (disconnect your other adapters), or change your home router's LAN subnet to something other than `192.168.1.x` (for example, `192.168.10.x`).
+
 ### How do I re-enable USB tethering after installing Rayhunter?
 
 If you have installed with `./installer orbic-usb`, you might find that USB
