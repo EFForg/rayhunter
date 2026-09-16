@@ -146,6 +146,12 @@ jobs:
         npm install
         npm run build -w daemon/web
         cargo check --verbose
+    - name: Fail if npm install modified package-lock.json
+      run: |
+        git diff --exit-code package-lock.json || {
+          echo "::error::npm install modified package-lock.json. Run 'npm install' locally and commit the updated lockfile."
+          exit 1
+        }
     - name: Run tests
       run: |
         cargo test --verbose
@@ -194,6 +200,12 @@ jobs:
         with:
           persist-credentials: false
       - run: npm install
+      - name: Fail if npm install modified package-lock.json
+        run: |
+          git diff --exit-code package-lock.json || {
+            echo "::error::npm install modified package-lock.json. Run 'npm install' locally and commit the updated lockfile."
+            exit 1
+          }
       - run: npm run lint -w daemon/web
       - run: npm run check -w daemon/web
       - run: npm run test -w daemon/web
