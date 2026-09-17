@@ -31,7 +31,10 @@ impl Analyzer for NoNasMessagesAnalyzer {
             key: "no_nas_messages".into(),
             default_enabled: false,
             name: "No NAS Messages".into(),
-            description: "Warns if a recording contains diagnostic traffic spanning 5 minutes but no NAS messages, which usually means the SIM card is not working and the recording is not usable for detecting IMSI catchers.".into(),
+            description: "Warns if a recording contains diagnostic traffic spanning 5 minutes \
+                         but no NAS messages, which usually means the SIM card is not working \
+                         and the recording is not usable for detecting IMSI catchers."
+                .into(),
             version: 1,
         }
     }

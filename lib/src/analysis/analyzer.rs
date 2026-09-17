@@ -60,9 +60,9 @@ fn all_analyzers(
     .into_iter()
 }
 
-/// Analyzer enablement overrides keyed by [AnalyzerMetadata::key]. Missing
-/// keys use the analyzer default; unknown keys are retained and produce a
-/// warning when deserialized.
+/// Stores whether an analyzer is enabled, keyed by [AnalyzerMetadata::key].
+/// Missing keys use the analyzer default; unknown keys are retained and
+/// produce a warning when deserialized.
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 #[serde(transparent)]
@@ -80,9 +80,10 @@ impl Default for AnalyzerConfig {
 }
 
 impl AnalyzerConfig {
-    /// Returns `default` when `key` has no configured override.
-    fn is_enabled(&self, key: &str, default: bool) -> bool {
-        self.0.get(key).copied().unwrap_or(default)
+    /// Returns the configured override for `key`, or `None` when there is no
+    /// config entry for it.
+    fn is_enabled(&self, key: &str) -> Option<bool> {
+        self.0.get(key).copied()
     }
 }
 
@@ -215,7 +216,7 @@ pub trait Analyzer {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct AnalyzerMetadata {
-    /// Stable configuration key.
+    /// Unique configuration key. Should remain the same even if `name` changes to maintain config stability.
     #[cfg_attr(feature = "apidocs", schema(value_type = String))]
     pub key: Cow<'static, str>,
     pub default_enabled: bool,
@@ -421,7 +422,10 @@ impl Harness {
         let mut harness = Harness::new();
 
         for (metadata, analyzer) in all_analyzers(device_metadata) {
-            if analyzer_config.is_enabled(metadata.key.as_ref(), metadata.default_enabled) {
+            if analyzer_config
+                .is_enabled(metadata.key.as_ref())
+                .unwrap_or(metadata.default_enabled)
+            {
                 harness.add_analyzer(metadata, analyzer);
             }
         }
@@ -604,6 +608,15 @@ impl Harness {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_analyzer_keys_are_unique() {
+        let metadata = get_analyzers_metadata();
+        let mut keys: Vec<&str> = metadata.iter().map(|m| m.key.as_ref()).collect();
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), metadata.len(), "duplicate analyzer keys");
+    }
 
     #[test]
     fn test_analysis_row_deserialize_old_format() {

@@ -15,7 +15,9 @@ impl Analyzer for NasNullCipherAnalyzer {
             key: "nas_null_cipher".into(),
             default_enabled: true,
             name: "NAS Null Cipher".into(),
-            description: "Tests whether the MME requests to use a null cipher in the NAS security mode command".into(),
+            description: "Tests whether the MME requests to use a null cipher \
+                         in the NAS security mode command"
+                .into(),
             version: 1,
         }
     }
