@@ -42,7 +42,9 @@
             loading = true;
             [config, analyzers] = await Promise.all([get_config(), get_analyzers()]);
             for (const analyzer of analyzers) {
-                config.analyzers[analyzer.key] ??= analyzer.default_enabled;
+                if (config.analyzers[analyzer.key] === undefined) {
+                    config.analyzers[analyzer.key] = analyzer.default_enabled;
+                }
             }
             dnsServersInput = config.dns_servers ? config.dns_servers.join(', ') : '';
             message = '';
