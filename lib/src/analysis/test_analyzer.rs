@@ -14,7 +14,11 @@ impl Analyzer for TestAnalyzer {
             key: "test_analyzer".into(),
             default_enabled: false,
             name: "Test Analyzer".into(),
-            description: "This is an analyzer which can be used to test that your rayhunter is working. It will generate an alert for every SIB1 message (a beacon from the cell tower) that it sees. Do not leave this on when you are hunting or it will be very noisy.".into(),
+            description: "This is an analyzer which can be used to test that your rayhunter \
+                         is working. It will generate an alert for every SIB1 message \
+                         (a beacon from the cell tower) that it sees. Do not leave this on \
+                         when you are hunting or it will be very noisy."
+                .into(),
             version: 1,
         }
     }

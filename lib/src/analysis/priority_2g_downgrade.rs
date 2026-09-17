@@ -53,7 +53,9 @@ impl Analyzer for LteSib6And7DowngradeAnalyzer {
             key: "lte_sib6_and_7_downgrade".into(),
             default_enabled: true,
             name: "LTE SIB6/7 Downgrade".into(),
-            description: "Tests for LTE cells broadcasting a SIB type 6 and 7 which include 2G/3G frequencies with higher priorities.".into(),
+            description: "Tests for LTE cells broadcasting a SIB type 6 and 7 which include \
+                         2G/3G frequencies with higher priorities."
+                .into(),
             version: 2,
         }
     }
