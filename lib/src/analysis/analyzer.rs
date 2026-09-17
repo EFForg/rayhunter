@@ -32,6 +32,7 @@ pub struct AnalyzerConfig {
     pub test_analyzer: bool,
     pub imsi_requested: bool,
     pub no_nas_messages: bool,
+    pub wifi_analyzer: bool,
 }
 
 impl Default for AnalyzerConfig {
@@ -46,6 +47,7 @@ impl Default for AnalyzerConfig {
             incomplete_sib: true,
             test_analyzer: false,
             no_nas_messages: false,
+            wifi_analyzer: false,
         }
     }
 }
@@ -396,6 +398,22 @@ impl Harness {
 
     pub fn add_analyzer(&mut self, analyzer: Box<dyn Analyzer + Send>) {
         self.analyzers.push(analyzer);
+    }
+
+    pub fn analyze_wifi_network(
+        &mut self,
+        bssid: String,
+        timestamp: DateTime<FixedOffset>,
+    ) -> AnalysisRow {
+        let mut analysis_row = AnalysisRow::new();
+        let ie = InformationElement::WifiNetwork(bssid);
+        for analyzer in &mut self.analyzers {
+            if let Some(event) = analyzer.analyze_information_element(&ie, 0, timestamp) {
+                analysis_row.events.push(Some(event));
+            }
+        }
+
+        analysis_row
     }
 
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {

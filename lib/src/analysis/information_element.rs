@@ -26,7 +26,7 @@ pub enum InformationElement {
     // so we box it to prevent the size of the enum (any variant) from blowing up.
     LTE(Box<LteInformationElement>),
     FiveG,
-    WifiBSSIDList(Vec<String>),
+    WifiNetwork(String),
 }
 
 #[derive(Debug)]

@@ -38,6 +38,7 @@ use crate::update::{UpdateStatus, run_update_check_worker};
 use crate::webdav::run_webdav_upload_worker;
 use crate::wifi_scan::WifiScanCtrlMessage;
 use crate::wifi_scan::run_wifi_scanner;
+use crate::wifi_store::{WifiStore, WifiStoreError};
 use wifi_station::WifiStatus;
 
 use analysis::{
@@ -114,6 +115,14 @@ async fn run_server(
             .await
             .unwrap();
     })
+}
+
+async fn init_wifi_store(config: &config::Config) -> Result<WifiStore, WifiStoreError> {
+    if WifiStore::exists(config.wifi_store_path.clone()).await? {
+        WifiStore::new(config.wifi_store_path.clone()).await
+    } else {
+        WifiStore::create(config.wifi_store_path.clone()).await
+    }
 }
 
 // Loads a RecordingStore if one exists, and if not, only create one if we're
@@ -212,8 +221,10 @@ async fn run_with_config(
     println!("R A Y H U N T E R 🐳");
 
     let store = init_qmdl_store(&config).await?;
+    let wifi_store = init_wifi_store(&config).await?;
     let analysis_status = AnalysisStatus::new(&store);
     let qmdl_store_lock = Arc::new(RwLock::new(store));
+    let wifi_store_lock = Arc::new(RwLock::new(wifi_store));
     let (diag_tx, diag_rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
     let (wifi_tx, wifi_rx) = mpsc::channel::<WifiScanCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
@@ -355,6 +366,7 @@ async fn run_with_config(
         config_path: args.config_path.clone(),
         config: config.clone(),
         qmdl_store_lock: qmdl_store_lock.clone(),
+        wifi_store_lock: wifi_store_lock.clone(),
         diag_device_ctrl_sender: diag_tx,
         wifi_scan_sender: wifi_tx,
         analysis_status_lock,
@@ -369,7 +381,17 @@ async fn run_with_config(
     run_server(&task_tracker, state.clone(), shutdown_token.clone()).await;
 
     //if config.analyzers.wifi_oui_analyzer {
-    run_wifi_scanner(&task_tracker, state, shutdown_token.clone(), wifi_rx).await;
+    run_wifi_scanner(
+        &task_tracker,
+        state,
+        shutdown_token.clone(),
+        wifi_rx,
+        wifi_store_lock,
+        config.min_space_to_start_recording_mb,
+        config.min_space_to_continue_recording_mb,
+        config.wifi_ouis,
+    )
+    .await;
     //}
 
     task_tracker.close();
