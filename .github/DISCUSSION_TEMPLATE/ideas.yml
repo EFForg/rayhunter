@@ -1,0 +1,15 @@
+body:
+  - type: textarea
+    attributes:
+      label: What's your idea?
+      description: Describe the idea and the problem it would solve for Rayhunter users.
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have read [CONTRIBUTING.md](https://github.com/EFForg/rayhunter/blob/main/CONTRIBUTING.md)
+          required: true
+        - label: No generative AI (including LLMs) tools were used to write this post.
+          required: true

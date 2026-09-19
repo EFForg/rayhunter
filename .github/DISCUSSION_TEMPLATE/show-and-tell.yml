@@ -1,0 +1,14 @@
+body:
+  - type: textarea
+    attributes:
+      label: What would you like to share?
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have read [CONTRIBUTING.md](https://github.com/EFForg/rayhunter/blob/main/CONTRIBUTING.md)
+          required: true
+        - label: No generative AI (including LLMs) tools were used to write this post.
+          required: true
