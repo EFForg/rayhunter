@@ -8,6 +8,8 @@ body:
       options:
         - label: I have read [CONTRIBUTING.md](https://github.com/EFForg/rayhunter/blob/main/CONTRIBUTING.md)
           required: true
+        - label: No generative AI (including LLMs) tools were used to write this issue.
+          required: true
   - type: textarea
     id: problem
     attributes:
