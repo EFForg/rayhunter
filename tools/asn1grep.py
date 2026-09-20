@@ -60,7 +60,7 @@ if __name__ == "__main__":
     terminating_types = get_terminating_types(rrc_asn)
     needle = rrc_asn.types.get(type_name)
     if needle == None:
-        raise ValueError(f"couldn't find type {type}")
+        raise ValueError(f"couldn't find type {type_name}")
 
     for haystack in terminating_types:
         for result in search_type(haystack.type, type_name):
