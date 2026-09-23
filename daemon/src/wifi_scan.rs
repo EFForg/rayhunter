@@ -1,20 +1,18 @@
-use chrono::{DateTime, FixedOffset, Local, TimeDelta};
+use chrono::{DateTime, FixedOffset, Local};
 use log::{debug, error, info, warn};
-use rayhunter::DeviceMetadata;
-use rayhunter::analysis::analyzer::{AnalyzerConfig, EventType};
+use rayhunter::analysis::analyzer::EventType;
 use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
+use tokio::sync::{oneshot, mpsc};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::fs::File;
-use tokio::sync::{RwLock, mpsc, oneshot};
-use tokio::{select, task::JoinHandle, time};
+use tokio::{select, time};
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 use wifi_station::{STA_IFACE, WifiNetwork, scan_wifi_networks};
 
-use crate::diag::{DiskSpaceCheck, check_disk_space};
-use crate::qmdl_store::RecordingStoreError;
-use crate::server::ServerState;
-use crate::wifi_store::{WifiAnalysisWriter, WifiStore, WifiStoreError, WifiWriter};
+use crate::display;
+use crate::notifications::{Notification, NotificationType};
+use crate::wifi_store::{WifiStore, WifiStoreError};
 
 pub enum WifiScanCtrlMessage {
     StopRecording,
@@ -36,17 +34,17 @@ pub enum WifiScanCtrlMessage {
 // followed by zero or more WiFi network structs, containing the
 // BSSID, SSID, signal strength and security for the network
 #[derive(Clone, Default, Deserialize, Serialize)]
-pub struct WifiScanEntry {
+pub struct WifiScan {
     pub start_ts: DateTime<FixedOffset>,
     pub end_ts: DateTime<FixedOffset>,
     pub networks: Vec<WifiNetwork>,
 }
 
-impl WifiScanEntry {
+impl WifiScan {
     fn new() -> Self {
-        let mut entry = Self::default();
-        entry.start_ts = Local::now().fixed_offset();
-        entry
+        let mut scan = Self::default();
+        scan.start_ts = Local::now().fixed_offset();
+        scan
     }
 
     fn finish(&mut self, networks: Vec<WifiNetwork>) {
@@ -57,13 +55,15 @@ impl WifiScanEntry {
 
 pub async fn run_wifi_scanner(
     task_tracker: &TaskTracker,
-    state: Arc<ServerState>,
+    wifi_scan_lock: Arc<RwLock<()>>,
     shutdown_token: CancellationToken,
     mut wifi_rx: mpsc::Receiver<WifiScanCtrlMessage>,
     wifi_store_lock: Arc<RwLock<WifiStore>>,
     min_space_to_start_mb: u64,
     min_space_to_continue_mb: u64,
     wifi_ouis: Option<Vec<String>>,
+    notification_channel: mpsc::Sender<Notification>,
+    ui_update_sender: mpsc::Sender<display::DisplayState>,
 ) {
     // Don't bother if we don't have OUIs specified
     if wifi_ouis.is_some() {
@@ -71,8 +71,7 @@ pub async fn run_wifi_scanner(
         info!("starting wifi scanner");
         task_tracker.spawn(async move {
             let mut started = false;
-            let mut wifi_writer: Option<WifiWriter<File>> = None;
-            let mut analysis_writer: Option<WifiAnalysisWriter> = None;
+            let mut max_type_seen = EventType::Informational;
             loop {
                 select! {
                     message = wifi_rx.recv() => {
@@ -80,7 +79,7 @@ pub async fn run_wifi_scanner(
                             Some(WifiScanCtrlMessage::StartRecording { response_tx }) => {
                                 started = true;
                                 // Lock wifi store
-                                let mut wifi_store = wifi_store_lock.write().await;
+                                let wifi_store = wifi_store_lock.write().await;
 
                                 // Check disk space
                                 match wifi_store.check_disk_space(min_space_to_start_mb, min_space_to_continue_mb).await {
@@ -92,28 +91,6 @@ pub async fn run_wifi_scanner(
                                         break;
                                     }
                                 }
-                                // Create WifiWriter
-                                let (wifi_file, analysis_file) = match wifi_store.new_entry().await {
-                                    Ok((wifi, analysis)) => (wifi, analysis),
-                                    Err(error) => {
-                                        error!("Error creating wifi file: {error}");
-                                        return;
-                                    }
-                                };
-                                wifi_writer = Some(WifiWriter::new(wifi_file));
-
-                                analysis_writer = match WifiAnalysisWriter::new(
-                                    analysis_file,
-                                    Some(wifi_ouis.clone()),
-                                ).await.map_err(WifiStoreError::IOError) {
-                                    Ok(writer) => Some(writer),
-                                    Err(error) => {
-                                        if let Some(tx) = response_tx {
-                                            tx.send(Err(error)).ok();
-                                        }
-                                        break;
-                                    }
-                                };
                             }
                             Some(WifiScanCtrlMessage::StopRecording) => {
                                 started = false;
@@ -133,31 +110,51 @@ pub async fn run_wifi_scanner(
                         return;
                     }
                     _ = time::sleep(Duration::from_secs(15)), if started => {
-                        if state.wifi_scan_lock.try_lock().is_err() {
+                        if wifi_scan_lock.try_write().is_err() {
                             warn!("WiFi scan already in progress");
                             continue;
                         }
                         debug!("Calling scan_wifi_networks()");
-                        let mut entry = WifiScanEntry::new();
+                        let mut scan = WifiScan::new();
                         match scan_wifi_networks(STA_IFACE).await {
                             Ok(networks) => {
+                                let wifi_store = wifi_store_lock.write().await;
                                 debug!("Found {} networks", networks.len());
-                                entry.finish(networks);
-                                let timestamp = Local::now();
-                                if let Some(ref mut wifi_writer) = wifi_writer {
-                                    if let Err(error) = wifi_writer.write(entry.clone()).await {
-                                        error!("Error writing to Wifi file: {error}");
-                                    }
+                                scan.finish(networks);
+                                if let Err(error) = wifi_store.write_scan_file(&scan).await {
+                                    error!("Error writing to Wifi file: {error}");
                                 }
-                                // Call AnalysisWriter.analyze_networks()
-                                if let Some(ref mut analysis_writer) = analysis_writer {
-                                    let max_type = match analysis_writer.analyze_networks(entry).await {
-                                        Ok(t) => t,
-                                        Err(e) => {
-                                            warn!("failed to analyze container: {e}");
-                                            EventType::Informational
-                                        }
-                                    };
+                                let max_type = match wifi_store.write_analysis_file(&scan, &wifi_ouis).await {
+                                    Ok(t) => t,
+                                    Err(e) => {
+                                        warn!("failed to analyze wifi scan: {e}");
+                                        EventType::Informational
+                                    }
+                                };
+
+                                // Code duplicated from diag.rs
+                                if max_type > EventType::Informational {
+                                    info!("a heuristic triggered on this run!");
+                                    notification_channel
+                                        .send(Notification::new(
+                                            NotificationType::Warning,
+                                            format!("Rayhunter has detected a {:?} severity event", max_type),
+                                            Some(Duration::from_secs(60 * 5)),
+                                        ))
+                                        .await
+                                        .expect("Failed to send to notification channel");
+                                }
+
+                                if max_type > max_type_seen {
+                                    max_type_seen = max_type;
+                                    if max_type_seen > EventType::Informational {
+                                        ui_update_sender
+                                            .send(display::DisplayState::WarningDetected {
+                                                event_type: max_type_seen,
+                                            })
+                                            .await
+                                            .expect("couldn't send ui update message: {}");
+                                    }
                                 }
                             }
                             Err(e) => {

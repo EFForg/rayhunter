@@ -15,7 +15,7 @@ use tokio::{
 use crate::{
     diag::{DiskSpaceCheck, check_disk_space},
     qmdl_store::FileKind,
-    wifi_scan::WifiScanEntry,
+    wifi_scan::WifiScan,
 };
 
 pub struct WifiWriter<T>
@@ -33,13 +33,18 @@ where
         Self { writer }
     }
 
-    pub async fn write(&mut self, entry: WifiScanEntry) -> Result<(), WifiStoreError> {
+    pub async fn write(&mut self, entry: &WifiScan) -> Result<(), WifiStoreError> {
         let json = serde_json::to_string(&entry).map_err(WifiStoreError::JsonWriteError)?;
         self.writer
             .write_all(json.as_bytes())
             .await
             .map_err(WifiStoreError::IOError)?;
         let _ = self.writer.flush();
+        Ok(())
+    }
+
+    pub async fn close(&mut self) -> Result<(), WifiStoreError> {
+        self.writer.shutdown().await.map_err(WifiStoreError::IOError)?;
         Ok(())
     }
 }
@@ -50,7 +55,7 @@ pub struct WifiAnalysisWriter {
 }
 
 impl WifiAnalysisWriter {
-    pub async fn new(file: File, wifi_ouis: Option<Vec<String>>) -> Result<Self, std::io::Error> {
+    pub async fn new(file: File, wifi_ouis: &Vec<String>) -> Result<Self, std::io::Error> {
         let mut harness = Harness::new();
         let wifi_analyzer = WifiOUIAnalyzer::new(wifi_ouis);
         harness.add_analyzer(Box::new(wifi_analyzer));
@@ -66,14 +71,14 @@ impl WifiAnalysisWriter {
 
     pub async fn analyze_networks(
         &mut self,
-        entry: WifiScanEntry,
+        entry: &WifiScan,
     ) -> Result<EventType, std::io::Error> {
         let mut max_type = EventType::Informational;
 
-        for network in entry.networks {
+        for network in entry.networks.iter() {
             let analysis_row = self
                 .harness
-                .analyze_wifi_network(network.bssid, entry.start_ts);
+                .analyze_wifi_network(&network.bssid, entry.start_ts);
             if !analysis_row.is_empty() {
                 self.write(&analysis_row).await?;
                 max_type = cmp::max(max_type, analysis_row.get_max_event_type());
@@ -91,8 +96,8 @@ impl WifiAnalysisWriter {
     }
 
     // Flushes any pending I/O to disk before dropping the writer
-    pub async fn close(mut self) -> Result<(), std::io::Error> {
-        self.writer.flush().await?;
+    pub async fn close(mut self) -> Result<(), WifiStoreError> {
+        self.writer.flush().await.map_err(WifiStoreError::IOError)?;
         Ok(())
     }
 }
@@ -148,6 +153,29 @@ impl WifiStore {
         Ok(Self {
             path: path.as_ref().to_path_buf(),
         })
+    }
+
+    pub async fn write_scan_file(&self, scan: &WifiScan) -> Result<(), WifiStoreError> {
+        let wifi_filepath =
+            FileKind::Wifi.get_filepath(&format!("{}", scan.start_ts), &self.path, false);
+        let wifi_file = File::create(&wifi_filepath)
+            .await
+            .map_err(WifiStoreError::CreateFileError)?;
+        let mut wifi_writer = WifiWriter::new(wifi_file);
+        wifi_writer.write(scan).await?;
+        wifi_writer.close().await
+    }
+
+    pub async fn write_analysis_file(&self, scan: &WifiScan, wifi_ouis: &Vec<String>) -> Result<EventType, WifiStoreError> {
+        let analysis_filepath =
+            FileKind::Analysis.get_filepath(&format!("{}", scan.start_ts), &self.path, false);
+        let analysis_file = File::create(&analysis_filepath)
+            .await
+            .map_err(WifiStoreError::CreateFileError)?;
+        let mut analysis_writer = WifiAnalysisWriter::new(analysis_file, wifi_ouis).await.map_err(WifiStoreError::IOError)?;
+        let event_type = analysis_writer.analyze_networks(scan).await.map_err(WifiStoreError::IOError)?;
+        analysis_writer.close().await?;
+        Ok(event_type)
     }
 
     pub async fn new_entry(&mut self) -> Result<(File, File), WifiStoreError> {

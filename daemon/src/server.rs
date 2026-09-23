@@ -37,13 +37,11 @@ use crate::pcap::{generate_pcap_data, load_gps_records_for_entry};
 use crate::qmdl_store::{FileKind, RecordingStore};
 use crate::update::UpdateStatus;
 use crate::wifi_scan::WifiScanCtrlMessage;
-use crate::wifi_store::WifiStore;
 
 pub struct ServerState {
     pub config_path: String,
     pub config: Config,
     pub qmdl_store_lock: Arc<RwLock<RecordingStore>>,
-    pub wifi_store_lock: Arc<RwLock<WifiStore>>,
     pub diag_device_ctrl_sender: Sender<DiagDeviceCtrlMessage>,
     pub wifi_scan_sender: Sender<WifiScanCtrlMessage>,
     pub analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
@@ -51,7 +49,7 @@ pub struct ServerState {
     pub daemon_restart_token: CancellationToken,
     pub ui_update_sender: Option<Sender<DisplayState>>,
     pub wifi_status: Arc<RwLock<wifi_station::WifiStatus>>,
-    pub wifi_scan_lock: tokio::sync::Mutex<()>,
+    pub wifi_scan_lock: Arc<RwLock<()>>,
     pub gps_state: Arc<RwLock<Option<GpsData>>>,
     pub update_status_lock: Arc<RwLock<UpdateStatus>>,
 }
@@ -505,7 +503,7 @@ pub async fn get_wifi_status(
 pub async fn scan_wifi(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<Vec<wifi_station::WifiNetwork>>, (StatusCode, String)> {
-    let _guard = state.wifi_scan_lock.try_lock().map_err(|_| {
+    let _guard = state.wifi_scan_lock.try_write().map_err(|_| {
         (
             StatusCode::TOO_MANY_REQUESTS,
             "WiFi scan already in progress".to_string(),
@@ -620,6 +618,7 @@ mod tests {
     ) -> Arc<ServerState> {
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let (analysis_tx, _analysis_rx) = tokio::sync::mpsc::channel(1);
+        let (wifi_tx, _wifi_rx) = tokio::sync::mpsc::channel::<WifiScanCtrlMessage>(1);
 
         let analysis_status = {
             let store = store_lock.try_read().unwrap();
@@ -631,12 +630,13 @@ mod tests {
             config: Config::default(),
             qmdl_store_lock: store_lock,
             diag_device_ctrl_sender: tx,
+            wifi_scan_sender: wifi_tx,
             analysis_status_lock: Arc::new(RwLock::new(analysis_status)),
             analysis_sender: analysis_tx,
             daemon_restart_token: CancellationToken::new(),
             ui_update_sender: None,
             wifi_status: Arc::new(RwLock::new(wifi_station::WifiStatus::default())),
-            wifi_scan_lock: tokio::sync::Mutex::new(()),
+            wifi_scan_lock: Arc::new(RwLock::new(())),
             gps_state: Arc::new(RwLock::new(None)),
             update_status_lock: Arc::new(RwLock::new(UpdateStatus::default())),
         })
