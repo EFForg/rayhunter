@@ -440,11 +440,11 @@ impl Harness {
 
     pub fn analyze_wifi_network(
         &mut self,
-        bssid: String,
+        bssid: &str,
         timestamp: DateTime<FixedOffset>,
     ) -> AnalysisRow {
         let mut analysis_row = AnalysisRow::new();
-        let ie = InformationElement::WifiNetwork(bssid);
+        let ie = InformationElement::WifiNetwork(bssid.to_string());
         for analyzer in &mut self.analyzers {
             if let Some(event) = analyzer.analyze_information_element(&ie, 0, timestamp) {
                 analysis_row.events.push(Some(event));

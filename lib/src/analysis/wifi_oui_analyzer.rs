@@ -9,12 +9,12 @@ use crate::analysis::{
 };
 
 pub struct WifiOUIAnalyzer {
-    wifi_ouis: Option<Vec<String>>,
+    wifi_ouis: Vec<String>,
 }
 
 impl WifiOUIAnalyzer {
-    pub fn new(wifi_ouis: Option<Vec<String>>) -> Self {
-        Self { wifi_ouis }
+    pub fn new(wifi_ouis: &Vec<String>) -> Self {
+        Self { wifi_ouis: wifi_ouis.clone() }
     }
 }
 
@@ -39,19 +39,18 @@ impl Analyzer for WifiOUIAnalyzer {
     ) -> Option<Event> {
         if let InformationElement::WifiNetwork(bssid) = ie {
             debug!("WifiOUIAnalyzer got BSSIDs {:?}", bssid);
-            if let Some(ouis) = &self.wifi_ouis {
-                if !ouis.is_empty() {
-                    if ouis
-                        .iter()
-                        .find(|oui| bssid.to_uppercase().starts_with(&oui.to_uppercase()))
-                        .is_some()
-                    {
-                        info!("Found match for bssid {bssid}");
-                        return Some(Event {
-                            event_type: EventType::Informational,
-                            message: format!("Found suspicious wifi network {bssid}"),
-                        });
-                    }
+            if !self.wifi_ouis.is_empty() {
+                if self
+                    .wifi_ouis
+                    .iter()
+                    .find(|oui| bssid.to_uppercase().starts_with(&oui.to_uppercase()))
+                    .is_some()
+                {
+                    info!("Found match for bssid {bssid}");
+                    return Some(Event {
+                        event_type: EventType::Informational,
+                        message: format!("Found suspicious wifi network {bssid}"),
+                    });
                 }
             }
         }

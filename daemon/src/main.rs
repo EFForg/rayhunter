@@ -227,6 +227,7 @@ async fn run_with_config(
     let analysis_status = AnalysisStatus::new(&store);
     let qmdl_store_lock = Arc::new(RwLock::new(store));
     let wifi_store_lock = Arc::new(RwLock::new(wifi_store));
+    let wifi_scan_lock = Arc::new(RwLock::new(()));
     let (diag_tx, diag_rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
     let (wifi_tx, wifi_rx) = mpsc::channel::<WifiScanCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
@@ -263,6 +264,21 @@ async fn run_with_config(
             config.gps_mode,
             gps_fixed_coords,
         );
+
+        run_wifi_scanner(
+            &task_tracker,
+            wifi_scan_lock.clone(),
+            shutdown_token.clone(),
+            wifi_rx,
+            wifi_store_lock.clone(),
+            config.min_space_to_start_recording_mb,
+            config.min_space_to_continue_recording_mb,
+            config.wifi_ouis.clone(),
+            notification_service.new_handler(),
+            ui_update_tx.clone(),
+        )
+        .await;
+
         info!("Starting UI");
 
         let update_ui = match &config.device {
@@ -368,7 +384,6 @@ async fn run_with_config(
         config_path: args.config_path.clone(),
         config: config.clone(),
         qmdl_store_lock: qmdl_store_lock.clone(),
-        wifi_store_lock: wifi_store_lock.clone(),
         diag_device_ctrl_sender: diag_tx,
         wifi_scan_sender: wifi_tx,
         analysis_status_lock,
@@ -376,25 +391,11 @@ async fn run_with_config(
         daemon_restart_token: restart_token.clone(),
         ui_update_sender: Some(ui_update_tx.clone()),
         wifi_status,
-        wifi_scan_lock: tokio::sync::Mutex::new(()),
+        wifi_scan_lock,
         gps_state: Arc::new(tokio::sync::RwLock::new(initial_gps)),
         update_status_lock: update_status_lock.clone(),
     });
     run_server(&task_tracker, state.clone(), shutdown_token.clone()).await;
-
-    //if config.analyzers.wifi_oui_analyzer {
-    run_wifi_scanner(
-        &task_tracker,
-        state,
-        shutdown_token.clone(),
-        wifi_rx,
-        wifi_store_lock,
-        config.min_space_to_start_recording_mb,
-        config.min_space_to_continue_recording_mb,
-        config.wifi_ouis,
-    )
-    .await;
-    //}
 
     task_tracker.close();
     task_tracker.wait().await;
