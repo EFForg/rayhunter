@@ -44,7 +44,10 @@ where
     }
 
     pub async fn close(&mut self) -> Result<(), WifiStoreError> {
-        self.writer.shutdown().await.map_err(WifiStoreError::IOError)?;
+        self.writer
+            .shutdown()
+            .await
+            .map_err(WifiStoreError::IOError)?;
         Ok(())
     }
 }
@@ -166,14 +169,23 @@ impl WifiStore {
         wifi_writer.close().await
     }
 
-    pub async fn write_analysis_file(&self, scan: &WifiScan, wifi_ouis: &Vec<String>) -> Result<EventType, WifiStoreError> {
+    pub async fn write_analysis_file(
+        &self,
+        scan: &WifiScan,
+        wifi_ouis: &Vec<String>,
+    ) -> Result<EventType, WifiStoreError> {
         let analysis_filepath =
             FileKind::Analysis.get_filepath(&format!("{}", scan.start_ts), &self.path, false);
         let analysis_file = File::create(&analysis_filepath)
             .await
             .map_err(WifiStoreError::CreateFileError)?;
-        let mut analysis_writer = WifiAnalysisWriter::new(analysis_file, wifi_ouis).await.map_err(WifiStoreError::IOError)?;
-        let event_type = analysis_writer.analyze_networks(scan).await.map_err(WifiStoreError::IOError)?;
+        let mut analysis_writer = WifiAnalysisWriter::new(analysis_file, wifi_ouis)
+            .await
+            .map_err(WifiStoreError::IOError)?;
+        let event_type = analysis_writer
+            .analyze_networks(scan)
+            .await
+            .map_err(WifiStoreError::IOError)?;
         analysis_writer.close().await?;
         Ok(event_type)
     }
