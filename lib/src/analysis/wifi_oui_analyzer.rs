@@ -14,7 +14,9 @@ pub struct WifiOUIAnalyzer {
 
 impl WifiOUIAnalyzer {
     pub fn new(wifi_ouis: &Vec<String>) -> Self {
-        Self { wifi_ouis: wifi_ouis.clone() }
+        Self {
+            wifi_ouis: wifi_ouis.clone(),
+        }
     }
 }
 
