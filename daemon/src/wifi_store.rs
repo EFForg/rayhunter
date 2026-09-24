@@ -39,7 +39,7 @@ where
             .write_all(json.as_bytes())
             .await
             .map_err(WifiStoreError::IOError)?;
-        let _ = self.writer.flush();
+        let _ = self.writer.flush().await;
         Ok(())
     }
 
@@ -58,7 +58,7 @@ pub struct WifiAnalysisWriter {
 }
 
 impl WifiAnalysisWriter {
-    pub async fn new(file: File, wifi_ouis: &Vec<String>) -> Result<Self, std::io::Error> {
+    pub async fn new(file: File, wifi_ouis: &[String]) -> Result<Self, std::io::Error> {
         let mut harness = Harness::new();
         let wifi_analyzer = WifiOUIAnalyzer::new(wifi_ouis);
         harness.add_analyzer(Box::new(wifi_analyzer));
@@ -172,7 +172,7 @@ impl WifiStore {
     pub async fn write_analysis_file(
         &self,
         scan: &WifiScan,
-        wifi_ouis: &Vec<String>,
+        wifi_ouis: &[String],
     ) -> Result<EventType, WifiStoreError> {
         let analysis_filepath =
             FileKind::Analysis.get_filepath(&format!("{}", scan.start_ts), &self.path, false);
@@ -190,34 +190,15 @@ impl WifiStore {
         Ok(event_type)
     }
 
-    pub async fn new_entry(&mut self) -> Result<(File, File), WifiStoreError> {
-        // if we've already got an entry open, close it
-        let now = rayhunter::clock::get_adjusted_now();
-        let wifi_filepath =
-            FileKind::Wifi.get_filepath(&format!("{}", now.timestamp()), &self.path, false);
-        let wifi_file = File::create(&wifi_filepath)
-            .await
-            .map_err(WifiStoreError::CreateFileError)?;
-        let analysis_filepath =
-            FileKind::Analysis.get_filepath(&format!("{}", now.timestamp()), &self.path, false);
-        let analysis_file = File::create(&analysis_filepath)
-            .await
-            .map_err(WifiStoreError::CreateFileError)?;
-        Ok((wifi_file, analysis_file))
-    }
-
     pub async fn check_disk_space(
         &self,
         min_space_to_start_mb: u64,
         min_space_to_continue_mb: u64,
     ) -> Result<(), WifiStoreError> {
         match check_disk_space(&self.path, min_space_to_start_mb, min_space_to_continue_mb) {
-            DiskSpaceCheck::Critical(mb) | DiskSpaceCheck::Warning(mb) => {
-                return Err(WifiStoreError::InsufficientDiskSpace(
-                    mb,
-                    min_space_to_start_mb,
-                ));
-            }
+            DiskSpaceCheck::Critical(mb) | DiskSpaceCheck::Warning(mb) => Err(
+                WifiStoreError::InsufficientDiskSpace(mb, min_space_to_start_mb),
+            ),
             DiskSpaceCheck::Ok(mb) => {
                 info!("Starting wifi recording with {}MB disk space available", mb);
                 Ok(())
