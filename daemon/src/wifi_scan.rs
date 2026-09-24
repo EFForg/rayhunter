@@ -19,13 +19,6 @@ pub enum WifiScanCtrlMessage {
     StartRecording {
         response_tx: Option<oneshot::Sender<Result<(), WifiStoreError>>>,
     },
-    DeleteEntry {
-        name: String,
-        response_tx: oneshot::Sender<Result<(), WifiStoreError>>,
-    },
-    DeleteAllEntries {
-        response_tx: oneshot::Sender<Result<(), WifiStoreError>>,
-    },
     Exit,
 }
 
@@ -42,9 +35,10 @@ pub struct WifiScan {
 
 impl WifiScan {
     fn new() -> Self {
-        let mut scan = Self::default();
-        scan.start_ts = Local::now().fixed_offset();
-        scan
+        Self {
+            start_ts: Local::now().fixed_offset(),
+            ..Default::default()
+        }
     }
 
     fn finish(&mut self, networks: Vec<WifiNetwork>) {
@@ -53,6 +47,7 @@ impl WifiScan {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn run_wifi_scanner(
     task_tracker: &TaskTracker,
     wifi_scan_lock: Arc<RwLock<()>>,
@@ -66,8 +61,7 @@ pub async fn run_wifi_scanner(
     ui_update_sender: mpsc::Sender<display::DisplayState>,
 ) {
     // Don't bother if we don't have OUIs specified
-    if wifi_ouis.is_some() {
-        let wifi_ouis = wifi_ouis.unwrap();
+    if let Some(wifi_ouis) = wifi_ouis {
         info!("starting wifi scanner");
         task_tracker.spawn(async move {
             let mut started = false;
@@ -77,6 +71,7 @@ pub async fn run_wifi_scanner(
                     message = wifi_rx.recv() => {
                         match message {
                             Some(WifiScanCtrlMessage::StartRecording { response_tx }) => {
+                                // Will start the scan the next time the timer goes off
                                 started = true;
                                 // Lock wifi store
                                 let wifi_store = wifi_store_lock.write().await;
@@ -93,14 +88,9 @@ pub async fn run_wifi_scanner(
                                 }
                             }
                             Some(WifiScanCtrlMessage::StopRecording) => {
+                                // Stop all further scans
                                 started = false;
-                                // TODO:
-                                // - Stop writing to wifi ndjson file
-                                // - Close writers
-                                // - Close entry
                             }
-                            Some(WifiScanCtrlMessage::DeleteEntry { name, response_tx }) => {}
-                            Some(WifiScanCtrlMessage::DeleteAllEntries { response_tx }) => {}
                             Some(WifiScanCtrlMessage::Exit) | None => {
                                 return;
                             }

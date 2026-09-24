@@ -161,6 +161,7 @@ async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, Rayh
 fn run_shutdown_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
+    wifi_sender: Sender<WifiScanCtrlMessage>,
     shutdown_token: CancellationToken,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_tx: Sender<AnalysisCtrlMessage>,
@@ -189,6 +190,10 @@ fn run_shutdown_thread(
             .send(DiagDeviceCtrlMessage::Exit)
             .await
             .expect("couldn't send Exit message to diag thread");
+        wifi_sender
+            .send(WifiScanCtrlMessage::Exit)
+            .await
+            .expect("couldn't send Exit message to wifi thread");
         analysis_tx
             .send(AnalysisCtrlMessage::Exit)
             .await
@@ -325,6 +330,7 @@ async fn run_with_config(
     run_shutdown_thread(
         &task_tracker,
         diag_tx.clone(),
+        wifi_tx.clone(),
         shutdown_token.clone(),
         qmdl_store_lock.clone(),
         analysis_tx.clone(),

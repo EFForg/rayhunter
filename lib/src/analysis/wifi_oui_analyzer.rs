@@ -13,9 +13,9 @@ pub struct WifiOUIAnalyzer {
 }
 
 impl WifiOUIAnalyzer {
-    pub fn new(wifi_ouis: &Vec<String>) -> Self {
+    pub fn new(wifi_ouis: &[String]) -> Self {
         Self {
-            wifi_ouis: wifi_ouis.clone(),
+            wifi_ouis: wifi_ouis.to_owned(),
         }
     }
 }
@@ -41,19 +41,18 @@ impl Analyzer for WifiOUIAnalyzer {
     ) -> Option<Event> {
         if let InformationElement::WifiNetwork(bssid) = ie {
             debug!("WifiOUIAnalyzer got BSSIDs {:?}", bssid);
-            if !self.wifi_ouis.is_empty() {
-                if self
+            if !self.wifi_ouis.is_empty()
+                && self
                     .wifi_ouis
                     .iter()
                     .find(|oui| bssid.to_uppercase().starts_with(&oui.to_uppercase()))
                     .is_some()
-                {
-                    info!("Found match for bssid {bssid}");
-                    return Some(Event {
-                        event_type: EventType::Informational,
-                        message: format!("Found suspicious wifi network {bssid}"),
-                    });
-                }
+            {
+                info!("Found match for bssid {bssid}");
+                return Some(Event {
+                    event_type: EventType::Informational,
+                    message: format!("Found suspicious wifi network {bssid}"),
+                });
             }
         }
 
