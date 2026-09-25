@@ -47,7 +47,6 @@
                 }
             }
             dnsServersInput = config.dns_servers ? config.dns_servers.join(', ') : '';
-            wifiOUIsInput = config.analyzers.wifi_ouis ? config.analyzers.wifi_ouis.join(', ') : '';
             message = '';
             messageType = null;
             poll_wifi_status();
@@ -66,15 +65,6 @@
         config.dns_servers =
             trimmed.length > 0
                 ? trimmed
-                      .split(',')
-                      .map((s) => s.trim())
-                      .filter((s) => s.length > 0)
-                : null;
-
-        const trimmed_ouis = wifiOUIsInput.trim();
-        config.analyzers.wifi_ouis =
-            trimmed_ouis.length > 0
-                ? trimmed_ouis
                       .split(',')
                       .map((s) => s.trim())
                       .filter((s) => s.length > 0)
