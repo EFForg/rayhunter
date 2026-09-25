@@ -105,32 +105,6 @@ impl Report {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::DateTime;
-
-    #[test]
-    fn process_row_records_skip_reason_and_event() {
-        let mut report = Report::new("test");
-        report.process_row(AnalysisRow {
-            packet_timestamp: Some(
-                DateTime::parse_from_rfc3339("2025-01-01T00:00:00+00:00").unwrap(),
-            ),
-            skipped_message_reason: Some("parse error".to_string()),
-            events: vec![Some(Event {
-                event_type: EventType::Low,
-                message: "warning".to_string(),
-            })],
-        });
-
-        assert_eq!(report.skipped, 1);
-        assert_eq!(report.skipped_reasons["parse error"], 1);
-        assert_eq!(report.warnings, 1);
-        assert_eq!(report.events.len(), 1);
-    }
-}
-
 async fn analyze_pcap(
     pcap_path: &str,
     show_skipped: bool,
@@ -289,5 +263,31 @@ async fn main() {
             .finish()
             .await
             .expect("failed to finish writing to JSON file");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::DateTime;
+
+    #[test]
+    fn process_row_records_skip_reason_and_event() {
+        let mut report = Report::new("test");
+        report.process_row(AnalysisRow {
+            packet_timestamp: Some(
+                DateTime::parse_from_rfc3339("2025-01-01T00:00:00+00:00").unwrap(),
+            ),
+            skipped_message_reason: Some("parse error".to_string()),
+            events: vec![Some(Event {
+                event_type: EventType::Low,
+                message: "warning".to_string(),
+            })],
+        });
+
+        assert_eq!(report.skipped, 1);
+        assert_eq!(report.skipped_reasons["parse error"], 1);
+        assert_eq!(report.warnings, 1);
+        assert_eq!(report.events.len(), 1);
     }
 }
