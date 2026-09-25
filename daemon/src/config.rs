@@ -62,6 +62,8 @@ use crate::notifications::NotificationType;
 pub struct Config {
     /// Path to store QMDL files
     pub qmdl_store_path: String,
+    /// Path to store Wifi files
+    pub wifi_store_path: String,
     /// Listening port
     pub port: u16,
     /// Debug mode
@@ -149,6 +151,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             qmdl_store_path: "/data/rayhunter/qmdl".to_string(),
+            wifi_store_path: "/data/rayhunter/wifi".to_string(),
             port: 8080,
             debug_mode: false,
             device: Device::Orbic,

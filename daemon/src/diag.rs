@@ -83,14 +83,18 @@ enum DiagState {
     Stopped,
 }
 
-enum DiskSpaceCheck {
+pub enum DiskSpaceCheck {
     Ok(u64),
     Warning(u64),
     Critical(u64),
     Failed,
 }
 
-fn check_disk_space(path: &std::path::Path, warning_mb: u64, critical_mb: u64) -> DiskSpaceCheck {
+pub fn check_disk_space(
+    path: &std::path::Path,
+    warning_mb: u64,
+    critical_mb: u64,
+) -> DiskSpaceCheck {
     match DiskStats::new(path.to_str().unwrap()) {
         Ok(stats) => {
             let available_mb = stats.available_bytes.unwrap_or(0) / 1024 / 1024;
@@ -598,6 +602,19 @@ pub async fn start_recording(
             )
         })?;
 
+    match response_rx.await {
+        Ok(Ok(())) => (),
+        Ok(Err(reason)) => {
+            return Err((StatusCode::INSUFFICIENT_STORAGE, reason.to_string()));
+        }
+        Err(e) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to receive start recording response: {e}"),
+            ));
+        }
+    };
+
     let (wifi_response_tx, wifi_response_rx) = oneshot::channel();
     state
         .wifi_scan_sender
@@ -612,22 +629,8 @@ pub async fn start_recording(
             )
         })?;
 
-    let qmdl_return_value: Result<(StatusCode, String), (StatusCode, String)> =
-        match response_rx.await {
-            Ok(Ok(())) => Ok((StatusCode::ACCEPTED, "ok".to_string())),
-            Ok(Err(reason)) => {
-                return Err((StatusCode::INSUFFICIENT_STORAGE, reason.to_string()));
-            }
-            Err(e) => {
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("failed to receive start recording response: {e}"),
-                ));
-            }
-        };
-
     match wifi_response_rx.await {
-        Ok(Ok(())) => qmdl_return_value,
+        Ok(Ok(())) => Ok((StatusCode::ACCEPTED, "ok".to_string())),
         Ok(Err(reason)) => Err((StatusCode::INSUFFICIENT_STORAGE, reason.to_string())),
         Err(e) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,

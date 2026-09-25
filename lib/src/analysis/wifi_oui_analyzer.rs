@@ -1,13 +1,7 @@
 use std::borrow::Cow;
 
 use chrono::{DateTime, FixedOffset};
-use log::{LevelFilter, Log, debug, info};
-use log4rs::{
-    Config, Logger,
-    append::file::FileAppender,
-    config::{Appender, Root},
-    encode::pattern::PatternEncoder,
-};
+use log::{debug, info};
 
 use crate::analysis::{
     analyzer::{Analyzer, Event, EventType},
@@ -15,33 +9,12 @@ use crate::analysis::{
 };
 
 pub struct WifiOUIAnalyzer {
-    wifi_ouis: Vec<String>,
-    logger: Box<dyn Log>,
+    wifi_ouis: Option<Vec<String>>,
 }
 
 impl WifiOUIAnalyzer {
-    pub fn new(ouis: &[String], logfile: String) -> Self {
-        let logger = Self::init_logger(logfile);
-        Self {
-            wifi_ouis: ouis.to_vec(),
-            logger: Box::new(logger),
-        }
-    }
-
-    fn init_logger(logfile: String) -> impl Log {
-        let logfile = FileAppender::builder()
-            .encoder(Box::new(PatternEncoder::new(
-                "[{d(%Y-%m-%dT%H:%M:%SZ)(utc)} {l}  {M}] {m}\n",
-            )))
-            .build(logfile)
-            .expect("Error creating FileAppender for wifi logs");
-
-        let config = Config::builder()
-            .appender(Appender::builder().build("logfile", Box::new(logfile)))
-            .build(Root::builder().appender("logfile").build(LevelFilter::Info))
-            .expect("Error creating config for wifi logs Logger");
-
-        Logger::new(config)
+    pub fn new(wifi_ouis: Option<Vec<String>>) -> Self {
+        Self { wifi_ouis }
     }
 }
 
@@ -64,21 +37,19 @@ impl Analyzer for WifiOUIAnalyzer {
         _packet_num: usize,
         _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
-        if let InformationElement::WifiBSSIDList(bssids) = ie {
-            debug!("WifiOUIAnalyzer got BSSIDs {:?}", bssids);
-            if !self.wifi_ouis.is_empty() {
-                for bssid in bssids {
-                    if self
-                        .wifi_ouis
+        if let InformationElement::WifiNetwork(bssid) = ie {
+            debug!("WifiOUIAnalyzer got BSSIDs {:?}", bssid);
+            if let Some(ouis) = &self.wifi_ouis {
+                if !ouis.is_empty() {
+                    if ouis
                         .iter()
                         .find(|oui| bssid.to_uppercase().starts_with(&oui.to_uppercase()))
                         .is_some()
                     {
-                        info!(logger: self.logger, "Found match for bssid {bssid}");
-                        self.logger.flush();
+                        info!("Found match for bssid {bssid}");
                         return Some(Event {
                             event_type: EventType::Informational,
-                            message: "Detected possible IMSI catcher wifi endpoint".to_string(),
+                            message: format!("Found suspicious wifi network {bssid}"),
                         });
                     }
                 }
