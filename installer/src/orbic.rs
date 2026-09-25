@@ -486,26 +486,33 @@ pub async fn send_serial_cmd(interface: &Interface, command: &str) -> Result<()>
         .into_result()
         .context("Failed to write command")?;
 
-    // Consume the echoed command
-    tokio::time::timeout(timeout, interface.bulk_in(0x82, RequestBuffer::new(256)))
-        .await
-        .context("Timed out reading submitted command")?
-        .into_result()
-        .context("Failed to read submitted command")?;
-
-    // Read the actual response
-    let response = tokio::time::timeout(timeout, interface.bulk_in(0x82, RequestBuffer::new(256)))
-        .await
-        .context("Timed out reading response")?
-        .into_result()
-        .context("Failed to read response")?;
-
-    // For some reason, on macOS the response buffer gets filled with garbage data that's
-    // rarely valid UTF-8. Luckily we only care about the first couple bytes, so just drop
-    // the garbage with `from_utf8_lossy` and look for our expected success string.
-    let responsestr = String::from_utf8_lossy(&response);
-    if !responsestr.contains("\r\nOK\r\n") {
-        bail!("Received unexpected response: {0}", responsestr);
+    let deadline = Instant::now() + timeout;
+    let mut response = Vec::new();
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            bail!(
+                "Timed out waiting for response to {command}: {}",
+                String::from_utf8_lossy(&response)
+            );
+        }
+        let packet =
+            tokio::time::timeout(remaining, interface.bulk_in(0x82, RequestBuffer::new(256)))
+                .await
+                .context("Timed out reading response")?
+                .into_result()
+                .context("Failed to read response")?;
+        response.extend_from_slice(&packet);
+        match serial_response_status(&response) {
+            SerialResponseStatus::Pending => {}
+            SerialResponseStatus::Success => break,
+            SerialResponseStatus::Error => {
+                bail!(
+                    "Device rejected command {command}: {}",
+                    String::from_utf8_lossy(&response)
+                );
+            }
+        }
     }
 
     Ok(())
