@@ -5,7 +5,7 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::time::Duration;
 
-use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError};
+use adb_client::{ADBDeviceExt, ADBUSBDevice, RustADBError, search_adb_devices};
 use anyhow::{Context, Result, anyhow, bail};
 use nusb::Interface;
 use nusb::transfer::{Control, ControlType, Recipient, RequestBuffer};
@@ -284,10 +284,22 @@ async fn get_adb() -> Result<ADBUSBDevice> {
     let mut failures = 0;
     loop {
         // Tethering changes the Orbic USB composition and can expose ADB under
-        // a different product ID. Prefer the known product, then use adb_client's
-        // interface-class autodetection so we do not depend on one USB mode.
+        // a different product ID. Prefer the known product, then search for a
+        // single ADB interface and require the Orbic Qualcomm vendor before
+        // opening it. Do not use ADBUSBDevice::autodetect(), which can select
+        // an unrelated Android device.
         let device = match ADBUSBDevice::new(VENDOR_ID, PRODUCT_ID) {
-            Err(RustADBError::DeviceNotFound(_)) => ADBUSBDevice::autodetect(),
+            Err(RustADBError::DeviceNotFound(_)) => match search_adb_devices()? {
+                Some((vendor_id, product_id)) if is_orbic_usb_vendor(vendor_id) => {
+                    ADBUSBDevice::new(vendor_id, product_id)
+                }
+                Some((vendor_id, product_id)) => Err(RustADBError::DeviceNotFound(format!(
+                    "ADB device {vendor_id:04x}:{product_id:04x} is not an Orbic"
+                ))),
+                None => Err(RustADBError::DeviceNotFound(
+                    "cannot find an Orbic ADB interface".into(),
+                )),
+            },
             result => result,
         };
         match device {
@@ -348,30 +360,12 @@ async fn adb_echo_test(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
     bail!("Could not communicate with the Orbic. Try disconnecting and reconnecting.");
 }
 
-#[cfg(not(target_os = "macos"))]
-async fn wait_for_usb_device() -> Result<()> {
-    use nusb::hotplug::HotplugEvent;
-    use tokio_stream::StreamExt;
-    loop {
-        let mut watcher = nusb::watch_devices()?;
-        while let Some(event) = watcher.next().await {
-            if let HotplugEvent::Connected(dev) = event
-                && is_orbic_usb_vendor(dev.vendor_id())
-            {
-                return Ok(());
-            }
-        }
-    }
-}
-
-#[cfg(target_os = "macos")]
-/// `nusb::watch_devices` doesn't appear to work on macOS to poll instead.
 async fn wait_for_usb_device() -> Result<()> {
     loop {
-        for device_info in nusb::list_devices()? {
-            if is_orbic_usb_vendor(device_info.vendor_id()) {
-                return Ok(());
-            }
+        if let Some((vendor_id, _product_id)) = search_adb_devices()?
+            && is_orbic_usb_vendor(vendor_id)
+        {
+            return Ok(());
         }
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
