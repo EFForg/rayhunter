@@ -283,7 +283,14 @@ async fn get_adb() -> Result<ADBUSBDevice> {
     const MAX_FAILURES: u32 = 10;
     let mut failures = 0;
     loop {
-        match ADBUSBDevice::new(VENDOR_ID, PRODUCT_ID) {
+        // Tethering changes the Orbic USB composition and can expose ADB under
+        // a different product ID. Prefer the known product, then use adb_client's
+        // interface-class autodetection so we do not depend on one USB mode.
+        let device = match ADBUSBDevice::new(VENDOR_ID, PRODUCT_ID) {
+            Err(RustADBError::DeviceNotFound(_)) => ADBUSBDevice::autodetect(),
+            result => result,
+        };
+        match device {
             Ok(dev) => match adb_echo_test(dev).await {
                 Ok(dev) => return Ok(dev),
                 Err(e) => {
@@ -303,12 +310,9 @@ async fn get_adb() -> Result<ADBUSBDevice> {
                 bail!(ORBIC_BUSY_MAC);
             }
             Err(RustADBError::DeviceNotFound(_)) => {
-                tokio::time::timeout(
-                    Duration::from_secs(30),
-                    wait_for_usb_device(VENDOR_ID, PRODUCT_ID),
-                )
-                .await
-                .context("Timeout waiting for Orbic to reconnect")??;
+                tokio::time::timeout(Duration::from_secs(30), wait_for_usb_device())
+                    .await
+                    .context("Timeout waiting for Orbic to reconnect")??;
             }
             Err(e) => {
                 if failures > MAX_FAILURES {
@@ -345,15 +349,14 @@ async fn adb_echo_test(mut adb_device: ADBUSBDevice) -> Result<ADBUSBDevice> {
 }
 
 #[cfg(not(target_os = "macos"))]
-async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
+async fn wait_for_usb_device() -> Result<()> {
     use nusb::hotplug::HotplugEvent;
     use tokio_stream::StreamExt;
     loop {
         let mut watcher = nusb::watch_devices()?;
         while let Some(event) = watcher.next().await {
             if let HotplugEvent::Connected(dev) = event
-                && dev.vendor_id() == vendor_id
-                && dev.product_id() == product_id
+                && is_orbic_usb_vendor(dev.vendor_id())
             {
                 return Ok(());
             }
@@ -363,10 +366,10 @@ async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
 
 #[cfg(target_os = "macos")]
 /// `nusb::watch_devices` doesn't appear to work on macOS to poll instead.
-async fn wait_for_usb_device(vendor_id: u16, product_id: u16) -> Result<()> {
+async fn wait_for_usb_device() -> Result<()> {
     loop {
         for device_info in nusb::list_devices()? {
-            if device_info.vendor_id() == vendor_id && device_info.product_id() == product_id {
+            if is_orbic_usb_vendor(device_info.vendor_id()) {
                 return Ok(());
             }
         }
@@ -537,4 +540,23 @@ pub fn open_orbic() -> Result<Option<Interface>> {
     }
 
     Ok(None)
+}
+
+fn is_orbic_usb_vendor(vendor_id: u16) -> bool {
+    vendor_id == VENDOR_ID
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_orbic_usb_vendor;
+
+    #[test]
+    fn accepts_orbic_vendor_regardless_of_usb_product_mode() {
+        assert!(is_orbic_usb_vendor(0x05c6));
+    }
+
+    #[test]
+    fn rejects_unrelated_usb_vendors() {
+        assert!(!is_orbic_usb_vendor(0x18d1));
+    }
 }
