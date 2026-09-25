@@ -218,16 +218,10 @@ async fn setup_rayhunter(admin_ip: &str, reset_config: bool, data_dir: &str) -> 
     let addr = SocketAddr::from_str(&format!("{admin_ip}:{TELNET_PORT}"))?;
     let rayhunter_daemon_bin = crate::get_file!("FILE_RAYHUNTER_DAEMON");
 
-    // Remount filesystem as read-write to allow modifications
-    // This is really only necessary for the Moxee Hotspot
-    telnet_send_command(
-        addr,
-        "mount -o remount,rw /dev/ubi0_0 /",
-        "exit code 0",
-        false,
-    )
-    .await?;
-
+    // Orbic firmware already exposes the installation paths as writable. The
+    // old unconditional remount was a Moxee-specific workaround and fails on
+    // Orbic devices, aborting an otherwise healthy installation with `exit code
+    // 1` before any files are transferred.
     let mut conn = TelnetConnection::new(addr, false);
     setup_data_directory(&mut conn, data_dir).await?;
 
