@@ -1,10 +1,8 @@
-use std::borrow::Cow;
-
 use chrono::{DateTime, FixedOffset};
 use log::{debug, info};
 
 use crate::analysis::{
-    analyzer::{Analyzer, Event, EventType},
+    analyzer::{Analyzer, AnalyzerMetadata, Event, EventType},
     information_element::InformationElement,
 };
 
@@ -21,16 +19,14 @@ impl WifiOUIAnalyzer {
 }
 
 impl Analyzer for WifiOUIAnalyzer {
-    fn get_name(&self) -> Cow<'_, str> {
-        "WifiOUIAnalyzer".into()
-    }
-
-    fn get_description(&self) -> Cow<'_, str> {
-        Cow::from("Scans wifi channels looking for OUIs of known IMSI catchers")
-    }
-
-    fn get_version(&self) -> u32 {
-        1
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "connection_redirect_2g_downgrade".into(),
+            default_enabled: true,
+            name: "WifiOUIAnalyzer".into(),
+            description: "Scans wifi channels looking for OUIs of known IMSI catchers".into(),
+            version: 1,
+        }
     }
 
     fn analyze_information_element(
