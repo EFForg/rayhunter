@@ -33,8 +33,7 @@
     let current_entry: ManifestEntry | undefined = $state(undefined);
     let system_stats: SystemStats | undefined = $state(undefined);
     let update_error: string | undefined = $state(undefined);
-    let rayhunter_logview_shown: boolean = $state(false);
-    let wifi_logview_shown: boolean = $state(false);
+    let logview_shown: boolean = $state(false);
     let config_shown: boolean = $state(false);
     let gps_data: GpsData | null = $state(null);
     let gps_mode: GpsMode = $state(GpsMode.Disabled);
@@ -82,8 +81,7 @@
     });
 </script>
 
-<LogView bind:shown={rayhunter_logview_shown} log="rayhunter.log" title="Rayhunter Logs" />
-<LogView bind:shown={wifi_logview_shown} log="wifi.log" title="WiFi Logs" />
+<LogView bind:shown={logview_shown} log="rayhunter.log" title="Rayhunter Logs" />
 <ConfigForm bind:shown={config_shown} />
 <div
     class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow-sm flex flex-row justify-between items-center"
