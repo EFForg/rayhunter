@@ -1,6 +1,6 @@
 use log::info;
 use rayhunter::analysis::{
-    analyzer::{EventType, Harness},
+    analyzer::{Analyzer, EventType, Harness},
     wifi_oui_analyzer::WifiOUIAnalyzer,
 };
 use serde::Serialize;
@@ -61,7 +61,7 @@ impl WifiAnalysisWriter {
     pub async fn new(file: File, wifi_ouis: &[String]) -> Result<Self, std::io::Error> {
         let mut harness = Harness::new();
         let wifi_analyzer = WifiOUIAnalyzer::new(wifi_ouis);
-        harness.add_analyzer(Box::new(wifi_analyzer));
+        harness.add_analyzer(WifiOUIAnalyzer::metadata(), Box::new(wifi_analyzer));
 
         let mut result = Self {
             writer: BufWriter::new(file),
