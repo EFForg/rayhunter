@@ -81,7 +81,7 @@
     });
 </script>
 
-<LogView bind:shown={logview_shown} />
+<LogView bind:shown={logview_shown} log="rayhunter.log" title="Rayhunter Logs" />
 <ConfigForm bind:shown={config_shown} />
 <div
     class="p-4 xl:px-8 bg-rayhunter-blue drop-shadow-sm flex flex-row justify-between items-center"

@@ -438,6 +438,22 @@ impl Harness {
         self.analyzers.push(analyzer);
     }
 
+    pub fn analyze_wifi_network(
+        &mut self,
+        bssid: &str,
+        timestamp: DateTime<FixedOffset>,
+    ) -> AnalysisRow {
+        let mut analysis_row = AnalysisRow::new();
+        let ie = InformationElement::WifiNetwork(bssid.to_string());
+        for analyzer in &mut self.analyzers {
+            if let Some(event) = analyzer.analyze_information_element(&ie, 0, timestamp) {
+                analysis_row.events.push(Some(event));
+            }
+        }
+
+        analysis_row
+    }
+
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {
         self.packet_num += 1;
 
