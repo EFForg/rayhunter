@@ -60,46 +60,45 @@ pub async fn run_wifi_scanner(
     notification_channel: mpsc::Sender<Notification>,
     ui_update_sender: mpsc::Sender<display::DisplayState>,
 ) {
-    // Don't bother if we don't have OUIs specified
-    if let Some(wifi_ouis) = wifi_ouis {
-        info!("starting wifi scanner");
-        task_tracker.spawn(async move {
-            let mut started = false;
-            let mut max_type_seen = EventType::Informational;
-            loop {
-                select! {
-                    message = wifi_rx.recv() => {
-                        match message {
-                            Some(WifiScanCtrlMessage::StartRecording { response_tx }) => {
-                                // Will start the scan the next time the timer goes off
-                                started = true;
-                                // Lock wifi store
-                                let wifi_store = wifi_store_lock.write().await;
+    info!("starting wifi scanner");
+    task_tracker.spawn(async move {
+        let mut started = false;
+        let mut max_type_seen = EventType::Informational;
+        loop {
+            select! {
+                message = wifi_rx.recv() => {
+                    match message {
+                        Some(WifiScanCtrlMessage::StartRecording { response_tx }) => {
+                            // Will start the scan the next time the timer goes off
+                            started = true;
+                            // Lock wifi store
+                            let wifi_store = wifi_store_lock.write().await;
 
-                                // Check disk space
-                                match wifi_store.check_disk_space(min_space_to_start_mb, min_space_to_continue_mb).await {
-                                    Ok(_) => {}
-                                    Err(error) => {
-                                        if let Some(tx) = response_tx {
-                                            tx.send(Err(error)).ok();
-                                        }
-                                        break;
+                            // Check disk space
+                            match wifi_store.check_disk_space(min_space_to_start_mb, min_space_to_continue_mb).await {
+                                Ok(_) => {}
+                                Err(error) => {
+                                    if let Some(tx) = response_tx {
+                                        tx.send(Err(error)).ok();
                                     }
+                                    break;
                                 }
                             }
-                            Some(WifiScanCtrlMessage::StopRecording) => {
-                                // Stop all further scans
-                                started = false;
-                            }
-                            Some(WifiScanCtrlMessage::Exit) | None => {
-                                return;
-                            }
+                        }
+                        Some(WifiScanCtrlMessage::StopRecording) => {
+                            // Stop all further scans
+                            started = false;
+                        }
+                        Some(WifiScanCtrlMessage::Exit) | None => {
+                            return;
                         }
                     }
-                    _ = shutdown_token.cancelled() => {
-                        return;
-                    }
-                    _ = time::sleep(Duration::from_secs(15)), if started => {
+                }
+                _ = shutdown_token.cancelled() => {
+                    return;
+                }
+                _ = time::sleep(Duration::from_secs(15)), if wifi_ouis.is_some() && started => {
+                    if let Some(ref wifi_ouis) = wifi_ouis {
                         if wifi_scan_lock.try_write().is_err() {
                             warn!("WiFi scan already in progress");
                             continue;
@@ -114,7 +113,7 @@ pub async fn run_wifi_scanner(
                                 if let Err(error) = wifi_store.write_scan_file(&scan).await {
                                     error!("Error writing to Wifi file: {error}");
                                 }
-                                let max_type = match wifi_store.write_analysis_file(&scan, &wifi_ouis).await {
+                                let max_type = match wifi_store.write_analysis_file(&scan, wifi_ouis).await {
                                     Ok(t) => t,
                                     Err(e) => {
                                         warn!("failed to analyze wifi scan: {e}");
@@ -154,6 +153,6 @@ pub async fn run_wifi_scanner(
                     }
                 }
             }
-        });
-    }
+        }
+    });
 }
