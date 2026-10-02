@@ -12,9 +12,11 @@ build-rootshell-firmware = "build -p rootshell --bin rootshell --target armv7-un
 # Build rootshell for development
 build-rootshell-firmware-devel = "build -p rootshell --bin rootshell --target armv7-unknown-linux-musleabihf --profile firmware-devel"
 
-[target.aarch64-apple-darwin]
-linker = "rust-lld"
-rustflags = ["-C", "target-feature=+crt-static"]
+# At least until https://github.com/rust-lang/rust/issues/162928 is resolved
+# for a stable version of rust, let's stop using rust-lld on macOS.
+# [target.aarch64-apple-darwin]
+# linker = "rust-lld"
+# rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.aarch64-unknown-linux-musl]
 linker = "rust-lld"
