@@ -143,15 +143,9 @@ jobs:
       run: cargo fmt --all --check
     - name: Check
       run: |
-        npm install
+        npm ci
         npm run build -w daemon/web
         cargo check --verbose
-    - name: Fail if npm install modified package-lock.json
-      run: |
-        git diff --exit-code package-lock.json || {
-          echo "::error::npm install modified package-lock.json. Run 'npm install' locally and commit the updated lockfile."
-          exit 1
-        }
     - name: Run tests
       run: |
         cargo test --verbose
@@ -199,13 +193,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: npm install
-      - name: Fail if npm install modified package-lock.json
-        run: |
-          git diff --exit-code package-lock.json || {
-            echo "::error::npm install modified package-lock.json. Run 'npm install' locally and commit the updated lockfile."
-            exit 1
-          }
+      - run: npm ci
       - run: npm run lint -w daemon/web
       - run: npm run check -w daemon/web
       - run: npm run test -w daemon/web
@@ -220,7 +208,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: npm install
+      - run: npm ci
       - run: npm run lint -w installer-gui
       - run: npm run check -w installer-gui
 
@@ -362,7 +350,7 @@ jobs:
           persist-credentials: false
       - name: Build frontend
         run: |
-          npm install
+          npm ci
           npm run build -w daemon/web
       - name: Cache musl-cross toolchain
         uses: actions/cache@v4
@@ -488,7 +476,7 @@ jobs:
       - name: Build GUI installer
         shell: bash
         run: |
-          npm install
+          npm ci
           npm run tauri build -w installer-gui -- --target ${{ matrix.platform.target }}
       - uses: actions/upload-artifact@v4
         with:
@@ -543,7 +531,7 @@ jobs:
       - name: Build GUI installer
         shell: bash
         run: |
-          npm install
+          npm ci
           npm run tauri build -w installer-gui -- --target ${{ matrix.platform.target }}
           mv "target/${{ matrix.platform.target }}/release/bundle/macos/"*.app .
           zip -r "rayhunter-installer-${{ matrix.platform.name }}.app.zip" ./*.app
@@ -581,7 +569,7 @@ jobs:
       - name: Build GUI installer
         shell: bash
         run: |
-          npm install
+          npm ci
           npm run tauri build -w installer-gui -- --target ${{ env.TARGET }}
       - uses: actions/upload-artifact@v4
         with:
