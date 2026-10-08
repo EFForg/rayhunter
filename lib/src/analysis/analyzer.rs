@@ -446,7 +446,10 @@ impl Harness {
             if let Some(event) =
                 analyzer.analyze_information_element(&ie, 0, timestamp.fixed_offset())
             {
-                info!("Pushing event {:?} onto analysis row {:?}", event, analysis_row);
+                info!(
+                    "Pushing event {:?} onto analysis row {:?}",
+                    event, analysis_row
+                );
                 analysis_row.events.push(Some(event));
             }
         }
