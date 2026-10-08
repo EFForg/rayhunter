@@ -2,11 +2,7 @@
     import { get_logs } from '$lib/utils.svelte';
     import Modal from './Modal.svelte';
 
-    let {
-        shown = $bindable(),
-        log,
-        title,
-    }: { shown: boolean; log: string; title: string } = $props();
+    let { shown = $bindable() }: { shown: boolean } = $props();
     let content: string | undefined = $state(undefined);
 
     $effect(() => {
@@ -15,7 +11,7 @@
                 if (content !== undefined && (document.hidden || !shown)) {
                     return;
                 }
-                content = await get_logs(log);
+                content = await get_logs();
             } catch (error) {
                 console.log(error);
             }
@@ -25,7 +21,7 @@
     });
 </script>
 
-<Modal bind:shown {title}>
+<Modal bind:shown title="Logs">
     <div class="bg-gray-100 border border-gray-100 rounded-md overflow-scroll">
         <pre class="m-2">{content}</pre>
     </div>
