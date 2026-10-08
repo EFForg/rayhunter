@@ -668,6 +668,17 @@ pub async fn stop_recording(
                 format!("couldn't send stop recording message: {e}"),
             )
         })?;
+    info!("Sending Wifi StartRecording message");
+    state
+        .wifi_scan_sender
+        .send(WifiScanCtrlMessage::StopRecording)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("couldn't send start recording message to wifi scanner: {e}"),
+            )
+        })?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))
 }
 

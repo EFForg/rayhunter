@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset, Local};
+use chrono::{DateTime, Local};
 use log::{debug, error, info, warn};
 use rayhunter::analysis::analyzer::EventType;
 use serde::{Deserialize, Serialize};
@@ -26,23 +26,23 @@ pub enum WifiScanCtrlMessage {
 // JSON file containing the start and end timestamps of the scan,
 // followed by zero or more WiFi network structs, containing the
 // BSSID, SSID, signal strength and security for the network
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct WifiScan {
-    pub start_ts: DateTime<FixedOffset>,
-    pub end_ts: DateTime<FixedOffset>,
+    pub start_ts: DateTime<Local>,
+    pub end_ts: DateTime<Local>,
     pub networks: Vec<WifiNetwork>,
 }
 
 impl WifiScan {
     fn new() -> Self {
         Self {
-            start_ts: Local::now().fixed_offset(),
+            start_ts: rayhunter::clock::get_adjusted_now(),
             ..Default::default()
         }
     }
 
     fn finish(&mut self, networks: Vec<WifiNetwork>) {
-        self.end_ts = Local::now().fixed_offset();
+        self.end_ts = rayhunter::clock::get_adjusted_now();
         self.networks = networks;
     }
 }
@@ -60,7 +60,7 @@ pub async fn run_wifi_scanner(
     notification_channel: mpsc::Sender<Notification>,
     ui_update_sender: mpsc::Sender<display::DisplayState>,
 ) {
-    info!("starting wifi scanner");
+    info!("starting wifi scanner, wifi_ouis = {:?}", wifi_ouis);
     task_tracker.spawn(async move {
         let mut started = false;
         let mut max_type_seen = EventType::Informational;
@@ -69,14 +69,17 @@ pub async fn run_wifi_scanner(
                 message = wifi_rx.recv() => {
                     match message {
                         Some(WifiScanCtrlMessage::StartRecording { response_tx }) => {
-                            // Will start the scan the next time the timer goes off
-                            started = true;
+                            info!("Got Wifi StartRecording message");
                             // Lock wifi store
                             let wifi_store = wifi_store_lock.write().await;
 
                             // Check disk space
                             match wifi_store.check_disk_space(min_space_to_start_mb, min_space_to_continue_mb).await {
-                                Ok(_) => {}
+                                Ok(_) => {
+                                    // Will start the scan the next time the timer goes off
+                                    started = true;
+                                    info!("Started recording wifi messages");
+                                }
                                 Err(error) => {
                                     if let Some(tx) = response_tx {
                                         tx.send(Err(error)).ok();
@@ -97,13 +100,14 @@ pub async fn run_wifi_scanner(
                 _ = shutdown_token.cancelled() => {
                     return;
                 }
-                _ = time::sleep(Duration::from_secs(15)), if wifi_ouis.is_some() && started => {
+                _ = time::sleep(Duration::from_secs(15)), if started => {
+                    info!("Calling timer");
                     if let Some(ref wifi_ouis) = wifi_ouis {
                         if wifi_scan_lock.try_write().is_err() {
                             warn!("WiFi scan already in progress");
                             continue;
                         }
-                        debug!("Calling scan_wifi_networks()");
+                        info!("Calling scan_wifi_networks()");
                         let mut scan = WifiScan::new();
                         match scan_wifi_networks(STA_IFACE).await {
                             Ok(networks) => {

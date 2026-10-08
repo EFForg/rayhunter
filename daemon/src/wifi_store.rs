@@ -39,7 +39,7 @@ where
             .write_all(json.as_bytes())
             .await
             .map_err(WifiStoreError::IOError)?;
-        let _ = self.writer.flush().await;
+        self.writer.flush().await.map_err(WifiStoreError::IOError)?;
         Ok(())
     }
 
@@ -87,6 +87,7 @@ impl WifiAnalysisWriter {
                 max_type = cmp::max(max_type, analysis_row.get_max_event_type());
             }
         }
+        self.close().await?;
         Ok(max_type)
     }
 
@@ -99,8 +100,8 @@ impl WifiAnalysisWriter {
     }
 
     // Flushes any pending I/O to disk before dropping the writer
-    pub async fn close(mut self) -> Result<(), WifiStoreError> {
-        self.writer.flush().await.map_err(WifiStoreError::IOError)?;
+    pub async fn close(&mut self) -> Result<(), std::io::Error> {
+        self.writer.shutdown().await?;
         Ok(())
     }
 }
@@ -159,8 +160,12 @@ impl WifiStore {
     }
 
     pub async fn write_scan_file(&self, scan: &WifiScan) -> Result<(), WifiStoreError> {
-        let wifi_filepath =
-            FileKind::Wifi.get_filepath(&format!("{}", scan.start_ts), &self.path, false);
+        let wifi_filepath = FileKind::Wifi.get_filepath(
+            &format!("{}", scan.start_ts.timestamp()),
+            &self.path,
+            false,
+        );
+        info!("Writing scan {:?} to wifi file {:?}", scan, wifi_filepath);
         let wifi_file = File::create(&wifi_filepath)
             .await
             .map_err(WifiStoreError::CreateFileError)?;
@@ -174,8 +179,11 @@ impl WifiStore {
         scan: &WifiScan,
         wifi_ouis: &[String],
     ) -> Result<EventType, WifiStoreError> {
-        let analysis_filepath =
-            FileKind::Analysis.get_filepath(&format!("{}", scan.start_ts), &self.path, false);
+        let analysis_filepath = FileKind::Analysis.get_filepath(
+            &format!("{}", scan.start_ts.timestamp()),
+            &self.path,
+            false,
+        );
         let analysis_file = File::create(&analysis_filepath)
             .await
             .map_err(WifiStoreError::CreateFileError)?;
@@ -186,7 +194,10 @@ impl WifiStore {
             .analyze_networks(scan)
             .await
             .map_err(WifiStoreError::IOError)?;
-        analysis_writer.close().await?;
+        analysis_writer
+            .close()
+            .await
+            .map_err(WifiStoreError::IOError)?;
         Ok(event_type)
     }
 

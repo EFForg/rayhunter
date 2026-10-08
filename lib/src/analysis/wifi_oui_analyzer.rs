@@ -1,5 +1,5 @@
 use chrono::{DateTime, FixedOffset};
-use log::{debug, info};
+use log::info;
 
 use crate::analysis::{
     analyzer::{Analyzer, AnalyzerMetadata, Event, EventType},
@@ -21,7 +21,7 @@ impl WifiOUIAnalyzer {
 impl Analyzer for WifiOUIAnalyzer {
     fn metadata() -> AnalyzerMetadata {
         AnalyzerMetadata {
-            key: "connection_redirect_2g_downgrade".into(),
+            key: "wifi_oui_analyzer".into(),
             default_enabled: true,
             name: "WifiOUIAnalyzer".into(),
             description: "Scans wifi channels looking for OUIs of known IMSI catchers".into(),
@@ -36,7 +36,7 @@ impl Analyzer for WifiOUIAnalyzer {
         _timestamp: DateTime<FixedOffset>,
     ) -> Option<Event> {
         if let InformationElement::WifiNetwork(bssid) = ie {
-            debug!("WifiOUIAnalyzer got BSSIDs {:?}", bssid);
+            info!("WifiOUIAnalyzer got BSSIDs {:?}", bssid);
             if !self.wifi_ouis.is_empty()
                 && self
                     .wifi_ouis
