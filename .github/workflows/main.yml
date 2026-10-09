@@ -506,13 +506,6 @@ jobs:
       - files_changed
       - installer_gui_check
       - test_installer_frontend
-    strategy:
-      matrix:
-        platform:
-          - name: macos-arm
-            target: aarch64-apple-darwin
-          - name: macos-intel
-            target: x86_64-apple-darwin
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -521,23 +514,25 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Install pinned Rust toolchain
         run: rustup toolchain install
-      - name: Add Rust target
-        run: rustup target add ${{ matrix.platform.target }}
+      - name: Add Rust targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
         with:
           # Workaround for https://github.com/Swatinem/rust-cache/issues/341
           # bin caching breaks cargo resolution on macOS 15 runner images
           cache-bin: 'false'
       - name: Build GUI installer
+        env:
+          TARGET: universal-apple-darwin
         shell: bash
         run: |
           npm ci
-          npm run tauri build -w installer-gui -- --target ${{ matrix.platform.target }}
-          mv "target/${{ matrix.platform.target }}/release/bundle/macos/"*.app .
-          zip -r "rayhunter-installer-${{ matrix.platform.name }}.app.zip" ./*.app
+          npm run tauri build -w installer-gui -- --target "$TARGET"
+          mv "target/$TARGET/release/bundle/macos/"*.app .
+          zip -r "rayhunter-installer-macos.app.zip" ./*.app
       - uses: actions/upload-artifact@v4
         with:
-          name: gui-installer-${{ matrix.platform.name }}-app
+          name: gui-installer-macos-app
           path: ./*.app.zip
           if-no-files-found: error
 
