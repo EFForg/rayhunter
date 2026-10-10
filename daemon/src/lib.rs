@@ -15,6 +15,8 @@ pub mod server;
 pub mod stats;
 pub mod update;
 pub mod webdav;
+pub mod wifi_scan;
+pub mod wifi_store;
 
 #[cfg(feature = "apidocs")]
 use utoipa::OpenApi;
