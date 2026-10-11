@@ -2,11 +2,15 @@
 
 ### Do I need an active SIM card to use Rayhunter?
 
-**It Depends**. Operation of Rayhunter does require the insertion of a SIM card into the device, but that sim card does not have to be actively registered with a service plan. If you want to use the device as a hotspot in addition to a research device, or get [notifications](./configuration.md), an active plan would of course be necessary.
+**Yes, you can use Rayhunter without an active cell service plan.** 
+
+Operation of Rayhunter does require the insertion of a SIM card into the device, but that SIM card does not have to be actively registered with a service plan. An inactive SIM card is sufficient for Rayhunter to detect cell towers and potential IMSI catchers.
+
+If you want to use the device as a hotspot in addition to a research device, or get [notifications](./configuration.md), an active plan would of course be necessary.
 
 ### If I am located outside of the United States, should I use the SIM card that came with my device?
 
-We recommend using a SIM card from a carrier from whichever country you are located in.
+**Important for international users:** If you are located outside of the United States, we recommend using a SIM card from a carrier from whichever country you are located in. The Verizon SIM that comes with Orbic devices is intended for use in the US, and may not provide optimal results for detecting IMSI catchers in other countries. A local SIM card will ensure better detection of local carriers and cell site simulators in your region.
 
 ### How can I test that my device is working?
 
