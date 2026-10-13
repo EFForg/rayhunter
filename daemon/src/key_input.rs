@@ -8,6 +8,7 @@ use tokio_util::task::TaskTracker;
 
 use crate::config::{self, KeyInputMode};
 use crate::diag::DiagDeviceCtrlMessage;
+use crate::wifi_scan::WifiScanCtrlMessage;
 
 #[derive(Debug)]
 enum Event {
@@ -21,6 +22,7 @@ pub fn run_key_input_thread(
     task_tracker: &TaskTracker,
     config: &config::Config,
     diag_tx: Sender<DiagDeviceCtrlMessage>,
+    wifi_tx: Sender<WifiScanCtrlMessage>,
     cancellation_token: CancellationToken,
 ) {
     if config.key_input_mode == KeyInputMode::Disabled {
@@ -86,6 +88,15 @@ pub fn run_key_input_thread(
                                 .await
                             {
                                 error!("Failed to send StartRecording: {e}");
+                            }
+                            if let Err(e) = wifi_tx.send(WifiScanCtrlMessage::StopRecording).await {
+                                error!("Failed to send WiFi StopRecording: {e}");
+                            }
+                            if let Err(e) = wifi_tx
+                                .send(WifiScanCtrlMessage::StartRecording { response_tx: None })
+                                .await
+                            {
+                                error!("Failed to send WiFi StartRecording: {e}");
                             }
                             last_keyup = None;
                             continue;

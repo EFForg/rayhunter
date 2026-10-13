@@ -8,12 +8,14 @@ use crate::update::UpdateStatus;
 use crate::{battery::BatteryState, qmdl_store::ManifestEntry};
 
 use axum::Json;
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use log::error;
 use rayhunter::{Device, util::RuntimeMetadata};
 use serde::Serialize;
 use tokio::process::Command;
+
+const LOG_ROOT: &str = "/data/rayhunter";
 
 /// Structure of device system statistics
 #[derive(Debug, Serialize)]
@@ -237,17 +239,20 @@ pub async fn get_update_status(State(state): State<Arc<ServerState>>) -> Json<Up
 
 #[cfg_attr(feature = "apidocs", utoipa::path(
     get,
-    path = "/api/log",
+    path = "/api/log/{log_name}",
     tag = "Statistics",
     responses(
         (status = StatusCode::OK, description = "Success", content_type = "text/plain"),
-        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Could not read /data/rayhunter/rayhunter.log file")
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Could not read /data/rayhunter/{log_name} file")
+    ),
+    params(
+        ("log_name" = String, Path, description = "Name of log to return")
     ),
     summary = "Display log",
     description = "Download the current device log in UTF-8 plaintext."
 ))]
-pub async fn get_log() -> Result<String, (StatusCode, String)> {
-    tokio::fs::read_to_string("/data/rayhunter/rayhunter.log")
+pub async fn get_log(Path(log_name): Path<String>) -> Result<String, (StatusCode, String)> {
+    tokio::fs::read_to_string(format!("{LOG_ROOT}/{log_name}"))
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::qmdl_store::RecordingStoreError;
+use crate::{qmdl_store::RecordingStoreError, wifi_store::WifiStoreError};
 
 #[derive(Error, Debug)]
 pub enum RayhunterError {
@@ -10,6 +10,8 @@ pub enum RayhunterError {
     TokioError(#[from] tokio::io::Error),
     #[error("QmdlStore error: {0}")]
     QmdlStoreError(#[from] RecordingStoreError),
+    #[error("WifiStore error: {0}")]
+    WifiStoreError(#[from] WifiStoreError),
     #[error("No QMDL store found at path {0}, but can't create a new one due to debug mode")]
     NoStoreDebugMode(String),
     #[error("Error parsing file to determine battery level")]

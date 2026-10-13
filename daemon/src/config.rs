@@ -62,6 +62,8 @@ use crate::notifications::NotificationType;
 pub struct Config {
     /// Path to store QMDL files
     pub qmdl_store_path: String,
+    /// Path to store Wifi files
+    pub wifi_store_path: String,
     /// Listening port
     pub port: u16,
     /// Debug mode
@@ -106,6 +108,8 @@ pub struct Config {
     pub dns_servers: Option<Vec<String>>,
     /// WebDAV upload configuration. The upload worker runs whenever `webdav.url` is non-empty.
     pub webdav: WebdavConfig,
+    /// Optional WiFi OUIs for analysis
+    pub wifi_ouis: Option<Vec<String>>,
 }
 
 /// Configuration for uploading finished QMDL recordings to a WebDAV server.
@@ -147,6 +151,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             qmdl_store_path: "/data/rayhunter/qmdl".to_string(),
+            wifi_store_path: "/data/rayhunter/wifi".to_string(),
             port: 8080,
             debug_mode: false,
             device: Device::Orbic,
@@ -169,6 +174,7 @@ impl Default for Config {
             wifi_enabled: false,
             dns_servers: None,
             webdav: WebdavConfig::default(),
+            wifi_ouis: None,
         }
     }
 }

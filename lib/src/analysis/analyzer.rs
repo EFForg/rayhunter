@@ -1,5 +1,5 @@
-use chrono::{DateTime, FixedOffset};
-use log::debug;
+use chrono::{DateTime, FixedOffset, Local};
+use log::{debug, info};
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -436,6 +436,25 @@ impl Harness {
     pub fn add_analyzer(&mut self, metadata: AnalyzerMetadata, analyzer: Box<dyn Analyzer + Send>) {
         self.metadata.push(metadata);
         self.analyzers.push(analyzer);
+    }
+
+    pub fn analyze_wifi_network(&mut self, bssid: &str, timestamp: DateTime<Local>) -> AnalysisRow {
+        let mut analysis_row = AnalysisRow::new();
+        analysis_row.packet_timestamp = Some(timestamp.fixed_offset());
+        let ie = InformationElement::WifiNetwork(bssid.to_string());
+        for analyzer in &mut self.analyzers {
+            if let Some(event) =
+                analyzer.analyze_information_element(&ie, 0, timestamp.fixed_offset())
+            {
+                info!(
+                    "Pushing event {:?} onto analysis row {:?}",
+                    event, analysis_row
+                );
+                analysis_row.events.push(Some(event));
+            }
+        }
+
+        analysis_row
     }
 
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {

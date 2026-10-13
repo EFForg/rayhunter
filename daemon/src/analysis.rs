@@ -19,7 +19,8 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 use tokio_util::task::TaskTracker;
 
-use crate::qmdl_store::{FileKind, RecordingStore};
+use crate::qmdl_store::FileKind;
+use crate::qmdl_store::RecordingStore;
 use crate::server::ServerState;
 
 pub struct AnalysisWriter {

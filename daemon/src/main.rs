@@ -15,6 +15,8 @@ mod server;
 mod stats;
 mod update;
 mod webdav;
+mod wifi_scan;
+mod wifi_store;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -35,6 +37,9 @@ use crate::server::{
 use crate::stats::{get_qmdl_manifest, get_system_stats, get_update_status};
 use crate::update::{UpdateStatus, run_update_check_worker};
 use crate::webdav::run_webdav_upload_worker;
+use crate::wifi_scan::WifiScanCtrlMessage;
+use crate::wifi_scan::run_wifi_scanner;
+use crate::wifi_store::{WifiStore, WifiStoreError};
 use wifi_station::WifiStatus;
 
 use analysis::{
@@ -69,7 +74,7 @@ fn get_router() -> AppRouter {
         .route("/api/system-stats", get(get_system_stats))
         .route("/api/update-status", get(get_update_status))
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))
-        .route("/api/log", get(get_log))
+        .route("/api/log/{name}", get(get_log))
         .route("/api/start-recording", post(start_recording))
         .route("/api/stop-recording", post(stop_recording))
         .route("/api/delete-recording/{name}", post(delete_recording))
@@ -114,6 +119,14 @@ async fn run_server(
     })
 }
 
+async fn init_wifi_store(config: &config::Config) -> Result<WifiStore, WifiStoreError> {
+    if WifiStore::exists(config.wifi_store_path.clone()).await? {
+        WifiStore::new(config.wifi_store_path.clone()).await
+    } else {
+        WifiStore::create(config.wifi_store_path.clone()).await
+    }
+}
+
 // Loads a RecordingStore if one exists, and if not, only create one if we're
 // not in debug mode. If we fail to parse the manifest AND we're not in debug
 // mode, try to recover the manifest from the existing QMDL files
@@ -148,6 +161,7 @@ async fn init_qmdl_store(config: &config::Config) -> Result<RecordingStore, Rayh
 fn run_shutdown_thread(
     task_tracker: &TaskTracker,
     diag_device_sender: Sender<DiagDeviceCtrlMessage>,
+    wifi_sender: Sender<WifiScanCtrlMessage>,
     shutdown_token: CancellationToken,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_tx: Sender<AnalysisCtrlMessage>,
@@ -176,6 +190,10 @@ fn run_shutdown_thread(
             .send(DiagDeviceCtrlMessage::Exit)
             .await
             .expect("couldn't send Exit message to diag thread");
+        wifi_sender
+            .send(WifiScanCtrlMessage::Exit)
+            .await
+            .expect("couldn't send Exit message to wifi thread");
         analysis_tx
             .send(AnalysisCtrlMessage::Exit)
             .await
@@ -210,9 +228,13 @@ async fn run_with_config(
     println!("R A Y H U N T E R 🐳");
 
     let store = init_qmdl_store(&config).await?;
+    let wifi_store = init_wifi_store(&config).await?;
     let analysis_status = AnalysisStatus::new(&store);
     let qmdl_store_lock = Arc::new(RwLock::new(store));
+    let wifi_store_lock = Arc::new(RwLock::new(wifi_store));
+    let wifi_scan_lock = Arc::new(RwLock::new(()));
     let (diag_tx, diag_rx) = mpsc::channel::<DiagDeviceCtrlMessage>(1);
+    let (wifi_tx, wifi_rx) = mpsc::channel::<WifiScanCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
     let restart_token = CancellationToken::new();
@@ -237,6 +259,7 @@ async fn run_with_config(
             diag_rx,
             diag_tx.clone(),
             ui_update_tx.clone(),
+            wifi_tx.clone(),
             qmdl_store_lock.clone(),
             analysis_tx.clone(),
             config.analyzers.clone(),
@@ -246,6 +269,21 @@ async fn run_with_config(
             config.gps_mode,
             gps_fixed_coords,
         );
+
+        run_wifi_scanner(
+            &task_tracker,
+            wifi_scan_lock.clone(),
+            shutdown_token.clone(),
+            wifi_rx,
+            wifi_store_lock.clone(),
+            config.min_space_to_start_recording_mb,
+            config.min_space_to_continue_recording_mb,
+            config.wifi_ouis.clone(),
+            notification_service.new_handler(),
+            ui_update_tx.clone(),
+        )
+        .await;
+
         info!("Starting UI");
 
         let update_ui = match &config.device {
@@ -263,6 +301,7 @@ async fn run_with_config(
             &task_tracker,
             &config,
             diag_tx.clone(),
+            wifi_tx.clone(),
             shutdown_token.clone(),
         );
 
@@ -291,6 +330,7 @@ async fn run_with_config(
     run_shutdown_thread(
         &task_tracker,
         diag_tx.clone(),
+        wifi_tx.clone(),
         shutdown_token.clone(),
         qmdl_store_lock.clone(),
         analysis_tx.clone(),
@@ -348,19 +388,20 @@ async fn run_with_config(
 
     let state = Arc::new(ServerState {
         config_path: args.config_path.clone(),
-        config,
+        config: config.clone(),
         qmdl_store_lock: qmdl_store_lock.clone(),
         diag_device_ctrl_sender: diag_tx,
+        wifi_scan_sender: wifi_tx,
         analysis_status_lock,
         analysis_sender: analysis_tx,
         daemon_restart_token: restart_token.clone(),
-        ui_update_sender: Some(ui_update_tx),
+        ui_update_sender: Some(ui_update_tx.clone()),
         wifi_status,
-        wifi_scan_lock: tokio::sync::Mutex::new(()),
+        wifi_scan_lock,
         gps_state: Arc::new(tokio::sync::RwLock::new(initial_gps)),
         update_status_lock: update_status_lock.clone(),
     });
-    run_server(&task_tracker, state, shutdown_token.clone()).await;
+    run_server(&task_tracker, state.clone(), shutdown_token.clone()).await;
 
     task_tracker.close();
     task_tracker.wait().await;
