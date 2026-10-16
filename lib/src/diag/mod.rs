@@ -17,6 +17,14 @@ pub const MESSAGE_ESCAPE_CHAR: u8 = 0x7d;
 pub const ESCAPED_MESSAGE_TERMINATOR: u8 = 0x5e;
 pub const ESCAPED_MESSAGE_ESCAPE_CHAR: u8 = 0x5d;
 
+// On multi-SIM devices (e.g. phones like the OnePlus 6T), the modem wraps diag
+// messages in a DIAG_MULTI_RADIO_CMD_F header that carries the subscription ID:
+// cmd_code (u8), reserved (u8), reserved (u16), subscription_id (u32), followed
+// by the actual diag message.
+// https://github.com/fgsect/scat/blob/646a764eb9fba4e2aa6ba0e847c1fd018853fc17/src/scat/parsers/qualcomm/qualcommparser.py#L950
+pub const DIAG_MULTI_RADIO_CMD_F: u8 = 0x98;
+const MULTI_RADIO_HEADER_LEN: usize = 8;
+
 #[derive(Debug, Clone, DekuWrite)]
 pub struct RequestContainer {
     pub data_type: DataType,
@@ -141,7 +149,7 @@ pub enum Message {
 impl Message {
     pub fn from_hdlc(data: &[u8]) -> Result<Message, DiagParsingError> {
         match hdlc_decapsulate(data, &CRC_CCITT) {
-            Ok(data) => match Message::from_bytes((&data, 0)) {
+            Ok(data) => match Message::from_bytes((strip_multi_radio_header(&data), 0)) {
                 Ok(((leftover_bytes, _), res)) => {
                     if !leftover_bytes.is_empty() {
                         warn!(
@@ -155,6 +163,17 @@ impl Message {
             },
             Err(err) => Err(DiagParsingError::HdlcDecapsulationError(err, data.to_vec())),
         }
+    }
+}
+
+/// Returns the inner diag message if `data` is wrapped in a multi-radio
+/// (multi-SIM) header, otherwise returns `data` unchanged.
+fn strip_multi_radio_header(data: &[u8]) -> &[u8] {
+    match data.first() {
+        Some(&DIAG_MULTI_RADIO_CMD_F) if data.len() > MULTI_RADIO_HEADER_LEN => {
+            &data[MULTI_RADIO_HEADER_LEN..]
+        }
+        _ => data,
     }
 }
 
