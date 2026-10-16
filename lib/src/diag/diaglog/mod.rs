@@ -93,7 +93,11 @@ pub enum LogBody {
     #[deku(id = "0xb064")]
     LteMacUl { packet: mac::Packet },
     #[deku(id = "0xb114")]
-    LteLl1ServingCellTiming { data: ll1::ServingCellTiming },
+    LteLl1ServingCellTiming {
+        version: u8,
+        #[deku(ctx = "*version, hdr_len.saturating_sub(1)")]
+        data: ll1::ServingCellTiming,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -347,6 +351,32 @@ pub(crate) mod test {
         let msg = Message::from_hdlc(&encapsulated).unwrap();
         let expected = Message::from_bytes((&data[8..], 0)).unwrap().1;
         assert_eq!(msg, expected);
+    }
+
+    #[test]
+    fn test_unsupported_ll1_serving_cell_timing_version() {
+        // LL1 Serving Cell Timing with a version other than 1 (seen on SDM845)
+        let data = vec![
+            16, 0, 20, 0, 20, 0, 20, 177, 0, 0, 0, 0, 0, 0, 0, 0, 122, 1, 2, 3, 4, 5, 6, 7,
+        ];
+        let ((rest, _), msg) = Message::from_bytes((&data, 0)).unwrap();
+        assert_eq!(rest.len(), 0);
+        assert_eq!(
+            msg,
+            Message::Log {
+                pending_msgs: 0,
+                outer_length: 20,
+                inner_length: 20,
+                log_type: 0xb114,
+                timestamp: Timestamp { ts: 0 },
+                body: LogBody::LteLl1ServingCellTiming {
+                    version: 122,
+                    data: ll1::ServingCellTiming::Unsupported {
+                        data: vec![1, 2, 3, 4, 5, 6, 7],
+                    },
+                },
+            }
+        );
     }
 
     #[test]
