@@ -336,6 +336,20 @@ pub(crate) mod test {
     }
 
     #[test]
+    fn test_multi_radio_wrapped_log() {
+        // the message from test_logs, wrapped in a multi-SIM header with subscription ID 1
+        let data = vec![
+            152, 1, 0, 0, 1, 0, 0, 0, 16, 0, 38, 0, 38, 0, 192, 176, 26, 165, 245, 135, 118, 35, 2,
+            1, 20, 14, 48, 0, 160, 0, 2, 8, 0, 0, 217, 15, 5, 0, 0, 0, 0, 7, 0, 64, 1, 238, 173,
+            213, 77, 208,
+        ];
+        let encapsulated = hdlc::hdlc_encapsulate(&data, &CRC_CCITT);
+        let msg = Message::from_hdlc(&encapsulated).unwrap();
+        let expected = Message::from_bytes((&data[8..], 0)).unwrap().1;
+        assert_eq!(msg, expected);
+    }
+
+    #[test]
     fn test_containers_with_multiple_messages() {
         let (encapsulated1, message1) = get_test_message(&[1]);
         let (encapsulated2, message2) = get_test_message(&[2]);
