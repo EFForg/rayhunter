@@ -11,12 +11,12 @@
     let {
         deviceName,
         installerArgs,
-        reselect_args,
+        on_back,
         reselect_device,
     }: {
         deviceName: string;
         installerArgs: string[];
-        reselect_args: () => void;
+        on_back: () => void;
         reselect_device: () => void;
     } = $props();
 
@@ -87,7 +87,7 @@
                 <StylizedButton label="Install another device" onclick={reselect_device} />
                 <StylizedButton color="blue" label="Exit" onclick={() => exit(0)} />
             {:else}
-                <StylizedButton color="blue" label="Retry" onclick={reselect_args} />
+                <StylizedButton color="blue" label="Retry" onclick={on_back} />
                 <a
                     class="rayhunter-button"
                     href="https://github.com/EFForg/rayhunter/issues"

@@ -96,9 +96,9 @@
     {:else}
         <p class="text-center text-md">
             {#if advanced_args.length > 0}
-                Set advanced settings if desired and then click install.
+                Set advanced settings if desired and then click next.
             {:else}
-                Click install to begin the installation process.
+                Click next to continue the installation process.
             {/if}
         </p>
     {/if}
@@ -112,6 +112,6 @@
     {/if}
     <div class="flex justify-evenly">
         <StylizedButton label="Back" onclick={reselect_device} />
-        <StylizedButton color="blue" label="Install" onclick={submit_args} />
+        <StylizedButton color="blue" label="Next" onclick={submit_args} />
     </div>
 </div>

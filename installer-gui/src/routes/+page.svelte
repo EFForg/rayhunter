@@ -1,34 +1,46 @@
 <script lang="ts">
     import ArgMenu from '$lib/ArgMenu.svelte';
+    import ConnectInstructions from '$lib/ConnectInstructions.svelte';
     import DeviceSelect from '$lib/DeviceSelect.svelte';
     import InstallProgress from '$lib/InstallProgress.svelte';
     import { ArgMenuInputData } from '$lib/types.svelte';
     import type { InstallerSubcommand } from '$lib/types.svelte';
     import type { PageProps } from './$types';
 
-    type GUIScreen = 'DeviceSelection' | 'ArgSelection' | 'Installation';
+    const ALL_SCREENS = ['DeviceSelection', 'ArgSelection', 'Connection', 'Installation'] as const;
+    type GUIScreen = (typeof ALL_SCREENS)[number];
 
     let { data }: PageProps = $props();
     let argMenuData = $state(new ArgMenuInputData());
-    let currentScreen: GUIScreen = $state('DeviceSelection');
+    let availableScreens: GUIScreen[] = $state(['DeviceSelection']);
     let installerArgs: string[] = $state([]);
+    let screenIndex = $state(0);
     let selectedDevice: InstallerSubcommand | null = $state(null);
 
     function reselect_device() {
-        currentScreen = 'DeviceSelection';
+        screenIndex = 0;
     }
 
     function set_device(device: InstallerSubcommand) {
         if (device != selectedDevice) {
             argMenuData = new ArgMenuInputData();
+            if (device.show_network_setup) {
+                availableScreens = [...ALL_SCREENS];
+            } else {
+                availableScreens = ALL_SCREENS.filter((s) => s != 'Connection');
+            }
         }
         selectedDevice = device;
-        currentScreen = 'ArgSelection';
+        screenIndex++;
     }
 
     function set_args(args: string[]) {
         installerArgs = args;
-        currentScreen = 'Installation';
+        screenIndex++;
+    }
+
+    function on_back() {
+        screenIndex--;
     }
 </script>
 
@@ -106,20 +118,27 @@
         </a>
     </div>
 </div>
-{#if currentScreen === 'DeviceSelection' || selectedDevice === null}
+{#if availableScreens[screenIndex] === 'DeviceSelection' || selectedDevice === null}
     <DeviceSelect initialSelection={selectedDevice} {set_device} subcommands={data.subcommands} />
-{:else if currentScreen === 'ArgSelection'}
+{:else if availableScreens[screenIndex] === 'ArgSelection'}
     <ArgMenu
         bind:inputData={argMenuData}
         {reselect_device}
         {set_args}
         subcommand={selectedDevice}
     />
+{:else if availableScreens[screenIndex] === 'Connection'}
+    <ConnectInstructions
+        {on_back}
+        on_install={() => screenIndex++}
+        allArgs={selectedDevice.arguments}
+        setArgs={installerArgs}
+    />
 {:else}
     <InstallProgress
         deviceName={selectedDevice.label}
         {installerArgs}
-        reselect_args={() => (currentScreen = 'ArgSelection')}
+        {on_back}
         {reselect_device}
     />
 {/if}
