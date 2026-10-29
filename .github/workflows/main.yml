@@ -609,7 +609,7 @@ jobs:
       - name: Setup versioned release directory
         run: |
           platform="${{ matrix.platform }}"
-          dest="rayhunter-v${VERSION}-${{ matrix.platform }}"
+          dest="rayhunter-cli-v${VERSION}-${{ matrix.platform }}"
           mkdir "$dest"
           # Handle installer with proper extension for Windows
           if [ "$platform" = "windows-x86_64" ]; then
@@ -624,10 +624,10 @@ jobs:
       - name: Upload zip release and sha256
         uses: actions/upload-artifact@v4
         with:
-          name: rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}
+          name: rayhunter-cli-v${{ env.VERSION }}-${{ matrix.platform }}
           path: |
-            rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}.zip
-            rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}.zip.sha256
+            rayhunter-cli-v${{ env.VERSION }}-${{ matrix.platform }}.zip
+            rayhunter-cli-v${{ env.VERSION }}-${{ matrix.platform }}.zip.sha256
           if-no-files-found: error
 
   openapi_build:
