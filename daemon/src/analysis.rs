@@ -9,7 +9,7 @@ use axum::{
 use log::{error, info};
 use rayhunter::Device;
 use rayhunter::DeviceMetadata;
-use rayhunter::analysis::analyzer::{AnalyzerConfig, EventType, Harness};
+use rayhunter::analysis::analyzer::{EventType, Harness};
 use rayhunter::diag::{DiagParsingError, Message, MessagesContainer};
 use rayhunter::qmdl::QmdlMessageReader;
 use serde::Serialize;
@@ -25,7 +25,7 @@ use crate::server::ServerState;
 
 pub struct AnalysisWriter {
     writer: BufWriter<File>,
-    harness: Harness,
+    harness: Arc<RwLock<Harness>>,
 }
 
 // We write our analysis results to a file immediately to minimize the amount of
@@ -37,16 +37,13 @@ pub struct AnalysisWriter {
 impl AnalysisWriter {
     pub async fn new(
         file: File,
-        analyzer_config: &AnalyzerConfig,
-        device_metadata: &DeviceMetadata,
+        harness: Arc<RwLock<Harness>>,
     ) -> Result<Self, std::io::Error> {
-        let harness = Harness::new_with_config(analyzer_config, device_metadata);
-
         let mut result = Self {
             writer: BufWriter::new(file),
             harness,
         };
-        let metadata = result.harness.get_metadata();
+        let metadata = result.harness.read().await.get_metadata();
         result.write(&metadata).await?;
         Ok(result)
     }
@@ -59,7 +56,12 @@ impl AnalysisWriter {
     ) -> Result<EventType, std::io::Error> {
         let mut max_type = EventType::Informational;
 
-        for row in self.harness.analyze_qmdl_messages(container) {
+        let rows = {
+            let mut harness = self.harness.write().await;
+            harness.analyze_qmdl_messages(container)
+        };
+
+        for row in rows {
             if !row.is_empty() {
                 self.write(&row).await?;
             }
@@ -72,14 +74,18 @@ impl AnalysisWriter {
         &mut self,
         maybe_qmdl_msg: Result<Message, DiagParsingError>,
     ) -> Result<EventType, std::io::Error> {
-        let row = self.harness.analyze_qmdl_message(maybe_qmdl_msg);
+        let row = {
+            let mut harness = self.harness.write().await;
+            harness.analyze_qmdl_message(maybe_qmdl_msg)
+        };
+
         if !row.is_empty() {
             self.write(&row).await?;
         }
         Ok(row.get_max_event_type())
     }
 
-    async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
+    pub async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
         let mut value_str = serde_json::to_string(value).unwrap();
         value_str.push('\n');
         self.writer.write_all(value_str.as_bytes()).await?;
@@ -99,11 +105,11 @@ impl AnalysisWriter {
 #[cfg_attr(feature = "apidocs", derive(utoipa::ToSchema))]
 pub struct AnalysisStatus {
     /// The vector array of queued files
-    queued: Vec<String>,
+    pub queued: Vec<String>,
     /// The file currently being analyzed
-    running: Option<String>,
+    pub running: Option<String>,
     /// The vector array of finished files
-    finished: Vec<String>,
+    pub finished: Vec<String>,
 }
 
 impl AnalysisStatus {
@@ -149,8 +155,8 @@ async fn finish_running_analysis(analysis_status_lock: Arc<RwLock<AnalysisStatus
 async fn perform_analysis(
     name: &str,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
-    analyzer_config: &AnalyzerConfig,
-    device_metadata: &DeviceMetadata,
+    harness: Arc<RwLock<rayhunter::analysis::analyzer::Harness>>,
+    wifi_analysis_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>>,
 ) -> Result<(), String> {
     info!("Opening QMDL and analysis file for {name}...");
     let (analysis_file, mut qmdl_reader) = {
@@ -174,20 +180,39 @@ async fn perform_analysis(
         (analysis_file, qmdl_reader)
     };
 
-    let mut analysis_writer = AnalysisWriter::new(analysis_file, analyzer_config, device_metadata)
+    let mut analysis_writer = AnalysisWriter::new(analysis_file, harness.clone())
         .await
         .map_err(|e| format!("{e:?}"))?;
 
     info!("Starting analysis for {name}...");
-    while let Some(maybe_message) = qmdl_reader
-        .get_next_message()
-        .await
-        .expect("failed to get message")
-    {
-        let _ = analysis_writer
-            .analyze_message(maybe_message)
-            .await
-            .map_err(|e| format!("{e:?}"))?;
+    loop {
+        tokio::select! {
+            maybe_message = qmdl_reader.get_next_message() => {
+                match maybe_message {
+                    Ok(Some(msg)) => {
+                        let _ = analysis_writer
+                            .analyze_message(msg)
+                            .await
+                            .map_err(|e| format!("{e:?}"))?;
+                    }
+                    Ok(None) => break,
+                    Err(e) => {
+                        error!("Error reading QMDL message: {e:?}");
+                        break;
+                    }
+                }
+            }
+            res = async {
+                let mut rx = wifi_analysis_rx.lock().await;
+                rx.recv().await
+            } => {
+                if let Some(wifi_row) = res {
+                    if let Err(e) = analysis_writer.write(&wifi_row).await {
+                        error!("Failed to write out-of-band wifi event: {e}");
+                    }
+                }
+            }
+        }
     }
 
     analysis_writer
@@ -202,9 +227,10 @@ async fn perform_analysis(
 pub fn run_analysis_thread(
     task_tracker: &TaskTracker,
     mut analysis_rx: Receiver<AnalysisCtrlMessage>,
+    wifi_analysis_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
-    analyzer_config: AnalyzerConfig,
+    harness_lock: Arc<RwLock<rayhunter::analysis::analyzer::Harness>>,
     device: Device,
     debug_mode: bool,
 ) {
@@ -222,8 +248,8 @@ pub fn run_analysis_thread(
                         if let Err(err) = perform_analysis(
                             &name,
                             qmdl_store_lock.clone(),
-                            &analyzer_config,
-                            &device_metadata,
+                            harness_lock.clone(),
+                            wifi_analysis_rx.clone(),
                         )
                         .await
                         {
@@ -255,7 +281,7 @@ pub fn run_analysis_thread(
 pub async fn get_analysis_status(
     State(state): State<Arc<ServerState>>,
 ) -> Result<Json<AnalysisStatus>, (StatusCode, String)> {
-    Ok(Json(state.analysis_status_lock.read().await.clone()))
+    Ok(Json((*state.analysis_status_lock.read().await).clone()))
 }
 
 fn queue_qmdl(name: &str, analysis_status: &mut RwLockWriteGuard<AnalysisStatus>) -> bool {
@@ -272,9 +298,14 @@ fn queue_qmdl(name: &str, analysis_status: &mut RwLockWriteGuard<AnalysisStatus>
     post,
     path = "/api/analysis/{name}",
     tag = "Recordings",
+    request_body(
+        content = Option<[Config]>,
+        description = "Any or all configuration elements from the valid config schema to be altered may be passed. Invalid keys will be discarded. Invalid values or value types will return an error."
+    ),
     responses(
         (status = StatusCode::ACCEPTED, description = "Success"),
-        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Unable to queue analysis file")
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Unable to queue analysis file"),
+        (status = 422, description = "Failed to deserialize JSON body")
     ),
     params(
         ("name" = String, Path, description = "QMDL file to analyze")
@@ -316,5 +347,5 @@ pub async fn start_analysis(
                 )
             })?;
     }
-    Ok((StatusCode::ACCEPTED, Json(analysis_status.clone())))
+    Ok((StatusCode::ACCEPTED, Json((*analysis_status).clone())))
 }

@@ -1,15 +1,9 @@
 use log::info;
-use rayhunter::analysis::{
-    analyzer::{Analyzer, EventType, Harness},
-    wifi_oui_analyzer::WifiOUIAnalyzer,
-};
-use serde::Serialize;
-use std::cmp;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::{
     fs::{self, File, try_exists},
-    io::{self, AsyncWrite, AsyncWriteExt, BufWriter},
+    io::{self, AsyncWrite, AsyncWriteExt},
 };
 
 use crate::{
@@ -48,60 +42,6 @@ where
             .shutdown()
             .await
             .map_err(WifiStoreError::IOError)?;
-        Ok(())
-    }
-}
-
-pub struct WifiAnalysisWriter {
-    writer: BufWriter<File>,
-    harness: Harness,
-}
-
-impl WifiAnalysisWriter {
-    pub async fn new(file: File, wifi_ouis: &[String]) -> Result<Self, std::io::Error> {
-        let mut harness = Harness::new();
-        let wifi_analyzer = WifiOUIAnalyzer::new(wifi_ouis);
-        harness.add_analyzer(WifiOUIAnalyzer::metadata(), Box::new(wifi_analyzer));
-
-        let mut result = Self {
-            writer: BufWriter::new(file),
-            harness,
-        };
-        let metadata = result.harness.get_metadata();
-        result.write(&metadata).await?;
-        Ok(result)
-    }
-
-    pub async fn analyze_networks(
-        &mut self,
-        entry: &WifiScan,
-    ) -> Result<EventType, std::io::Error> {
-        let mut max_type = EventType::Informational;
-
-        for network in entry.networks.iter() {
-            let analysis_row = self
-                .harness
-                .analyze_wifi_network(&network.bssid, entry.start_ts);
-            if !analysis_row.is_empty() {
-                self.write(&analysis_row).await?;
-                max_type = cmp::max(max_type, analysis_row.get_max_event_type());
-            }
-        }
-        self.close().await?;
-        Ok(max_type)
-    }
-
-    async fn write<T: Serialize>(&mut self, value: &T) -> Result<(), std::io::Error> {
-        let mut value_str = serde_json::to_string(value).unwrap();
-        value_str.push('\n');
-        self.writer.write_all(value_str.as_bytes()).await?;
-        self.writer.flush().await?;
-        Ok(())
-    }
-
-    // Flushes any pending I/O to disk before dropping the writer
-    pub async fn close(&mut self) -> Result<(), std::io::Error> {
-        self.writer.shutdown().await?;
         Ok(())
     }
 }
@@ -172,33 +112,6 @@ impl WifiStore {
         let mut wifi_writer = WifiWriter::new(wifi_file);
         wifi_writer.write(scan).await?;
         wifi_writer.close().await
-    }
-
-    pub async fn write_analysis_file(
-        &self,
-        scan: &WifiScan,
-        wifi_ouis: &[String],
-    ) -> Result<EventType, WifiStoreError> {
-        let analysis_filepath = FileKind::Analysis.get_filepath(
-            &format!("{}", scan.start_ts.timestamp()),
-            &self.path,
-            false,
-        );
-        let analysis_file = File::create(&analysis_filepath)
-            .await
-            .map_err(WifiStoreError::CreateFileError)?;
-        let mut analysis_writer = WifiAnalysisWriter::new(analysis_file, wifi_ouis)
-            .await
-            .map_err(WifiStoreError::IOError)?;
-        let event_type = analysis_writer
-            .analyze_networks(scan)
-            .await
-            .map_err(WifiStoreError::IOError)?;
-        analysis_writer
-            .close()
-            .await
-            .map_err(WifiStoreError::IOError)?;
-        Ok(event_type)
     }
 
     pub async fn check_disk_space(

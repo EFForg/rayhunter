@@ -237,6 +237,21 @@ async fn run_with_config(
     let (wifi_tx, wifi_rx) = mpsc::channel::<WifiScanCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
+    let (wifi_analysis_tx, wifi_analysis_rx) = mpsc::channel::<rayhunter::analysis::analyzer::AnalysisRow>(10);
+    let wifi_analysis_rx = Arc::new(tokio::sync::Mutex::new(wifi_analysis_rx));
+    let harness = Arc::new(RwLock::new(rayhunter::analysis::analyzer::Harness::new_with_config(
+        &config.analyzers,
+        &rayhunter::DeviceMetadata::default(),
+    )));
+
+    {
+        let mut h = harness.write().await;
+        h.configure_analyzer(
+            "wifi_oui_analyzer",
+            &serde_json::to_value(&config.wifi_ouis).unwrap(),
+        );
+    }
+
     let restart_token = CancellationToken::new();
     let shutdown_token = restart_token.child_token();
     // Ensure shutdown_token is cancelled when this function exits for any
@@ -262,12 +277,13 @@ async fn run_with_config(
             wifi_tx.clone(),
             qmdl_store_lock.clone(),
             analysis_tx.clone(),
-            config.analyzers.clone(),
+            harness.clone(),
             notification_service.new_handler(),
             config.min_space_to_start_recording_mb,
             config.min_space_to_continue_recording_mb,
             config.gps_mode,
             gps_fixed_coords,
+            wifi_analysis_rx.clone(),
         );
 
         run_wifi_scanner(
@@ -279,6 +295,8 @@ async fn run_with_config(
             config.min_space_to_start_recording_mb,
             config.min_space_to_continue_recording_mb,
             config.wifi_ouis.clone(),
+            wifi_analysis_tx.clone(),
+            harness.clone(),
             notification_service.new_handler(),
             ui_update_tx.clone(),
         )
@@ -320,9 +338,10 @@ async fn run_with_config(
     run_analysis_thread(
         &task_tracker,
         analysis_rx,
+        wifi_analysis_rx,
         qmdl_store_lock.clone(),
         analysis_status_lock.clone(),
-        config.analyzers.clone(),
+        harness.clone(),
         config.device.clone(),
         config.debug_mode,
     );

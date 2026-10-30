@@ -11,10 +11,14 @@ pub struct WifiOUIAnalyzer {
 }
 
 impl WifiOUIAnalyzer {
-    pub fn new(wifi_ouis: &[String]) -> Self {
+    pub fn new() -> Self {
         Self {
-            wifi_ouis: wifi_ouis.to_owned(),
+            wifi_ouis: Vec::new(),
         }
+    }
+
+    pub fn set_ouis(&mut self, ouis: &[String]) {
+        self.wifi_ouis = ouis.to_owned();
     }
 }
 
@@ -26,6 +30,15 @@ impl Analyzer for WifiOUIAnalyzer {
             name: "WifiOUIAnalyzer".into(),
             description: "Scans wifi channels looking for OUIs of known IMSI catchers".into(),
             version: 1,
+        }
+    }
+
+    fn configure(&mut self, config: &serde_json::Value) {
+        if let Some(ouis) = config.as_array() {
+            self.wifi_ouis = ouis
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect();
         }
     }
 

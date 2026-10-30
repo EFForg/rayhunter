@@ -57,6 +57,8 @@ pub async fn run_wifi_scanner(
     min_space_to_start_mb: u64,
     min_space_to_continue_mb: u64,
     wifi_ouis: Option<Vec<String>>,
+    wifi_analysis_tx: mpsc::Sender<rayhunter::analysis::analyzer::AnalysisRow>,
+    harness_lock: Arc<RwLock<rayhunter::analysis::analyzer::Harness>>,
     notification_channel: mpsc::Sender<Notification>,
     ui_update_sender: mpsc::Sender<display::DisplayState>,
 ) {
@@ -102,7 +104,7 @@ pub async fn run_wifi_scanner(
                 }
                 _ = time::sleep(Duration::from_secs(15)), if started => {
                     info!("Calling timer");
-                    if let Some(ref wifi_ouis) = wifi_ouis {
+                    if let Some(_) = wifi_ouis {
                         if wifi_scan_lock.try_write().is_err() {
                             warn!("WiFi scan already in progress");
                             continue;
@@ -117,13 +119,23 @@ pub async fn run_wifi_scanner(
                                 if let Err(error) = wifi_store.write_scan_file(&scan).await {
                                     error!("Error writing to Wifi file: {error}");
                                 }
-                                let max_type = match wifi_store.write_analysis_file(&scan, wifi_ouis).await {
-                                    Ok(t) => t,
-                                    Err(e) => {
-                                        warn!("failed to analyze wifi scan: {e}");
-                                        EventType::Informational
+                                let mut max_type = EventType::Informational;
+                                let mut events_to_send = Vec::new();
+                                {
+                                    let mut harness = harness_lock.write().await;
+                                    for network in &scan.networks {
+                                        let row = harness.analyze_wifi_network(&network.bssid, scan.start_ts);
+                                        if !row.is_empty() {
+                                            max_type = std::cmp::max(max_type, row.get_max_event_type());
+                                            events_to_send.push(row);
+                                        }
                                     }
-                                };
+                                }
+                                for row in events_to_send {
+                                    if let Err(e) = wifi_analysis_tx.send(row).await {
+                                        error!("Failed to send wifi event to analysis stream: {e}");
+                                    }
+                                }
 
                                 // Code duplicated from diag.rs
                                 if max_type > EventType::Informational {
