@@ -46,7 +46,7 @@ impl Analyzer for WifiOUIAnalyzer {
             {
                 info!("Found match for bssid {bssid}");
                 return Some(Event {
-                    event_type: EventType::Informational,
+                    event_type: EventType::Low,
                     message: format!("Found suspicious wifi network {bssid}"),
                 });
             }

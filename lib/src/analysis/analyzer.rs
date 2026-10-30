@@ -6,6 +6,7 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use crate::DeviceMetadata;
+use crate::analysis::wifi_oui_analyzer::WifiOUIAnalyzer;
 use crate::diag::{DiagParsingError, Message, MessagesContainer};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, parser as gsmtap_parser};
 use crate::util::RuntimeMetadata;
@@ -54,6 +55,10 @@ fn all_analyzers(
         (
             NoNasMessagesAnalyzer::metadata(),
             boxed(NoNasMessagesAnalyzer::new()),
+        ),
+        (
+            WifiOUIAnalyzer::metadata(),
+            boxed(WifiOUIAnalyzer::new(&["28:70:4E".to_string()])),
         ),
         (DiagnosticAnalyzer::metadata(), boxed(DiagnosticAnalyzer {})),
     ]
@@ -439,22 +444,16 @@ impl Harness {
     }
 
     pub fn analyze_wifi_network(&mut self, bssid: &str, timestamp: DateTime<Local>) -> AnalysisRow {
-        let mut analysis_row = AnalysisRow::new();
-        analysis_row.packet_timestamp = Some(timestamp.fixed_offset());
+        let mut row = AnalysisRow::new();
+        row.packet_timestamp = Some(timestamp.fixed_offset());
         let ie = InformationElement::WifiNetwork(bssid.to_string());
-        for analyzer in &mut self.analyzers {
-            if let Some(event) =
-                analyzer.analyze_information_element(&ie, 0, timestamp.fixed_offset())
-            {
-                info!(
-                    "Pushing event {:?} onto analysis row {:?}",
-                    event, analysis_row
-                );
-                analysis_row.events.push(Some(event));
-            }
-        }
-
-        analysis_row
+        row.events = self.analyze_information_element(&ie, timestamp.fixed_offset());
+        info!(
+            "Pushing event {:?} onto analysis row {:?}",
+            row.events, row 
+        );
+        self.assert_events_match_analyzers(&row.events);
+        row
     }
 
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {
