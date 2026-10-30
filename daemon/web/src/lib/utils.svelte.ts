@@ -140,7 +140,7 @@ export async function get_system_stats(): Promise<SystemStats> {
 }
 
 export async function get_logs(): Promise<string> {
-    return await req('GET', '/api/log/rayhunter.log');
+    return await req('GET', '/api/log');
 }
 
 export async function get_config(): Promise<Config> {
