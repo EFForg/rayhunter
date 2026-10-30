@@ -2,7 +2,7 @@ use log::info;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::{
-    fs::{self, File, try_exists},
+    fs::{self, OpenOptions, try_exists},
     io::{self, AsyncWrite, AsyncWriteExt},
 };
 
@@ -99,14 +99,17 @@ impl WifiStore {
         })
     }
 
-    pub async fn write_scan_file(&self, scan: &WifiScan) -> Result<(), WifiStoreError> {
+    pub async fn write_scan_file(&self, scan: &WifiScan, entry_name: &str) -> Result<(), WifiStoreError> {
         let wifi_filepath = FileKind::Wifi.get_filepath(
-            &format!("{}", scan.start_ts.timestamp()),
+            entry_name,
             &self.path,
             false,
         );
         info!("Writing scan {:?} to wifi file {:?}", scan, wifi_filepath);
-        let wifi_file = File::create(&wifi_filepath)
+        let wifi_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&wifi_filepath)
             .await
             .map_err(WifiStoreError::CreateFileError)?;
         let mut wifi_writer = WifiWriter::new(wifi_file);

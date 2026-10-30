@@ -119,11 +119,11 @@ async fn run_server(
     })
 }
 
-async fn init_wifi_store(config: &config::Config) -> Result<WifiStore, WifiStoreError> {
-    if WifiStore::exists(config.wifi_store_path.clone()).await? {
-        WifiStore::new(config.wifi_store_path.clone()).await
+async fn init_wifi_store(path: &str) -> Result<WifiStore, WifiStoreError> {
+    if WifiStore::exists(path.to_string()).await? {
+        WifiStore::new(path.to_string()).await
     } else {
-        WifiStore::create(config.wifi_store_path.clone()).await
+        WifiStore::create(path.to_string()).await
     }
 }
 
@@ -228,7 +228,7 @@ async fn run_with_config(
     println!("R A Y H U N T E R 🐳");
 
     let store = init_qmdl_store(&config).await?;
-    let wifi_store = init_wifi_store(&config).await?;
+    let wifi_store = init_wifi_store(&config.qmdl_store_path).await?;
     let analysis_status = AnalysisStatus::new(&store);
     let qmdl_store_lock = Arc::new(RwLock::new(store));
     let wifi_store_lock = Arc::new(RwLock::new(wifi_store));
@@ -286,21 +286,22 @@ async fn run_with_config(
             wifi_analysis_rx.clone(),
         );
 
-        run_wifi_scanner(
-            &task_tracker,
-            wifi_scan_lock.clone(),
-            shutdown_token.clone(),
-            wifi_rx,
-            wifi_store_lock.clone(),
-            config.min_space_to_start_recording_mb,
-            config.min_space_to_continue_recording_mb,
-            config.wifi_ouis.clone(),
-            wifi_analysis_tx.clone(),
-            harness.clone(),
-            notification_service.new_handler(),
-            ui_update_tx.clone(),
-        )
-        .await;
+                        run_wifi_scanner(
+                            &task_tracker,
+                            wifi_scan_lock.clone(),
+                            shutdown_token.clone(),
+                            wifi_rx,
+                            wifi_store_lock.clone(),
+                            qmdl_store_lock.clone(),
+                            config.min_space_to_start_recording_mb,
+                            config.min_space_to_continue_recording_mb,
+                            config.wifi_ouis.clone(),
+                            wifi_analysis_tx.clone(),
+                            harness.clone(),
+                            notification_service.new_handler(),
+                            ui_update_tx.clone(),
+                        )
+                        .await;
 
         info!("Starting UI");
 

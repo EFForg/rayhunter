@@ -54,6 +54,7 @@ pub async fn run_wifi_scanner(
     shutdown_token: CancellationToken,
     mut wifi_rx: mpsc::Receiver<WifiScanCtrlMessage>,
     wifi_store_lock: Arc<RwLock<WifiStore>>,
+    qmdl_store_lock: Arc<RwLock<crate::qmdl_store::RecordingStore>>,
     min_space_to_start_mb: u64,
     min_space_to_continue_mb: u64,
     wifi_ouis: Option<Vec<String>>,
@@ -116,7 +117,11 @@ pub async fn run_wifi_scanner(
                                 let wifi_store = wifi_store_lock.write().await;
                                 debug!("Found {} networks", networks.len());
                                 scan.finish(networks);
-                                if let Err(error) = wifi_store.write_scan_file(&scan).await {
+                                let entry_name = {
+                                    let qmdl_store = qmdl_store_lock.read().await;
+                                    qmdl_store.get_current_entry().map(|(_, entry)| entry.name.clone()).unwrap_or_else(|| "unknown".to_string())
+                                };
+                                if let Err(error) = wifi_store.write_scan_file(&scan, &entry_name).await {
                                     error!("Error writing to Wifi file: {error}");
                                 }
                                 let mut max_type = EventType::Informational;

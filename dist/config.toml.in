@@ -1,6 +1,5 @@
 # cat config.toml
 qmdl_store_path = "/data/rayhunter/qmdl"
-wifi_store_path = "/data/rayhunter/wifi"
 port = 8080
 debug_mode = false
 colorblind_mode = false
