@@ -54,7 +54,12 @@ pub enum FileKind {
 
 impl FileKind {
     // List of all possible physical files on disk.
-    pub const ALL: &'static [FileKind] = &[FileKind::Qmdl, FileKind::Analysis, FileKind::Gps, FileKind::Wifi];
+    pub const ALL: &'static [FileKind] = &[
+        FileKind::Qmdl,
+        FileKind::Analysis,
+        FileKind::Gps,
+        FileKind::Wifi,
+    ];
 
     pub fn get_filename(&self, entry_name: &str, qmdl_compressed: bool) -> String {
         match self {

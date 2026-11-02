@@ -237,12 +237,15 @@ async fn run_with_config(
     let (wifi_tx, wifi_rx) = mpsc::channel::<WifiScanCtrlMessage>(1);
     let (ui_update_tx, ui_update_rx) = mpsc::channel::<display::DisplayState>(1);
     let (analysis_tx, analysis_rx) = mpsc::channel::<AnalysisCtrlMessage>(5);
-    let (wifi_analysis_tx, wifi_analysis_rx) = mpsc::channel::<rayhunter::analysis::analyzer::AnalysisRow>(10);
+    let (wifi_analysis_tx, wifi_analysis_rx) =
+        mpsc::channel::<rayhunter::analysis::analyzer::AnalysisRow>(10);
     let wifi_analysis_rx = Arc::new(tokio::sync::Mutex::new(wifi_analysis_rx));
-    let harness = Arc::new(RwLock::new(rayhunter::analysis::analyzer::Harness::new_with_config(
-        &config.analyzers,
-        &rayhunter::DeviceMetadata::default(),
-    )));
+    let harness = Arc::new(RwLock::new(
+        rayhunter::analysis::analyzer::Harness::new_with_config(
+            &config.analyzers,
+            &rayhunter::DeviceMetadata::default(),
+        ),
+    ));
 
     {
         let mut h = harness.write().await;
@@ -286,22 +289,22 @@ async fn run_with_config(
             wifi_analysis_rx.clone(),
         );
 
-                        run_wifi_scanner(
-                            &task_tracker,
-                            wifi_scan_lock.clone(),
-                            shutdown_token.clone(),
-                            wifi_rx,
-                            wifi_store_lock.clone(),
-                            qmdl_store_lock.clone(),
-                            config.min_space_to_start_recording_mb,
-                            config.min_space_to_continue_recording_mb,
-                            config.wifi_ouis.clone(),
-                            wifi_analysis_tx.clone(),
-                            harness.clone(),
-                            notification_service.new_handler(),
-                            ui_update_tx.clone(),
-                        )
-                        .await;
+        run_wifi_scanner(
+            &task_tracker,
+            wifi_scan_lock.clone(),
+            shutdown_token.clone(),
+            wifi_rx,
+            wifi_store_lock.clone(),
+            qmdl_store_lock.clone(),
+            config.min_space_to_start_recording_mb,
+            config.min_space_to_continue_recording_mb,
+            config.wifi_ouis.clone(),
+            wifi_analysis_tx.clone(),
+            harness.clone(),
+            notification_service.new_handler(),
+            ui_update_tx.clone(),
+        )
+        .await;
 
         info!("Starting UI");
 

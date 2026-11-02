@@ -35,10 +35,7 @@ pub struct AnalysisWriter {
 // lets us simply append new rows to the end without parsing the entire JSON
 // object beforehand.
 impl AnalysisWriter {
-    pub async fn new(
-        file: File,
-        harness: Arc<RwLock<Harness>>,
-    ) -> Result<Self, std::io::Error> {
+    pub async fn new(file: File, harness: Arc<RwLock<Harness>>) -> Result<Self, std::io::Error> {
         let mut result = Self {
             writer: BufWriter::new(file),
             harness,
@@ -156,7 +153,9 @@ async fn perform_analysis(
     name: &str,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     harness: Arc<RwLock<rayhunter::analysis::analyzer::Harness>>,
-    wifi_analysis_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>>,
+    wifi_analysis_rx: Arc<
+        tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>,
+    >,
 ) -> Result<(), String> {
     info!("Opening QMDL and analysis file for {name}...");
     let (analysis_file, mut qmdl_reader) = {
@@ -227,7 +226,9 @@ async fn perform_analysis(
 pub fn run_analysis_thread(
     task_tracker: &TaskTracker,
     mut analysis_rx: Receiver<AnalysisCtrlMessage>,
-    wifi_analysis_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>>,
+    wifi_analysis_rx: Arc<
+        tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>,
+    >,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_status_lock: Arc<RwLock<AnalysisStatus>>,
     harness_lock: Arc<RwLock<rayhunter::analysis::analyzer::Harness>>,

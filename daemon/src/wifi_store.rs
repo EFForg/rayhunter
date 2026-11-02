@@ -99,12 +99,12 @@ impl WifiStore {
         })
     }
 
-    pub async fn write_scan_file(&self, scan: &WifiScan, entry_name: &str) -> Result<(), WifiStoreError> {
-        let wifi_filepath = FileKind::Wifi.get_filepath(
-            entry_name,
-            &self.path,
-            false,
-        );
+    pub async fn write_scan_file(
+        &self,
+        scan: &WifiScan,
+        entry_name: &str,
+    ) -> Result<(), WifiStoreError> {
+        let wifi_filepath = FileKind::Wifi.get_filepath(entry_name, &self.path, false);
         info!("Writing scan {:?} to wifi file {:?}", scan, wifi_filepath);
         let wifi_file = OpenOptions::new()
             .create(true)

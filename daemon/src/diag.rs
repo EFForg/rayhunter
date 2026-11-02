@@ -66,7 +66,9 @@ pub struct DiagTask {
     min_space_to_continue_mb: u64,
     gps_mode: GpsMode,
     gps_fixed_coords: Option<(f64, f64)>,
-    wifi_analysis_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>>,
+    wifi_analysis_rx: Arc<
+        tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>,
+    >,
     state: DiagState,
     max_type_seen: EventType,
     bytes_since_space_check: usize,
@@ -123,7 +125,11 @@ impl DiagTask {
         min_space_to_continue_mb: u64,
         gps_mode: GpsMode,
         gps_fixed_coords: Option<(f64, f64)>,
-        wifi_analysis_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>>,
+        wifi_analysis_rx: Arc<
+            tokio::sync::Mutex<
+                tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>,
+            >,
+        >,
     ) -> Self {
         Self {
             ui_update_sender,
@@ -170,7 +176,7 @@ impl DiagTask {
 
         // For fixed-mode sessions, write the configured coordinates to the storage
         // immediately so the per-session GPS is stored durably and isn't affected
-        // by future config changes or GPS API calls.        
+        // by future config changes or GPS API calls.
         if self.gps_mode == GpsMode::Fixed
             && let Some((lat, lon)) = self.gps_fixed_coords
             && let Some((entry_idx, _)) = qmdl_store.get_current_entry()
@@ -195,10 +201,9 @@ impl DiagTask {
         }
         self.stop_current_recording(qmdl_store).await;
         let qmdl_writer = Box::new(QmdlWriter::new(qmdl_gz_file));
-        let analysis_writer =
-            AnalysisWriter::new(analysis_file, self.harness.clone())
-                .await
-                .map_err(RecordingStoreError::WriteFileError)?;
+        let analysis_writer = AnalysisWriter::new(analysis_file, self.harness.clone())
+            .await
+            .map_err(RecordingStoreError::WriteFileError)?;
         self.state = DiagState::Recording {
             qmdl_writer,
             analysis_writer: Box::new(analysis_writer),
@@ -488,7 +493,9 @@ pub fn run_diag_read_thread(
     min_space_to_continue_mb: u64,
     gps_mode: GpsMode,
     gps_fixed_coords: Option<(f64, f64)>,
-    wifi_analysis_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>>,
+    wifi_analysis_rx: Arc<
+        tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>,
+    >,
 ) {
     task_tracker.spawn(async move {
         info!("Using configuration for device: {0:?}", device);

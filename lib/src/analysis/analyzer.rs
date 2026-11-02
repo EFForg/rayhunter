@@ -56,10 +56,7 @@ fn all_analyzers(
             NoNasMessagesAnalyzer::metadata(),
             boxed(NoNasMessagesAnalyzer::new()),
         ),
-        (
-            WifiOUIAnalyzer::metadata(),
-            boxed(WifiOUIAnalyzer::new()),
-        ),
+        (WifiOUIAnalyzer::metadata(), boxed(WifiOUIAnalyzer::new())),
         (DiagnosticAnalyzer::metadata(), boxed(DiagnosticAnalyzer {})),
     ]
     .into_iter()
@@ -459,10 +456,7 @@ impl Harness {
         row.packet_timestamp = Some(timestamp.fixed_offset());
         let ie = InformationElement::WifiNetwork(bssid.to_string());
         row.events = self.analyze_information_element(&ie, timestamp.fixed_offset());
-        info!(
-            "Pushing event {:?} onto analysis row {:?}",
-            row.events, row 
-        );
+        info!("Pushing event {:?} onto analysis row {:?}", row.events, row);
         self.assert_events_match_analyzers(&row.events);
         row
     }
