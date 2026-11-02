@@ -299,14 +299,9 @@ fn queue_qmdl(name: &str, analysis_status: &mut RwLockWriteGuard<AnalysisStatus>
     post,
     path = "/api/analysis/{name}",
     tag = "Recordings",
-    request_body(
-        content = Option<[Config]>,
-        description = "Any or all configuration elements from the valid config schema to be altered may be passed. Invalid keys will be discarded. Invalid values or value types will return an error."
-    ),
     responses(
         (status = StatusCode::ACCEPTED, description = "Success"),
-        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Unable to queue analysis file"),
-        (status = 422, description = "Failed to deserialize JSON body")
+        (status = StatusCode::INTERNAL_SERVER_ERROR, description = "Unable to queue analysis file")
     ),
     params(
         ("name" = String, Path, description = "QMDL file to analyze")
