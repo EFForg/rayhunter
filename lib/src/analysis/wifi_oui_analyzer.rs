@@ -10,6 +10,12 @@ pub struct WifiOUIAnalyzer {
     wifi_ouis: Vec<String>,
 }
 
+impl Default for WifiOUIAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WifiOUIAnalyzer {
     pub fn new() -> Self {
         Self {

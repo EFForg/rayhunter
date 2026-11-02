@@ -205,11 +205,10 @@ async fn perform_analysis(
                 let mut rx = wifi_analysis_rx.lock().await;
                 rx.recv().await
             } => {
-                if let Some(wifi_row) = res {
-                    if let Err(e) = analysis_writer.write(&wifi_row).await {
+                if let Some(wifi_row) = res
+                    && let Err(e) = analysis_writer.write(&wifi_row).await {
                         error!("Failed to write out-of-band wifi event: {e}");
                     }
-                }
             }
         }
     }
@@ -223,6 +222,7 @@ async fn perform_analysis(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run_analysis_thread(
     task_tracker: &TaskTracker,
     mut analysis_rx: Receiver<AnalysisCtrlMessage>,

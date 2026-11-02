@@ -20,7 +20,7 @@ use super::{
     test_analyzer::TestAnalyzer,
 };
 
-fn boxed(analyzer: impl Analyzer + Send + 'static) -> Box<dyn Analyzer + Send + Sync> {
+fn boxed(analyzer: impl Analyzer + 'static) -> Box<dyn Analyzer + Send + Sync> {
     Box::new(analyzer)
 }
 

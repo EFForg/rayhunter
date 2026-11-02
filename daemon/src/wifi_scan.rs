@@ -105,7 +105,7 @@ pub async fn run_wifi_scanner(
                 }
                 _ = time::sleep(Duration::from_secs(15)), if started => {
                     info!("Calling timer");
-                    if let Some(_) = wifi_ouis {
+                    if wifi_ouis.is_some() {
                         if wifi_scan_lock.try_write().is_err() {
                             warn!("WiFi scan already in progress");
                             continue;
