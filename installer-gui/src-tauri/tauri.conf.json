@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "Rayhunter Installer",
+    "productName": "Rayhunter-Installer",
     "identifier": "com.rayhunter-installer.app",
     "build": {
         "beforeDevCommand": "npm run dev",

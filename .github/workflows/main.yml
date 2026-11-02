@@ -488,8 +488,8 @@ jobs:
         with:
           name: gui-installer-${{ matrix.platform.arch }}-appimage
           path: |
-            Rayhunter Installer*.AppImage
-            Rayhunter Installer*.AppImage.sha256
+            Rayhunter-Installer*.AppImage
+            Rayhunter-Installer*.AppImage.sha256
           if-no-files-found: error
 
   build_installer_gui_macos:
@@ -538,8 +538,8 @@ jobs:
         with:
           name: gui-installer-app
           path: |
-            Rayhunter Installer.app.zip
-            Rayhunter Installer.app.zip.sha256
+            Rayhunter-Installer.app.zip
+            Rayhunter-Installer.app.zip.sha256
           if-no-files-found: error
 
   build_installer_gui_windows:
@@ -582,8 +582,8 @@ jobs:
         with:
           name: gui-installer-exe
           path: |
-            Rayhunter Installer*.exe
-            Rayhunter Installer*.exe.sha256
+            Rayhunter-Installer*.exe
+            Rayhunter-Installer*.exe.sha256
           if-no-files-found: error
 
   build_release_zip:
