@@ -100,8 +100,9 @@ This analyzer is great for testing if your Rayhunter installation works. It will
 
 On the **Orbic**, **Moxee**, **UZ801**, **TMOHS1**, and **Wingtech**, Rayhunter can be configured to scan nearby WiFi Access Points (APs) for specific OUIs (Organizationally Unique Identifiers) which identify specific WiFi signatures from known IMSI catcher manufacturers. In most cases this is probably false positive if it triggers on its own, especially for the axon OUI. But in conjunction with other alerts this becomes a high value signal. 
 We supply the follow preconfigured list OUIs, but you can add your own. 
-```
-    # Axon
+```rust,ignore
+[
+    # Axon 
     "00:58:28",
     "00:C0:D4",
     "84:70:03",
@@ -116,4 +117,5 @@ We supply the follow preconfigured list OUIs, but you can add your own.
     "00:17:F3",
     # Octasic
     "00:0C:90",
+]
 ```
