@@ -3,7 +3,7 @@
 Make sure you've got one of Rayhunter's [supported devices](./supported-devices.md). These instructions have only been tested on macOS and Ubuntu 24.04. If they fail, you will need to [install Rayhunter from source](./installing-from-source.md).
 
 1. **For the TP-Link only,** insert a FAT-formatted SD card. This will be used to store all recordings.
-2. Download the latest `rayhunter-vX.X.X-PLATFORM.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases) for your platform:
+2. Download the latest `rayhunter-cli-vX.X.X-PLATFORM.zip` from the [Rayhunter releases page](https://github.com/EFForg/rayhunter/releases) for your platform:
     - for Linux on x64 architecture: `linux-x64`
     - for Linux on ARM64 architecture: `linux-aarch64`
     - for Linux on armv7/v8 (32-bit) architecture: `linux-armv7`
@@ -11,13 +11,13 @@ Make sure you've got one of Rayhunter's [supported devices](./supported-devices.
     - for MacOS on ARM (M1/M2 etc.) architecture: `macos-arm`
     - for Windows: `windows-x86_64`
 
-    > **Note:** Download the `rayhunter-vX.X.X-PLATFORM.zip` asset for your platform, **not** the automatically generated "Source code (zip)" archive at the bottom of the release. The source archive does not contain the prebuilt `installer` binary, so the commands below will fail with an error like `./installer: command not found`.
+    > **Note:** Download the `rayhunter-cli-vX.X.X-PLATFORM.zip` asset for your platform, **not** the automatically generated "Source code (zip)" archive at the bottom of the release. The source archive does not contain the prebuilt `installer` binary, so the commands below will fail with an error like `./installer: command not found`.
 
-3. Decompress the `rayhunter-vX.X.X-PLATFORM.zip` archive. Open the terminal and navigate to the folder. (Be sure to replace X.X.X with the correct version number!)
+3. Decompress the `rayhunter-cli-vX.X.X-PLATFORM.zip` archive. Open the terminal and navigate to the folder. (Be sure to replace X.X.X with the correct version number!)
 
     ```bash
-    unzip ~/Downloads/rayhunter-vX.X.X-PLATFORM.zip
-    cd ~/Downloads/rayhunter-vX.X.X-PLATFORM
+    unzip ~/Downloads/rayhunter-cli-vX.X.X-PLATFORM.zip
+    cd ~/Downloads/rayhunter-cli-vX.X.X-PLATFORM
     ```
 
    On Windows you can decompress using the file browser, then navigate to the
