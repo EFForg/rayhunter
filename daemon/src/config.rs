@@ -184,8 +184,8 @@ impl Default for Config {
                 // L3Harris
                 "00:00:C3".to_string(),
                 "00:06:EC".to_string(),
-                //Ocastic
                 "00:17:F3".to_string(),
+                // Octasic
                 "00:0C:90".to_string(),
             ]),
         }

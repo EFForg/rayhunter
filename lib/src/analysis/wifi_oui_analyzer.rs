@@ -34,7 +34,7 @@ impl Analyzer for WifiOUIAnalyzer {
             key: "wifi_oui_analyzer".into(),
             default_enabled: true,
             name: "WifiOUIAnalyzer".into(),
-            description: "Scans wifi channels looking for OUIs of known IMSI catchers".into(),
+            description: "Scans wifi channels looking for access points manufactured by known manufactuerers of IMSI catchers, likely a false positive if not accompanied by other alerts.".into(),
             version: 1,
         }
     }
@@ -66,7 +66,7 @@ impl Analyzer for WifiOUIAnalyzer {
                 info!("Found match for bssid {bssid}");
                 return Some(Event {
                     event_type: EventType::Low,
-                    message: format!("Found suspicious wifi network {bssid}"),
+                    message: format!("Found suspicious wifi network {bssid}. Don't worry about this unless there are also non wifi related alerts!"),
                 });
             }
         }
