@@ -454,10 +454,10 @@ jobs:
         platform:
           # we want to use the oldest supported version of ubuntu here to
           # maximize compatibility with older versions of glibc
-          - name: linux-x64
+          - arch: x86_64
             os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-          - name: linux-aarch64
+          - arch: aarch64
             os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
     runs-on: ${{ matrix.platform.os }}
@@ -478,20 +478,18 @@ jobs:
         run: |
           npm ci
           npm run tauri build -w installer-gui -- --target ${{ matrix.platform.target }}
+      - name: Create hash file
+        shell: bash
+        run: |
+          mv target/${{ matrix.platform.target }}/release/bundle/appimage/*.AppImage .
+          appimages=(./*.AppImage)
+          sha256sum "${appimages[0]}" > "${appimages[0]}.sha256"
       - uses: actions/upload-artifact@v4
         with:
-          name: gui-installer-${{ matrix.platform.name }}-appimage
-          path: target/${{ matrix.platform.target }}/release/bundle/appimage/*.AppImage
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gui-installer-${{ matrix.platform.name }}-deb
-          path: target/${{ matrix.platform.target }}/release/bundle/deb/*.deb
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gui-installer-${{ matrix.platform.name }}-rpm
-          path: target/${{ matrix.platform.target }}/release/bundle/rpm/*.rpm
+          name: gui-installer-${{ matrix.platform.arch }}-appimage
+          path: |
+            Rayhunter-Installer*.AppImage
+            Rayhunter-Installer*.AppImage.sha256
           if-no-files-found: error
 
   build_installer_gui_macos:
@@ -506,6 +504,8 @@ jobs:
       - files_changed
       - installer_gui_check
       - test_installer_frontend
+    env:
+      TARGET: universal-apple-darwin
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -522,18 +522,24 @@ jobs:
           # bin caching breaks cargo resolution on macOS 15 runner images
           cache-bin: 'false'
       - name: Build GUI installer
-        env:
-          TARGET: universal-apple-darwin
         shell: bash
         run: |
           npm ci
           npm run tauri build -w installer-gui -- --target "$TARGET"
+      - name: Create zip and hash file
+        shell: bash
+        run: |
           mv "target/$TARGET/release/bundle/macos/"*.app .
-          zip -r "rayhunter-installer-macos.app.zip" ./*.app
+          apps=(./*.app)
+          zipfile="${apps[0]}.zip"
+          zip -r "$zipfile" "${apps[0]}"
+          sha256sum "$zipfile" > "$zipfile.sha256"
       - uses: actions/upload-artifact@v4
         with:
-          name: gui-installer-macos-app
-          path: ./*.app.zip
+          name: gui-installer-app
+          path: |
+            Rayhunter-Installer.app.zip
+            Rayhunter-Installer.app.zip.sha256
           if-no-files-found: error
 
   build_installer_gui_windows:
@@ -566,15 +572,18 @@ jobs:
         run: |
           npm ci
           npm run tauri build -w installer-gui -- --target ${{ env.TARGET }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: gui-installer-msi
-          path: target/${{ env.TARGET }}/release/bundle/msi/*.msi
-          if-no-files-found: error
+      - name: Create hash file
+        shell: bash
+        run: |
+          mv "target/$TARGET/release/bundle/nsis/"*.exe .
+          exes=(./*.exe)
+          sha256sum "${exes[0]}" > "${exes[0]}.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: gui-installer-exe
-          path: target/${{ env.TARGET }}/release/bundle/nsis/*.exe
+          path: |
+            Rayhunter-Installer*.exe
+            Rayhunter-Installer*.exe.sha256
           if-no-files-found: error
 
   build_release_zip:
@@ -609,7 +618,7 @@ jobs:
       - name: Setup versioned release directory
         run: |
           platform="${{ matrix.platform }}"
-          dest="rayhunter-v${VERSION}-${{ matrix.platform }}"
+          dest="rayhunter-cli-v${VERSION}-${{ matrix.platform }}"
           mkdir "$dest"
           # Handle installer with proper extension for Windows
           if [ "$platform" = "windows-x86_64" ]; then
@@ -624,10 +633,10 @@ jobs:
       - name: Upload zip release and sha256
         uses: actions/upload-artifact@v4
         with:
-          name: rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}
+          name: rayhunter-cli-v${{ env.VERSION }}-${{ matrix.platform }}
           path: |
-            rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}.zip
-            rayhunter-v${{ env.VERSION }}-${{ matrix.platform }}.zip.sha256
+            rayhunter-cli-v${{ env.VERSION }}-${{ matrix.platform }}.zip
+            rayhunter-cli-v${{ env.VERSION }}-${{ matrix.platform }}.zip.sha256
           if-no-files-found: error
 
   openapi_build:
