@@ -95,3 +95,27 @@ This heuristic is experimental. It may produce a false positive if the device re
 *(disabled by default)*
 
 This analyzer is great for testing if your Rayhunter installation works. It will alert every time a new tower is seen (specifically every time a tower broadcasts a SIB1 message.) It is designed to be very noisy so we do not recommend leaving it on but if this alerts it means your Rayhunter device is working! 
+
+### WiFi OUI Analyzer
+
+On the **Orbic**, **Moxee**, **UZ801**, **TMOHS1**, and **Wingtech**, Rayhunter can be configured to scan nearby WiFi Access Points (APs) for specific OUIs (Organizationally Unique Identifiers) which identify specific WiFi signatures from known IMSI catcher manufacturers. In most cases this is probably false positive if it triggers on its own, especially for the axon OUI. But in conjunction with other alerts this becomes a high value signal. 
+We supply the follow preconfigured list OUIs, but you can add your own. 
+```rust,ignore
+[
+    # Axon 
+    "00:58:28",
+    "00:C0:D4",
+    "84:70:03",
+    # Keyw
+    "70:B3:D5:7C:B",
+    # Jacobs
+    "10:63:A3:1",
+    "8C:1F:64:A9:8",
+    # L3Harris
+    "00:00:C3",
+    "00:06:EC",
+    "00:17:F3",
+    # Octasic
+    "00:0C:90",
+]
+```

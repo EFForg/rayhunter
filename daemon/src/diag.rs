@@ -15,15 +15,15 @@ use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
 use crate::gps::GpsRecord;
+use crate::wifi_scan::WifiScanCtrlMessage;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{RwLock, oneshot};
 use tokio_stream::wrappers::LinesStream;
 use tokio_util::task::TaskTracker;
 
-use rayhunter::DeviceMetadata;
 #[cfg(feature = "apidocs")]
 use rayhunter::analysis::analyzer::ReportMetadata;
-use rayhunter::analysis::analyzer::{AnalysisLineNormalizer, AnalyzerConfig, EventType};
+use rayhunter::analysis::analyzer::{AnalysisLineNormalizer, EventType};
 use rayhunter::diag::{DataType, Message, MessagesContainer};
 use rayhunter::diag_device::DiagDevice;
 use rayhunter::qmdl::QmdlWriter;
@@ -60,13 +60,15 @@ pub enum DiagDeviceCtrlMessage {
 pub struct DiagTask {
     ui_update_sender: Sender<display::DisplayState>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
-    analyzer_config: AnalyzerConfig,
-    device: Device,
+    harness: Arc<RwLock<rayhunter::analysis::analyzer::Harness>>,
     notification_channel: tokio::sync::mpsc::Sender<Notification>,
     min_space_to_start_mb: u64,
     min_space_to_continue_mb: u64,
     gps_mode: GpsMode,
     gps_fixed_coords: Option<(f64, f64)>,
+    wifi_analysis_rx: Arc<
+        tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>,
+    >,
     state: DiagState,
     max_type_seen: EventType,
     bytes_since_space_check: usize,
@@ -82,14 +84,18 @@ enum DiagState {
     Stopped,
 }
 
-enum DiskSpaceCheck {
+pub enum DiskSpaceCheck {
     Ok(u64),
     Warning(u64),
     Critical(u64),
     Failed,
 }
 
-fn check_disk_space(path: &std::path::Path, warning_mb: u64, critical_mb: u64) -> DiskSpaceCheck {
+pub fn check_disk_space(
+    path: &std::path::Path,
+    warning_mb: u64,
+    critical_mb: u64,
+) -> DiskSpaceCheck {
     match DiskStats::new(path.to_str().unwrap()) {
         Ok(stats) => {
             let available_mb = stats.available_bytes.unwrap_or(0) / 1024 / 1024;
@@ -113,24 +119,28 @@ impl DiagTask {
     fn new(
         ui_update_sender: Sender<display::DisplayState>,
         analysis_sender: Sender<AnalysisCtrlMessage>,
-        analyzer_config: AnalyzerConfig,
-        device: Device,
+        harness: Arc<RwLock<rayhunter::analysis::analyzer::Harness>>,
         notification_channel: tokio::sync::mpsc::Sender<Notification>,
         min_space_to_start_mb: u64,
         min_space_to_continue_mb: u64,
         gps_mode: GpsMode,
         gps_fixed_coords: Option<(f64, f64)>,
+        wifi_analysis_rx: Arc<
+            tokio::sync::Mutex<
+                tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>,
+            >,
+        >,
     ) -> Self {
         Self {
             ui_update_sender,
             analysis_sender,
-            analyzer_config,
-            device,
+            harness,
             notification_channel,
             min_space_to_start_mb,
             min_space_to_continue_mb,
             gps_mode,
             gps_fixed_coords,
+            wifi_analysis_rx,
             state: DiagState::Stopped,
             max_type_seen: EventType::Informational,
             bytes_since_space_check: 0,
@@ -191,13 +201,9 @@ impl DiagTask {
         }
         self.stop_current_recording(qmdl_store).await;
         let qmdl_writer = Box::new(QmdlWriter::new(qmdl_gz_file));
-        let device_metadata = DeviceMetadata {
-            home_plmn: rayhunter::sim::home_plmn(&self.device).await,
-        };
-        let analysis_writer =
-            AnalysisWriter::new(analysis_file, &self.analyzer_config, &device_metadata)
-                .await
-                .map_err(RecordingStoreError::WriteFileError)?;
+        let analysis_writer = AnalysisWriter::new(analysis_file, self.harness.clone())
+            .await
+            .map_err(RecordingStoreError::WriteFileError)?;
         self.state = DiagState::Recording {
             qmdl_writer,
             analysis_writer: Box::new(analysis_writer),
@@ -339,13 +345,16 @@ impl DiagTask {
             debug!("skipping non-userspace diag messages...");
             return;
         }
-        // keep track of how many bytes were written to the QMDL file so we can read
-        // a valid block of data from it in the HTTP server
+
+        let mut should_stop = None;
+
         if let DiagState::Recording {
             qmdl_writer,
             analysis_writer,
         } = &mut self.state
         {
+            // keep track of how many bytes were written to the QMDL file so we can read
+            // a valid block of data from it in the HTTP server
             if self.bytes_since_space_check >= DISK_CHECK_BYTES_INTERVAL {
                 self.bytes_since_space_check = 0;
                 match check_disk_space(
@@ -369,8 +378,7 @@ impl DiagTask {
                             .await
                             .ok();
 
-                        self.stop(qmdl_store, Some(reason)).await;
-                        return;
+                        should_stop = Some(reason);
                     }
                     DiskSpaceCheck::Warning(mb) if !self.low_space_warned => {
                         self.low_space_warned = true;
@@ -391,10 +399,8 @@ impl DiagTask {
             if let Err(e) = qmdl_writer.write_container(&container).await {
                 let reason = format!("failed to write to QMDL (disk full?): {e}");
                 error!("{reason}");
-                self.stop(qmdl_store, Some(reason)).await;
-                return;
-            }
-            if let Ok(file_size) = qmdl_writer.size().await {
+                should_stop = Some(reason);
+            } else if let Ok(file_size) = qmdl_writer.size().await {
                 debug!(
                     "total QMDL bytes written: {}, updating manifest...",
                     file_size
@@ -402,10 +408,10 @@ impl DiagTask {
                 if let Err(e) = qmdl_store.update_current_entry_qmdl_size(file_size).await {
                     let reason = format!("failed to update manifest (disk full?): {e}");
                     error!("{reason}");
-                    self.stop(qmdl_store, Some(reason)).await;
-                    return;
+                    should_stop = Some(reason);
+                } else {
+                    debug!("done!");
                 }
-                debug!("done!");
             }
 
             // Extract the latest packet timestamp from this container
@@ -454,8 +460,19 @@ impl DiagTask {
                         .expect("couldn't send ui update message: {}");
                 }
             }
-        } else {
-            debug!("no qmdl_writer set, continuing...");
+
+            // Integrated Wifi Analysis processing:
+            // Poll the wifi analysis channel and write any events to the current analysis file.
+            let mut wifi_rx = self.wifi_analysis_rx.lock().await;
+            while let Ok(wifi_row) = wifi_rx.try_recv() {
+                if let Err(e) = analysis_writer.write(&wifi_row).await {
+                    error!("Failed to write out-of-band wifi event: {e}");
+                }
+            }
+        }
+
+        if let Some(reason) = should_stop {
+            self.stop(qmdl_store, Some(reason)).await;
         }
     }
 }
@@ -467,19 +484,28 @@ pub fn run_diag_read_thread(
     mut qmdl_file_rx: Receiver<DiagDeviceCtrlMessage>,
     qmdl_file_tx: Sender<DiagDeviceCtrlMessage>,
     ui_update_sender: Sender<display::DisplayState>,
+    wifi_tx: Sender<WifiScanCtrlMessage>,
     qmdl_store_lock: Arc<RwLock<RecordingStore>>,
     analysis_sender: Sender<AnalysisCtrlMessage>,
-    analyzer_config: AnalyzerConfig,
+    harness: Arc<RwLock<rayhunter::analysis::analyzer::Harness>>,
     notification_channel: tokio::sync::mpsc::Sender<Notification>,
     min_space_to_start_mb: u64,
     min_space_to_continue_mb: u64,
     gps_mode: GpsMode,
     gps_fixed_coords: Option<(f64, f64)>,
+    wifi_analysis_rx: Arc<
+        tokio::sync::Mutex<tokio::sync::mpsc::Receiver<rayhunter::analysis::analyzer::AnalysisRow>>,
+    >,
 ) {
     task_tracker.spawn(async move {
         info!("Using configuration for device: {0:?}", device);
-        let mut dev = DiagDevice::new(&device)
-            .await?;
+        let mut dev = match DiagDevice::new(&device).await {
+            Ok(d) => d,
+            Err(e) => {
+                error!("failed to init diag device: {e}");
+                return Err(e);
+            }
+        };
         dev.config_logs()
             .await?;
 
@@ -487,16 +513,19 @@ pub fn run_diag_read_thread(
         let mut diag_task = DiagTask::new(
             ui_update_sender,
             analysis_sender,
-            analyzer_config,
-            device.clone(),
+            harness,
             notification_channel,
             min_space_to_start_mb,
             min_space_to_continue_mb,
             gps_mode,
             gps_fixed_coords,
+            wifi_analysis_rx,
         );
         qmdl_file_tx
             .send(DiagDeviceCtrlMessage::StartRecording { response_tx: None })
+            .await
+            .unwrap();
+        wifi_tx.send(WifiScanCtrlMessage::StartRecording { response_tx: None })
             .await
             .unwrap();
         loop {
@@ -594,6 +623,33 @@ pub async fn start_recording(
         })?;
 
     match response_rx.await {
+        Ok(Ok(())) => (),
+        Ok(Err(reason)) => {
+            return Err((StatusCode::INSUFFICIENT_STORAGE, reason.to_string()));
+        }
+        Err(e) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to receive start recording response: {e}"),
+            ));
+        }
+    };
+
+    let (wifi_response_tx, wifi_response_rx) = oneshot::channel();
+    state
+        .wifi_scan_sender
+        .send(WifiScanCtrlMessage::StartRecording {
+            response_tx: Some(wifi_response_tx),
+        })
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("couldn't send start recording message to wifi scanner: {e}"),
+            )
+        })?;
+
+    match wifi_response_rx.await {
         Ok(Ok(())) => Ok((StatusCode::ACCEPTED, "ok".to_string())),
         Ok(Err(reason)) => Err((StatusCode::INSUFFICIENT_STORAGE, reason.to_string())),
         Err(e) => Err((
@@ -630,6 +686,17 @@ pub async fn stop_recording(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("couldn't send stop recording message: {e}"),
+            )
+        })?;
+    info!("Sending Wifi StartRecording message");
+    state
+        .wifi_scan_sender
+        .send(WifiScanCtrlMessage::StopRecording)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("couldn't send start recording message to wifi scanner: {e}"),
             )
         })?;
     Ok((StatusCode::ACCEPTED, "ok".to_string()))

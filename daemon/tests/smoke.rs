@@ -86,6 +86,8 @@ async fn daemon_serves_index_and_api() {
     let tmp = TempDir::new().unwrap();
     let qmdl_dir = tmp.path().join("qmdl");
     std::fs::create_dir(&qmdl_dir).unwrap();
+    let wifi_dir = tmp.path().join("wifi");
+    std::fs::create_dir(&wifi_dir).unwrap();
     // The daemon refuses to create a store in debug_mode, so seed an empty
     // manifest. See init_qmdl_store in daemon/src/main.rs.
     std::fs::write(qmdl_dir.join("manifest.toml"), "entries = []\n").unwrap();
@@ -94,8 +96,9 @@ async fn daemon_serves_index_and_api() {
     std::fs::write(
         &config_path,
         format!(
-            "qmdl_store_path = \"{}\"\nport = {}\ndebug_mode = true\n",
+            "qmdl_store_path = \"{}\"\nwifi_store_path = \"{}\"\nport = {}\ndebug_mode = true\n",
             qmdl_dir.display(),
+            wifi_dir.display(),
             port,
         ),
     )

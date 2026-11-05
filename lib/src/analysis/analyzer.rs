@@ -1,11 +1,12 @@
-use chrono::{DateTime, FixedOffset};
-use log::debug;
+use chrono::{DateTime, FixedOffset, Local};
+use log::{debug, info};
 use pcap_file_tokio::pcapng::blocks::enhanced_packet::EnhancedPacketBlock;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use crate::DeviceMetadata;
+use crate::analysis::wifi_oui_analyzer::WifiOUIAnalyzer;
 use crate::diag::{DiagParsingError, Message, MessagesContainer};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, parser as gsmtap_parser};
 use crate::util::RuntimeMetadata;
@@ -19,13 +20,13 @@ use super::{
     test_analyzer::TestAnalyzer,
 };
 
-fn boxed(analyzer: impl Analyzer + Send + 'static) -> Box<dyn Analyzer + Send> {
+fn boxed(analyzer: impl Analyzer + 'static) -> Box<dyn Analyzer + Send + Sync> {
     Box::new(analyzer)
 }
 
 fn all_analyzers(
     device_metadata: &DeviceMetadata,
-) -> impl Iterator<Item = (AnalyzerMetadata, Box<dyn Analyzer + Send>)> {
+) -> impl Iterator<Item = (AnalyzerMetadata, Box<dyn Analyzer + Send + Sync>)> {
     [
         (
             ImsiRequestedAnalyzer::metadata(),
@@ -55,6 +56,7 @@ fn all_analyzers(
             NoNasMessagesAnalyzer::metadata(),
             boxed(NoNasMessagesAnalyzer::new()),
         ),
+        (WifiOUIAnalyzer::metadata(), boxed(WifiOUIAnalyzer::new())),
         (DiagnosticAnalyzer::metadata(), boxed(DiagnosticAnalyzer {})),
     ]
     .into_iter()
@@ -184,7 +186,7 @@ pub struct Event {
 /// (IC). While maintaining some amount of state is useful, be mindful of how
 /// much memory your [Analyzer] uses at runtime, since rayhunter may run for
 /// many hours at a time with dozens of [Analyzers](Analyzer) working in parallel.
-pub trait Analyzer {
+pub trait Analyzer: Send + Sync {
     /// Returns static metadata for this analyzer type; it must not depend on
     /// instance state.
     fn metadata() -> AnalyzerMetadata
@@ -210,6 +212,8 @@ pub trait Analyzer {
     fn report_skipped_packet(&mut self, _timestamp: DateTime<FixedOffset>) -> Option<Event> {
         None
     }
+
+    fn configure(&mut self, _config: &serde_json::Value) {}
 }
 
 /// Static analyzer metadata exposed in configuration and analysis reports.
@@ -395,7 +399,7 @@ impl<'de> Deserialize<'de> for AnalysisRow {
 }
 
 pub struct Harness {
-    analyzers: Vec<Box<dyn Analyzer + Send>>,
+    analyzers: Vec<Box<dyn Analyzer + Send + Sync>>,
     metadata: Vec<AnalyzerMetadata>,
     packet_num: usize,
 }
@@ -436,6 +440,25 @@ impl Harness {
     pub fn add_analyzer(&mut self, metadata: AnalyzerMetadata, analyzer: Box<dyn Analyzer + Send>) {
         self.metadata.push(metadata);
         self.analyzers.push(analyzer);
+    }
+
+    pub fn configure_analyzer(&mut self, key: &str, config: &serde_json::Value) {
+        for (i, metadata) in self.metadata.iter().enumerate() {
+            if metadata.key == key {
+                self.analyzers[i].configure(config);
+                return;
+            }
+        }
+    }
+
+    pub fn analyze_wifi_network(&mut self, bssid: &str, timestamp: DateTime<Local>) -> AnalysisRow {
+        let mut row = AnalysisRow::new();
+        row.packet_timestamp = Some(timestamp.fixed_offset());
+        let ie = InformationElement::WifiNetwork(bssid.to_string());
+        row.events = self.analyze_information_element(&ie, timestamp.fixed_offset());
+        info!("Pushing event {:?} onto analysis row {:?}", row.events, row);
+        self.assert_events_match_analyzers(&row.events);
+        row
     }
 
     pub fn analyze_pcap_packet(&mut self, packet: EnhancedPacketBlock) -> AnalysisRow {
