@@ -10,7 +10,7 @@ use rayhunter::{
     qmdl::QmdlMessageReader,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf };
 use tokio::fs::File;
 use walkdir::WalkDir;
 
@@ -21,8 +21,8 @@ mod json;
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    #[arg(short = 'p', long, help = "A file or directory of packet captures")]
-    path: PathBuf,
+    #[arg(short = 'p', long, help = "A file or directory of packet captures",)]
+    path: Option<PathBuf>,
 
     #[arg(short = 'P', long, help = "Convert qmdl files to pcap after analysis")]
     pcapify: bool,
@@ -38,6 +38,12 @@ struct Args {
 
     #[arg(short, long, help = "Show debug messages")]
     debug: bool,
+
+    #[arg(short = 'c', long, help = "specify a config.toml file containing tests to run")]
+    config: Option<PathBuf>,
+
+    #[arg(help="paths to scan for files")]
+    scanfiles: Vec<PathBuf>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -221,6 +227,32 @@ async fn pcapify(qmdl_path: &PathBuf) {
     info!("wrote pcap to {:?}", pcap_path);
 }
 
+async fn analyze_path(path: PathBuf, args: &Args,
+        mut json_writer: Option<&mut IncrementalJsonWriter<File>>,) {
+
+    for maybe_entry in WalkDir::new(&path) {
+        let Ok(entry) = maybe_entry else {
+            error!("failed to open dir entry {maybe_entry:?}");
+            continue;
+        };
+        let name = entry.file_name();
+        let name_str = name.to_str().unwrap();
+        let path = entry.path();
+        let path_str = path.to_str().unwrap();
+        if name_str.ends_with(".qmdl") || name_str.ends_with(".qmdl.gz") {
+            info!("**** Beginning analysis of {name_str}");
+            analyze_qmdl(path_str, args.show_skipped, json_writer.as_deref_mut()).await;
+            if args.pcapify {
+                pcapify(&path.to_path_buf()).await;
+            }
+        } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
+            // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
+            info!("**** Beginning analysis of {name_str}");
+            analyze_pcap(path_str, args.show_skipped, json_writer.as_deref_mut()).await;
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
@@ -252,34 +284,22 @@ async fn main() {
             .open(json_path)
             .await
             .expect("failed to create JSON output file");
-        let check_path_str = args.path.to_string_lossy();
+
         json_writer = Some(
-            IncrementalJsonWriter::new(json_file, &check_path_str, &metadata)
+            IncrementalJsonWriter::new(json_file, &metadata)
                 .await
                 .expect("failed to create JSON writer"),
         );
     }
+    let scanfiles = args.scanfiles.clone();
+    for pathbuf in scanfiles {
+        analyze_path(pathbuf, &args, json_writer.as_mut()).await;
+    } 
 
-    for maybe_entry in WalkDir::new(&args.path) {
-        let Ok(entry) = maybe_entry else {
-            error!("failed to open dir entry {maybe_entry:?}");
-            continue;
-        };
-        let name = entry.file_name();
-        let name_str = name.to_str().unwrap();
-        let path = entry.path();
-        let path_str = path.to_str().unwrap();
-        if name_str.ends_with(".qmdl") || name_str.ends_with(".qmdl.gz") {
-            info!("**** Beginning analysis of {name_str}");
-            analyze_qmdl(path_str, args.show_skipped, json_writer.as_mut()).await;
-            if args.pcapify {
-                pcapify(&path.to_path_buf()).await;
-            }
-        } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
-            // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
-            info!("**** Beginning analysis of {name_str}");
-            analyze_pcap(path_str, args.show_skipped, json_writer.as_mut()).await;
-        }
+    let patharg = args.path.clone();
+    if let Some(pathbuf) = patharg {
+        analyze_path(pathbuf, &args, json_writer.as_mut()).await;
+
     }
 
     if let Some(writer) = json_writer {

@@ -15,17 +15,15 @@ pub struct IncrementalJsonWriter<T> {
 impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
     pub async fn new(
         file: T,
-        check_path: &str,
         metadata: &ReportMetadata,
     ) -> std::io::Result<Self> {
         // Writes the "static" part of the report, i.e. the initial curly brace
         // & fields that don't change depending on QMDL reports
         let mut writer = BufWriter::new(file);
-        let path_str = serde_json::to_string(check_path)?;
         let metadata_str = serde_json::to_string(metadata)?;
         let s = format!(
-            r#"{{ "path": {}, "metadata": {}, "reports": ["#,
-            path_str, metadata_str
+            r#"{{ "metadata": {}, "reports": ["#,
+            metadata_str
         );
         writer.write_all(s.as_bytes()).await?;
         Ok(Self {
@@ -67,7 +65,6 @@ mod test {
 
     #[derive(Debug, Deserialize, PartialEq)]
     struct ExpectedJsonLayout {
-        path: String,
         metadata: ReportMetadata,
         reports: Vec<Report>,
     }
@@ -86,12 +83,12 @@ mod test {
         report
     }
 
-    async fn create_test_writer(path: &str) -> (IncrementalJsonWriter<DuplexStream>, DuplexStream) {
+    async fn create_test_writer() -> (IncrementalJsonWriter<DuplexStream>, DuplexStream) {
         let (writer, reader) = duplex(1_000_000);
         let harness =
             Harness::new_with_config(&AnalyzerConfig::default(), &DeviceMetadata::default());
         (
-            IncrementalJsonWriter::new(writer, path, &harness.get_metadata())
+            IncrementalJsonWriter::new(writer, &harness.get_metadata())
                 .await
                 .unwrap(),
             reader,
@@ -106,11 +103,10 @@ mod test {
 
     #[tokio::test]
     async fn test_empty() {
-        let (writer, reader) = create_test_writer("test_path").await;
+        let (writer, reader) = create_test_writer().await;
         writer.finish().await.unwrap();
         let value = parse_json(reader).await;
         let expected = ExpectedJsonLayout {
-            path: "test_path".to_string(),
             metadata: Harness::new_with_config(
                 &AnalyzerConfig::default(),
                 &DeviceMetadata::default(),
@@ -123,7 +119,7 @@ mod test {
 
     #[tokio::test]
     async fn test_with_one_report() {
-        let (mut writer, reader) = create_test_writer("test_path").await;
+        let (mut writer, reader) = create_test_writer().await;
         let report = create_report("foo.qmdl");
         writer.write_report(&report).await.unwrap();
         writer.finish().await.unwrap();
@@ -133,7 +129,7 @@ mod test {
 
     #[tokio::test]
     async fn test_with_multiple_reports() {
-        let (mut writer, reader) = create_test_writer("test_path").await;
+        let (mut writer, reader) = create_test_writer().await;
         let report1 = create_report("foo.qmdl");
         writer.write_report(&report1).await.unwrap();
         let report2 = create_report("bar.qmdl");
