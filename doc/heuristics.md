@@ -4,7 +4,7 @@ Rayhunter includes several analyzers to detect potential IMSI catcher activity. 
 
 ## Available Analyzers
 
-### IMSI Requested (v3)
+### IMSI Requested (v6)
 
 This analyzer tests whether the eNodeB sends an IMSI or IMEI Identity Request NAS message under suspicious .
 
@@ -28,7 +28,7 @@ Looking for this chain of events is much less prone to false positives than naiv
 This is the attack used by commercial IMSI catchers used by law enforcement. 
 
 This heuristic will also alert you if any of the following happen:
-* Identity is requested after authentication.
+* Identity (IMEI or IMSI) is requested after authentication. (IMEISV hardware ID can be requested if protected)
 * Identity is requested without your phone connecting to the tower. 
 * Identity is requested and then authentication doesn't happen shortly thereafter. 
 

@@ -11,6 +11,7 @@ use log::{debug, error};
 
 use pycrate_rs::nas::generated::emm::emm_attach_reject::EMMCauseEMMCause as AttachRejectEMMCause;
 use pycrate_rs::nas::generated::emm::emm_attach_request::TAI;
+use pycrate_rs::nas::generated::emm::emm_identity_request::IDTypeV;
 use telcom_parser::lte_rrc::{BCCH_DL_SCH_MessageType, BCCH_DL_SCH_MessageType_c1};
 use telcom_parser::lte_rrc::{
     DL_DCCH_MessageType, DL_DCCH_MessageType_c1, UL_CCCH_MessageType, UL_CCCH_MessageType_c1,
@@ -212,7 +213,7 @@ impl Analyzer for ImsiRequestedAnalyzer {
             default_enabled: true,
             name: "IMSI Requested".into(),
             description: "Tests whether the ME sends an Identity Request NAS message without either an associated attach request or auth accept message".into(),
-            version: 5,
+            version: 6,
         }
     }
 
@@ -248,8 +249,10 @@ impl Analyzer for ImsiRequestedAnalyzer {
                     NASMessage::EMMMessage(EMMMessage::EMMExtServiceRequest(_)) => {
                         self.transition(State::AttachRequest, packet_num);
                     }
-                    NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(_)) => {
-                        self.transition(State::IdentityRequest, packet_num);
+                    NASMessage::EMMMessage(EMMMessage::EMMIdentityRequest(request)) => {
+                        if !matches!(request.id_type.inner, IDTypeV::IMEISV) {
+                            self.transition(State::IdentityRequest, packet_num);
+                        }
                     }
                     NASMessage::EMMMessage(EMMMessage::EMMAttachComplete(_))
                     | NASMessage::EMMMessage(EMMMessage::EMMAuthenticationResponse(_)) => {
@@ -311,5 +314,50 @@ impl Analyzer for ImsiRequestedAnalyzer {
         }
 
         self.flag.take()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, LteNasSubtype};
+
+    const AUTH_RESPONSE: &[u8] = &[0x07, 0x53, 0x08, 0, 0, 0, 0, 0, 0, 0, 0];
+    const ID_REQUEST_IMSI: &[u8] = &[0x07, 0x55, 0x01];
+    const ID_REQUEST_IMEISV: &[u8] = &[0x07, 0x55, 0x03];
+
+    fn time() -> DateTime<FixedOffset> {
+        DateTime::parse_from_rfc3339("2026-11-08T13:12:11+00:00").unwrap()
+    }
+
+    fn nas(payload: &[u8]) -> InformationElement {
+        InformationElement::try_from(&GsmtapMessage {
+            header: GsmtapHeader::new(GsmtapType::LteNas(LteNasSubtype::Plain)),
+            payload: payload.to_vec(),
+        })
+        .expect("failed to parse test NAS message")
+    }
+
+    fn run(messages: &[InformationElement]) -> Vec<Event> {
+        let mut analyzer = ImsiRequestedAnalyzer::default();
+        messages
+            .iter()
+            .enumerate()
+            .filter_map(|(i, ie)| analyzer.analyze_information_element(ie, i, time()))
+            .collect()
+    }
+
+    #[test]
+    fn imeisv_request_after_auth_is_not_flagged() {
+        let events = run(&[nas(AUTH_RESPONSE), nas(ID_REQUEST_IMEISV)]);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn imsi_request_after_auth_is_high() {
+        let events = run(&[nas(AUTH_RESPONSE), nas(ID_REQUEST_IMSI)]);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].event_type, EventType::High);
+        assert_eq!(events[0].message, "Identity requested after auth request");
     }
 }
