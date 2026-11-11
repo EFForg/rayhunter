@@ -13,18 +13,12 @@ pub struct IncrementalJsonWriter<T> {
 }
 
 impl<T: AsyncWrite + Unpin> IncrementalJsonWriter<T> {
-    pub async fn new(
-        file: T,
-        metadata: &ReportMetadata,
-    ) -> std::io::Result<Self> {
+    pub async fn new(file: T, metadata: &ReportMetadata) -> std::io::Result<Self> {
         // Writes the "static" part of the report, i.e. the initial curly brace
         // & fields that don't change depending on QMDL reports
         let mut writer = BufWriter::new(file);
         let metadata_str = serde_json::to_string(metadata)?;
-        let s = format!(
-            r#"{{ "metadata": {}, "reports": ["#,
-            metadata_str
-        );
+        let s = format!(r#"{{ "metadata": {}, "reports": ["#, metadata_str);
         writer.write_all(s.as_bytes()).await?;
         Ok(Self {
             writer,

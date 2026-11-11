@@ -10,7 +10,7 @@ use rayhunter::{
     qmdl::QmdlMessageReader,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf };
+use std::{collections::HashMap, path::PathBuf};
 use tokio::fs::File;
 use walkdir::WalkDir;
 
@@ -21,7 +21,7 @@ mod json;
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    #[arg(short = 'p', long, help = "A file or directory of packet captures",)]
+    #[arg(short = 'p', long, help = "A file or directory of packet captures")]
     path: Option<PathBuf>,
 
     #[arg(short = 'P', long, help = "Convert qmdl files to pcap after analysis")]
@@ -39,10 +39,14 @@ struct Args {
     #[arg(short, long, help = "Show debug messages")]
     debug: bool,
 
-    #[arg(short = 'c', long, help = "specify a config.toml file containing tests to run")]
+    #[arg(
+        short = 'c',
+        long,
+        help = "specify a config.toml file containing tests to run"
+    )]
     config: Option<PathBuf>,
 
-    #[arg(help="paths to scan for files")]
+    #[arg(help = "paths to scan for files")]
     scanfiles: Vec<PathBuf>,
 }
 
@@ -227,9 +231,11 @@ async fn pcapify(qmdl_path: &PathBuf) {
     info!("wrote pcap to {:?}", pcap_path);
 }
 
-async fn analyze_path(path: PathBuf, args: &Args,
-        mut json_writer: Option<&mut IncrementalJsonWriter<File>>,) {
-
+async fn analyze_path(
+    path: PathBuf,
+    args: &Args,
+    mut json_writer: Option<&mut IncrementalJsonWriter<File>>,
+) {
     for maybe_entry in WalkDir::new(&path) {
         let Ok(entry) = maybe_entry else {
             error!("failed to open dir entry {maybe_entry:?}");
@@ -294,12 +300,11 @@ async fn main() {
     let scanfiles = args.scanfiles.clone();
     for pathbuf in scanfiles {
         analyze_path(pathbuf, &args, json_writer.as_mut()).await;
-    } 
+    }
 
     let patharg = args.path.clone();
     if let Some(pathbuf) = patharg {
         analyze_path(pathbuf, &args, json_writer.as_mut()).await;
-
     }
 
     if let Some(writer) = json_writer {
