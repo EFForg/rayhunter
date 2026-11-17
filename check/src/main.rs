@@ -1,3 +1,4 @@
+use async_zip::tokio::read::seek::ZipFileReader;
 use chrono::{DateTime, FixedOffset};
 use clap::Parser;
 use log::{debug, error, info, warn};
@@ -10,17 +11,14 @@ use rayhunter::{
     qmdl::QmdlMessageReader,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf, path::Path};
+use std::{collections::HashMap, path::Path, path::PathBuf};
 use tokio::fs::File;
-use walkdir::WalkDir;
 use tokio::io::{AsyncReadExt, AsyncSeek};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
-use async_zip::tokio::read::seek::ZipFileReader;
+use walkdir::WalkDir;
 
 // zip-bomb guard
 const MAX_ENTRY_BYTES: u64 = 8 * 1024 * 1024 * 1024;
-
-
 
 use crate::json::IncrementalJsonWriter;
 
@@ -208,15 +206,12 @@ async fn analyze_qmdl<R: tokio::io::AsyncRead + AsyncSeek + Unpin>(
     }
 }
 async fn analyze_zip(
-    zip_path: &Path, 
-    args: &Args, 
+    zip_path: &Path,
+    args: &Args,
     mut json_writer: Option<&mut IncrementalJsonWriter<File>>,
-){
-       let file = tokio::io::BufReader::new(
-        File::open(zip_path)
-            .await
-            .expect("failed to open zip file"),
-    );
+) {
+    let file =
+        tokio::io::BufReader::new(File::open(zip_path).await.expect("failed to open zip file"));
     let mut zip = ZipFileReader::with_tokio(file)
         .await
         .expect("failed to read zip archive");
@@ -237,14 +232,17 @@ async fn analyze_zip(
                 continue;
             }
         };
-        if name.ends_with(".qmdl") || name.ends_with(".qmdl.gz"){
-            members.push(Member { index, name, 
-            size: entry.uncompressed_size()});
+        if name.ends_with(".qmdl") || name.ends_with(".qmdl.gz") {
+            members.push(Member {
+                index,
+                name,
+                size: entry.uncompressed_size(),
+            });
         } else {
             continue;
         }
     }
-    
+
     let mut analyzed = 0usize;
     for member in members {
         let entry_reader = match zip.reader_with_entry(member.index).await {
@@ -260,19 +258,27 @@ async fn analyze_zip(
         let display = format!("{}!{}", zip_path.display(), member.name);
         let size = member.size;
         if size > MAX_ENTRY_BYTES {
-            warn!("{zip_path:?}: {} is {size} bytes, skipping (limit {MAX_ENTRY_BYTES})", member.name);
+            warn!(
+                "{zip_path:?}: {} is {size} bytes, skipping (limit {MAX_ENTRY_BYTES})",
+                member.name
+            );
             continue;
         }
         let mut buf = Vec::with_capacity(size as usize);
-        entry_reader.compat().read_to_end(&mut buf).await.unwrap();  // or read_to_end_checked for CRC
-        let mut cursor = std::io::Cursor::new(buf);   
-        analyze_qmdl(&display, &mut cursor, args.show_skipped, json_writer.as_deref_mut()).await;
+        entry_reader.compat().read_to_end(&mut buf).await.unwrap(); // or read_to_end_checked for CRC
+        let mut cursor = std::io::Cursor::new(buf);
+        analyze_qmdl(
+            &display,
+            &mut cursor,
+            args.show_skipped,
+            json_writer.as_deref_mut(),
+        )
+        .await;
     }
 
     if analyzed == 0 {
         warn!("{zip_path:?}: no qmdl captures found in archive");
-    } 
-
+    }
 }
 
 async fn pcapify(qmdl_path: &PathBuf) {
@@ -320,24 +326,33 @@ async fn analyze_path(
         let name_str = name.to_str().unwrap();
         let path = entry.path();
         let path_str = path.to_str().unwrap();
-        let reader = File::open(&path)
-            .await
-            .expect("failed to open file");
+        let reader = File::open(&path).await.expect("failed to open file");
         if name_str.ends_with(".qmdl") || name_str.ends_with(".qmdl.gz") {
             info!("**** Beginning analysis of {name_str}");
-            analyze_qmdl(path_str, reader, args.show_skipped, json_writer.as_deref_mut()).await;
+            analyze_qmdl(
+                path_str,
+                reader,
+                args.show_skipped,
+                json_writer.as_deref_mut(),
+            )
+            .await;
             if args.pcapify {
                 pcapify(&path.to_path_buf()).await;
             }
         } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
             // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
             info!("**** Beginning analysis of {name_str}");
-            analyze_pcap(path_str, reader, args.show_skipped, json_writer.as_deref_mut()).await;
+            analyze_pcap(
+                path_str,
+                reader,
+                args.show_skipped,
+                json_writer.as_deref_mut(),
+            )
+            .await;
         } else if name_str.ends_with(".zip") {
             info!("**** Beginning analysis of {name_str}");
             analyze_zip(path, args, json_writer.as_deref_mut()).await;
         }
-
     }
 }
 
