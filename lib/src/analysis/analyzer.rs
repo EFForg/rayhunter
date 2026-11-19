@@ -6,6 +6,7 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use crate::DeviceMetadata;
+use crate::analysis::nas_lpp::NasLppAnalyzer;
 use crate::diag::{DiagParsingError, Message, MessagesContainer};
 use crate::gsmtap::{GsmtapHeader, GsmtapMessage, GsmtapType, parser as gsmtap_parser};
 use crate::util::RuntimeMetadata;
@@ -56,6 +57,7 @@ fn all_analyzers(
             boxed(NoNasMessagesAnalyzer::new()),
         ),
         (DiagnosticAnalyzer::metadata(), boxed(DiagnosticAnalyzer {})),
+        (NasLppAnalyzer::metadata(), boxed(NasLppAnalyzer::default())),
     ]
     .into_iter()
 }
