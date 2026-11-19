@@ -29,6 +29,11 @@ pub struct SubcommandModifier<'a> {
     /// Modifications to the arguments of this subcommand. The order arguments are defined in this
     /// vector will match the order the arguments are displayed in the GUI.
     pub arg_modifiers: Vec<ArgumentModifier<'a>>,
+    /// Whether the GUI should show a screen instructing users to connect to the device over Wi-Fi
+    /// or USB tethering before installation. Any subcommands that use this feature should have an
+    /// --admin-ip argument with a default value as it's used to provide more detailed
+    /// instructions in the GUI.
+    pub show_network_setup: bool,
 }
 
 /// Provides "modifiers" or additional metadata about each subcommand.
@@ -75,11 +80,13 @@ pub fn subcommand_modifiers() -> Vec<SubcommandModifier<'static>> {
             command: "orbic",
             gui_label: "Orbic/Kajeet (via network)",
             arg_modifiers: orbic_and_moxee_args.clone(),
+            show_network_setup: true,
         },
         SubcommandModifier {
             command: "orbic-usb",
             gui_label: "Orbic/Kajeet (via legacy USB+ADB installer)",
             arg_modifiers: vec![reset_config],
+            show_network_setup: false,
         },
         SubcommandModifier {
             command: "tplink",
@@ -99,31 +106,37 @@ pub fn subcommand_modifiers() -> Vec<SubcommandModifier<'static>> {
                     advanced: true,
                 },
             ],
+            show_network_setup: true,
         },
         SubcommandModifier {
             command: "moxee",
             gui_label: "Moxee",
             arg_modifiers: orbic_and_moxee_args,
+            show_network_setup: true,
         },
         SubcommandModifier {
             command: "pinephone",
             gui_label: "PinePhone",
             arg_modifiers: vec![],
+            show_network_setup: false,
         },
         SubcommandModifier {
             command: "tmobile",
             gui_label: "TMobile",
             arg_modifiers: vec![admin_password, admin_ip],
+            show_network_setup: true,
         },
         SubcommandModifier {
             command: "uz801",
             gui_label: "UZ801",
             arg_modifiers: vec![admin_ip],
+            show_network_setup: false,
         },
         SubcommandModifier {
             command: "wingtech",
             gui_label: "Wingtech",
             arg_modifiers: vec![admin_password, admin_ip],
+            show_network_setup: true,
         },
     ]
 }
@@ -135,7 +148,7 @@ mod tests {
     //! utils from the GUI. The tests below help ensure that exclusions were done deliberately
     //! rather than on accident.
     use super::*;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     /// Lists the subcommands that are purposefully excluded from subcommand_modifiers().
     fn excluded_subcommands() -> Vec<&'static str> {
@@ -254,6 +267,38 @@ mod tests {
                 "The {} argument for {subcommand_name} is missing a long form command line flag.",
                 arg.get_id().as_str()
             )
+        }
+    }
+
+    #[test]
+    fn test_show_network_setup() {
+        // tests that expectations for show_network_setup hold for all subcommands with
+        // the feature enabled. that is
+        //   1. they have an --admin-ip flag
+        //   2. that flag has exactly one default value
+
+        let expected_arg = "admin-ip";
+        let subcommands_with_network_setup: HashSet<&str> = subcommand_modifiers()
+            .into_iter()
+            .filter(|m| m.show_network_setup)
+            .map(|m| m.command)
+            .collect();
+
+        for subcommand in crate::INSTALLER_COMMAND.get_subcommands() {
+            let subcommand_name = subcommand.get_name();
+            if subcommands_with_network_setup.contains(subcommand_name) {
+                let arg = subcommand
+                    .get_arguments()
+                    .find(|a| a.get_long().is_some_and(|l| l == expected_arg))
+                    .unwrap_or_else(|| {
+                        panic!("{} has no --{} argument.", subcommand_name, expected_arg)
+                    });
+                assert_eq!(
+                    arg.get_default_values().len(),
+                    1,
+                    "{subcommand_name}'s --{expected_arg} argument doesn't have exactly one default value"
+                )
+            }
         }
     }
 
