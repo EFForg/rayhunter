@@ -1,10 +1,22 @@
 use deku::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
+#[deku(ctx = "version: u8, len: u16", id = "version")]
+pub enum ServingCellTiming {
+    #[deku(id = "1")]
+    V1(ServingCellTimingV1),
+    // other versions (e.g. on SDM845 phones) have an unknown layout, so keep
+    // the raw bytes instead of failing to parse the whole message
+    #[deku(id_pat = "_")]
+    Unsupported {
+        #[deku(count = "len")]
+        data: Vec<u8>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
 #[deku(bit_order = "lsb")]
-pub struct ServingCellTiming {
-    #[deku(assert_eq = "1")]
-    pub version: u8,
+pub struct ServingCellTimingV1 {
     #[deku(bits = 5, assert = "(1..=20).contains(num_records)")]
     pub num_records: u8,
     #[deku(bits = 4, assert = "*starting_sub_fn <= 9")]

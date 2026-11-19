@@ -93,7 +93,11 @@ pub enum LogBody {
     #[deku(id = "0xb064")]
     LteMacUl { packet: mac::Packet },
     #[deku(id = "0xb114")]
-    LteLl1ServingCellTiming { data: ll1::ServingCellTiming },
+    LteLl1ServingCellTiming {
+        version: u8,
+        #[deku(ctx = "*version, hdr_len.saturating_sub(1)")]
+        data: ll1::ServingCellTiming,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, DekuRead, DekuWrite)]
@@ -333,6 +337,46 @@ pub(crate) mod test {
         // sanity check
         assert_eq!(&Message::from_hdlc(&encapsulated.data).unwrap(), &message);
         (encapsulated, message)
+    }
+
+    #[test]
+    fn test_multi_radio_wrapped_log() {
+        // the message from test_logs, wrapped in a multi-SIM header with subscription ID 1
+        let data = vec![
+            152, 1, 0, 0, 1, 0, 0, 0, 16, 0, 38, 0, 38, 0, 192, 176, 26, 165, 245, 135, 118, 35, 2,
+            1, 20, 14, 48, 0, 160, 0, 2, 8, 0, 0, 217, 15, 5, 0, 0, 0, 0, 7, 0, 64, 1, 238, 173,
+            213, 77, 208,
+        ];
+        let encapsulated = hdlc::hdlc_encapsulate(&data, &CRC_CCITT);
+        let msg = Message::from_hdlc(&encapsulated).unwrap();
+        let expected = Message::from_bytes((&data[8..], 0)).unwrap().1;
+        assert_eq!(msg, expected);
+    }
+
+    #[test]
+    fn test_unsupported_ll1_serving_cell_timing_version() {
+        // LL1 Serving Cell Timing with a version other than 1 (seen on SDM845)
+        let data = vec![
+            16, 0, 20, 0, 20, 0, 20, 177, 0, 0, 0, 0, 0, 0, 0, 0, 122, 1, 2, 3, 4, 5, 6, 7,
+        ];
+        let ((rest, _), msg) = Message::from_bytes((&data, 0)).unwrap();
+        assert_eq!(rest.len(), 0);
+        assert_eq!(
+            msg,
+            Message::Log {
+                pending_msgs: 0,
+                outer_length: 20,
+                inner_length: 20,
+                log_type: 0xb114,
+                timestamp: Timestamp { ts: 0 },
+                body: LogBody::LteLl1ServingCellTiming {
+                    version: 122,
+                    data: ll1::ServingCellTiming::Unsupported {
+                        data: vec![1, 2, 3, 4, 5, 6, 7],
+                    },
+                },
+            }
+        );
     }
 
     #[test]
