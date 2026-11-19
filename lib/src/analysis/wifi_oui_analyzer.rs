@@ -1,0 +1,78 @@
+use chrono::{DateTime, FixedOffset};
+use log::info;
+
+use crate::analysis::{
+    analyzer::{Analyzer, AnalyzerMetadata, Event, EventType},
+    information_element::InformationElement,
+};
+
+pub struct WifiOUIAnalyzer {
+    wifi_ouis: Vec<String>,
+}
+
+impl Default for WifiOUIAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl WifiOUIAnalyzer {
+    pub fn new() -> Self {
+        Self {
+            wifi_ouis: Vec::new(),
+        }
+    }
+
+    pub fn set_ouis(&mut self, ouis: &[String]) {
+        self.wifi_ouis = ouis.to_owned();
+    }
+}
+
+impl Analyzer for WifiOUIAnalyzer {
+    fn metadata() -> AnalyzerMetadata {
+        AnalyzerMetadata {
+            key: "wifi_oui_analyzer".into(),
+            default_enabled: true,
+            name: "WifiOUIAnalyzer".into(),
+            description: "Scans wifi channels looking for access points manufactured by known manufactuerers of IMSI catchers, likely a false positive if not accompanied by other alerts.".into(),
+            version: 1,
+        }
+    }
+
+    fn configure(&mut self, config: &serde_json::Value) {
+        if let Some(ouis) = config.as_array() {
+            self.wifi_ouis = ouis
+                .iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect();
+        }
+    }
+
+    fn analyze_information_element(
+        &mut self,
+        ie: &InformationElement,
+        _packet_num: usize,
+        _timestamp: DateTime<FixedOffset>,
+    ) -> Option<Event> {
+        if let InformationElement::WifiNetwork(bssid) = ie {
+            info!("WifiOUIAnalyzer got BSSIDs {:?}", bssid);
+            if !self.wifi_ouis.is_empty()
+                && self
+                    .wifi_ouis
+                    .iter()
+                    .find(|oui| bssid.to_uppercase().starts_with(&oui.to_uppercase()))
+                    .is_some()
+            {
+                info!("Found match for bssid {bssid}");
+                return Some(Event {
+                    event_type: EventType::Low,
+                    message: format!(
+                        "Found suspicious wifi network {bssid}. Don't worry about this unless there are also non wifi related alerts!"
+                    ),
+                });
+            }
+        }
+
+        None
+    }
+}

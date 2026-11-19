@@ -21,7 +21,7 @@ apidocs = ["dep:utoipa", "wifi-station/utoipa"]
 
 [dependencies]
 rayhunter = { path = "../lib" }
-wifi-station = "0.10.1"
+wifi-station = { git = "https://github.com/jacklund/wifi-station", branch = "add-bssid" }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
 serde_repr = "0.1"

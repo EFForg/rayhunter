@@ -49,11 +49,17 @@ pub enum FileKind {
     Qmdl,
     Analysis,
     Gps,
+    Wifi,
 }
 
 impl FileKind {
     // List of all possible physical files on disk.
-    pub const ALL: &'static [FileKind] = &[FileKind::Qmdl, FileKind::Analysis, FileKind::Gps];
+    pub const ALL: &'static [FileKind] = &[
+        FileKind::Qmdl,
+        FileKind::Analysis,
+        FileKind::Gps,
+        FileKind::Wifi,
+    ];
 
     pub fn get_filename(&self, entry_name: &str, qmdl_compressed: bool) -> String {
         match self {
@@ -61,6 +67,7 @@ impl FileKind {
             FileKind::Qmdl => format!("{}.qmdl", entry_name),
             FileKind::Analysis => format!("{}.ndjson", entry_name),
             FileKind::Gps => format!("{}-gps.ndjson", entry_name),
+            FileKind::Wifi => format!("{}-wifi.ndjson", entry_name),
         }
     }
 
@@ -82,6 +89,7 @@ impl Display for FileKind {
             FileKind::Qmdl => write!(f, "QMDL"),
             FileKind::Analysis => write!(f, "analysis"),
             FileKind::Gps => write!(f, "GPS"),
+            FileKind::Wifi => write!(f, "Wifi"),
         }
     }
 }
