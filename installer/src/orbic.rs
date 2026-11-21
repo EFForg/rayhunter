@@ -255,19 +255,105 @@ async fn install_file_impl(
     hasher.update(payload);
     let file_hash_bytes = hasher.finalize();
     let file_hash = format!("{file_hash_bytes:x}");
+    let payload_len = payload.len();
     adb_device.push(&mut payload, &push_tmp_path)?;
     adb_at_syscmd(adb_device, &format!("mv {push_tmp_path} {dest}")).await?;
     let file_info = adb_device
         .stat(dest)
         .context("Failed to stat transfered file")?;
+    let existing_len = u64::from(file_info.file_size);
     if file_info.file_size == 0 {
-        bail!("File transfer unsuccessful\nFile is empty");
+        return Err(transfer_error(
+            adb_device,
+            dest,
+            payload_len,
+            existing_len,
+            "File is empty",
+        ));
     }
     let output = adb_command(adb_device, &["sha256sum", dest])?;
     if !output.contains(&file_hash) {
-        bail!("File transfer unsuccessful\nBad hash expected {file_hash} got {output}");
+        return Err(transfer_error(
+            adb_device,
+            dest,
+            payload_len,
+            existing_len,
+            &format!("Bad hash expected {file_hash} got {output}"),
+        ));
     }
     Ok(())
+}
+
+/// Builds the error for a failed file transfer. If the destination filesystem does not have
+/// room for the payload, reports that instead of the less helpful hash mismatch. `existing_len`
+/// is the size of the file already at `dest`, which the transfer replaces and so counts as free.
+fn transfer_error(
+    adb_device: &mut ADBUSBDevice,
+    dest: &str,
+    payload_len: usize,
+    existing_len: u64,
+    reason: &str,
+) -> anyhow::Error {
+    let parent = Path::new(dest)
+        .parent()
+        .and_then(|p| p.to_str())
+        .unwrap_or("/");
+    if let Ok(output) = adb_command(adb_device, &["df", "-k", parent])
+        && let Some(avail_kb) = parse_df_available_kb(&output)
+        && is_out_of_space(avail_kb, existing_len, payload_len)
+    {
+        return anyhow!(
+            "Not enough free space on the Orbic to write {dest} ({} KB needed, {avail_kb} KB free). Free up space on the device and try again.",
+            payload_len.div_ceil(1024)
+        );
+    }
+    anyhow!("File transfer unsuccessful\n{reason}")
+}
+
+/// Whether `payload_len` bytes do not fit in `avail_kb` free KiB plus the `existing_len` bytes
+/// that writing the destination replaces.
+fn is_out_of_space(avail_kb: u64, existing_len: u64, payload_len: usize) -> bool {
+    avail_kb.saturating_mul(1024).saturating_add(existing_len) < payload_len as u64
+}
+
+/// Parses the available space in KiB from `df -k` output.
+fn parse_df_available_kb(output: &str) -> Option<u64> {
+    output
+        .lines()
+        .find(|line| !line.trim_start().starts_with("Filesystem") && !line.trim().is_empty())
+        .and_then(|line| line.split_whitespace().nth(3))
+        .and_then(|field| field.parse().ok())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_out_of_space, parse_df_available_kb};
+
+    #[test]
+    fn parses_available_space_from_df_output() {
+        let output = "Filesystem           1K-blocks      Used Available Use% Mounted on\n\
+                      ubi0:rootfs              51200     50100      1100  98% /\n";
+        assert_eq!(parse_df_available_kb(output), Some(1100));
+    }
+
+    #[test]
+    fn df_parse_returns_none_for_garbage() {
+        assert_eq!(parse_df_available_kb(""), None);
+        assert_eq!(parse_df_available_kb("Filesystem 1K-blocks\n"), None);
+        assert_eq!(parse_df_available_kb("error: not found\n"), None);
+    }
+
+    #[test]
+    fn detects_payload_that_does_not_fit() {
+        // 10 KiB free, 12 KiB payload, no existing file: does not fit.
+        assert!(is_out_of_space(10, 0, 12 * 1024));
+        // Same, but a 4 KiB file at the destination is replaced: fits.
+        assert!(!is_out_of_space(10, 4 * 1024, 12 * 1024));
+        // Exact fit is not out of space.
+        assert!(!is_out_of_space(12, 0, 12 * 1024));
+        // One byte short is out of space.
+        assert!(is_out_of_space(12, 0, 12 * 1024 + 1));
+    }
 }
 
 fn adb_command(adb_device: &mut ADBUSBDevice, command: &[&str]) -> Result<String> {
