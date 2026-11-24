@@ -1,5 +1,6 @@
 //! Combines the values we care about from the clap CLI and the modifiers module into something
 //! serializable by serde.
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use anyhow::Context;
@@ -44,6 +45,7 @@ impl Command<'_> {
 #[derive(Debug, Serialize)]
 struct Argument<'a> {
     advanced: bool,
+    default_values: Vec<Cow<'a, str>>,
     flag: String,
     help: String,
     label: &'a str,
@@ -55,6 +57,7 @@ struct Subcommand<'a> {
     arguments: Vec<Argument<'a>>,
     command: &'a str,
     label: &'a str,
+    show_network_setup: bool,
 }
 
 fn argument_help(argument: &clap::Arg) -> String {
@@ -87,6 +90,11 @@ impl Argument<'_> {
         argument: &'a clap::Arg,
         modifier: &modifiers::ArgumentModifier<'static>,
     ) -> anyhow::Result<Argument<'a>> {
+        let default_values = argument
+            .get_default_values()
+            .iter()
+            .map(|v| v.to_string_lossy())
+            .collect();
         let partial_flag = argument.get_long().with_context(|| {
             format!(
                 "Missing long form command line flag for {}",
@@ -95,6 +103,7 @@ impl Argument<'_> {
         })?;
         Ok(Argument {
             advanced: modifier.advanced,
+            default_values,
             flag: format!("--{}", partial_flag),
             help: argument_help(argument),
             label: modifier.gui_label,
@@ -139,6 +148,7 @@ impl Subcommand<'_> {
                 .collect(),
             command: modifier.command,
             label: modifier.gui_label,
+            show_network_setup: modifier.show_network_setup,
         }
     }
 }
