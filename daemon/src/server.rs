@@ -1044,4 +1044,111 @@ mod tests {
         };
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
     }
+
+    fn analysis_marker(name: &str) -> String {
+        format!("analysis of recording {name}\n")
+    }
+
+    // Gives each recording a distinct analysis file, so a test can tell which
+    // recording's files ended up in which ZIP folder.
+    async fn write_analysis_marker(
+        store_lock: &Arc<RwLock<crate::qmdl_store::RecordingStore>>,
+        name: &str,
+    ) {
+        let path = {
+            let store = store_lock.read().await;
+            FileKind::Analysis.get_filepath(name, &store.path, false)
+        };
+        tokio::fs::write(path, analysis_marker(name)).await.unwrap();
+    }
+
+    async fn read_zip_entry(zip_reader: &ZipFileReader, filename: &str) -> String {
+        let index = zip_reader
+            .file()
+            .entries()
+            .iter()
+            .position(|entry| entry.filename().as_str().unwrap() == filename)
+            .unwrap_or_else(|| panic!("{filename} is not in the ZIP"));
+        let mut body = Vec::new();
+        zip_reader
+            .reader_without_entry(index)
+            .await
+            .unwrap()
+            .read_to_end(&mut body)
+            .await
+            .unwrap();
+        String::from_utf8(body).unwrap()
+    }
+
+    // The ZIP is written by a background task, so recordings can be deleted
+    // after the request is validated but before they are zipped. Deleting a
+    // recording shifts the manifest index of every later one, so the task
+    // looks each recording up again by name rather than reusing an index.
+    //
+    // On the current-thread runtime the spawned task can't run until the
+    // calling test yields, and it needs the store lock to do anything, so
+    // holding the write lock across the deletes makes them land before any
+    // recording is zipped.
+    async fn zip_recordings_deleting_mid_download(
+        requested: &str,
+        deleted: &[&str],
+    ) -> (ZipFileReader, Vec<String>) {
+        let (_temp_dir, store_lock) = create_test_qmdl_store().await;
+        for name in ["100", "200", "300"] {
+            create_named_test_entry(&store_lock, name, Some(&create_test_container())).await;
+            write_analysis_marker(&store_lock, name).await;
+        }
+        let state = create_test_server_state(store_lock.clone());
+
+        let response = get_zip_recordings(State(state), zip_recordings_query(Some(requested)))
+            .await
+            .unwrap();
+        {
+            let mut store = store_lock.write().await;
+            for name in deleted {
+                store.delete_entry(name).await.unwrap();
+            }
+        }
+        zip_entry_filenames(response).await
+    }
+
+    // A stale index wouldn't fail here, it would silently put "300"'s files
+    // in the "200" folder.
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_get_zip_recordings_earlier_delete_during_download() {
+        // Deleting "100" moves "200" from index 1 to 0, and "300" into index 1.
+        let (zip_reader, filenames) = zip_recordings_deleting_mid_download("200", &["100"]).await;
+        assert_eq!(
+            filenames,
+            vec![
+                "200/200.qmdl",
+                "200/200.ndjson",
+                "200/200-gps.ndjson",
+                "200/200.pcapng",
+            ]
+        );
+        assert_eq!(
+            read_zip_entry(&zip_reader, "200/200.ndjson").await,
+            analysis_marker("200")
+        );
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_get_zip_recordings_requested_delete_during_download() {
+        let (zip_reader, filenames) =
+            zip_recordings_deleting_mid_download("100,300", &["300"]).await;
+        assert_eq!(
+            filenames,
+            vec![
+                "100/100.qmdl",
+                "100/100.ndjson",
+                "100/100-gps.ndjson",
+                "100/100.pcapng",
+            ]
+        );
+        assert_eq!(
+            read_zip_entry(&zip_reader, "100/100.ndjson").await,
+            analysis_marker("100")
+        );
+    }
 }
