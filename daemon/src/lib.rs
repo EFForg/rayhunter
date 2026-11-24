@@ -34,6 +34,7 @@ use utoipa::OpenApi;
         pcap::get_pcap,
         server::get_qmdl,
         server::get_zip,
+        server::get_zip_recordings,
         stats::get_system_stats,
         stats::get_qmdl_manifest,
         stats::get_update_status,

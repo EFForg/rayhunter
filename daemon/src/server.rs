@@ -5,6 +5,7 @@ use async_zip::tokio::write::ZipFileWriter;
 use axum::Json;
 use axum::body::Body;
 use axum::extract::Path;
+use axum::extract::Query;
 use axum::extract::State;
 use axum::http::header::{self, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
@@ -18,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::pin::pin;
 use std::sync::Arc;
 use tokio::fs::write;
+use tokio::io::DuplexStream;
 use tokio::io::copy;
 use tokio::io::duplex;
 use tokio::sync::RwLock;
@@ -31,7 +33,7 @@ use crate::analysis::{AnalysisCtrlMessage, AnalysisStatus};
 use crate::config::{Config, GpsMode};
 use crate::diag::DiagDeviceCtrlMessage;
 use crate::display::DisplayState;
-use crate::gps::GpsData;
+use crate::gps::{GpsData, GpsRecord};
 use crate::notifications::DEFAULT_NOTIFICATION_TIMEOUT;
 use crate::pcap::{generate_pcap_data, load_gps_records_for_entry};
 use crate::qmdl_store::{FileKind, RecordingStore};
@@ -385,75 +387,15 @@ pub async fn get_zip(
     tokio::spawn(async move {
         let result: Result<(), Error> = async {
             let mut zip = ZipFileWriter::with_tokio(writer);
-
-            // Add stored files
-            for &file_kind in FileKind::ALL {
-                let file_opt = {
-                    let qmdl_store = qmdl_store_lock.read().await;
-                    qmdl_store.open_file(entry_index, file_kind).await?
-                };
-
-                let Some(mut file) = file_opt else {
-                    continue;
-                };
-
-                /*
-                 * `qmdl_compressed` is always false here because even if the
-                 * QMDL was already compressed, we decompress it before zipping.
-                 * This is for two reasons
-                 * 1. If this is the current entry, it's still being written and
-                 *    lacks a GZIP footer. If we zipped up this partial .gz
-                 *    file, some software might consider it damaged and refuse to
-                 *    extract it.
-                 * 2. Zipping an already-GZIP'd file is redundant and
-                 *    inconvenient for the user.
-                 */
-                let zip_entry = ZipEntryBuilder::new(
-                    file_kind.get_filename(&qmdl_idx, false).into(),
-                    Compression::Stored,
-                );
-                // FuturesAsyncWriteCompatExt::compat_write because async-zip's entrystream does
-                // not impl tokio's AsyncWrite, but only future's AsyncWrite. This can be removed
-                // once https://github.com/Majored/rs-async-zip/pull/160 is released.
-                let mut entry_writer = zip.write_entry_stream(zip_entry).await?.compat_write();
-
-                if file_kind == FileKind::Qmdl {
-                    let reader = QmdlMessageReader::new(&mut file).await?;
-                    let stream = reader.into_qmdl_stream();
-                    let mut reader = pin!(stream.into_async_read().compat());
-                    copy(&mut reader, &mut entry_writer).await?;
-                } else {
-                    copy(&mut file, &mut entry_writer).await?;
-                }
-                entry_writer.into_inner().close().await?;
-            }
-
-            // Add PCAP file
-            {
-                let entry =
-                    ZipEntryBuilder::new(format!("{qmdl_idx}.pcapng").into(), Compression::Stored);
-                let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
-
-                let qmdl_file_for_pcap = {
-                    let qmdl_store = qmdl_store_lock.read().await;
-                    qmdl_store
-                        .open_file(entry_index, FileKind::Qmdl)
-                        .await?
-                        .ok_or_else(|| anyhow::anyhow!("QMDL file not found"))?
-                };
-                let qmdl_reader = QmdlMessageReader::new(qmdl_file_for_pcap).await?;
-
-                if let Err(e) =
-                    generate_pcap_data(&mut entry_writer, qmdl_reader, gps_records).await
-                {
-                    // if we fail to generate the PCAP file, we should still continue and give the
-                    // user the QMDL.
-                    error!("Failed to generate PCAP: {e:?}");
-                }
-
-                entry_writer.into_inner().close().await?;
-            }
-
+            write_recording_to_zip(
+                &mut zip,
+                &qmdl_store_lock,
+                entry_index,
+                &qmdl_idx,
+                gps_records,
+                "",
+            )
+            .await?;
             zip.close().await?;
             Ok(())
         }
@@ -465,6 +407,214 @@ pub async fn get_zip(
     });
 
     let headers = [(CONTENT_TYPE, "application/zip")];
+    let body = Body::from_stream(ReaderStream::new(reader));
+    Ok((headers, body).into_response())
+}
+
+/// Writes every file belonging to one recording into `zip`: the stored files
+/// (QMDL, analysis report, GPS log) followed by a PCAP generated from the
+/// QMDL. Each file name is prefixed with `path_prefix`, which is empty for the
+/// single-recording ZIP and `"{name}/"` for the multi-recording ZIP.
+async fn write_recording_to_zip(
+    zip: &mut ZipFileWriter<DuplexStream>,
+    qmdl_store_lock: &RwLock<RecordingStore>,
+    entry_index: usize,
+    entry_name: &str,
+    gps_records: Vec<GpsRecord>,
+    path_prefix: &str,
+) -> Result<(), Error> {
+    // Add stored files
+    for &file_kind in FileKind::ALL {
+        let file_opt = {
+            let qmdl_store = qmdl_store_lock.read().await;
+            qmdl_store.open_file(entry_index, file_kind).await?
+        };
+
+        let Some(mut file) = file_opt else {
+            continue;
+        };
+
+        /*
+         * `qmdl_compressed` is always false here because even if the
+         * QMDL was already compressed, we decompress it before zipping.
+         * This is for two reasons
+         * 1. If this is the current entry, it's still being written and
+         *    lacks a GZIP footer. If we zipped up this partial .gz
+         *    file, some software might consider it damaged and refuse to
+         *    extract it.
+         * 2. Zipping an already-GZIP'd file is redundant and
+         *    inconvenient for the user.
+         */
+        let zip_entry = ZipEntryBuilder::new(
+            format!("{path_prefix}{}", file_kind.get_filename(entry_name, false)).into(),
+            Compression::Stored,
+        );
+        // FuturesAsyncWriteCompatExt::compat_write because async-zip's entrystream does
+        // not impl tokio's AsyncWrite, but only future's AsyncWrite. This can be removed
+        // once https://github.com/Majored/rs-async-zip/pull/160 is released.
+        let mut entry_writer = zip.write_entry_stream(zip_entry).await?.compat_write();
+
+        if file_kind == FileKind::Qmdl {
+            let reader = QmdlMessageReader::new(&mut file).await?;
+            let stream = reader.into_qmdl_stream();
+            let mut reader = pin!(stream.into_async_read().compat());
+            copy(&mut reader, &mut entry_writer).await?;
+        } else {
+            copy(&mut file, &mut entry_writer).await?;
+        }
+        entry_writer.into_inner().close().await?;
+    }
+
+    // Add PCAP file
+    {
+        let entry = ZipEntryBuilder::new(
+            format!("{path_prefix}{entry_name}.pcapng").into(),
+            Compression::Stored,
+        );
+        let mut entry_writer = zip.write_entry_stream(entry).await?.compat_write();
+
+        let qmdl_file_for_pcap = {
+            let qmdl_store = qmdl_store_lock.read().await;
+            qmdl_store
+                .open_file(entry_index, FileKind::Qmdl)
+                .await?
+                .ok_or_else(|| anyhow::anyhow!("QMDL file not found"))?
+        };
+        let qmdl_reader = QmdlMessageReader::new(qmdl_file_for_pcap).await?;
+
+        if let Err(e) = generate_pcap_data(&mut entry_writer, qmdl_reader, gps_records).await {
+            // if we fail to generate the PCAP file, we should still continue and give the
+            // user the QMDL.
+            error!("Failed to generate PCAP: {e:?}");
+        }
+
+        entry_writer.into_inner().close().await?;
+    }
+
+    Ok(())
+}
+
+#[derive(Deserialize)]
+pub struct ZipRecordingsQuery {
+    names: Option<String>,
+}
+
+/// Splits a comma-separated list of recording names, dropping blanks and
+/// duplicates while keeping the order they were requested in.
+fn parse_recording_names(names: Option<&str>) -> Vec<String> {
+    let mut parsed: Vec<String> = Vec::new();
+    for name in names.unwrap_or_default().split(',').map(str::trim) {
+        if !name.is_empty() && !parsed.iter().any(|existing| existing == name) {
+            parsed.push(name.to_string());
+        }
+    }
+    parsed
+}
+
+#[cfg_attr(feature = "apidocs", utoipa::path(
+    get,
+    path = "/api/zip-recordings",
+    tag = "Recordings",
+    responses(
+        (status = StatusCode::OK, description = "ZIP download successful. Recordings whose QMDL file is still empty are left out. It is possible that if a PCAP fails to convert, the same status will be returned, but that recording's PCAP will be empty or incomplete.", content_type = "application/zip"),
+        (status = StatusCode::BAD_REQUEST, description = "No recording names were given"),
+        (status = StatusCode::NOT_FOUND, description = "Could not find one of the named recordings"),
+        (status = StatusCode::SERVICE_UNAVAILABLE, description = "Every named recording has an empty QMDL file")
+    ),
+    params(
+        ("names" = String, Query, description = "Comma-separated list of recording names to include. Duplicates are ignored.")
+    ),
+    summary = "Download several recordings as one ZIP file",
+    description = "Stream a single ZIP file to the client with one folder per requested recording, in the order given. Each folder contains the same files as the ZIP download for that recording. Recordings are added one at a time."
+))]
+pub async fn get_zip_recordings(
+    State(state): State<Arc<ServerState>>,
+    Query(query): Query<ZipRecordingsQuery>,
+) -> Result<Response, (StatusCode, String)> {
+    let requested_names = parse_recording_names(query.names.as_deref());
+    if requested_names.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "no recording names given".to_string(),
+        ));
+    }
+
+    let names_to_zip = {
+        let qmdl_store = state.qmdl_store_lock.read().await;
+        let mut names_to_zip = Vec::with_capacity(requested_names.len());
+        for name in requested_names {
+            let (_, entry) = qmdl_store.entry_for_name(&name).ok_or((
+                StatusCode::NOT_FOUND,
+                format!("couldn't find entry with name {name}"),
+            ))?;
+            if entry.qmdl_size_bytes == 0 {
+                warn!("skipping recording {name} in multi-recording ZIP, its QMDL file is empty");
+                continue;
+            }
+            names_to_zip.push(name);
+        }
+        names_to_zip
+    };
+
+    if names_to_zip.is_empty() {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "QMDL files are empty, try again in a bit!".to_string(),
+        ));
+    }
+
+    let (reader, writer) = duplex(8192);
+
+    tokio::spawn(async move {
+        let result: Result<(), Error> = async {
+            let mut zip = ZipFileWriter::with_tokio(writer);
+
+            // Recordings are written one after another, never concurrently, so
+            // that a large selection doesn't multiply the PCAP conversion load.
+            for name in &names_to_zip {
+                // Look the entry up again by name rather than reusing an index
+                // from validation, since deleting another recording while this
+                // ZIP is streaming shifts the indexes of later entries.
+                let entry_index = {
+                    let qmdl_store = state.qmdl_store_lock.read().await;
+                    qmdl_store
+                        .entry_for_name(name)
+                        .map(|(entry_index, _)| entry_index)
+                };
+                let Some(entry_index) = entry_index else {
+                    warn!("recording {name} was deleted before it could be zipped, skipping");
+                    continue;
+                };
+
+                let gps_records = load_gps_records_for_entry(&state, entry_index).await;
+                write_recording_to_zip(
+                    &mut zip,
+                    &state.qmdl_store_lock,
+                    entry_index,
+                    name,
+                    gps_records,
+                    &format!("{name}/"),
+                )
+                .await?;
+            }
+
+            zip.close().await?;
+            Ok(())
+        }
+        .await;
+
+        if let Err(e) = result {
+            error!("Error generating multi-recording ZIP file: {e:?}");
+        }
+    });
+
+    let headers = [
+        (CONTENT_TYPE, "application/zip"),
+        (
+            header::CONTENT_DISPOSITION,
+            "attachment; filename=\"rayhunter-recordings.zip\"",
+        ),
+    ];
     let body = Body::from_stream(ReaderStream::new(reader));
     Ok((headers, body).into_response())
 }
@@ -704,5 +854,194 @@ mod tests {
             qmdl_reader.get_next_message().await.unwrap(),
             Some(Ok(expected_message)),
         );
+    }
+
+    // Entry names come from the creation timestamp in seconds, so entries made
+    // back to back in a test would collide. This creates an entry and then
+    // renames it (files and manifest) to a fixed name. Passing `None` for the
+    // data leaves the QMDL file empty.
+    async fn create_named_test_entry(
+        store_lock: &Arc<RwLock<crate::qmdl_store::RecordingStore>>,
+        name: &str,
+        test_data: Option<&MessagesContainer>,
+    ) {
+        let mut store = store_lock.write().await;
+        let (mut qmdl_file, analysis_file) = store.new_entry(GpsMode::Disabled).await.unwrap();
+        if let Some(test_data) = test_data {
+            let mut writer = QmdlWriter::new(&mut qmdl_file);
+            writer.write_container(test_data).await.unwrap();
+            writer.close().await.unwrap();
+            let qmdl_file_size = qmdl_file.metadata().await.unwrap().len() as usize;
+            store
+                .update_current_entry_qmdl_size(qmdl_file_size)
+                .await
+                .unwrap();
+        }
+        drop(qmdl_file);
+        drop(analysis_file);
+
+        let entry_index = store.current_entry.unwrap();
+        store.close_current_entry().await.unwrap();
+
+        let store_path = store.path.clone();
+        let entry = &mut store.manifest.entries[entry_index];
+        for &file_kind in FileKind::ALL {
+            tokio::fs::rename(
+                file_kind.get_filepath(&entry.name, &store_path, entry.compressed),
+                file_kind.get_filepath(name, &store_path, entry.compressed),
+            )
+            .await
+            .unwrap();
+        }
+        entry.name = name.to_string();
+    }
+
+    fn zip_recordings_query(names: Option<&str>) -> Query<ZipRecordingsQuery> {
+        Query(ZipRecordingsQuery {
+            names: names.map(str::to_string),
+        })
+    }
+
+    async fn zip_entry_filenames(response: Response) -> (ZipFileReader, Vec<String>) {
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let zip_reader = ZipFileReader::new(body_bytes.to_vec()).await.unwrap();
+        let filenames = zip_reader
+            .file()
+            .entries()
+            .iter()
+            .map(|entry| entry.filename().as_str().unwrap().to_string())
+            .collect();
+        (zip_reader, filenames)
+    }
+
+    #[test]
+    fn test_parse_recording_names() {
+        assert!(parse_recording_names(None).is_empty());
+        assert!(parse_recording_names(Some("")).is_empty());
+        assert!(parse_recording_names(Some(" , ,")).is_empty());
+        assert_eq!(
+            parse_recording_names(Some("2, 1,2,,3,1")),
+            vec!["2", "1", "3"]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_zip_recordings_requires_names() {
+        let (_temp_dir, store_lock) = create_test_qmdl_store().await;
+        create_named_test_entry(&store_lock, "100", Some(&create_test_container())).await;
+        let state = create_test_server_state(store_lock);
+
+        for names in [None, Some(""), Some(" , ")] {
+            let Err((status, _)) =
+                get_zip_recordings(State(state.clone()), zip_recordings_query(names)).await
+            else {
+                panic!("expected an error for names {names:?}");
+            };
+            assert_eq!(status, StatusCode::BAD_REQUEST);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_zip_recordings_unknown_name() {
+        let (_temp_dir, store_lock) = create_test_qmdl_store().await;
+        create_named_test_entry(&store_lock, "100", Some(&create_test_container())).await;
+        let state = create_test_server_state(store_lock);
+
+        let Err((status, message)) =
+            get_zip_recordings(State(state), zip_recordings_query(Some("100,999"))).await
+        else {
+            panic!("expected an error for an unknown recording");
+        };
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert!(message.contains("999"), "message was {message:?}");
+    }
+
+    #[tokio::test]
+    async fn test_get_zip_recordings_success() {
+        let (_temp_dir, store_lock) = create_test_qmdl_store().await;
+        let test_qmdl_data = create_test_container();
+        create_named_test_entry(&store_lock, "100", Some(&test_qmdl_data)).await;
+        create_named_test_entry(&store_lock, "200", Some(&test_qmdl_data)).await;
+        let state = create_test_server_state(store_lock);
+
+        // Requested order is kept, and the repeated name is only zipped once.
+        let response = get_zip_recordings(State(state), zip_recordings_query(Some("200,100,200")))
+            .await
+            .unwrap();
+
+        let headers = response.headers();
+        assert_eq!(headers.get("content-type").unwrap(), "application/zip");
+        assert_eq!(
+            headers.get("content-disposition").unwrap(),
+            "attachment; filename=\"rayhunter-recordings.zip\""
+        );
+
+        let (zip_reader, filenames) = zip_entry_filenames(response).await;
+        assert_eq!(
+            filenames,
+            vec![
+                "200/200.qmdl",
+                "200/200.ndjson",
+                "200/200-gps.ndjson",
+                "200/200.pcapng",
+                "100/100.qmdl",
+                "100/100.ndjson",
+                "100/100-gps.ndjson",
+                "100/100.pcapng",
+            ]
+        );
+
+        // The QMDL inside each folder is decompressed, same as the single
+        // recording ZIP.
+        for qmdl_index in [0, 4] {
+            let mut qmdl_body = Vec::with_capacity(128);
+            zip_reader
+                .reader_without_entry(qmdl_index)
+                .await
+                .unwrap()
+                .read_to_end(&mut qmdl_body)
+                .await
+                .unwrap();
+            let mut qmdl_reader = QmdlMessageReader::new(Cursor::new(qmdl_body))
+                .await
+                .unwrap();
+            let expected_message = Message::from_hdlc(&test_qmdl_data.messages[0].data).unwrap();
+            assert_eq!(
+                qmdl_reader.get_next_message().await.unwrap(),
+                Some(Ok(expected_message)),
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_zip_recordings_skips_empty_recordings() {
+        let (_temp_dir, store_lock) = create_test_qmdl_store().await;
+        create_named_test_entry(&store_lock, "100", Some(&create_test_container())).await;
+        create_named_test_entry(&store_lock, "200", None).await;
+        let state = create_test_server_state(store_lock);
+
+        let response =
+            get_zip_recordings(State(state.clone()), zip_recordings_query(Some("100,200")))
+                .await
+                .unwrap();
+        let (_zip_reader, filenames) = zip_entry_filenames(response).await;
+        assert_eq!(
+            filenames,
+            vec![
+                "100/100.qmdl",
+                "100/100.ndjson",
+                "100/100-gps.ndjson",
+                "100/100.pcapng",
+            ]
+        );
+
+        let Err((status, _)) =
+            get_zip_recordings(State(state), zip_recordings_query(Some("200"))).await
+        else {
+            panic!("expected an error when every recording is empty");
+        };
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
     }
 }

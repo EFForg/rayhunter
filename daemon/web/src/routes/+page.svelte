@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
+    import { SvelteSet } from 'svelte/reactivity';
     import { ManifestEntry } from '$lib/manifest.svelte';
     import {
         get_manifest,
@@ -15,7 +17,6 @@
     import type { SystemStats } from '$lib/systemStats';
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import SystemStatsTable from '$lib/components/SystemStatsTable.svelte';
-    import DeleteAllButton from '$lib/components/DeleteAllButton.svelte';
     import RecordingControls from '$lib/components/RecordingControls.svelte';
     import ConfigForm from '$lib/components/ConfigForm.svelte';
     import ActionErrors from '$lib/components/ActionErrors.svelte';
@@ -26,6 +27,7 @@
     import NavItem from '$lib/components/NavItem.svelte';
     import NoDiagMessagesAlert from '$lib/components/NoDiagMessagesAlert.svelte';
     import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+    import BulkActions from '$lib/components/BulkActions.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -39,6 +41,20 @@
     let gps_data: GpsData | null = $state(null);
     let gps_mode: GpsMode = $state(GpsMode.Disabled);
     let update_status: UpdateStatus | null = $state(null);
+    // Names of recordings selected for bulk actions
+    const selected = new SvelteSet<string>();
+    // Only ever act on what's on screen: drop selections that were deleted or
+    // are hidden by the warnings filter.
+    $effect(() => {
+        const visible = new Set(entries.map((e) => e.name));
+        untrack(() => {
+            for (const name of [...selected]) {
+                if (!visible.has(name)) {
+                    selected.delete(name);
+                }
+            }
+        });
+    });
     $effect(() => {
         const interval = setInterval(async () => {
             try {
@@ -290,9 +306,11 @@
                     />
                 </div>
             </div>
-            <ManifestTable {entries} server_is_recording={!!current_entry} {manager} />
+            {#if entries.length > 0}
+                <BulkActions {entries} {selected} />
+            {/if}
+            <ManifestTable {entries} server_is_recording={!!current_entry} {manager} {selected} />
         </div>
-        <DeleteAllButton />
     {:else}
         <div class="flex flex-col justify-center items-center">
             <!-- https://www.w3.org/WAI/tutorials/images/decorative/ -->
