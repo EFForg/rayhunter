@@ -14,5 +14,5 @@ clap = { version = "4.5.2", features = ["derive"] }
 walkdir = "2.5.0"
 serde = "1.0.229"
 serde_json = "1.0.151"
-async_zip = { version = "0.0.19", features = ["full", "tokio", "tokio-util"] }
+async_zip = { version = "0.0.19", features = ["tokio", "tokio-util"] }
 tokio-util = { version = "0.7.20", features = ["compat"] }
