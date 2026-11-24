@@ -25,19 +25,19 @@
 
     const severity_classes = {
         error: {
-            container: 'bg-red-100 border-red-100',
-            title: 'text-red-600',
-            icon: 'text-red-600',
+            container: 'bg-red-100 dark:bg-red-950 border-red-100 dark:border-red-900',
+            title: 'text-red-600 dark:text-red-400',
+            icon: 'text-red-600 dark:text-red-400',
         },
         warning: {
-            container: 'bg-yellow-100 border-yellow-400',
-            title: 'text-yellow-700',
-            icon: 'text-yellow-600',
+            container: 'bg-yellow-100 dark:bg-yellow-950 border-yellow-400 dark:border-yellow-700',
+            title: 'text-yellow-700 dark:text-yellow-300',
+            icon: 'text-yellow-600 dark:text-yellow-400',
         },
         info: {
-            container: 'bg-sky-100 border-sky-300',
-            title: 'text-sky-800',
-            icon: 'text-sky-700',
+            container: 'bg-sky-100 dark:bg-sky-950 border-sky-300 dark:border-sky-800',
+            title: 'text-sky-800 dark:text-sky-200',
+            icon: 'text-sky-700 dark:text-sky-300',
         },
     };
 

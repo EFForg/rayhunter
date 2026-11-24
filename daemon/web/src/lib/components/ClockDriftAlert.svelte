@@ -102,11 +102,11 @@
         </table>
         <p>Copy browser clock to device?</p>
         <div class="flex flex-row flex-wrap gap-2 items-center justify-end">
-            <p class="text-sm text-yellow-700 mr-auto">
+            <p class="text-sm text-yellow-700 dark:text-yellow-300 mr-auto">
                 Rayhunter can sync this automatically with the "Clock Sync" setting in Config.
             </p>
             <button
-                class="font-medium py-2 px-4 rounded-md border border-gray-400 hover:bg-yellow-200"
+                class="font-medium py-2 px-4 rounded-md border border-gray-400 dark:border-gray-500 hover:bg-yellow-200 dark:hover:bg-yellow-900"
                 onclick={dismiss}
             >
                 Dismiss

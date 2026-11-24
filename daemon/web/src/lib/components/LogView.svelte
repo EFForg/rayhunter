@@ -22,7 +22,9 @@
 </script>
 
 <Modal bind:shown title="Logs">
-    <div class="bg-gray-100 border border-gray-100 rounded-md overflow-scroll">
+    <div
+        class="bg-gray-100 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-md overflow-scroll"
+    >
         <pre class="m-2">{content}</pre>
     </div>
 </Modal>

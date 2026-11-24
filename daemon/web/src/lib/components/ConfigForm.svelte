@@ -223,8 +223,10 @@
                     </select>
                 </FormField>
 
-                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                        Notification Settings
+                    </h3>
 
                     <CheckboxField
                         id="auto_check_updates"
@@ -274,8 +276,8 @@
                             {#if testMessage}
                                 <div
                                     class="mt-2 p-2 rounded-sm text-sm {testMessageType === 'error'
-                                        ? 'bg-red-100 text-red-700'
-                                        : 'bg-green-100 text-green-700'}"
+                                        ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300'
+                                        : 'bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300'}"
                                 >
                                     {testMessage}
                                 </div>
@@ -283,7 +285,9 @@
                         </div>
 
                         <div class="space-y-2">
-                            <div class="block text-sm font-medium text-gray-700 mb-1">
+                            <div
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                            >
                                 Enabled Notification Types
                             </div>
                             <div class="flex items-center">
@@ -292,11 +296,11 @@
                                     id="enable_warning_notifications"
                                     value="Warning"
                                     bind:group={config.enabled_notifications}
-                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 dark:border-gray-600 rounded-sm"
                                 />
                                 <label
                                     for="enable_warning_notifications"
-                                    class="ml-2 block text-sm text-gray-700"
+                                    class="ml-2 block text-sm text-gray-700 dark:text-gray-300"
                                 >
                                     Warnings
                                 </label>
@@ -307,11 +311,11 @@
                                     id="enable_lowbattery_notifications"
                                     value="LowBattery"
                                     bind:group={config.enabled_notifications}
-                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 dark:border-gray-600 rounded-sm"
                                 />
                                 <label
                                     for="enable_lowbattery_notifications"
-                                    class="ml-2 block text-sm text-gray-700"
+                                    class="ml-2 block text-sm text-gray-700 dark:text-gray-300"
                                 >
                                     Low Battery
                                 </label>
@@ -322,11 +326,11 @@
                                     id="enable_update_notifications"
                                     value={enabled_notifications.Update}
                                     bind:group={config.enabled_notifications}
-                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                                    class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 dark:border-gray-600 rounded-sm"
                                 />
                                 <label
                                     for="enable_update_notifications"
-                                    class="ml-2 block text-sm text-gray-700"
+                                    class="ml-2 block text-sm text-gray-700 dark:text-gray-300"
                                 >
                                     Software Updates
                                 </label>
@@ -335,8 +339,10 @@
                     </ExpandableInput>
                 </div>
 
-                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Storage Management</h3>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                        Storage Management
+                    </h3>
 
                     <FormField
                         id="min_space_to_start_recording_mb"
@@ -367,9 +373,11 @@
                     </FormField>
                 </div>
 
-                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">WebDAV Upload</h3>
-                    <p class="text-xs text-gray-500">
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                        WebDAV Upload
+                    </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
                         Once a recording has been closed for at least the configured age, both the
                         .qmdl and .ndjson files are uploaded in the background to the WebDAV server.
                     </p>
@@ -457,9 +465,11 @@
                 </div>
 
                 {#if config.device === 'orbic' || config.device === 'moxee' || config.device === 'tmobile' || config.device === 'wingtech'}
-                    <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">WiFi Client Mode</h3>
-                        <p class="text-xs text-gray-500">
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6 space-y-3">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                            WiFi Client Mode
+                        </h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
                             Connect the device to an existing WiFi network for internet access (e.g.
                             notifications, remote access). The hotspot AP stays running alongside
                             WiFi client mode.
@@ -474,19 +484,23 @@
 
                         {#if wifiStatus && config.wifi_enabled}
                             {#if wifiStatus.state === 'connected'}
-                                <p class="text-xs text-green-600">
+                                <p class="text-xs text-green-600 dark:text-green-400">
                                     Connected to "{wifiStatus.ssid}" ({wifiStatus.ip})
                                 </p>
                             {:else if wifiStatus.state === 'connecting'}
-                                <p class="text-xs text-amber-600">Connecting...</p>
+                                <p class="text-xs text-amber-600 dark:text-amber-400">
+                                    Connecting...
+                                </p>
                             {:else if wifiStatus.state === 'recovering'}
-                                <p class="text-xs text-amber-600">Recovering connection...</p>
+                                <p class="text-xs text-amber-600 dark:text-amber-400">
+                                    Recovering connection...
+                                </p>
                             {:else if wifiStatus.state === 'dataPathDead'}
-                                <p class="text-xs text-amber-600">
+                                <p class="text-xs text-amber-600 dark:text-amber-400">
                                     Data path stalled, attempting recovery...
                                 </p>
                             {:else if wifiStatus.state === 'failed'}
-                                <p class="text-xs text-red-600">
+                                <p class="text-xs text-red-600 dark:text-red-400">
                                     Failed: {wifiStatus.error}
                                 </p>
                             {/if}
@@ -505,7 +519,7 @@
                                     type="button"
                                     onclick={do_scan}
                                     disabled={scanning}
-                                    class="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 disabled:opacity-50 border border-gray-300 rounded-md"
+                                    class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 border border-gray-300 dark:border-gray-600 rounded-md"
                                 >
                                     {scanning ? 'Scanning...' : 'Scan'}
                                 </button>
@@ -513,21 +527,21 @@
                         </FormField>
 
                         {#if scanError}
-                            <p class="text-xs text-red-600">{scanError}</p>
+                            <p class="text-xs text-red-600 dark:text-red-400">{scanError}</p>
                         {/if}
 
                         {#if scanResults.length > 0}
                             <div
-                                class="border border-gray-200 rounded-md max-h-40 overflow-y-auto divide-y divide-gray-200"
+                                class="border border-gray-200 dark:border-gray-700 rounded-md max-h-40 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700"
                             >
                                 {#each scanResults as network}
                                     <button
                                         type="button"
-                                        class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex justify-between"
+                                        class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex justify-between"
                                         onclick={() => select_network(network)}
                                     >
                                         <span>{network.ssid}</span>
-                                        <span class="text-gray-400"
+                                        <span class="text-gray-400 dark:text-gray-500"
                                             >{network.signal_dbm} dBm &middot; {network.security}</span
                                         >
                                     </button>
@@ -580,8 +594,8 @@
                     </div>
                 {/if}
 
-                <div class="border-t border-gray-200 pt-4 mt-6">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
                         Analyzer Heuristic Settings
                     </h3>
                     <div class="space-y-3">
@@ -596,8 +610,10 @@
                     </div>
                 </div>
 
-                <div class="border-t border-gray-200 pt-4 mt-6 space-y-3">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">GPS Settings</h3>
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6 space-y-3">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                        GPS Settings
+                    </h3>
                     <FormField id="gps_mode" label="GPS Mode">
                         {#snippet help()}
                             {#if gpsMode === GpsMode.Api}
@@ -690,14 +706,14 @@
             {#if message}
                 <div
                     class="mt-4 p-3 rounded-sm {messageType === 'error'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-green-100 text-green-700'}"
+                        ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300'
+                        : 'bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-300'}"
                 >
                     {message}
                 </div>
             {/if}
         {:else}
-            <div class="text-center py-4 text-red-600">
+            <div class="text-center py-4 text-red-600 dark:text-red-400">
                 Failed to load configuration. Please try reloading the page.
             </div>
         {/if}

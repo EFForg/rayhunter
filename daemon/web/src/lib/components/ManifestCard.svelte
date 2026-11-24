@@ -26,16 +26,18 @@
     let status_row_color = $derived.by(() => {
         const num_warnings = entry.get_num_warnings();
         if (num_warnings !== undefined && num_warnings > 0) {
-            return 'bg-red-100';
+            return 'bg-red-100 dark:bg-red-900/30';
         }
-        return current ? 'bg-green-100' : 'bg-gray-100';
+        return current ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-800';
     });
     let status_border_color = $derived.by(() => {
         const num_warnings = entry.get_num_warnings();
         if (num_warnings !== undefined && num_warnings > 0) {
-            return 'border-red-100';
+            return 'border-red-100 dark:border-transparent';
         }
-        return current ? 'border-green-100' : 'border-gray-100';
+        return current
+            ? 'border-green-100 dark:border-transparent'
+            : 'border-gray-100 dark:border-gray-800';
     });
     let analysis_visible = $state(false);
     function toggle_analysis_visibility() {
@@ -82,7 +84,9 @@
         >
     </div>
     {#if entry.stop_reason}
-        <div class="bg-yellow-50 border border-yellow-300 rounded-sm p-2 text-yellow-800 text-sm">
+        <div
+            class="bg-yellow-50 dark:bg-yellow-950 border border-yellow-300 dark:border-yellow-700 rounded-sm p-2 text-yellow-800 dark:text-yellow-200 text-sm"
+        >
             {entry.stop_reason}
         </div>
     {/if}
@@ -100,7 +104,7 @@
             />
         {/if}
     </div>
-    <div class="border-b border-gray-200 {analysis_visible ? '' : 'hidden'}">
+    <div class="border-b border-gray-200 dark:border-gray-700 {analysis_visible ? '' : 'hidden'}">
         <AnalysisView {entry} {manager} {current} />
     </div>
 </div>

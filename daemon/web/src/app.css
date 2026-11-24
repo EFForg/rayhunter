@@ -1,5 +1,10 @@
 @import 'tailwindcss';
 
+/* Dark mode follows data-theme on <html> rather than the media query directly,
+ * so users can override their OS setting. It is set before first paint by the
+ * inline script in app.html and kept up to date by ThemeToggle. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
     --color-rayhunter-blue: #4e4eb1;
     --color-rayhunter-dark-blue: #3f3da0;
@@ -7,7 +12,7 @@
 }
 
 @utility form-control {
-    @apply px-3 py-2 border border-gray-300 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue;
+    @apply px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-hidden focus:ring-2 focus:ring-rayhunter-blue;
 }
 
 /* v4 dropped the v3 preflight rule that set `cursor: pointer` on buttons.
@@ -16,5 +21,11 @@
     button:not(:disabled),
     [role='button']:not(:disabled) {
         cursor: pointer;
+    }
+
+    /* color-scheme makes native controls, scrollbars and <select> menus dark too */
+    [data-theme='dark'] {
+        color-scheme: dark;
+        @apply bg-gray-900 text-gray-100;
     }
 }
