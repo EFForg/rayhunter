@@ -29,8 +29,8 @@ use crate::pcap::get_pcap;
 use crate::qmdl_store::RecordingStore;
 use crate::server::{
     ServerState, debug_set_display_state, get_analyzers, get_config, get_qmdl, get_time,
-    get_wifi_status, get_zip, scan_wifi, serve_static, set_config, set_time_offset,
-    test_notification,
+    get_wifi_status, get_zip, get_zip_recordings, scan_wifi, serve_static, set_config,
+    set_time_offset, test_notification,
 };
 use crate::stats::{get_qmdl_manifest, get_system_stats, get_update_status};
 use crate::update::{UpdateStatus, run_update_check_worker};
@@ -66,6 +66,7 @@ fn get_router() -> AppRouter {
         .route("/api/pcap/{name}", get(get_pcap))
         .route("/api/qmdl/{name}", get(get_qmdl))
         .route("/api/zip/{name}", get(get_zip))
+        .route("/api/zip-recordings", get(get_zip_recordings))
         .route("/api/system-stats", get(get_system_stats))
         .route("/api/update-status", get(get_update_status))
         .route("/api/qmdl-manifest", get(get_qmdl_manifest))

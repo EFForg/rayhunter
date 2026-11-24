@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { SvelteSet } from 'svelte/reactivity';
     import { ManifestEntry } from '$lib/manifest.svelte';
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import DownloadLink from '$lib/components/DownloadLink.svelte';
@@ -11,11 +12,14 @@
         current,
         server_is_recording,
         manager,
+        selected,
     }: {
         entry: ManifestEntry;
         current: boolean;
         server_is_recording: boolean;
         manager: AnalysisManager;
+        // omitted for the current recording, which can't be bulk-selected
+        selected?: SvelteSet<string>;
     } = $props();
 
     // passing `undefined` as the locale uses the browser default
@@ -62,7 +66,22 @@
     {/if}
     <div class="flex flex-col">
         <div class="flex flex-row justify-between">
-            <span class="font-bold">ID: {entry.name}</span>
+            {#if selected && !current}
+                <label class="font-bold flex flex-row items-center gap-2">
+                    <input
+                        type="checkbox"
+                        checked={selected.has(entry.name)}
+                        onchange={(e) =>
+                            e.currentTarget.checked
+                                ? selected.add(entry.name)
+                                : selected.delete(entry.name)}
+                        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 dark:border-gray-600 rounded-sm"
+                    />
+                    ID: {entry.name}
+                </label>
+            {:else}
+                <span class="font-bold">ID: {entry.name}</span>
+            {/if}
             {#if !current}
                 <span class=""
                     ><AnalysisStatus

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { SvelteSet } from 'svelte/reactivity';
     import { ManifestEntry } from '$lib/manifest.svelte';
     import { AnalysisManager } from '$lib/analysisManager.svelte';
     import DownloadLink from '$lib/components/DownloadLink.svelte';
@@ -10,11 +11,13 @@
         current,
         i,
         manager,
+        selected,
     }: {
         entry: ManifestEntry;
         current: boolean;
         i: number;
         manager: AnalysisManager;
+        selected: SvelteSet<string>;
     } = $props();
 
     // passing `undefined` as the locale uses the browser default
@@ -39,6 +42,20 @@
 </script>
 
 <tr class="{status_row_color} drop-shadow-sm">
+    <td class="p-2">
+        {#if !current}
+            <input
+                type="checkbox"
+                aria-label="Select recording {entry.name}"
+                checked={selected.has(entry.name)}
+                onchange={(e) =>
+                    e.currentTarget.checked
+                        ? selected.add(entry.name)
+                        : selected.delete(entry.name)}
+                class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 dark:border-gray-600 rounded-sm"
+            />
+        {/if}
+    </td>
     <td class="p-2">{entry.name}</td>
     <td class="p-2">{date_formatter.format(entry.start_time)}</td>
     <td class="p-2"

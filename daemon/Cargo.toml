@@ -26,7 +26,7 @@ toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
 serde_repr = "0.1"
 tokio = { version = "1.44.2", default-features = false, features = ["fs", "signal", "process", "rt", "time"] }
-axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "query"] }
 thiserror = "1.0.52"
 libc = "0.2.150"
 log = "0.4.20"
