@@ -23,14 +23,14 @@
         {disabled}
         {onchange}
         bind:checked
-        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 dark:border-gray-600 rounded-sm"
     />
-    <label for={id} class="ml-2 block text-sm text-gray-700">
+    <label for={id} class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
         {label}
     </label>
 </div>
 {#if help}
-    <p class="text-xs text-gray-500">
+    <p class="text-xs text-gray-500 dark:text-gray-400">
         {help}
     </p>
 {/if}

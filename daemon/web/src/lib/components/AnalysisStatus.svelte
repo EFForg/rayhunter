@@ -38,11 +38,11 @@
 
     let button_class = $derived.by(() => {
         if (!ready) {
-            return 'text-gray-700';
+            return 'text-gray-700 dark:text-gray-300';
         } else if ((entry.get_num_warnings() || 0) < 1) {
-            return 'text-green-700 border-green-500 bg-green-200 text-blue-600 border rounded-full px-2';
+            return 'text-green-700 dark:text-green-300 border-green-500 dark:border-green-700 bg-green-200 dark:bg-green-950 text-blue-600 border rounded-full px-2';
         } else {
-            return 'text-red-700 border-red-500 bg-red-200 text-blue-600 border rounded-full px-2';
+            return 'text-red-700 dark:text-red-300 border-red-500 dark:border-red-700 bg-red-200 dark:bg-red-950 text-blue-600 border rounded-full px-2';
         }
     });
 </script>
@@ -50,12 +50,14 @@
 <button class="flex flex-row gap-1 lg:gap-2" disabled={!ready} {onclick}>
     <span class="flex flex-row items-center gap-1">
         {#if entry.analysis_status === AnalysisStatus.Queued || entry.analysis_status === AnalysisStatus.Running || (entry.analysis_status === AnalysisStatus.Finished && entry.analysis_report === undefined)}
-            <Spinner class="h-4 w-4 text-blue-600" />
+            <Spinner class="h-4 w-4 text-blue-600 dark:text-blue-400" />
         {/if}
         <span class={button_class}>{summary}</span>
     </span>
     <svg
-        class="w-6 h-6 text-gray-800 transition-transform {analysis_visible ? 'rotate-180' : ''}"
+        class="w-6 h-6 text-gray-800 dark:text-gray-200 transition-transform {analysis_visible
+            ? 'rotate-180'
+            : ''}"
         aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
         width="24"

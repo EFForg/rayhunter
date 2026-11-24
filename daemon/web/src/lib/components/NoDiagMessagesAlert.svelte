@@ -33,9 +33,11 @@
 
 {#if show_alert}
     <div
-        class="bg-yellow-100 border-yellow-400 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md"
+        class="bg-yellow-100 dark:bg-yellow-950 border-yellow-400 dark:border-yellow-700 drop-shadow-sm p-4 flex flex-col gap-2 border rounded-md"
     >
-        <span class="text-xl font-bold text-yellow-700">No diagnostic messages received</span>
+        <span class="text-xl font-bold text-yellow-700 dark:text-yellow-300"
+            >No diagnostic messages received</span
+        >
         <p>
             Rayhunter has not received diagnostic messages for at least five minutes and may not be
             recording modem activity.

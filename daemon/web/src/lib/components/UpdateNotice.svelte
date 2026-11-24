@@ -16,7 +16,7 @@
             and the latest release is version {status.latest_version}.
         </p>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <span class="text-sm text-sky-900/80">
+            <span class="text-sm text-sky-900/80 dark:text-sky-100/80">
                 View the latest release on GitHub to see what's new and download the update.
             </span>
             <a

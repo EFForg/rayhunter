@@ -14,7 +14,7 @@
     href={url}
     class="flex flex-row {full_button
         ? 'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-2 sm:px-4 rounded-md'
-        : 'text-blue-600 underline'}"
+        : 'text-blue-600 dark:text-blue-400 underline'}"
 >
     {text}
     <svg class="fill-current w-4 h-4 m-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">

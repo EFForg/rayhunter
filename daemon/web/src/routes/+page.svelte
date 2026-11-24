@@ -25,6 +25,7 @@
     import Alert from '$lib/components/Alert.svelte';
     import NavItem from '$lib/components/NavItem.svelte';
     import NoDiagMessagesAlert from '$lib/components/NoDiagMessagesAlert.svelte';
+    import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 
     let manager: AnalysisManager = new AnalysisManager();
     let loaded = $state(false);
@@ -154,6 +155,7 @@
                 </svg>
             {/snippet}
         </NavItem>
+        <ThemeToggle />
         <div class="w-px bg-white/30 self-stretch"></div>
         <NavItem
             label="Report Issue"
@@ -276,7 +278,7 @@
                 <div class="flex flex-row items-center gap-2 px-3">
                     <label
                         for="filter_threshold"
-                        class="block text-md font-medium text-gray-700 mb-1"
+                        class="block text-md font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >
                         Filter for Warnings
                     </label>
@@ -284,7 +286,7 @@
                         type="checkbox"
                         id="filter_threshold"
                         bind:checked={filter_threshold}
-                        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 rounded-sm"
+                        class="h-4 w-4 text-rayhunter-blue focus:ring-rayhunter-blue border-gray-300 dark:border-gray-600 rounded-sm"
                     />
                 </div>
             </div>
