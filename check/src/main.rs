@@ -1,3 +1,4 @@
+use async_zip::tokio::read::seek::ZipFileReader;
 use chrono::{DateTime, FixedOffset};
 use clap::Parser;
 use log::{debug, error, info, warn};
@@ -10,9 +11,14 @@ use rayhunter::{
     qmdl::QmdlMessageReader,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::Path, path::PathBuf};
 use tokio::fs::File;
+use tokio::io::{AsyncReadExt, AsyncSeek};
+use tokio_util::compat::FuturesAsyncReadCompatExt;
 use walkdir::WalkDir;
+
+// zip-bomb guard
+const MAX_ENTRY_BYTES: u64 = 8 * 1024 * 1024 * 1024;
 
 use crate::json::IncrementalJsonWriter;
 
@@ -22,7 +28,7 @@ mod json;
 #[command(version, about)]
 struct Args {
     #[arg(short = 'p', long, help = "A file or directory of packet captures")]
-    path: PathBuf,
+    path: Option<PathBuf>,
 
     #[arg(short = 'P', long, help = "Convert qmdl files to pcap after analysis")]
     pcapify: bool,
@@ -38,6 +44,16 @@ struct Args {
 
     #[arg(short, long, help = "Show debug messages")]
     debug: bool,
+
+    #[arg(
+        short = 'c',
+        long,
+        help = "specify a config.toml file containing tests to run"
+    )]
+    config: Option<PathBuf>,
+
+    #[arg(help = "paths to scan for files")]
+    scanfiles: Vec<PathBuf>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -131,23 +147,23 @@ mod tests {
     }
 }
 
-async fn analyze_pcap(
-    pcap_path: &str,
+async fn analyze_pcap<R: tokio::io::AsyncRead + Unpin>(
+    name: &str,
+    reader: R,
     show_skipped: bool,
     json_writer: Option<&mut IncrementalJsonWriter<File>>,
 ) {
     let mut harness =
         Harness::new_with_config(&AnalyzerConfig::default(), &DeviceMetadata::default());
-    let pcap_file = &mut File::open(&pcap_path).await.expect("failed to open file");
-    let mut pcap_reader = PcapNgReader::new(pcap_file)
+    let mut pcap_reader = PcapNgReader::new(reader)
         .await
         .expect("failed to read PCAP file");
-    let mut report = Report::new(pcap_path);
+    let mut report = Report::new(name);
     while let Some(Ok(block)) = pcap_reader.next_block().await {
         let row = match block {
             Block::EnhancedPacket(packet) => harness.analyze_pcap_packet(packet),
             other => {
-                debug!("{pcap_path}: skipping pcap packet {other:?}");
+                debug!("{name}: skipping pcap packet {other:?}");
                 continue;
             }
         };
@@ -162,18 +178,18 @@ async fn analyze_pcap(
     }
 }
 
-async fn analyze_qmdl(
-    qmdl_path: &str,
+async fn analyze_qmdl<R: tokio::io::AsyncRead + AsyncSeek + Unpin>(
+    name: &str,
+    reader: R,
     show_skipped: bool,
     json_writer: Option<&mut IncrementalJsonWriter<File>>,
 ) {
     let mut harness =
         Harness::new_with_config(&AnalyzerConfig::default(), &DeviceMetadata::default());
-    let qmdl_file = &mut File::open(&qmdl_path).await.expect("failed to open file");
-    let mut qmdl_reader = QmdlMessageReader::new(qmdl_file)
+    let mut qmdl_reader = QmdlMessageReader::new(reader)
         .await
         .expect("failed to open QmdlReader");
-    let mut report = Report::new(qmdl_path);
+    let mut report = Report::new(name);
     while let Some(maybe_message) = qmdl_reader
         .get_next_message()
         .await
@@ -187,6 +203,81 @@ async fn analyze_qmdl(
             .write_report(&report)
             .await
             .expect("failed to write report to JSON");
+    }
+}
+async fn analyze_zip(
+    zip_path: &Path,
+    args: &Args,
+    mut json_writer: Option<&mut IncrementalJsonWriter<File>>,
+) {
+    let file =
+        tokio::io::BufReader::new(File::open(zip_path).await.expect("failed to open zip file"));
+    let mut zip = ZipFileReader::with_tokio(file)
+        .await
+        .expect("failed to read zip archive");
+
+    struct Member {
+        index: usize,
+        name: String,
+        size: u64,
+    }
+
+    let mut members: Vec<Member> = Vec::new();
+    for (index, entry) in zip.file().entries().iter().enumerate() {
+        let name = match entry.filename().as_str() {
+            Ok(n) => n.to_owned(),
+            Err(e) => {
+                // ZIP names are arbitrary bytes; some dumps use Latin-1.
+                warn!("{zip_path:?}: skipping entry #{index} with undecodable name: {e}");
+                continue;
+            }
+        };
+        if name.ends_with(".qmdl") || name.ends_with(".qmdl.gz") {
+            members.push(Member {
+                index,
+                name,
+                size: entry.uncompressed_size(),
+            });
+        } else {
+            continue;
+        }
+    }
+
+    let mut analyzed = 0usize;
+    for member in members {
+        let entry_reader = match zip.reader_with_entry(member.index).await {
+            Ok(r) => r,
+            Err(e) => {
+                // Encrypted members land here too.
+                error!("{zip_path:?}: failed to open {:?}: {e}", member.name);
+                continue;
+            }
+        };
+        analyzed += 1;
+
+        let display = format!("{}!{}", zip_path.display(), member.name);
+        let size = member.size;
+        if size > MAX_ENTRY_BYTES {
+            warn!(
+                "{zip_path:?}: {} is {size} bytes, skipping (limit {MAX_ENTRY_BYTES})",
+                member.name
+            );
+            continue;
+        }
+        let mut buf = Vec::with_capacity(size as usize);
+        entry_reader.compat().read_to_end(&mut buf).await.unwrap(); // or read_to_end_checked for CRC
+        let mut cursor = std::io::Cursor::new(buf);
+        analyze_qmdl(
+            &display,
+            &mut cursor,
+            args.show_skipped,
+            json_writer.as_deref_mut(),
+        )
+        .await;
+    }
+
+    if analyzed == 0 {
+        warn!("{zip_path:?}: no qmdl captures found in archive");
     }
 }
 
@@ -221,6 +312,50 @@ async fn pcapify(qmdl_path: &PathBuf) {
     info!("wrote pcap to {:?}", pcap_path);
 }
 
+async fn analyze_path(
+    path: PathBuf,
+    args: &Args,
+    mut json_writer: Option<&mut IncrementalJsonWriter<File>>,
+) {
+    for maybe_entry in WalkDir::new(&path) {
+        let Ok(entry) = maybe_entry else {
+            error!("failed to open dir entry {maybe_entry:?}");
+            continue;
+        };
+        let name = entry.file_name();
+        let name_str = name.to_str().unwrap();
+        let path = entry.path();
+        let path_str = path.to_str().unwrap();
+        let reader = File::open(&path).await.expect("failed to open file");
+        if name_str.ends_with(".qmdl") || name_str.ends_with(".qmdl.gz") {
+            info!("**** Beginning analysis of {name_str}");
+            analyze_qmdl(
+                path_str,
+                reader,
+                args.show_skipped,
+                json_writer.as_deref_mut(),
+            )
+            .await;
+            if args.pcapify {
+                pcapify(&path.to_path_buf()).await;
+            }
+        } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
+            // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
+            info!("**** Beginning analysis of {name_str}");
+            analyze_pcap(
+                path_str,
+                reader,
+                args.show_skipped,
+                json_writer.as_deref_mut(),
+            )
+            .await;
+        } else if name_str.ends_with(".zip") {
+            info!("**** Beginning analysis of {name_str}");
+            analyze_zip(path, args, json_writer.as_deref_mut()).await;
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
@@ -252,34 +387,21 @@ async fn main() {
             .open(json_path)
             .await
             .expect("failed to create JSON output file");
-        let check_path_str = args.path.to_string_lossy();
+
         json_writer = Some(
-            IncrementalJsonWriter::new(json_file, &check_path_str, &metadata)
+            IncrementalJsonWriter::new(json_file, &metadata)
                 .await
                 .expect("failed to create JSON writer"),
         );
     }
+    let scanfiles = args.scanfiles.clone();
+    for pathbuf in scanfiles {
+        analyze_path(pathbuf, &args, json_writer.as_mut()).await;
+    }
 
-    for maybe_entry in WalkDir::new(&args.path) {
-        let Ok(entry) = maybe_entry else {
-            error!("failed to open dir entry {maybe_entry:?}");
-            continue;
-        };
-        let name = entry.file_name();
-        let name_str = name.to_str().unwrap();
-        let path = entry.path();
-        let path_str = path.to_str().unwrap();
-        if name_str.ends_with(".qmdl") || name_str.ends_with(".qmdl.gz") {
-            info!("**** Beginning analysis of {name_str}");
-            analyze_qmdl(path_str, args.show_skipped, json_writer.as_mut()).await;
-            if args.pcapify {
-                pcapify(&path.to_path_buf()).await;
-            }
-        } else if name_str.ends_with(".pcap") || name_str.ends_with(".pcapng") {
-            // TODO: if we've already analyzed a QMDL, skip its corresponding pcap
-            info!("**** Beginning analysis of {name_str}");
-            analyze_pcap(path_str, args.show_skipped, json_writer.as_mut()).await;
-        }
+    let patharg = args.path.clone();
+    if let Some(pathbuf) = patharg {
+        analyze_path(pathbuf, &args, json_writer.as_mut()).await;
     }
 
     if let Some(writer) = json_writer {
