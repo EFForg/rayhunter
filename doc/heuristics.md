@@ -73,6 +73,12 @@ This analyzer tests whether the SIB1 message contains a complete SIB chain (SIB3
 
 On its own this might just be a misconfigured base station (though we have only seen it in the wild under suspicious circumstances) but combined with other heuristics such as **IMSI Requested** detection it should be considered as a strong indicator of malicious activity.
 
+### NAS LTE Positioning Analyzer (v0)
+
+This analyzer tracks LTE Positioning Protocol (LPP) messages and emits progress and summary events around the lifecycle of the transactions those messages compose.
+
+This analyzer produces Information-only events for the purpose of providing initial awareness of LPP activity. On their own, they do not necessarily indicate suspicious activity. Captures producing these events would prove useful in implementing targeted heuristics around LPP activity.
+
 ### Diagnostic Information 
 This analyzer displays some diagnostic information about when your device connects and disconnects from certain towers. It is helpful for analysis of suspicious PCAPs. The informational warnings in here can safely be ignored until there is a low, medium, or high severity warning. 
 
