@@ -7,12 +7,15 @@
         href,
         target,
         onclick,
+        title,
     }: {
         label: string;
         icon: Snippet;
         href?: string;
         target?: string;
         onclick?: () => void;
+        // Tooltip and accessible name, for items whose state isn't conveyed by the label
+        title?: string;
     } = $props();
 </script>
 
@@ -31,7 +34,7 @@
         {@render content()}
     </a>
 {:else}
-    <button {onclick} class="flex flex-row items-center gap-1 group">
+    <button {onclick} {title} aria-label={title} class="flex flex-row items-center gap-1 group">
         {@render content()}
     </button>
 {/if}

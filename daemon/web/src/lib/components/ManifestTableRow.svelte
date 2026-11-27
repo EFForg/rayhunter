@@ -22,13 +22,15 @@
         timeStyle: 'long',
         dateStyle: 'short',
     });
-    let alternating_row_color = $derived(i % 2 == 0 ? 'bg-white' : 'bg-gray-100');
+    let alternating_row_color = $derived(
+        i % 2 == 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-100 dark:bg-gray-800'
+    );
     let status_row_color = $derived.by(() => {
         const num_warnings = entry.get_num_warnings();
         if (num_warnings !== undefined && num_warnings > 0) {
-            return 'bg-red-100';
+            return 'bg-red-100 dark:bg-red-900/30';
         }
-        return current ? 'bg-green-100' : alternating_row_color;
+        return current ? 'bg-green-100 dark:bg-green-900/30' : alternating_row_color;
     });
     let analysis_visible = $state(false);
     function toggle_analysis_visibility() {
@@ -65,8 +67,12 @@
         </td>
     {/if}
 </tr>
-<tr class="{alternating_row_color} border-b border-gray-200 {analysis_visible ? '' : 'hidden'}">
-    <td class="border-t border-gray-200 border-dashed p-2" colspan="9">
+<tr
+    class="{alternating_row_color} border-b border-gray-200 dark:border-gray-700 {analysis_visible
+        ? ''
+        : 'hidden'}"
+>
+    <td class="border-t border-gray-200 dark:border-gray-700 border-dashed p-2" colspan="9">
         <AnalysisView {entry} {manager} {current} />
     </td>
 </tr>

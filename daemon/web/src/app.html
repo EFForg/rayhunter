@@ -1,9 +1,25 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
     <head>
         <meta charset="utf-8" />
         <link rel="icon" href="%sveltekit.assets%/favicon.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script>
+            // Apply the saved (or OS) colour theme before first paint, to avoid a flash
+            // of the wrong theme. Keep in sync with src/lib/color_theme.ts.
+            (function () {
+                var theme = null;
+                try {
+                    theme = localStorage.getItem('rayhunter-theme');
+                } catch (e) {}
+                if (theme !== 'light' && theme !== 'dark') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+                        ? 'dark'
+                        : 'light';
+                }
+                document.documentElement.dataset.theme = theme;
+            })();
+        </script>
         %sveltekit.head%
     </head>
     <body data-sveltekit-preload-data="hover" style="width: 100%">

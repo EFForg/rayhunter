@@ -15,12 +15,12 @@
 </script>
 
 <div>
-    <label for={id} class="block text-sm font-medium text-gray-700 mb-1">
+    <label for={id} class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         {label}
     </label>
     {@render children()}
     {#if help}
-        <p class="text-xs text-gray-500 mt-1">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {#if typeof help === 'string'}
                 {help}
             {:else}

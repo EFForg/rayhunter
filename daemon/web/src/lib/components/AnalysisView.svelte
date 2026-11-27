@@ -34,14 +34,14 @@
                 <div class="flex flex-row justify-between items-center">
                     {#if !!numWarnings}
                         <div
-                            class="text-red-700 border-red-500 border rounded-lg text-blue-600 px-2 py-1 mr-12"
+                            class="text-red-700 dark:text-red-300 border-red-500 border rounded-lg text-blue-600 px-2 py-1 mr-12"
                         >
                             Your Rayhunter device raised {`${numWarnings}`} warning{`${
                                 numWarnings > 1 ? 's' : ''
                             }`}!
                             <a
                                 href="https://efforg.github.io/rayhunter/faq.html#red"
-                                class="text-blue-600 underline">Read the FAQ</a
+                                class="text-blue-600 dark:text-blue-400 underline">Read the FAQ</a
                             > to learn what you can do about it
                         </div>
                     {/if}
@@ -66,7 +66,7 @@
                 {#if entry.upload_time}
                     <p>
                         <b>WebDAV uploaded at:</b>
-                        <span class="text-green-700"
+                        <span class="text-green-700 dark:text-green-300"
                             >{date_formatter.format(entry.upload_time)}</span
                         >
                     </p>
