@@ -158,15 +158,16 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
 
 #[test]
 fn test_encrypt_password() {
-    let p = b"80536913";
-    let s = encrypt_password(p).ok();
-    let expected = Some("5brvd8xl732cSoFTAy67ig==".to_string());
+    let p = [b'8'; 8];
+    let s = encrypt_password(&p).ok();
+    let expected = Some("G0g4/bbq2YVFJIdB5Wsifw==".to_string());
     assert_eq!(s, expected);
 }
 
 #[test]
 fn test_encrypt_password_rejects_passwords_longer_than_block() {
-    let error = encrypt_password(b"12345678901234567").unwrap_err();
+    let password = [b'1'; 17];
+    let error = encrypt_password(&password).unwrap_err();
     assert_eq!(
         error.to_string(),
         "Wingtech admin password must be at most 16 bytes"
