@@ -158,9 +158,9 @@ async fn wingtech_run_install(admin_ip: String, admin_password: String) -> Resul
 
 #[test]
 fn test_encrypt_password() {
-    let p = b"80536913";
-    let s = encrypt_password(p).ok();
-    let expected = Some("5brvd8xl732cSoFTAy67ig==".to_string());
+    let p = std::array::from_fn::<u8, 8, _>(|i| b'A' + i as u8);
+    let s = encrypt_password(&p).ok();
+    let expected = Some("tqJIEQVbFzbnF6H82HJEgw==".to_string());
     assert_eq!(s, expected);
 }
 
