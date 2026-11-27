@@ -25,7 +25,7 @@
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@sveltejs/adapter-static": "^3.0.6",
-        "@sveltejs/kit": "^2.70.2",
+        "@sveltejs/kit": "^3.4.1",
         "@sveltejs/vite-plugin-svelte": "^7.0.0",
         "@tauri-apps/cli": "^2",
         "@types/node": "^26.6.4",
